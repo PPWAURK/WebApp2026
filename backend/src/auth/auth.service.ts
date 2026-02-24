@@ -1,0 +1,100 @@
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import type { StringValue } from 'ms';
+import { UsersService } from '../users/users.service';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  async login(loginDto: LoginDto) {
+    const user = await this.usersService.findByEmail(loginDto.email);
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.passwordHash,
+    );
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    return this.buildAuthResponse(user);
+  }
+
+  async register(registerDto: RegisterDto) {
+    const existingUser = await this.usersService.findByEmail(registerDto.email);
+
+    if (existingUser) {
+      throw new ConflictException('Email already in use');
+    }
+
+    const passwordHash = await bcrypt.hash(registerDto.password, 10);
+    const user = await this.usersService.createEmployee({
+      email: registerDto.email,
+      passwordHash,
+      name: registerDto.name,
+    });
+
+    return this.buildAuthResponse(user);
+  }
+
+  private async buildAuthResponse(user: {
+    id: number;
+    email: string;
+    name: string | null;
+    role: string;
+    isOnProbation: boolean;
+    workplaceRole: string;
+  }) {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      workplaceRole: user.workplaceRole,
+    };
+
+    return {
+      accessToken: await this.jwtService.signAsync(payload, {
+        expiresIn: this.configService.get<string>(
+          'JWT_EXPIRES_IN',
+          '15m',
+        ) as StringValue,
+      }),
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isOnProbation: user.isOnProbation,
+        workplaceRole: user.workplaceRole,
+      },
+    };
+  }
+
+  async validateUserById(userId: number) {
+    const user = await this.usersService.findById(userId);
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    return user;
+  }
+}
