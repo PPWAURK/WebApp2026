@@ -1,9 +1,11 @@
 import {
+  Body,
   BadRequestException,
   Controller,
   Get,
   Param,
   Post,
+  Query,
   Req,
   Res,
   UploadedFile,
@@ -87,8 +89,26 @@ export class UploadsController {
           type: 'string',
           format: 'binary',
         },
+        module: {
+          type: 'string',
+          enum: ['TRAINING', 'POLICY', 'MANAGEMENT', 'FORMS'],
+        },
+        section: {
+          type: 'string',
+          enum: [
+            'RECIPE_TRAINING',
+            'RECIPE',
+            'MISE_EN_PLACE_SOP',
+            'RED_RULES',
+            'BLACK_RULES',
+            'SALLE_TOOLS',
+            'CUISINE_TOOLS',
+            'MEAT_DATE_FORM',
+            'CLEANING_FORM',
+          ],
+        },
       },
-      required: ['file'],
+      required: ['file', 'module', 'section'],
     },
   })
   @ApiBearerAuth()
@@ -124,8 +144,21 @@ export class UploadsController {
       },
     }),
   )
-  uploadSingle(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
-    return this.uploadsService.handleSingleUpload(file, req);
+  uploadSingle(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: Request,
+    @Body('module') module: string | undefined,
+    @Body('section') section: string | undefined,
+  ) {
+    const authenticatedRequest = req as Request & {
+      user?: { id?: number };
+    };
+
+    return this.uploadsService.handleSingleUpload(file, req, {
+      module,
+      section,
+      uploadedByUserId: authenticatedRequest.user?.id,
+    });
   }
 
   @ApiOperation({ summary: 'Upload multiple image/video files (max 10)' })
@@ -141,8 +174,26 @@ export class UploadsController {
             format: 'binary',
           },
         },
+        module: {
+          type: 'string',
+          enum: ['TRAINING', 'POLICY', 'MANAGEMENT', 'FORMS'],
+        },
+        section: {
+          type: 'string',
+          enum: [
+            'RECIPE_TRAINING',
+            'RECIPE',
+            'MISE_EN_PLACE_SOP',
+            'RED_RULES',
+            'BLACK_RULES',
+            'SALLE_TOOLS',
+            'CUISINE_TOOLS',
+            'MEAT_DATE_FORM',
+            'CLEANING_FORM',
+          ],
+        },
       },
-      required: ['files'],
+      required: ['files', 'module', 'section'],
     },
   })
   @ApiBearerAuth()
@@ -181,8 +232,31 @@ export class UploadsController {
   uploadMultiple(
     @UploadedFiles() files: Express.Multer.File[],
     @Req() req: Request,
+    @Body('module') module: string | undefined,
+    @Body('section') section: string | undefined,
   ) {
-    return this.uploadsService.handleMultipleUpload(files, req);
+    const authenticatedRequest = req as Request & {
+      user?: { id?: number };
+    };
+
+    return this.uploadsService.handleMultipleUpload(files, req, {
+      module,
+      section,
+      uploadedByUserId: authenticatedRequest.user?.id,
+    });
+  }
+
+  @ApiOperation({ summary: 'List uploaded files with business classification' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('library')
+  listLibrary(
+    @Req() req: Request,
+    @Query('module') module: string | undefined,
+    @Query('section') section: string | undefined,
+    @Query('mediaType') mediaType: string | undefined,
+  ) {
+    return this.uploadsService.listLibrary(req, { module, section, mediaType });
   }
 
   @ApiOperation({ summary: 'Get uploaded file by category and file name' })

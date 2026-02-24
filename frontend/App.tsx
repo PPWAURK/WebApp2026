@@ -53,7 +53,12 @@ export default function App() {
     }
 
     if (activePage === 'training') {
-      return <TrainingPage text={language.text} />;
+      return (
+        <TrainingPage
+          text={language.text}
+          accessToken={auth.session.accessToken}
+        />
+      );
     }
 
     if (activePage === 'restaurantForms') {

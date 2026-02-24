@@ -1,6 +1,12 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import {
+  moduleOptions,
+  sectionsByModule,
+  type LibraryModule,
+  type LibrarySection,
+} from '../constants/documentTaxonomy';
 import type { AppText } from '../locales/translations';
 import {
   uploadSingleFile,
@@ -25,9 +31,22 @@ const PICKER_TYPES = [
 ];
 
 export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
+  const [selectedModule, setSelectedModule] = useState<LibraryModule>('TRAINING');
+  const [selectedSection, setSelectedSection] =
+    useState<LibrarySection>('RECIPE_TRAINING');
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpload, setLastUpload] = useState<UploadedFileResponse | null>(null);
+
+  const availableSections = sectionsByModule[selectedModule];
+
+  function onSelectModule(nextModule: LibraryModule) {
+    setSelectedModule(nextModule);
+    const firstSection = sectionsByModule[nextModule][0];
+    if (firstSection) {
+      setSelectedSection(firstSection.key as LibrarySection);
+    }
+  }
 
   async function handlePickAndUpload() {
     setError(null);
@@ -55,6 +74,9 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
         name: asset.name,
         mimeType: asset.mimeType ?? undefined,
         file: (asset as { file?: File }).file,
+      }, {
+        module: selectedModule,
+        section: selectedSection,
       });
       setLastUpload(uploadResponse);
     } catch (uploadError) {
@@ -68,6 +90,38 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
     <View style={styles.uploadCard}>
       <Text style={styles.uploadTitle}>{text.upload.title}</Text>
       <Text style={styles.uploadSubtitle}>{text.upload.subtitle}</Text>
+
+      <Text style={styles.uploadFieldTitle}>Module</Text>
+      <View style={styles.uploadChipWrap}>
+        {moduleOptions.map((moduleOption) => (
+          <Pressable
+            key={moduleOption.key}
+            style={[
+              styles.uploadChip,
+              selectedModule === moduleOption.key && styles.uploadChipActive,
+            ]}
+            onPress={() => onSelectModule(moduleOption.key as LibraryModule)}
+          >
+            <Text style={styles.uploadChipText}>{moduleOption.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <Text style={styles.uploadFieldTitle}>Section</Text>
+      <View style={styles.uploadChipWrap}>
+        {availableSections.map((sectionOption) => (
+          <Pressable
+            key={sectionOption.key}
+            style={[
+              styles.uploadChip,
+              selectedSection === sectionOption.key && styles.uploadChipActive,
+            ]}
+            onPress={() => setSelectedSection(sectionOption.key as LibrarySection)}
+          >
+            <Text style={styles.uploadChipText}>{sectionOption.label}</Text>
+          </Pressable>
+        ))}
+      </View>
 
       <Pressable
         style={[styles.primaryButton, isUploading && styles.buttonDisabled]}
@@ -87,6 +141,9 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
         <View style={styles.uploadResultBox}>
           <Text style={styles.uploadResultText}>
             {text.upload.success}: {lastUpload.originalName}
+          </Text>
+          <Text style={styles.uploadResultMeta}>
+            {lastUpload.module} / {lastUpload.section}
           </Text>
           <Text style={styles.uploadResultLink}>{lastUpload.fileUrl}</Text>
         </View>
