@@ -85,10 +85,6 @@ export const translations = {
           item4: 'Journal d actions correctives',
         },
       },
-      item1: 'Parcours accueil nouveaux employes',
-      item2: 'Modules salle: ouverture, encaissement',
-      item3: 'Modules cuisine: prep, cuisson, HACCP',
-      item4: 'Validation finale manager',
     },
     forms: {
       title: 'Tableaux de restaurant',
@@ -183,10 +179,6 @@ export const translations = {
           item4: '问题复盘与改进追踪记录',
         },
       },
-      item1: '新员工入职培训流程',
-      item2: '前厅模块：开店、收银',
-      item3: '后厨模块：备餐、出品、食品安全',
-      item4: '经理最终考核确认',
     },
     forms: {
       title: '店铺日常使用表格',

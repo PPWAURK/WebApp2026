@@ -10,9 +10,6 @@ export const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  keyboardArea: {
-    flex: 1,
-  },
   keyboardAreaContent: {
     flex: 1,
     zIndex: 1,

@@ -3,67 +3,38 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { basename, extname, join } from 'path';
+import {
+  UploadCategory,
+  UploadMediaType,
+  UploadModule,
+  UploadSection,
+  type Prisma,
+} from '@prisma/client';
+import { existsSync, mkdirSync } from 'fs';
+import { basename, join } from 'path';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   isSectionInModule,
   isUploadModule,
   isUploadSection,
-  type UploadModule,
-  type UploadSection,
 } from './upload-taxonomy';
-
-type UploadCategory = 'images' | 'videos' | 'documents';
-type UploadMediaType = 'image' | 'video' | 'document';
-
-type StoredUploadMetadata = {
-  fileName: string;
-  category: UploadCategory;
-  originalName: string;
-  mimeType: string;
-  size: number;
-  mediaType: UploadMediaType;
-  module: UploadModule;
-  section: UploadSection;
-  uploadedAt: string;
-  uploadedByUserId: number | null;
-};
 
 @Injectable()
 export class UploadsService {
   private readonly storageRoot =
     process.env.STORAGE_ROOT_PATH ?? join(process.cwd(), 'uploads');
   private readonly publicApiBaseUrl = process.env.PUBLIC_API_BASE_URL;
-  private readonly metadataFilePath = join(this.storageRoot, 'library-index.json');
   private readonly storageDirs: Record<UploadCategory, string> = {
-    images: join(this.storageRoot, 'images'),
-    videos: join(this.storageRoot, 'videos'),
-    documents: join(this.storageRoot, 'documents'),
+    [UploadCategory.images]: join(this.storageRoot, 'images'),
+    [UploadCategory.videos]: join(this.storageRoot, 'videos'),
+    [UploadCategory.documents]: join(this.storageRoot, 'documents'),
   };
 
-  constructor() {
+  constructor(private readonly prisma: PrismaService) {
     this.ensureStorageFolders();
   }
 
-  getDestinationByMimeType(mimeType: string) {
-    if (mimeType.startsWith('image/')) {
-      return this.storageDirs.images;
-    }
-
-    if (mimeType.startsWith('video/')) {
-      return this.storageDirs.videos;
-    }
-
-    return this.storageDirs.documents;
-  }
-
-  createStoredFileName(originalName: string) {
-    const fileExtension = extname(originalName || '').toLowerCase();
-    return `${randomUUID()}${fileExtension}`;
-  }
-
-  handleSingleUpload(
+  async handleSingleUpload(
     file: Express.Multer.File,
     req: { protocol: string; get: (name: string) => string | undefined },
     metadataInput: { module?: string; section?: string; uploadedByUserId?: number },
@@ -82,7 +53,8 @@ export class UploadsService {
     const category = this.getCategoryFromMimeType(file.mimetype);
     const mediaType = this.getMediaType(file.mimetype);
 
-    this.appendMetadata({
+    const createdDocument = await this.prisma.document.create({
+      data: {
       fileName: file.filename,
       category,
       originalName: file.originalname,
@@ -91,24 +63,24 @@ export class UploadsService {
       mediaType,
       module,
       section,
-      uploadedAt: new Date().toISOString(),
-      uploadedByUserId: metadataInput.uploadedByUserId ?? null,
+        uploadedByUserId: metadataInput.uploadedByUserId ?? null,
+      },
     });
 
     return {
-      fileName: file.filename,
-      category,
-      originalName: file.originalname,
-      mimeType: file.mimetype,
-      size: file.size,
-      fileUrl: this.buildFileUrl(req, category, file.filename),
-      mediaType,
-      module,
-      section,
+      fileName: createdDocument.fileName,
+      category: createdDocument.category,
+      originalName: createdDocument.originalName,
+      mimeType: createdDocument.mimeType,
+      size: createdDocument.size,
+      fileUrl: this.buildFileUrl(req, createdDocument.category, createdDocument.fileName),
+      mediaType: createdDocument.mediaType,
+      module: createdDocument.module,
+      section: createdDocument.section,
     };
   }
 
-  handleMultipleUpload(
+  async handleMultipleUpload(
     files: Express.Multer.File[],
     req: { protocol: string; get: (name: string) => string | undefined },
     metadataInput: { module?: string; section?: string; uploadedByUserId?: number },
@@ -117,14 +89,15 @@ export class UploadsService {
       throw new BadRequestException('At least one file is required');
     }
 
-    return files.map((file) => this.handleSingleUpload(file, req, metadataInput));
+    return Promise.all(
+      files.map((file) => this.handleSingleUpload(file, req, metadataInput)),
+    );
   }
 
-  listLibrary(
+  async listLibrary(
     req: { protocol: string; get: (name: string) => string | undefined },
     filters: { module?: string; section?: string; mediaType?: string },
   ) {
-    const entries = this.readMetadata();
     const moduleFilter = filters.module
       ? this.parseUploadModule(filters.module)
       : undefined;
@@ -135,23 +108,20 @@ export class UploadsService {
       ? this.parseMediaType(filters.mediaType)
       : undefined;
 
+    const where: Prisma.DocumentWhereInput = {
+      ...(moduleFilter ? { module: moduleFilter } : {}),
+      ...(sectionFilter ? { section: sectionFilter } : {}),
+      ...(mediaTypeFilter ? { mediaType: mediaTypeFilter } : {}),
+    };
+
+    const entries = await this.prisma.document.findMany({
+      where,
+      orderBy: {
+        uploadedAt: 'desc',
+      },
+    });
+
     return entries
-      .filter((entry) => {
-        if (moduleFilter && entry.module !== moduleFilter) {
-          return false;
-        }
-
-        if (sectionFilter && entry.section !== sectionFilter) {
-          return false;
-        }
-
-        if (mediaTypeFilter && entry.mediaType !== mediaTypeFilter) {
-          return false;
-        }
-
-        return true;
-      })
-      .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt))
       .map((entry) => ({
         ...entry,
         fileUrl: this.buildFileUrl(req, entry.category, entry.fileName),
@@ -186,9 +156,9 @@ export class UploadsService {
 
   private parseCategory(category: string): UploadCategory {
     if (
-      category === 'images' ||
-      category === 'videos' ||
-      category === 'documents'
+      category === UploadCategory.images ||
+      category === UploadCategory.videos ||
+      category === UploadCategory.documents
     ) {
       return category;
     }
@@ -201,7 +171,7 @@ export class UploadsService {
       throw new BadRequestException('Invalid module');
     }
 
-    return module;
+    return module as UploadModule;
   }
 
   private parseUploadSection(section: string | undefined): UploadSection {
@@ -209,11 +179,15 @@ export class UploadsService {
       throw new BadRequestException('Invalid section');
     }
 
-    return section;
+    return section as UploadSection;
   }
 
   private parseMediaType(mediaType: string): UploadMediaType {
-    if (mediaType === 'image' || mediaType === 'video' || mediaType === 'document') {
+    if (
+      mediaType === UploadMediaType.image ||
+      mediaType === UploadMediaType.video ||
+      mediaType === UploadMediaType.document
+    ) {
       return mediaType;
     }
 
@@ -222,54 +196,26 @@ export class UploadsService {
 
   private getCategoryFromMimeType(mimeType: string): UploadCategory {
     if (mimeType.startsWith('image/')) {
-      return 'images';
+      return UploadCategory.images;
     }
 
     if (mimeType.startsWith('video/')) {
-      return 'videos';
+      return UploadCategory.videos;
     }
 
-    return 'documents';
+    return UploadCategory.documents;
   }
 
   private getMediaType(mimeType: string): UploadMediaType {
     if (mimeType.startsWith('image/')) {
-      return 'image';
+      return UploadMediaType.image;
     }
 
     if (mimeType.startsWith('video/')) {
-      return 'video';
+      return UploadMediaType.video;
     }
 
-    return 'document';
-  }
-
-  private appendMetadata(entry: StoredUploadMetadata) {
-    const entries = this.readMetadata();
-    entries.push(entry);
-    this.writeMetadata(entries);
-  }
-
-  private readMetadata(): StoredUploadMetadata[] {
-    if (!existsSync(this.metadataFilePath)) {
-      return [];
-    }
-
-    try {
-      const raw = readFileSync(this.metadataFilePath, 'utf-8');
-      const parsed = JSON.parse(raw) as unknown;
-      if (!Array.isArray(parsed)) {
-        return [];
-      }
-
-      return parsed as StoredUploadMetadata[];
-    } catch {
-      return [];
-    }
-  }
-
-  private writeMetadata(entries: StoredUploadMetadata[]) {
-    writeFileSync(this.metadataFilePath, JSON.stringify(entries, null, 2), 'utf-8');
+    return UploadMediaType.document;
   }
 
   private ensureStorageFolders() {

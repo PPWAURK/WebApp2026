@@ -21,8 +21,26 @@ model User {
   role          Role          @default(EMPLOYEE)
   isOnProbation Boolean       @default(false)
   workplaceRole WorkplaceRole @default(BOTH)
+  documents     Document[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+}
+
+model Document {
+  id               Int             @id @default(autoincrement())
+  fileName         String          @unique
+  category         UploadCategory
+  originalName     String
+  mimeType         String
+  size             Int
+  mediaType        UploadMediaType
+  module           UploadModule
+  section          UploadSection
+  uploadedAt       DateTime        @default(now())
+  uploadedByUserId Int?
+  uploadedBy       User?           @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([module, section, mediaType, uploadedAt])
 }
 
 enum Role {
@@ -35,4 +53,35 @@ enum WorkplaceRole {
   SALLE
   CUISINE
   BOTH
+}
+
+enum UploadCategory {
+  images
+  videos
+  documents
+}
+
+enum UploadMediaType {
+  image
+  video
+  document
+}
+
+enum UploadModule {
+  TRAINING
+  POLICY
+  MANAGEMENT
+  FORMS
+}
+
+enum UploadSection {
+  RECIPE_TRAINING
+  RECIPE
+  MISE_EN_PLACE_SOP
+  RED_RULES
+  BLACK_RULES
+  SALLE_TOOLS
+  CUISINE_TOOLS
+  MEAT_DATE_FORM
+  CLEANING_FORM
 }
