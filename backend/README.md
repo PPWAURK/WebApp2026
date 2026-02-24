@@ -47,6 +47,10 @@ npm run start:dev
 
 API docs are available on `http://localhost:3000/docs`.
 
+When your reverse proxy keeps a path prefix (e.g. `/backend2`) without rewrite,
+set `API_PREFIX="backend2"` so backend routes are exposed as
+`/backend2/auth/*`, `/backend2/uploads/*`, etc.
+
 ## Upload service (images and videos)
 
 Authenticated endpoints:
@@ -60,9 +64,10 @@ Public file access:
 
 Rules:
 
-- Accepted MIME types: `image/*` and `video/*`
+- Accepted MIME types: `image/*`, `video/*` and common documents (pdf, doc, docx, xls, xlsx, txt)
 - Max file size: `50MB` per file
 - `STORAGE_ROOT_PATH` controls where files are physically stored
+- `PUBLIC_API_BASE_URL` controls generated public URLs (useful behind reverse proxy path like `/backend2`)
 - With `STORAGE_ROOT_PATH="/data/storage"`, uploads are saved in:
   - `/data/storage/images`
   - `/data/storage/videos`

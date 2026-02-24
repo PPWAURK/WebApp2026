@@ -40,6 +40,15 @@ export const translations = {
       yes: 'Oui',
       no: 'Non',
       logout: 'Se deconnecter',
+      uploadPermission: 'Seuls les admins peuvent publier des fichiers.',
+    },
+    upload: {
+      title: 'Publication de medias',
+      subtitle: 'Upload images, videos et fichiers operationnels.',
+      cta: 'Choisir un fichier et uploader',
+      uploading: 'Upload en cours...',
+      success: 'Upload reussi',
+      error: 'Impossible de televerser le fichier',
     },
     training: {
       title: "ZHAO's Formation",
@@ -99,6 +108,15 @@ export const translations = {
       yes: '是',
       no: '否',
       logout: '退出登录',
+      uploadPermission: '仅管理员可以上传文件。',
+    },
+    upload: {
+      title: '媒体上传',
+      subtitle: '可上传图片、视频和门店文档。',
+      cta: '选择文件并上传',
+      uploading: '上传中...',
+      success: '上传成功',
+      error: '文件上传失败',
     },
     training: {
       title: '店铺培训',

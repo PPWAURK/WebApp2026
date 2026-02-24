@@ -55,6 +55,23 @@ function createStoredFileName(originalName: string) {
   return `${randomUUID()}${fileExtension}`;
 }
 
+function isAllowedMimeType(mimeType: string) {
+  if (mimeType.startsWith('image/') || mimeType.startsWith('video/')) {
+    return true;
+  }
+
+  const allowedDocumentMimeTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+  ];
+
+  return allowedDocumentMimeTypes.includes(mimeType);
+}
+
 @ApiTags('uploads')
 @Controller('uploads')
 export class UploadsController {
@@ -93,12 +110,11 @@ export class UploadsController {
         fileSize: UPLOAD_MAX_FILE_SIZE,
       },
       fileFilter: (_req, file, callback) => {
-        if (
-          !file.mimetype.startsWith('image/') &&
-          !file.mimetype.startsWith('video/')
-        ) {
+        if (!isAllowedMimeType(file.mimetype)) {
           callback(
-            new BadRequestException('Only image and video files are allowed'),
+            new BadRequestException(
+              'Only image, video and document files are allowed',
+            ),
             false,
           );
           return;
@@ -148,12 +164,11 @@ export class UploadsController {
         fileSize: UPLOAD_MAX_FILE_SIZE,
       },
       fileFilter: (_req, file, callback) => {
-        if (
-          !file.mimetype.startsWith('image/') &&
-          !file.mimetype.startsWith('video/')
-        ) {
+        if (!isAllowedMimeType(file.mimetype)) {
           callback(
-            new BadRequestException('Only image and video files are allowed'),
+            new BadRequestException(
+              'Only image, video and document files are allowed',
+            ),
             false,
           );
           return;

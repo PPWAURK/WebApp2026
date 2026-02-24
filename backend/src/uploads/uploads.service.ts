@@ -13,6 +13,7 @@ type UploadCategory = 'images' | 'videos' | 'documents';
 export class UploadsService {
   private readonly storageRoot =
     process.env.STORAGE_ROOT_PATH ?? join(process.cwd(), 'uploads');
+  private readonly publicApiBaseUrl = process.env.PUBLIC_API_BASE_URL;
   private readonly storageDirs: Record<UploadCategory, string> = {
     images: join(this.storageRoot, 'images'),
     videos: join(this.storageRoot, 'videos'),
@@ -59,7 +60,7 @@ export class UploadsService {
         this.getCategoryFromMimeType(file.mimetype),
         file.filename,
       ),
-      mediaType: file.mimetype.startsWith('video/') ? 'video' : 'image',
+      mediaType: this.getMediaType(file.mimetype),
     };
   }
 
@@ -91,6 +92,11 @@ export class UploadsService {
     category: UploadCategory,
     fileName: string,
   ) {
+    if (this.publicApiBaseUrl) {
+      const normalizedBaseUrl = this.publicApiBaseUrl.replace(/\/$/, '');
+      return `${normalizedBaseUrl}/uploads/${category}/${fileName}`;
+    }
+
     const host = req.get('host');
     return `${req.protocol}://${host}/uploads/${category}/${fileName}`;
   }
@@ -117,6 +123,18 @@ export class UploadsService {
     }
 
     return 'documents';
+  }
+
+  private getMediaType(mimeType: string): 'image' | 'video' | 'document' {
+    if (mimeType.startsWith('image/')) {
+      return 'image';
+    }
+
+    if (mimeType.startsWith('video/')) {
+      return 'video';
+    }
+
+    return 'document';
   }
 
   private ensureStorageFolders() {

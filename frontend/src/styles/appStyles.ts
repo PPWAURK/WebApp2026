@@ -188,6 +188,47 @@ export const styles = StyleSheet.create({
     borderColor: '#d3e4df',
     gap: 12,
   },
+  stackCardWrap: {
+    gap: 14,
+  },
+  uploadCard: {
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 22,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#d3e4df',
+    gap: 10,
+  },
+  uploadTitle: {
+    color: '#183632',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  uploadSubtitle: {
+    color: '#48645f',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  uploadResultBox: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#c7ddd7',
+    backgroundColor: '#eef7f4',
+    padding: 10,
+    gap: 6,
+  },
+  uploadResultText: {
+    color: '#22514a',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  uploadResultLink: {
+    color: '#0f766e',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+  },
   title: {
     color: '#183632',
     fontFamily: 'Manrope_700Bold',

@@ -5,6 +5,11 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const apiPrefix = (process.env.API_PREFIX ?? '').replace(/^\/+|\/+$/g, '');
+
+  if (apiPrefix) {
+    app.setGlobalPrefix(apiPrefix);
+  }
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -29,7 +34,8 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+  const docsPath = apiPrefix ? `${apiPrefix}/docs` : 'docs';
+  SwaggerModule.setup(docsPath, app, document);
 
   await app.listen(process.env.PORT ?? 3000);
 }

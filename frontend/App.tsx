@@ -63,6 +63,7 @@ export default function App() {
     return (
       <SessionCard
         user={auth.session.user}
+        accessToken={auth.session.accessToken}
         text={language.text}
         onLogout={() => void auth.logout()}
       />
