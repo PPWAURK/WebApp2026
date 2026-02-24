@@ -51,6 +51,8 @@ When your reverse proxy keeps a path prefix (e.g. `/backend2`) without rewrite,
 set `API_PREFIX="backend2"` so backend routes are exposed as
 `/backend2/auth/*`, `/backend2/uploads/*`, etc.
 
+For local development, keep `API_PREFIX` empty and `PUBLIC_API_BASE_URL` empty.
+
 ## Upload service (images and videos)
 
 Authenticated endpoints:
