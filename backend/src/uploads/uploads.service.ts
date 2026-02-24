@@ -11,7 +11,7 @@ import {
   type Prisma,
 } from '@prisma/client';
 import { existsSync, mkdirSync } from 'fs';
-import { basename, join } from 'path';
+import { basename, isAbsolute, join, resolve } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   isSectionInModule,
@@ -21,8 +21,9 @@ import {
 
 @Injectable()
 export class UploadsService {
-  private readonly storageRoot =
-    process.env.STORAGE_ROOT_PATH ?? join(process.cwd(), 'uploads');
+  private readonly storageRoot = this.resolveStorageRoot(
+    process.env.STORAGE_ROOT_PATH,
+  );
   private readonly publicApiBaseUrl = process.env.PUBLIC_API_BASE_URL;
   private readonly storageDirs: Record<UploadCategory, string> = {
     [UploadCategory.images]: join(this.storageRoot, 'images'),
@@ -52,12 +53,13 @@ export class UploadsService {
 
     const category = this.getCategoryFromMimeType(file.mimetype);
     const mediaType = this.getMediaType(file.mimetype);
+    const normalizedOriginalName = this.normalizeOriginalName(file.originalname);
 
     const createdDocument = await this.prisma.document.create({
       data: {
       fileName: file.filename,
       category,
-      originalName: file.originalname,
+      originalName: normalizedOriginalName,
       mimeType: file.mimetype,
       size: file.size,
       mediaType,
@@ -225,5 +227,28 @@ export class UploadsService {
         mkdirSync(folder, { recursive: true });
       }
     }
+  }
+
+  private resolveStorageRoot(storageRootPath: string | undefined) {
+    if (!storageRootPath) {
+      return join(process.cwd(), 'uploads');
+    }
+
+    return isAbsolute(storageRootPath)
+      ? storageRootPath
+      : resolve(process.cwd(), storageRootPath);
+  }
+
+  private normalizeOriginalName(originalName: string) {
+    if (/[\u3400-\u9FFF]/.test(originalName)) {
+      return originalName;
+    }
+
+    const decodedName = Buffer.from(originalName, 'latin1').toString('utf8');
+    if (/[\u3400-\u9FFF]/.test(decodedName)) {
+      return decodedName;
+    }
+
+    return originalName;
   }
 }
