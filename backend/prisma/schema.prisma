@@ -18,6 +18,7 @@ model User {
   email         String        @unique
   passwordHash  String
   name          String?
+  profilePhoto  String?       @map("profile_photo") @db.Text
   restaurantId  Int?
   restaurant    Restaurant?   @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
   role          Role          @default(EMPLOYEE)

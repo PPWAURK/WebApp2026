@@ -1,5 +1,5 @@
 import { API_URL } from '../constants/config';
-import type { Restaurant, TrainingSection } from '../types/auth';
+import type { Restaurant, TrainingSection, User } from '../types/auth';
 
 export type TrainingAccessUser = {
   id: number;
@@ -155,4 +155,48 @@ export async function updateUserManagerRole(
   }
 
   return data as TrainingAccessUser;
+}
+
+type PickedFile = {
+  uri: string;
+  name: string;
+  mimeType?: string;
+  file?: File;
+};
+
+export async function uploadMyProfilePhoto(
+  token: string,
+  file: PickedFile,
+): Promise<User> {
+  const formData = new FormData();
+
+  if (file.file) {
+    formData.append('file', file.file);
+  } else {
+    formData.append('file', {
+      uri: file.uri,
+      name: file.name,
+      type: file.mimeType ?? 'image/jpeg',
+    } as never);
+  }
+
+  const response = await fetch(`${API_URL}/users/me/profile-photo`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  const data = (await response.json()) as User | { message?: string | string[] };
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to upload profile photo';
+    throw new Error(message);
+  }
+
+  return data as User;
 }

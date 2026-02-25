@@ -7,7 +7,7 @@ import {
   persistSession,
 } from '../services/sessionStorage';
 import type { AppText } from '../locales/translations';
-import type { AuthMode, AuthResponse, Restaurant } from '../types/auth';
+import type { AuthMode, AuthResponse, Restaurant, User } from '../types/auth';
 
 export function useAuth() {
   const [isLoadingSession, setIsLoadingSession] = useState(true);
@@ -114,6 +114,22 @@ export function useAuth() {
     setMode((currentMode) => (currentMode === 'login' ? 'register' : 'login'));
   }
 
+  async function updateSessionUser(user: User) {
+    setSession((currentSession) => {
+      if (!currentSession) {
+        return currentSession;
+      }
+
+      const nextSession = {
+        ...currentSession,
+        user,
+      };
+
+      void persistSession(nextSession, rememberMe);
+      return nextSession;
+    });
+  }
+
   return {
     isLoadingSession,
     isSubmitting,
@@ -134,5 +150,6 @@ export function useAuth() {
     submitAuth,
     logout,
     toggleMode,
+    updateSessionUser,
   };
 }

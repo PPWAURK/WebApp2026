@@ -9,12 +9,36 @@ import {
   Patch,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { randomUUID } from 'crypto';
+import { existsSync, mkdirSync } from 'fs';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, isAbsolute, join, resolve } from 'path';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UsersService } from './users.service';
+
+const STORAGE_ROOT_PATH =
+  process.env.STORAGE_ROOT_PATH && isAbsolute(process.env.STORAGE_ROOT_PATH)
+    ? process.env.STORAGE_ROOT_PATH
+    : resolve(process.cwd(), process.env.STORAGE_ROOT_PATH ?? 'uploads');
+const PROFILE_IMAGE_DIR = join(STORAGE_ROOT_PATH, 'images');
+
+function ensureImageDirectoryExists() {
+  if (!existsSync(PROFILE_IMAGE_DIR)) {
+    mkdirSync(PROFILE_IMAGE_DIR, { recursive: true });
+  }
+}
+
+function createStoredFileName(originalName: string) {
+  const fileExtension = extname(originalName || '').toLowerCase();
+  return `${randomUUID()}${fileExtension}`;
+}
 
 type AuthenticatedRequest = Request & {
   user?: {
@@ -136,5 +160,44 @@ export class UsersController {
       restaurantId: restaurantIdRaw,
       actorId: req.user.id,
     });
+  }
+
+  @ApiOperation({ summary: 'Upload profile photo for current user' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/profile-photo')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (_req, _file, callback) => {
+          ensureImageDirectoryExists();
+          callback(null, PROFILE_IMAGE_DIR);
+        },
+        filename: (_req, file, callback) => {
+          callback(null, createStoredFileName(file.originalname));
+        },
+      }),
+      fileFilter: (_req, file, callback) => {
+        if (!file.mimetype.startsWith('image/')) {
+          callback(new BadRequestException('Only image files are allowed'), false);
+          return;
+        }
+
+        callback(null, true);
+      },
+      limits: {
+        fileSize: 10 * 1024 * 1024,
+      },
+    }),
+  )
+  updateOwnProfilePhoto(
+    @Req() req: AuthenticatedRequest,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!req.user) {
+      throw new ForbiddenException('Unauthenticated request');
+    }
+
+    return this.usersService.updateOwnProfilePhoto(req.user.id, file, req);
   }
 }

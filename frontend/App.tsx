@@ -17,6 +17,7 @@ import { HeaderDrawer } from './src/components/HeaderDrawer';
 import { OrderHistoryPage } from './src/components/OrderHistoryPage';
 import { OrderRecapPage } from './src/components/OrderRecapPage';
 import { OrdersPage } from './src/components/OrdersPage';
+import { ProfilePage } from './src/components/ProfilePage';
 import { RestaurantFormsPage } from './src/components/RestaurantFormsPage';
 import { SessionCard } from './src/components/SessionCard';
 import { SupplierManagementPage } from './src/components/SupplierManagementPage';
@@ -47,6 +48,8 @@ export default function App() {
   const [orderHistory, setOrderHistory] = useState<OrderSummary[]>([]);
   const [isLoadingOrderHistory, setIsLoadingOrderHistory] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [isUploadingProfilePhoto, setIsUploadingProfilePhoto] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [latestCreatedOrder, setLatestCreatedOrder] = useState<{
     id: number;
     number: string;
@@ -88,6 +91,8 @@ export default function App() {
       setDeliveryDate(getTodayDateString());
       setOrderHistory([]);
       setIsLoadingOrderHistory(false);
+      setIsUploadingProfilePhoto(false);
+      setProfileError(null);
       setLatestCreatedOrder(null);
       return;
     }
@@ -201,6 +206,29 @@ export default function App() {
           text={language.text}
           accessToken={auth.session.accessToken}
           currentUser={auth.session.user}
+        />
+      );
+    }
+
+    if (activePage === 'profile') {
+      return (
+        <ProfilePage
+          text={language.text}
+          user={auth.session.user}
+          accessToken={auth.session.accessToken}
+          isUploadingPhoto={isUploadingProfilePhoto}
+          error={profileError}
+          onUploadStart={() => {
+            setProfileError(null);
+            setIsUploadingProfilePhoto(true);
+          }}
+          onUploadFinish={() => {
+            setIsUploadingProfilePhoto(false);
+          }}
+          onUploadError={setProfileError}
+          onUserUpdate={(nextUser) => {
+            void auth.updateSessionUser(nextUser);
+          }}
         />
       );
     }

@@ -12,6 +12,8 @@ import {
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private readonly publicApiBaseUrl = process.env.PUBLIC_API_BASE_URL;
+
   private ensureRoleScope(actor: {
     actorRole: string;
     actorRestaurantId: number | null;
@@ -36,6 +38,7 @@ export class UsersService {
         id: true,
         email: true,
         name: true,
+        profilePhoto: true,
         restaurantId: true,
         restaurant: {
           select: {
@@ -365,5 +368,68 @@ export class UsersService {
       ...updatedUser,
       trainingAccess: this.normalizeTrainingAccess(updatedUser.trainingAccess),
     };
+  }
+
+  async updateOwnProfilePhoto(
+    userId: number,
+    file: Express.Multer.File,
+    req: { protocol: string; get: (name: string) => string | undefined },
+  ) {
+    if (!file) {
+      throw new BadRequestException('A file is required');
+    }
+
+    const existing = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('User not found');
+    }
+
+    const profilePhoto = this.buildProfilePhotoUrl(req, file.filename);
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        profilePhoto,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        profilePhoto: true,
+        role: true,
+        isOnProbation: true,
+        workplaceRole: true,
+        trainingAccess: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+          },
+        },
+      },
+    });
+
+    return {
+      ...updated,
+      trainingAccess: this.normalizeTrainingAccess(updated.trainingAccess),
+    };
+  }
+
+  private buildProfilePhotoUrl(
+    req: { protocol: string; get: (name: string) => string | undefined },
+    fileName: string,
+  ) {
+    if (this.publicApiBaseUrl) {
+      const normalizedBaseUrl = this.publicApiBaseUrl.replace(/\/$/, '');
+      return `${normalizedBaseUrl}/uploads/images/${fileName}`;
+    }
+
+    const host = req.get('host');
+    return `${req.protocol}://${host}/uploads/images/${fileName}`;
   }
 }

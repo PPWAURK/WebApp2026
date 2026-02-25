@@ -23,6 +23,7 @@ export type User = {
   id: number;
   email: string;
   name: string | null;
+  profilePhoto: string | null;
   role: Role;
   isOnProbation: boolean;
   workplaceRole: WorkplaceRole;

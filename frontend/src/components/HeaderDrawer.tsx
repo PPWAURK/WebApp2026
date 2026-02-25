@@ -22,6 +22,7 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
   const translateX = useRef(new Animated.Value(-280)).current;
   const menuItems: Array<{ key: MenuPage; label: string }> = [
     { key: 'dashboard', label: props.text.drawer.dashboard },
+    { key: 'profile', label: props.text.drawer.profile },
     { key: 'training', label: props.text.drawer.training },
     { key: 'restaurantForms', label: props.text.drawer.restaurantForms },
     ...(props.currentUser.role === 'ADMIN' || props.currentUser.role === 'MANAGER'

@@ -350,6 +350,35 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 12,
   },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  profileAvatarFrame: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f3dcdd',
+    borderWidth: 1,
+    borderColor: '#dfb0b2',
+  },
+  profileAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  profileAvatarFallback: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 28,
+  },
+  profileHeaderMeta: {
+    flex: 1,
+    gap: 4,
+  },
   productInfoRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

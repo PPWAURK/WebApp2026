@@ -77,6 +77,7 @@ export class AuthService {
     id: number;
     email: string;
     name: string | null;
+    profilePhoto: string | null;
     role: string;
     isOnProbation: boolean;
     workplaceRole: string;
@@ -102,6 +103,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        profilePhoto: user.profilePhoto,
         role: user.role,
         isOnProbation: user.isOnProbation,
         workplaceRole: user.workplaceRole,
