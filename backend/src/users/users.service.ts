@@ -12,6 +12,23 @@ import {
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private ensureRoleScope(actor: {
+    actorRole: string;
+    actorRestaurantId: number | null;
+  }) {
+    if (actor.actorRole === Role.ADMIN) {
+      return;
+    }
+
+    if (actor.actorRole !== Role.MANAGER) {
+      throw new BadRequestException('Only ADMIN and MANAGER are allowed');
+    }
+
+    if (!actor.actorRestaurantId) {
+      throw new BadRequestException('Manager must be assigned to a restaurant');
+    }
+  }
+
   findById(id: number) {
     return this.prisma.user.findUnique({
       where: { id },
@@ -43,13 +60,29 @@ export class UsersService {
     });
   }
 
-  async listUsersTrainingAccess(restaurantId?: number) {
+  async listUsersTrainingAccess(
+    restaurantId: number | undefined,
+    actor: {
+      actorId: number;
+      actorRole: string;
+      actorRestaurantId: number | null;
+    },
+  ) {
+    this.ensureRoleScope(actor);
+
+    const effectiveRestaurantId =
+      actor.actorRole === Role.ADMIN ? restaurantId : actor.actorRestaurantId;
+
     const users = await this.prisma.user.findMany({
       where: {
-        role: {
-          not: Role.ADMIN,
-        },
-        ...(restaurantId ? { restaurantId } : {}),
+        ...(actor.actorRole === Role.ADMIN
+          ? {
+              role: {
+                not: Role.ADMIN,
+              },
+            }
+          : { role: Role.EMPLOYEE }),
+        ...(effectiveRestaurantId ? { restaurantId: effectiveRestaurantId } : {}),
       },
       orderBy: {
         createdAt: 'asc',
@@ -76,7 +109,17 @@ export class UsersService {
     }));
   }
 
-  async updateTrainingAccess(userId: number, sections: string[] | undefined) {
+  async updateTrainingAccess(
+    userId: number,
+    sections: string[] | undefined,
+    actor: {
+      actorId: number;
+      actorRole: string;
+      actorRestaurantId: number | null;
+    },
+  ) {
+    this.ensureRoleScope(actor);
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -92,6 +135,17 @@ export class UsersService {
 
     if (user.role === Role.ADMIN) {
       throw new BadRequestException('Cannot update ADMIN training access');
+    }
+
+    if (actor.actorRole === Role.MANAGER && user.role !== Role.EMPLOYEE) {
+      throw new BadRequestException('Manager can only update EMPLOYEE training access');
+    }
+
+    if (
+      actor.actorRole === Role.MANAGER &&
+      user.restaurantId !== actor.actorRestaurantId
+    ) {
+      throw new BadRequestException('Manager can only update users in own restaurant');
     }
 
     if (!sections) {
@@ -220,6 +274,75 @@ export class UsersService {
       where: { id: userId },
       data: {
         restaurantId,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        restaurantId: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+          },
+        },
+      },
+    });
+  }
+
+  async updateManagerRole(
+    userId: number,
+    params: {
+      isManager: boolean;
+      restaurantId?: number;
+      actorId: number;
+    },
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        restaurantId: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role === Role.ADMIN) {
+      throw new BadRequestException('Cannot change ADMIN role here');
+    }
+
+    if (params.actorId === userId) {
+      throw new BadRequestException('Admin cannot edit own role in this endpoint');
+    }
+
+    const nextRestaurantId = params.restaurantId ?? user.restaurantId;
+
+    if (params.isManager && !nextRestaurantId) {
+      throw new BadRequestException('Manager must be assigned to a restaurant');
+    }
+
+    if (nextRestaurantId) {
+      const restaurant = await this.prisma.restaurant.findUnique({
+        where: { id: nextRestaurantId },
+        select: { id: true },
+      });
+
+      if (!restaurant) {
+        throw new NotFoundException('Restaurant not found');
+      }
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        role: params.isManager ? Role.MANAGER : Role.EMPLOYEE,
+        ...(params.restaurantId ? { restaurantId: params.restaurantId } : {}),
       },
       select: {
         id: true,

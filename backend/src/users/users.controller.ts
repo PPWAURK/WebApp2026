@@ -20,6 +20,7 @@ type AuthenticatedRequest = Request & {
   user?: {
     id: number;
     role: string;
+    restaurantId: number | null;
   };
 };
 
@@ -36,8 +37,10 @@ export class UsersController {
     @Req() req: AuthenticatedRequest,
     @Query('restaurantId') restaurantIdRaw: string | undefined,
   ) {
-    if (req.user?.role !== 'ADMIN') {
-      throw new ForbiddenException('Admin only');
+    const actor = req.user;
+
+    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
+      throw new ForbiddenException('Only ADMIN and MANAGER can access this resource');
     }
 
     const restaurantId = restaurantIdRaw ? Number(restaurantIdRaw) : undefined;
@@ -49,7 +52,11 @@ export class UsersController {
       throw new BadRequestException('restaurantId must be a positive integer');
     }
 
-    return this.usersService.listUsersTrainingAccess(restaurantId);
+    return this.usersService.listUsersTrainingAccess(restaurantId, {
+      actorId: actor.id,
+      actorRole: actor.role,
+      actorRestaurantId: actor.restaurantId,
+    });
   }
 
   @ApiOperation({ summary: 'Update one user training section access' })
@@ -61,11 +68,17 @@ export class UsersController {
     @Param('id', ParseIntPipe) userId: number,
     @Body('sections') sections: string[] | undefined,
   ) {
-    if (req.user?.role !== 'ADMIN') {
-      throw new ForbiddenException('Admin only');
+    const actor = req.user;
+
+    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
+      throw new ForbiddenException('Only ADMIN and MANAGER can access this resource');
     }
 
-    return this.usersService.updateTrainingAccess(userId, sections);
+    return this.usersService.updateTrainingAccess(userId, sections, {
+      actorId: actor.id,
+      actorRole: actor.role,
+      actorRestaurantId: actor.restaurantId,
+    });
   }
 
   @ApiOperation({ summary: 'List employees not yet assigned to any restaurant' })
@@ -94,5 +107,34 @@ export class UsersController {
     }
 
     return this.usersService.assignUserRestaurant(userId, restaurantId);
+  }
+
+  @ApiOperation({ summary: 'Set or unset manager role for one user (admin only)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/manager-role')
+  updateManagerRole(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) userId: number,
+    @Body('isManager') isManager: boolean | undefined,
+    @Body('restaurantId') restaurantIdRaw: number | undefined,
+  ) {
+    if (req.user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    if (typeof isManager !== 'boolean') {
+      throw new BadRequestException('isManager must be a boolean');
+    }
+
+    if (restaurantIdRaw !== undefined && (!Number.isInteger(restaurantIdRaw) || restaurantIdRaw <= 0)) {
+      throw new BadRequestException('restaurantId must be a positive integer');
+    }
+
+    return this.usersService.updateManagerRole(userId, {
+      isManager,
+      restaurantId: restaurantIdRaw,
+      actorId: req.user.id,
+    });
   }
 }

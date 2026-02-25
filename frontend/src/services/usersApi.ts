@@ -127,3 +127,32 @@ export async function assignUserRestaurant(
 
   return data as { id: number };
 }
+
+export async function updateUserManagerRole(
+  token: string,
+  userId: number,
+  payload: { isManager: boolean; restaurantId?: number },
+): Promise<TrainingAccessUser> {
+  const response = await fetch(`${API_URL}/users/${userId}/manager-role`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await response.json()) as
+    | TrainingAccessUser
+    | { message?: string | string[] };
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to update manager role';
+    throw new Error(message);
+  }
+
+  return data as TrainingAccessUser;
+}

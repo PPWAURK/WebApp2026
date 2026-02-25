@@ -41,11 +41,13 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         </Pressable>
       </View>
 
-      {user.role === 'ADMIN' ? (
+      {user.role === 'ADMIN' || user.role === 'MANAGER' ? (
         <>
-          <AdminRestaurantPanel accessToken={accessToken} />
-          <AdminTrainingAccessPanel accessToken={accessToken} />
-          <AdminUploadPanel accessToken={accessToken} text={text} />
+          {user.role === 'ADMIN' ? <AdminRestaurantPanel accessToken={accessToken} /> : null}
+          <AdminTrainingAccessPanel accessToken={accessToken} currentUser={user} />
+          {user.role === 'ADMIN' ? (
+            <AdminUploadPanel accessToken={accessToken} text={text} />
+          ) : null}
         </>
       ) : (
         <View style={styles.card}>

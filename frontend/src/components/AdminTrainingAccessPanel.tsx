@@ -4,14 +4,16 @@ import { sectionsByModule } from '../constants/documentTaxonomy';
 import { fetchRestaurants } from '../services/restaurantsApi';
 import {
   fetchTrainingAccessUsers,
+  updateUserManagerRole,
   updateUserTrainingAccess,
   type TrainingAccessUser,
 } from '../services/usersApi';
 import { styles } from '../styles/appStyles';
-import type { Restaurant, TrainingSection } from '../types/auth';
+import type { Restaurant, TrainingSection, User } from '../types/auth';
 
 type AdminTrainingAccessPanelProps = {
   accessToken: string;
+  currentUser: User;
 };
 
 const allSections = Object.values(sectionsByModule)
@@ -21,7 +23,12 @@ const allSections = Object.values(sectionsByModule)
     label: option.label,
   }));
 
-export function AdminTrainingAccessPanel({ accessToken }: AdminTrainingAccessPanelProps) {
+export function AdminTrainingAccessPanel({
+  accessToken,
+  currentUser,
+}: AdminTrainingAccessPanelProps) {
+  const canManageRoles = currentUser.role === 'ADMIN';
+  const canFilterRestaurant = currentUser.role === 'ADMIN';
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(
     null,
@@ -32,6 +39,9 @@ export function AdminTrainingAccessPanel({ accessToken }: AdminTrainingAccessPan
   const [draftSections, setDraftSections] = useState<TrainingSection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingRoleUserId, setIsUpdatingRoleUserId] = useState<number | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,37 +49,49 @@ export function AdminTrainingAccessPanel({ accessToken }: AdminTrainingAccessPan
     setIsLoading(true);
     setError(null);
 
-    void fetchRestaurants()
-      .then((result) => {
-        if (!isActive) {
-          return;
-        }
+    if (canFilterRestaurant) {
+      void fetchRestaurants()
+        .then((result) => {
+          if (!isActive) {
+            return;
+          }
 
-        setRestaurants(result);
-        const firstRestaurant = result[0];
-        if (firstRestaurant) {
-          setSelectedRestaurantId(firstRestaurant.id);
-        }
-      })
-      .catch((requestError) => {
-        if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : 'Cannot load restaurants',
-          );
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      });
+          setRestaurants(result);
+          const firstRestaurant = result[0];
+          if (firstRestaurant) {
+            setSelectedRestaurantId(firstRestaurant.id);
+          }
+        })
+        .catch((requestError) => {
+          if (isActive) {
+            setError(
+              requestError instanceof Error
+                ? requestError.message
+                : 'Cannot load restaurants',
+            );
+          }
+        })
+        .finally(() => {
+          if (isActive) {
+            setIsLoading(false);
+          }
+        });
+    } else {
+      const managerRestaurant = currentUser.restaurant;
+      if (!managerRestaurant) {
+        setError('Manager must be assigned to a restaurant');
+        setIsLoading(false);
+      } else {
+        setRestaurants([managerRestaurant]);
+        setSelectedRestaurantId(managerRestaurant.id);
+        setIsLoading(false);
+      }
+    }
 
     return () => {
       isActive = false;
     };
-  }, [accessToken]);
+  }, [accessToken, canFilterRestaurant, currentUser.restaurant]);
 
   useEffect(() => {
     if (!selectedRestaurantId) {
@@ -91,8 +113,13 @@ export function AdminTrainingAccessPanel({ accessToken }: AdminTrainingAccessPan
           return;
         }
 
-        setUsers(result);
-        const firstUser = result[0];
+        const filteredResult =
+          currentUser.role === 'MANAGER'
+            ? result.filter((user) => user.role !== 'MANAGER')
+            : result;
+
+        setUsers(filteredResult);
+        const firstUser = filteredResult[0];
         if (firstUser) {
           setSelectedUserId(firstUser.id);
           setDraftSections(firstUser.trainingAccess);
@@ -122,7 +149,7 @@ export function AdminTrainingAccessPanel({ accessToken }: AdminTrainingAccessPan
     return () => {
       isActive = false;
     };
-  }, [accessToken, selectedRestaurantId]);
+  }, [accessToken, currentUser.role, selectedRestaurantId]);
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -169,6 +196,33 @@ export function AdminTrainingAccessPanel({ accessToken }: AdminTrainingAccessPan
     }
   }
 
+  async function toggleManagerRole(user: TrainingAccessUser) {
+    if (!canManageRoles) {
+      return;
+    }
+
+    setIsUpdatingRoleUserId(user.id);
+    setError(null);
+    try {
+      const updated = await updateUserManagerRole(accessToken, user.id, {
+        isManager: user.role !== 'MANAGER',
+        restaurantId: selectedRestaurantId ?? undefined,
+      });
+
+      setUsers((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Cannot update manager role',
+      );
+    } finally {
+      setIsUpdatingRoleUserId(null);
+    }
+  }
+
   return (
     <View style={styles.uploadCard}>
       <Text style={styles.uploadTitle}>Training Access Manager</Text>
@@ -180,7 +234,11 @@ export function AdminTrainingAccessPanel({ accessToken }: AdminTrainingAccessPan
       <View style={styles.restaurantSelectWrap}>
         <Pressable
           style={styles.restaurantSelectTrigger}
-          onPress={() => setIsRestaurantListOpen((currentValue) => !currentValue)}
+          onPress={() => {
+            if (canFilterRestaurant) {
+              setIsRestaurantListOpen((currentValue) => !currentValue);
+            }
+          }}
         >
           <Text style={styles.restaurantSelectTriggerText}>
             {selectedRestaurant?.name ?? 'Choose a restaurant'}
@@ -190,7 +248,7 @@ export function AdminTrainingAccessPanel({ accessToken }: AdminTrainingAccessPan
           </Text>
         </Pressable>
 
-        {isRestaurantListOpen ? (
+        {isRestaurantListOpen && canFilterRestaurant ? (
           <View style={styles.restaurantSelectList}>
             {restaurants.map((restaurant) => (
               <Pressable
@@ -271,6 +329,25 @@ export function AdminTrainingAccessPanel({ accessToken }: AdminTrainingAccessPan
                   ))
                 )}
               </View>
+
+              {canManageRoles ? (
+                <Pressable
+                  style={[
+                    styles.secondaryButton,
+                    isUpdatingRoleUserId === user.id && styles.buttonDisabled,
+                  ]}
+                  disabled={isUpdatingRoleUserId === user.id}
+                  onPress={() => {
+                    void toggleManagerRole(user);
+                  }}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    {user.role === 'MANAGER'
+                      ? 'Retirer manager'
+                      : 'Definir manager'}
+                  </Text>
+                </Pressable>
+              ) : null}
             </Pressable>
           ))
         )}
