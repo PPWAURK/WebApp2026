@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import {
-  sectionsByModule,
+  getSectionsByModule,
   type LibraryModule,
   type LibrarySection,
 } from '../constants/documentTaxonomy';
@@ -40,6 +40,7 @@ export function TrainingPage({
         ? 'POLICY'
         : 'MANAGEMENT';
   const userTrainingAccess = currentUser.trainingAccess ?? [];
+  const sectionsByModule = useMemo(() => getSectionsByModule(text), [text]);
 
   const sectionOptions = useMemo(
     () => sectionsByModule[activeModule],
@@ -90,10 +91,10 @@ export function TrainingPage({
           setLibraryItems(items);
         }
       })
-      .catch((error) => {
+      .catch(() => {
         if (isActive) {
           setLibraryItems([]);
-          setLibraryError(error instanceof Error ? error.message : 'Failed to load documents');
+          setLibraryError(text.training.loadError);
         }
       })
       .finally(() => {
@@ -180,17 +181,17 @@ export function TrainingPage({
       {libraryError ? <Text style={styles.error}>{libraryError}</Text> : null}
 
       {allowedTabs.length === 0 ? (
-        <Text style={styles.docEmpty}>No training access configured for this account.</Text>
+        <Text style={styles.docEmpty}>{text.training.noAccessConfigured}</Text>
       ) : null}
 
       {selectedSection ? (
         <View style={styles.docBlock}>
           <Text style={styles.docBlockTitle}>{selectedSection.label}</Text>
 
-          <Text style={styles.docItemMeta}>Documents</Text>
+          <Text style={styles.docItemMeta}>{text.training.documentsTitle}</Text>
           {docs.length === 0 ? (
             <Text style={styles.docEmpty}>
-              {isLoadingLibrary ? 'Loading...' : 'No documents yet'}
+              {isLoadingLibrary ? text.training.loadingLibrary : text.training.noDocuments}
             </Text>
           ) : (
             docs.map((item) => (
@@ -206,10 +207,10 @@ export function TrainingPage({
             ))
           )}
 
-          <Text style={styles.docItemMeta}>Videos</Text>
+          <Text style={styles.docItemMeta}>{text.training.videosTitle}</Text>
           {videos.length === 0 ? (
             <Text style={styles.docEmpty}>
-              {isLoadingLibrary ? 'Loading...' : 'No videos yet'}
+              {isLoadingLibrary ? text.training.loadingLibrary : text.training.noVideos}
             </Text>
           ) : (
             videos.map((item) => (

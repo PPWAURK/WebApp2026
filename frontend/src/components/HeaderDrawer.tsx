@@ -4,11 +4,13 @@ import type { AppText } from '../locales/translations';
 import { styles } from '../styles/appStyles';
 import type { Language } from '../types/language';
 import type { MenuPage } from '../types/menu';
+import type { User } from '../types/auth';
 
 type HeaderDrawerProps = {
   isOpen: boolean;
   text: AppText;
   language: Language;
+  currentUser: User;
   activePage: MenuPage;
   onToggle: () => void;
   onClose: () => void;
@@ -22,6 +24,9 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
     { key: 'dashboard', label: props.text.drawer.dashboard },
     { key: 'training', label: props.text.drawer.training },
     { key: 'restaurantForms', label: props.text.drawer.restaurantForms },
+    ...(props.currentUser.role === 'ADMIN' || props.currentUser.role === 'MANAGER'
+      ? [{ key: 'orders' as MenuPage, label: props.text.drawer.orders }]
+      : []),
   ];
 
   useEffect(() => {

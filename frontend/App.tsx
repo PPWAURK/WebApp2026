@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { AuthForm } from './src/components/AuthForm';
 import { HeaderDrawer } from './src/components/HeaderDrawer';
+import { OrdersPage } from './src/components/OrdersPage';
 import { RestaurantFormsPage } from './src/components/RestaurantFormsPage';
 import { SessionCard } from './src/components/SessionCard';
 import { TrainingPage } from './src/components/TrainingPage';
@@ -30,8 +31,17 @@ export default function App() {
     if (!auth.session) {
       setIsDrawerOpen(false);
       setActivePage('dashboard');
+      return;
     }
-  }, [auth.session]);
+
+    if (
+      activePage === 'orders' &&
+      auth.session.user.role !== 'ADMIN' &&
+      auth.session.user.role !== 'MANAGER'
+    ) {
+      setActivePage('dashboard');
+    }
+  }, [activePage, auth.session]);
 
   const [fontsLoaded] = useFonts({
     Manrope_400Regular,
@@ -65,6 +75,20 @@ export default function App() {
       return <RestaurantFormsPage text={language.text} />;
     }
 
+    if (activePage === 'orders') {
+      if (auth.session.user.role === 'ADMIN' || auth.session.user.role === 'MANAGER') {
+        return (
+          <OrdersPage
+            text={language.text}
+            accessToken={auth.session.accessToken}
+            language={language.language}
+          />
+        );
+      }
+
+      return null;
+    }
+
     return (
       <SessionCard
         user={auth.session.user}
@@ -85,6 +109,7 @@ export default function App() {
               isOpen={isDrawerOpen}
               text={language.text}
               language={language.language}
+              currentUser={auth.session.user}
               activePage={activePage}
               onToggle={() => setIsDrawerOpen((isOpen) => !isOpen)}
               onClose={() => setIsDrawerOpen(false)}
@@ -137,7 +162,7 @@ export default function App() {
                 onSelectLanguage={(nextLanguage) => {
                   void language.setLanguage(nextLanguage);
                 }}
-                onSubmit={() => void auth.submitAuth(auth.mode)}
+                onSubmit={() => void auth.submitAuth(auth.mode, language.text)}
                 onToggleMode={auth.toggleMode}
               />
             ) : (

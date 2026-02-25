@@ -1,1 +1,1 @@
-export type MenuPage = 'dashboard' | 'training' | 'restaurantForms';
+export type MenuPage = 'dashboard' | 'training' | 'restaurantForms' | 'orders';

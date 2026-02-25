@@ -14,6 +14,9 @@ type SessionCardProps = {
 };
 
 export function SessionCard({ user, accessToken, text, onLogout }: SessionCardProps) {
+  const roleLabel = text.dashboard.roleValues[user.role];
+  const workplaceLabel = text.dashboard.workplaceValues[user.workplaceRole];
+
   return (
     <View style={styles.stackCardWrap}>
       <View style={styles.card}>
@@ -28,8 +31,8 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         ) : null}
 
         <View style={styles.pillRow}>
-          <Text style={styles.pill}>{text.dashboard.role}: {user.role}</Text>
-          <Text style={styles.pill}>{text.dashboard.workplace}: {user.workplaceRole}</Text>
+          <Text style={styles.pill}>{text.dashboard.role}: {roleLabel}</Text>
+          <Text style={styles.pill}>{text.dashboard.workplace}: {workplaceLabel}</Text>
         </View>
 
         <Text style={styles.meta}>
@@ -43,8 +46,14 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
 
       {user.role === 'ADMIN' || user.role === 'MANAGER' ? (
         <>
-          {user.role === 'ADMIN' ? <AdminRestaurantPanel accessToken={accessToken} /> : null}
-          <AdminTrainingAccessPanel accessToken={accessToken} currentUser={user} />
+          {user.role === 'ADMIN' ? (
+            <AdminRestaurantPanel accessToken={accessToken} text={text} />
+          ) : null}
+          <AdminTrainingAccessPanel
+            accessToken={accessToken}
+            currentUser={user}
+            text={text}
+          />
           {user.role === 'ADMIN' ? (
             <AdminUploadPanel accessToken={accessToken} text={text} />
           ) : null}

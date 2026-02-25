@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { sectionsByModule } from '../constants/documentTaxonomy';
+import { getSectionsByModule } from '../constants/documentTaxonomy';
+import type { AppText } from '../locales/translations';
 import { fetchRestaurants } from '../services/restaurantsApi';
 import {
   fetchTrainingAccessUsers,
@@ -14,18 +15,13 @@ import type { Restaurant, TrainingSection, User } from '../types/auth';
 type AdminTrainingAccessPanelProps = {
   accessToken: string;
   currentUser: User;
+  text: AppText;
 };
-
-const allSections = Object.values(sectionsByModule)
-  .flat()
-  .map((option) => ({
-    key: option.key as TrainingSection,
-    label: option.label,
-  }));
 
 export function AdminTrainingAccessPanel({
   accessToken,
   currentUser,
+  text,
 }: AdminTrainingAccessPanelProps) {
   const canManageRoles = currentUser.role === 'ADMIN';
   const canFilterRestaurant = currentUser.role === 'ADMIN';
@@ -43,6 +39,17 @@ export function AdminTrainingAccessPanel({
     null,
   );
   const [error, setError] = useState<string | null>(null);
+
+  const allSections = useMemo(
+    () =>
+      Object.values(getSectionsByModule(text))
+        .flat()
+        .map((option) => ({
+          key: option.key as TrainingSection,
+          label: option.label,
+        })),
+    [text],
+  );
 
   useEffect(() => {
     let isActive = true;
@@ -62,13 +69,9 @@ export function AdminTrainingAccessPanel({
             setSelectedRestaurantId(firstRestaurant.id);
           }
         })
-        .catch((requestError) => {
+        .catch(() => {
           if (isActive) {
-            setError(
-              requestError instanceof Error
-                ? requestError.message
-                : 'Cannot load restaurants',
-            );
+            setError(text.adminTraining.loadRestaurantsError);
           }
         })
         .finally(() => {
@@ -79,7 +82,7 @@ export function AdminTrainingAccessPanel({
     } else {
       const managerRestaurant = currentUser.restaurant;
       if (!managerRestaurant) {
-        setError('Manager must be assigned to a restaurant');
+        setError(text.adminTraining.managerRestaurantRequired);
         setIsLoading(false);
       } else {
         setRestaurants([managerRestaurant]);
@@ -91,7 +94,12 @@ export function AdminTrainingAccessPanel({
     return () => {
       isActive = false;
     };
-  }, [accessToken, canFilterRestaurant, currentUser.restaurant]);
+  }, [
+    canFilterRestaurant,
+    currentUser.restaurant,
+    text.adminTraining.loadRestaurantsError,
+    text.adminTraining.managerRestaurantRequired,
+  ]);
 
   useEffect(() => {
     if (!selectedRestaurantId) {
@@ -133,13 +141,9 @@ export function AdminTrainingAccessPanel({
           setDraftSections([]);
         }
       })
-      .catch((requestError) => {
+      .catch(() => {
         if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : 'Cannot load users',
-          );
+          setError(text.adminTraining.loadUsersError);
           setUsers([]);
           setSelectedUserId(null);
           setDraftSections([]);
@@ -154,19 +158,26 @@ export function AdminTrainingAccessPanel({
     return () => {
       isActive = false;
     };
-  }, [accessToken, currentUser.role, selectedRestaurantId]);
+  }, [
+    accessToken,
+    currentUser.role,
+    selectedRestaurantId,
+    text.adminTraining.loadUsersError,
+  ]);
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
     [selectedUserId, users],
   );
+
   const sectionLabelByKey = useMemo(
     () =>
       Object.fromEntries(
         allSections.map((section) => [section.key, section.label]),
       ) as Record<TrainingSection, string>,
-    [],
+    [allSections],
   );
+
   const selectedRestaurant =
     restaurants.find((restaurant) => restaurant.id === selectedRestaurantId) ?? null;
 
@@ -194,8 +205,8 @@ export function AdminTrainingAccessPanel({
       setUsers((current) =>
         current.map((user) => (user.id === updated.id ? updated : user)),
       );
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Cannot save access');
+    } catch {
+      setError(text.adminTraining.saveError);
     } finally {
       setIsSaving(false);
     }
@@ -224,12 +235,8 @@ export function AdminTrainingAccessPanel({
           item.id === normalizedUpdated.id ? normalizedUpdated : item,
         ),
       );
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'Cannot update manager role',
-      );
+    } catch {
+      setError(text.adminTraining.updateManagerError);
     } finally {
       setIsUpdatingRoleUserId(null);
     }
@@ -237,12 +244,10 @@ export function AdminTrainingAccessPanel({
 
   return (
     <View style={styles.uploadCard}>
-      <Text style={styles.uploadTitle}>Training Access Manager</Text>
-      <Text style={styles.uploadSubtitle}>
-        Configure which formation sections each user can view.
-      </Text>
+      <Text style={styles.uploadTitle}>{text.adminTraining.title}</Text>
+      <Text style={styles.uploadSubtitle}>{text.adminTraining.subtitle}</Text>
 
-      <Text style={styles.uploadFieldTitle}>Restaurant</Text>
+      <Text style={styles.uploadFieldTitle}>{text.adminTraining.restaurantLabel}</Text>
       <View style={styles.restaurantSelectWrap}>
         <Pressable
           style={styles.restaurantSelectTrigger}
@@ -253,7 +258,7 @@ export function AdminTrainingAccessPanel({
           }}
         >
           <Text style={styles.restaurantSelectTriggerText}>
-            {selectedRestaurant?.name ?? 'Choose a restaurant'}
+            {selectedRestaurant?.name ?? text.adminTraining.restaurantPlaceholder}
           </Text>
           <Text style={styles.restaurantSelectChevron}>
             {isRestaurantListOpen ? '▲' : '▼'}
@@ -292,10 +297,12 @@ export function AdminTrainingAccessPanel({
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Text style={styles.uploadFieldTitle}>Employees and access labels</Text>
+      <Text style={styles.uploadFieldTitle}>{text.adminTraining.usersAndLabels}</Text>
       <View style={styles.docBlock}>
         {users.length === 0 ? (
-          <Text style={styles.docEmpty}>{isLoading ? 'Loading...' : 'No employee in this restaurant.'}</Text>
+          <Text style={styles.docEmpty}>
+            {isLoading ? text.adminTraining.loading : text.adminTraining.noEmployee}
+          </Text>
         ) : (
           users.map((user) => (
             <Pressable
@@ -315,7 +322,7 @@ export function AdminTrainingAccessPanel({
                   selectedUserId === user.id && styles.trainingTabTextActive,
                 ]}
               >
-                {user.name ?? user.email} ({user.role})
+                {user.name ?? user.email} ({text.adminTraining.roleValues[user.role]})
               </Text>
               <View style={styles.uploadChipWrap}>
                 {(user.trainingAccess ?? []).length === 0 ? (
@@ -325,7 +332,7 @@ export function AdminTrainingAccessPanel({
                       selectedUserId === user.id && styles.trainingTabTextActive,
                     ]}
                   >
-                    Aucun acces / 无权限
+                    {text.adminTraining.noAccess}
                   </Text>
                 ) : (
                   (user.trainingAccess ?? []).map((section) => (
@@ -355,8 +362,8 @@ export function AdminTrainingAccessPanel({
                 >
                   <Text style={styles.secondaryButtonText}>
                     {user.role === 'MANAGER'
-                      ? 'Retirer manager'
-                      : 'Definir manager'}
+                      ? text.adminTraining.removeManager
+                      : text.adminTraining.defineManager}
                   </Text>
                 </Pressable>
               ) : null}
@@ -365,7 +372,7 @@ export function AdminTrainingAccessPanel({
         )}
       </View>
 
-      <Text style={styles.uploadFieldTitle}>User</Text>
+      <Text style={styles.uploadFieldTitle}>{text.adminTraining.userLabel}</Text>
       <View style={styles.uploadChipWrap}>
         {users.map((user) => (
           <Pressable
@@ -391,7 +398,7 @@ export function AdminTrainingAccessPanel({
         ))}
       </View>
 
-      <Text style={styles.uploadFieldTitle}>Allowed Sections</Text>
+      <Text style={styles.uploadFieldTitle}>{text.adminTraining.allowedSections}</Text>
       <View style={styles.uploadChipWrap}>
         {allSections.map((section) => (
           <Pressable
@@ -422,7 +429,7 @@ export function AdminTrainingAccessPanel({
         }}
       >
         <Text style={styles.primaryButtonText}>
-          {isSaving ? 'Saving access...' : 'Save access'}
+          {isSaving ? text.adminTraining.saving : text.adminTraining.save}
         </Text>
       </Pressable>
     </View>

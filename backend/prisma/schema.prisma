@@ -38,6 +38,22 @@ model Restaurant {
   updatedAt DateTime @updatedAt
 }
 
+model Produit {
+  id            BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  supplierId    Int      @map("supplier_id")
+  reference     String?  @db.VarChar(100)
+  categorie     String   @db.VarChar(20)
+  nomCn         String   @map("nom_cn") @db.VarChar(255)
+  designationFr String?  @map("designation_fr") @db.VarChar(255)
+  unite         String?  @db.VarChar(100)
+  prixUHt       Decimal? @map("prix_u_ht") @db.Decimal(10, 2)
+  image         String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("produits")
+}
+
 model Document {
   id               Int             @id @default(autoincrement())
   fileName         String          @unique

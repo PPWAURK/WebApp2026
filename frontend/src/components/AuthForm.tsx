@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import { API_URL } from '../constants/config';
 import { styles } from '../styles/appStyles';
 import type { AuthMode, Restaurant } from '../types/auth';
 import type { AppText } from '../locales/translations';
@@ -79,7 +78,7 @@ export function AuthForm(props: AuthFormProps) {
               onPress={() => setIsRestaurantListOpen((currentValue) => !currentValue)}
             >
               <Text style={styles.restaurantSelectTriggerText}>
-                {selectedRestaurant?.name ?? 'Choisir un etablissement'}
+                {selectedRestaurant?.name ?? props.text.auth.restaurantPlaceholder}
               </Text>
               <Text style={styles.restaurantSelectChevron}>
                 {isRestaurantListOpen ? '▲' : '▼'}

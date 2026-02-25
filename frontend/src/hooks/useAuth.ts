@@ -6,6 +6,7 @@ import {
   loadStoredSession,
   persistSession,
 } from '../services/sessionStorage';
+import type { AppText } from '../locales/translations';
 import type { AuthMode, AuthResponse, Restaurant } from '../types/auth';
 
 export function useAuth() {
@@ -63,13 +64,13 @@ export function useAuth() {
     };
   }, []);
 
-  async function submitAuth(currentMode: AuthMode) {
+  async function submitAuth(currentMode: AuthMode, text: AppText) {
     setIsSubmitting(true);
     setError(null);
 
     try {
       if (currentMode === 'register' && !selectedRestaurantId) {
-        throw new Error('Veuillez choisir un etablissement');
+        throw new Error(text.auth.restaurantMissing);
       }
 
       const authData = await requestAuth(currentMode, {
@@ -86,11 +87,14 @@ export function useAuth() {
       await persistSession(authData, rememberMe);
       setPassword('');
     } catch (requestError) {
-      const message =
-        requestError instanceof Error
-          ? requestError.message
-          : 'Impossible de contacter l API';
-      setError(message);
+      if (
+        requestError instanceof Error &&
+        requestError.message === text.auth.restaurantMissing
+      ) {
+        setError(requestError.message);
+      } else {
+        setError(text.auth.requestFailed);
+      }
     } finally {
       setIsSubmitting(false);
     }

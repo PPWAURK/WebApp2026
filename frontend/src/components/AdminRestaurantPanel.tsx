@@ -9,14 +9,16 @@ import {
   fetchUnassignedUsers,
   type UnassignedUser,
 } from '../services/usersApi';
+import type { AppText } from '../locales/translations';
 import { styles } from '../styles/appStyles';
 import type { Restaurant } from '../types/auth';
 
 type AdminRestaurantPanelProps = {
   accessToken: string;
+  text: AppText;
 };
 
-export function AdminRestaurantPanel({ accessToken }: AdminRestaurantPanelProps) {
+export function AdminRestaurantPanel({ accessToken, text }: AdminRestaurantPanelProps) {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [unassignedUsers, setUnassignedUsers] = useState<UnassignedUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -47,8 +49,8 @@ export function AdminRestaurantPanel({ accessToken }: AdminRestaurantPanelProps)
       if (unassigned.length > 0) {
         setSelectedUserId((current) => current ?? unassigned[0].id);
       }
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Cannot load restaurant data');
+    } catch {
+      setError(text.adminRestaurant.loadError);
     } finally {
       setIsLoading(false);
     }
@@ -76,8 +78,8 @@ export function AdminRestaurantPanel({ accessToken }: AdminRestaurantPanelProps)
       setSelectedRestaurantId(created.id);
       setRestaurantName('');
       setRestaurantAddress('');
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Cannot create restaurant');
+    } catch {
+      setError(text.adminRestaurant.createError);
     } finally {
       setIsSavingRestaurant(false);
     }
@@ -95,8 +97,8 @@ export function AdminRestaurantPanel({ accessToken }: AdminRestaurantPanelProps)
       const nextUsers = unassignedUsers.filter((user) => user.id !== selectedUser.id);
       setUnassignedUsers(nextUsers);
       setSelectedUserId(nextUsers[0]?.id ?? null);
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Cannot assign user');
+    } catch {
+      setError(text.adminRestaurant.assignError);
     } finally {
       setIsAssigning(false);
     }
@@ -104,24 +106,24 @@ export function AdminRestaurantPanel({ accessToken }: AdminRestaurantPanelProps)
 
   return (
     <View style={styles.uploadCard}>
-      <Text style={styles.uploadTitle}>Restaurant Manager</Text>
+      <Text style={styles.uploadTitle}>{text.adminRestaurant.title}</Text>
       <Text style={styles.uploadSubtitle}>
-        Create restaurants and assign employees still not attached to an establishment.
+        {text.adminRestaurant.subtitle}
       </Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Text style={styles.uploadFieldTitle}>New Restaurant</Text>
+      <Text style={styles.uploadFieldTitle}>{text.adminRestaurant.newRestaurant}</Text>
       <TextInput
         style={styles.input}
-        placeholder="Restaurant name"
+        placeholder={text.adminRestaurant.namePlaceholder}
         placeholderTextColor="#a98a8d"
         value={restaurantName}
         onChangeText={setRestaurantName}
       />
       <TextInput
         style={styles.input}
-        placeholder="Restaurant address"
+        placeholder={text.adminRestaurant.addressPlaceholder}
         placeholderTextColor="#a98a8d"
         value={restaurantAddress}
         onChangeText={setRestaurantAddress}
@@ -134,11 +136,13 @@ export function AdminRestaurantPanel({ accessToken }: AdminRestaurantPanelProps)
         }}
       >
         <Text style={styles.primaryButtonText}>
-          {isSavingRestaurant ? 'Creating...' : 'Add restaurant'}
+          {isSavingRestaurant
+            ? text.adminRestaurant.creating
+            : text.adminRestaurant.createButton}
         </Text>
       </Pressable>
 
-      <Text style={styles.uploadFieldTitle}>Unassigned Employees</Text>
+      <Text style={styles.uploadFieldTitle}>{text.adminRestaurant.unassignedEmployees}</Text>
       <View style={styles.uploadChipWrap}>
         {unassignedUsers.map((user) => (
           <Pressable
@@ -161,7 +165,7 @@ export function AdminRestaurantPanel({ accessToken }: AdminRestaurantPanelProps)
         ))}
       </View>
 
-      <Text style={styles.uploadFieldTitle}>Assign To Restaurant</Text>
+      <Text style={styles.uploadFieldTitle}>{text.adminRestaurant.assignToRestaurant}</Text>
       <View style={styles.uploadChipWrap}>
         {restaurants.map((restaurant) => (
           <Pressable
@@ -186,7 +190,7 @@ export function AdminRestaurantPanel({ accessToken }: AdminRestaurantPanelProps)
 
       {unassignedUsers.length === 0 ? (
         <Text style={styles.docEmpty}>
-          {isLoading ? 'Loading...' : 'All employees are already assigned.'}
+          {isLoading ? text.adminRestaurant.loading : text.adminRestaurant.allAssigned}
         </Text>
       ) : null}
 
@@ -198,7 +202,9 @@ export function AdminRestaurantPanel({ accessToken }: AdminRestaurantPanelProps)
         }}
       >
         <Text style={styles.secondaryButtonText}>
-          {isAssigning ? 'Assigning...' : 'Assign selected employee'}
+          {isAssigning
+            ? text.adminRestaurant.assigning
+            : text.adminRestaurant.assignButton}
         </Text>
       </Pressable>
     </View>

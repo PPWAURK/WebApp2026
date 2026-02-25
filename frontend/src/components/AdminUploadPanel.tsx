@@ -2,8 +2,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import {
-  moduleOptions,
-  sectionsByModule,
+  getModuleOptions,
+  getSectionsByModule,
   type LibraryModule,
   type LibrarySection,
 } from '../constants/documentTaxonomy';
@@ -31,6 +31,8 @@ const PICKER_TYPES = [
 ];
 
 export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
+  const moduleOptions = getModuleOptions(text);
+  const sectionsByModule = getSectionsByModule(text);
   const [selectedModule, setSelectedModule] = useState<LibraryModule>('TRAINING');
   const [selectedSection, setSelectedSection] =
     useState<LibrarySection>('RECIPE_TRAINING');
@@ -79,8 +81,8 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
         section: selectedSection,
       });
       setLastUpload(uploadResponse);
-    } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : text.upload.error);
+    } catch {
+      setError(text.upload.error);
     } finally {
       setIsUploading(false);
     }
@@ -91,7 +93,7 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
       <Text style={styles.uploadTitle}>{text.upload.title}</Text>
       <Text style={styles.uploadSubtitle}>{text.upload.subtitle}</Text>
 
-      <Text style={styles.uploadFieldTitle}>Module</Text>
+      <Text style={styles.uploadFieldTitle}>{text.upload.moduleLabel}</Text>
       <View style={styles.uploadChipWrap}>
         {moduleOptions.map((moduleOption) => (
           <Pressable
@@ -114,7 +116,7 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
         ))}
       </View>
 
-      <Text style={styles.uploadFieldTitle}>Section</Text>
+      <Text style={styles.uploadFieldTitle}>{text.upload.sectionLabel}</Text>
       <View style={styles.uploadChipWrap}>
         {availableSections.map((sectionOption) => (
           <Pressable
@@ -157,7 +159,10 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
             {text.upload.success}: {lastUpload.originalName}
           </Text>
           <Text style={styles.uploadResultMeta}>
-            {lastUpload.module} / {lastUpload.section}
+            {text.upload.resultModule}: {moduleOptions.find((option) => option.key === lastUpload.module)?.label ?? lastUpload.module}
+          </Text>
+          <Text style={styles.uploadResultMeta}>
+            {text.upload.resultSection}: {sectionsByModule[lastUpload.module].find((option) => option.key === lastUpload.section)?.label ?? lastUpload.section}
           </Text>
           <Text style={styles.uploadResultLink}>{lastUpload.fileUrl}</Text>
         </View>

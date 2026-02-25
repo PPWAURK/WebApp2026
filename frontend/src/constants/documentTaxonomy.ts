@@ -1,3 +1,5 @@
+import type { AppText } from '../locales/translations';
+
 export type LibraryModule = 'TRAINING' | 'POLICY' | 'MANAGEMENT' | 'FORMS';
 
 export type LibrarySection =
@@ -16,29 +18,35 @@ export type TaxonomyOption = {
   label: string;
 };
 
-export const moduleOptions: TaxonomyOption[] = [
-  { key: 'TRAINING', label: "店铺培训 / ZHAO's Formation" },
-  { key: 'POLICY', label: "公司规章制度 / Regles de l'entreprise" },
-  { key: 'MANAGEMENT', label: '管理工具 / Outil de gestion' },
-  { key: 'FORMS', label: '店铺日常使用表格 / Tableaux de restaurant' },
-];
+export function getModuleOptions(text: AppText): Array<{ key: LibraryModule; label: string }> {
+  return [
+    { key: 'TRAINING', label: text.taxonomy.modules.TRAINING },
+    { key: 'POLICY', label: text.taxonomy.modules.POLICY },
+    { key: 'MANAGEMENT', label: text.taxonomy.modules.MANAGEMENT },
+    { key: 'FORMS', label: text.taxonomy.modules.FORMS },
+  ];
+}
 
-export const sectionsByModule: Record<LibraryModule, TaxonomyOption[]> = {
-  TRAINING: [
-    { key: 'RECIPE_TRAINING', label: '菜谱培训 / Formation de recette' },
-    { key: 'RECIPE', label: '食谱 / Recette' },
-    { key: 'MISE_EN_PLACE_SOP', label: '酱汁及半成品菜品出品 SOP' },
-  ],
-  POLICY: [
-    { key: 'RED_RULES', label: '红线制度 / Regles rouges' },
-    { key: 'BLACK_RULES', label: '黑线制度 / Regles noires' },
-  ],
-  MANAGEMENT: [
-    { key: 'SALLE_TOOLS', label: '外场管理工具 / Outil de gestion de Salle' },
-    { key: 'CUISINE_TOOLS', label: '厨房管理工具 / Outil de gestion de Cuisine' },
-  ],
-  FORMS: [
-    { key: 'MEAT_DATE_FORM', label: '肉类日期记录表格 / Date de production de viande' },
-    { key: 'CLEANING_FORM', label: '大扫除表格 / Tableau de menage' },
-  ],
-};
+export function getSectionsByModule(
+  text: AppText,
+): Record<LibraryModule, Array<{ key: LibrarySection; label: string }>> {
+  return {
+    TRAINING: [
+      { key: 'RECIPE_TRAINING', label: text.taxonomy.sections.RECIPE_TRAINING },
+      { key: 'RECIPE', label: text.taxonomy.sections.RECIPE },
+      { key: 'MISE_EN_PLACE_SOP', label: text.taxonomy.sections.MISE_EN_PLACE_SOP },
+    ],
+    POLICY: [
+      { key: 'RED_RULES', label: text.taxonomy.sections.RED_RULES },
+      { key: 'BLACK_RULES', label: text.taxonomy.sections.BLACK_RULES },
+    ],
+    MANAGEMENT: [
+      { key: 'SALLE_TOOLS', label: text.taxonomy.sections.SALLE_TOOLS },
+      { key: 'CUISINE_TOOLS', label: text.taxonomy.sections.CUISINE_TOOLS },
+    ],
+    FORMS: [
+      { key: 'MEAT_DATE_FORM', label: text.taxonomy.sections.MEAT_DATE_FORM },
+      { key: 'CLEANING_FORM', label: text.taxonomy.sections.CLEANING_FORM },
+    ],
+  };
+}
