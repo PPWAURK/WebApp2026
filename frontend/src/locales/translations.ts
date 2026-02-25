@@ -118,6 +118,7 @@ export const translations = {
     orders: {
       title: 'Commande produits',
       subtitle: 'Selectionner les produits puis definir les quantites a commander.',
+      supplierLabel: 'Fournisseur',
       filterLabel: 'Type de produits',
       allTypes: 'Tous les types',
       loading: 'Chargement des produits...',
@@ -305,6 +306,7 @@ export const translations = {
     orders: {
       title: '产品下单',
       subtitle: '选择商品并设置下单数量。',
+      supplierLabel: '供应商',
       filterLabel: '产品类型',
       allTypes: '全部类型',
       loading: '正在加载商品...',

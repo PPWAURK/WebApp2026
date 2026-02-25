@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { AppText } from '../locales/translations';
 import { fetchProducts, type ProductItem } from '../services/productsApi';
+import { fetchSuppliers, type SupplierItem } from '../services/suppliersApi';
 import { styles } from '../styles/appStyles';
 import type { Language } from '../types/language';
 
@@ -13,6 +14,8 @@ type OrdersPageProps = {
 
 export function OrdersPage({ text, accessToken, language }: OrdersPageProps) {
   const [products, setProducts] = useState<ProductItem[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<number | 'ALL'>('ALL');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
@@ -23,17 +26,27 @@ export function OrdersPage({ text, accessToken, language }: OrdersPageProps) {
     setLoading(true);
     setError(null);
 
-    void fetchProducts(accessToken)
-      .then((result) => {
+    void Promise.all([fetchProducts(accessToken), fetchSuppliers(accessToken)])
+      .then(([productResult, supplierResult]) => {
         if (!isActive) {
           return;
         }
 
-        setProducts(result);
+        setProducts(productResult);
+        setSuppliers(supplierResult);
+
+        if (supplierResult.length > 0) {
+          setSelectedSupplierId((current) =>
+            current === 'ALL' ? supplierResult[0].id : current,
+          );
+        } else {
+          setSelectedSupplierId('ALL');
+        }
       })
       .catch(() => {
         if (isActive) {
           setProducts([]);
+          setSuppliers([]);
           setError(text.orders.loadError);
         }
       })
@@ -71,25 +84,33 @@ export function OrdersPage({ text, accessToken, language }: OrdersPageProps) {
     );
   }, [products, quantities]);
 
+  const supplierProducts = useMemo(() => {
+    if (selectedSupplierId === 'ALL') {
+      return products;
+    }
+
+    return products.filter((product) => product.supplierId === selectedSupplierId);
+  }, [products, selectedSupplierId]);
+
   const categories = useMemo(() => {
     const unique = Array.from(
       new Set(
-        products
+        supplierProducts
           .map((product) => product.category)
           .filter((value) => typeof value === 'string' && value.trim()),
       ),
     );
 
     return unique.sort((a, b) => a.localeCompare(b));
-  }, [products]);
+  }, [supplierProducts]);
 
   const filteredProducts = useMemo(() => {
     if (selectedCategory === 'ALL') {
-      return products;
+      return supplierProducts;
     }
 
-    return products.filter((product) => product.category === selectedCategory);
-  }, [products, selectedCategory]);
+    return supplierProducts.filter((product) => product.category === selectedCategory);
+  }, [selectedCategory, supplierProducts]);
 
   return (
     <View style={styles.card}>
@@ -99,6 +120,36 @@ export function OrdersPage({ text, accessToken, language }: OrdersPageProps) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {loading ? <Text style={styles.docEmpty}>{text.orders.loading}</Text> : null}
+
+      {suppliers.length > 0 ? (
+        <>
+          <Text style={styles.uploadFieldTitle}>{text.orders.supplierLabel}</Text>
+          <View style={styles.trainingTabRow}>
+            {suppliers.map((supplier) => (
+              <Pressable
+                key={supplier.id}
+                style={[
+                  styles.trainingTab,
+                  selectedSupplierId === supplier.id && styles.trainingTabActive,
+                ]}
+                onPress={() => {
+                  setSelectedSupplierId(supplier.id);
+                  setSelectedCategory('ALL');
+                }}
+              >
+                <Text
+                  style={[
+                    styles.trainingTabText,
+                    selectedSupplierId === supplier.id && styles.trainingTabTextActive,
+                  ]}
+                >
+                  {supplier.name}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      ) : null}
 
       {categories.length > 0 ? (
         <>
@@ -144,11 +195,11 @@ export function OrdersPage({ text, accessToken, language }: OrdersPageProps) {
         </>
       ) : null}
 
-      {!loading && products.length === 0 ? (
+      {!loading && supplierProducts.length === 0 ? (
         <Text style={styles.docEmpty}>{text.orders.empty}</Text>
       ) : null}
 
-      {!loading && products.length > 0 && filteredProducts.length === 0 ? (
+      {!loading && supplierProducts.length > 0 && filteredProducts.length === 0 ? (
         <Text style={styles.docEmpty}>{text.orders.emptyForType}</Text>
       ) : null}
 
