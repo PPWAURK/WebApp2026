@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Pressable, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, Text, View } from 'react-native';
 import type { AppText } from '../locales/translations';
 import { styles } from '../styles/appStyles';
 import type { Language } from '../types/language';
@@ -28,7 +28,7 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
     Animated.timing(translateX, {
       toValue: props.isOpen ? 0 : -280,
       duration: 220,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start();
   }, [props.isOpen, translateX]);
 

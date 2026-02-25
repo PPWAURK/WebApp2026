@@ -118,11 +118,16 @@ export function AdminTrainingAccessPanel({
             ? result.filter((user) => user.role !== 'MANAGER')
             : result;
 
-        setUsers(filteredResult);
-        const firstUser = filteredResult[0];
+        const normalizedUsers = filteredResult.map((user) => ({
+          ...user,
+          trainingAccess: user.trainingAccess ?? [],
+        }));
+
+        setUsers(normalizedUsers);
+        const firstUser = normalizedUsers[0];
         if (firstUser) {
           setSelectedUserId(firstUser.id);
-          setDraftSections(firstUser.trainingAccess);
+          setDraftSections(firstUser.trainingAccess ?? []);
         } else {
           setSelectedUserId(null);
           setDraftSections([]);
@@ -209,8 +214,15 @@ export function AdminTrainingAccessPanel({
         restaurantId: selectedRestaurantId ?? undefined,
       });
 
+      const normalizedUpdated = {
+        ...updated,
+        trainingAccess: updated.trainingAccess ?? [],
+      };
+
       setUsers((current) =>
-        current.map((item) => (item.id === updated.id ? updated : item)),
+        current.map((item) =>
+          item.id === normalizedUpdated.id ? normalizedUpdated : item,
+        ),
       );
     } catch (requestError) {
       setError(
@@ -294,7 +306,7 @@ export function AdminTrainingAccessPanel({
               ]}
               onPress={() => {
                 setSelectedUserId(user.id);
-                setDraftSections(user.trainingAccess);
+                setDraftSections(user.trainingAccess ?? []);
               }}
             >
               <Text
@@ -306,7 +318,7 @@ export function AdminTrainingAccessPanel({
                 {user.name ?? user.email} ({user.role})
               </Text>
               <View style={styles.uploadChipWrap}>
-                {user.trainingAccess.length === 0 ? (
+                {(user.trainingAccess ?? []).length === 0 ? (
                   <Text
                     style={[
                       styles.docEmpty,
@@ -316,7 +328,7 @@ export function AdminTrainingAccessPanel({
                     Aucun acces / 无权限
                   </Text>
                 ) : (
-                  user.trainingAccess.map((section) => (
+                  (user.trainingAccess ?? []).map((section) => (
                     <Text
                       key={`${user.id}-${section}`}
                       style={[
@@ -364,7 +376,7 @@ export function AdminTrainingAccessPanel({
             ]}
             onPress={() => {
               setSelectedUserId(user.id);
-              setDraftSections(user.trainingAccess);
+              setDraftSections(user.trainingAccess ?? []);
             }}
           >
             <Text

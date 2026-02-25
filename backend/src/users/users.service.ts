@@ -338,7 +338,7 @@ export class UsersService {
       }
     }
 
-    return this.prisma.user.update({
+    const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: {
         role: params.isManager ? Role.MANAGER : Role.EMPLOYEE,
@@ -350,6 +350,7 @@ export class UsersService {
         name: true,
         role: true,
         restaurantId: true,
+        trainingAccess: true,
         restaurant: {
           select: {
             id: true,
@@ -359,5 +360,10 @@ export class UsersService {
         },
       },
     });
+
+    return {
+      ...updatedUser,
+      trainingAccess: this.normalizeTrainingAccess(updatedUser.trainingAccess),
+    };
   }
 }
