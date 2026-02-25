@@ -31,3 +31,31 @@ export async function fetchSuppliers(token: string): Promise<SupplierItem[]> {
     })
     .filter((supplier) => supplier.id > 0 && supplier.name);
 }
+
+export async function createSupplier(
+  token: string,
+  payload: { name: string },
+): Promise<SupplierItem> {
+  const response = await fetch(`${API_URL}/suppliers`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error('SUPPLIERS_CREATE_FAILED');
+  }
+
+  const data = (await response.json()) as { id?: unknown; name?: unknown };
+  const id = typeof data.id === 'number' && Number.isFinite(data.id) ? data.id : 0;
+  const name = typeof data.name === 'string' ? data.name : '';
+
+  if (!id || !name) {
+    throw new Error('SUPPLIERS_CREATE_FAILED');
+  }
+
+  return { id, name };
+}

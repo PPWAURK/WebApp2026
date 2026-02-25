@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -16,5 +16,23 @@ export class SuppliersService {
       id: supplier.id,
       name: supplier.nom,
     }));
+  }
+
+  async createSupplier(name: string) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      throw new BadRequestException('name is required');
+    }
+
+    const created = await this.prisma.fournisseur.create({
+      data: {
+        nom: trimmedName,
+      },
+    });
+
+    return {
+      id: created.id,
+      name: created.nom,
+    };
   }
 }

@@ -1,7 +1,9 @@
 import {
+  Body,
   Controller,
   ForbiddenException,
   Get,
+  Post,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -32,5 +34,21 @@ export class SuppliersController {
     }
 
     return this.suppliersService.listSuppliers();
+  }
+
+  @ApiOperation({ summary: 'Create a supplier' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post()
+  createSupplier(
+    @Req() req: AuthenticatedRequest,
+    @Body('name') name: string | undefined,
+  ) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN' && role !== 'MANAGER') {
+      throw new ForbiddenException('Only ADMIN and MANAGER can create suppliers');
+    }
+
+    return this.suppliersService.createSupplier(name ?? '');
   }
 }

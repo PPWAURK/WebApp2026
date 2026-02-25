@@ -25,7 +25,13 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
     { key: 'training', label: props.text.drawer.training },
     { key: 'restaurantForms', label: props.text.drawer.restaurantForms },
     ...(props.currentUser.role === 'ADMIN' || props.currentUser.role === 'MANAGER'
-      ? [{ key: 'orders' as MenuPage, label: props.text.drawer.orders }]
+      ? [
+          { key: 'orders' as MenuPage, label: props.text.drawer.orders },
+          {
+            key: 'supplierManagement' as MenuPage,
+            label: props.text.drawer.supplierManagement,
+          },
+        ]
       : []),
   ];
 

@@ -24,6 +24,13 @@ type RawProduct = {
   image?: unknown;
 };
 
+type PickedFile = {
+  uri: string;
+  name: string;
+  mimeType?: string;
+  file?: File;
+};
+
 function toNumber(value: unknown, fallback = 0) {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
@@ -75,4 +82,72 @@ export async function fetchProducts(token: string): Promise<ProductItem[]> {
   }
 
   return data.map((entry, index) => normalizeProduct(entry as RawProduct, index));
+}
+
+export async function updateProduct(
+  token: string,
+  productId: number,
+  payload: {
+    supplierId?: number;
+    reference?: string | null;
+    category?: string;
+    nameZh?: string;
+    nameFr?: string | null;
+    unit?: string | null;
+    priceHt?: number | null;
+    image?: string | null;
+  },
+): Promise<ProductItem> {
+  const response = await fetch(`${API_URL}/products/${productId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error('PRODUCTS_UPDATE_FAILED');
+  }
+
+  const data = (await response.json()) as RawProduct;
+  return normalizeProduct(data, 0);
+}
+
+export async function uploadProductImage(
+  token: string,
+  productId: number,
+  file: PickedFile,
+): Promise<string> {
+  const formData = new FormData();
+
+  if (file.file) {
+    formData.append('file', file.file);
+  } else {
+    formData.append('file', {
+      uri: file.uri,
+      name: file.name,
+      type: file.mimeType ?? 'image/jpeg',
+    } as never);
+  }
+
+  const response = await fetch(`${API_URL}/products/${productId}/image`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error('PRODUCTS_IMAGE_UPLOAD_FAILED');
+  }
+
+  const data = (await response.json()) as { image?: unknown };
+  if (typeof data.image !== 'string') {
+    throw new Error('PRODUCTS_IMAGE_UPLOAD_FAILED');
+  }
+
+  return data.image;
 }

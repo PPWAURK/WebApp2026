@@ -15,6 +15,7 @@ import { HeaderDrawer } from './src/components/HeaderDrawer';
 import { OrdersPage } from './src/components/OrdersPage';
 import { RestaurantFormsPage } from './src/components/RestaurantFormsPage';
 import { SessionCard } from './src/components/SessionCard';
+import { SupplierManagementPage } from './src/components/SupplierManagementPage';
 import { TrainingPage } from './src/components/TrainingPage';
 import { useAuth } from './src/hooks/useAuth';
 import { useLanguage } from './src/hooks/useLanguage';
@@ -35,7 +36,7 @@ export default function App() {
     }
 
     if (
-      activePage === 'orders' &&
+      (activePage === 'orders' || activePage === 'supplierManagement') &&
       auth.session.user.role !== 'ADMIN' &&
       auth.session.user.role !== 'MANAGER'
     ) {
@@ -82,6 +83,19 @@ export default function App() {
             text={language.text}
             accessToken={auth.session.accessToken}
             language={language.language}
+          />
+        );
+      }
+
+      return null;
+    }
+
+    if (activePage === 'supplierManagement') {
+      if (auth.session.user.role === 'ADMIN' || auth.session.user.role === 'MANAGER') {
+        return (
+          <SupplierManagementPage
+            text={language.text}
+            accessToken={auth.session.accessToken}
           />
         );
       }
