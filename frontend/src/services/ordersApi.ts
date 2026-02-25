@@ -11,6 +11,7 @@ type RawOrderSummary = {
   totalItems?: unknown;
   totalAmount?: unknown;
   bonUrl?: unknown;
+  commandeUrl?: unknown;
   createdAt?: unknown;
 };
 
@@ -49,6 +50,13 @@ function toNumber(value: unknown, fallback = 0) {
 }
 
 function normalizeOrderSummary(raw: RawOrderSummary): OrderSummary {
+  const commandeUrl =
+    typeof raw.commandeUrl === 'string'
+      ? raw.commandeUrl
+      : typeof raw.bonUrl === 'string'
+        ? raw.bonUrl
+        : '';
+
   return {
     id: toNumber(raw.id, 0),
     number: typeof raw.number === 'string' ? raw.number : '',
@@ -59,7 +67,7 @@ function normalizeOrderSummary(raw: RawOrderSummary): OrderSummary {
       typeof raw.deliveryAddress === 'string' ? raw.deliveryAddress : '',
     totalItems: toNumber(raw.totalItems, 0),
     totalAmount: toNumber(raw.totalAmount, 0),
-    bonUrl: typeof raw.bonUrl === 'string' ? raw.bonUrl : '',
+    bonUrl: commandeUrl,
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : '',
   };
 }
@@ -120,5 +128,5 @@ export async function fetchOrders(token: string): Promise<OrderSummary[]> {
 }
 
 export function buildOrderBonUrl(orderId: number) {
-  return `${API_URL}/orders/${orderId}/bon`;
+  return `${API_URL}/orders/${orderId}/commande`;
 }

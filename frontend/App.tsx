@@ -134,6 +134,7 @@ export default function App() {
       });
 
       setLatestCreatedOrder(created);
+      void handleDownloadOrderBon(created);
       await loadOrderHistory();
     } catch {
       // keep page state; user can retry

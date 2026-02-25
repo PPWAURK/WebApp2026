@@ -135,13 +135,13 @@ export class OrdersService {
     });
 
     const orderNumber = this.buildOrderNumber(createdOrder.id, createdOrder.createdAt);
-    const bonFileName = `bon-commande-${orderNumber}.pdf`;
+    const orderFileName = `commande-${orderNumber}.pdf`;
 
     await this.prisma.purchaseOrder.update({
       where: { id: createdOrder.id },
       data: {
         number: orderNumber,
-        bonFileName,
+        bonFileName: orderFileName,
       },
     });
 
@@ -160,8 +160,8 @@ export class OrdersService {
       })),
     });
 
-    await this.generateBonPdf({
-      filePath: join(this.ordersDir, bonFileName),
+    await this.generateCommandePdf({
+      filePath: join(this.ordersDir, orderFileName),
       orderNumber,
       supplierName: supplier.nom,
       restaurantName: restaurant.name,
@@ -177,6 +177,8 @@ export class OrdersService {
       totalAmount,
     });
 
+    const commandeUrl = this.buildOrderUrl(req, createdOrder.id);
+
     return {
       id: createdOrder.id,
       number: orderNumber,
@@ -186,7 +188,8 @@ export class OrdersService {
       deliveryAddress: restaurant.address,
       totalItems,
       totalAmount,
-      bonUrl: this.buildBonUrl(req, createdOrder.id),
+      bonUrl: commandeUrl,
+      commandeUrl,
       createdAt: createdOrder.createdAt,
     };
   }
@@ -217,21 +220,26 @@ export class OrdersService {
       },
     });
 
-    return orders.map((order) => ({
-      id: order.id,
-      number: order.number,
-      supplierId: order.supplierId,
-      supplierName: order.supplier.nom,
-      deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
-      deliveryAddress: order.deliveryAddress,
-      totalItems: order.totalItems,
-      totalAmount: Number(order.totalAmount),
-      bonUrl: this.buildBonUrl(req, order.id),
-      createdAt: order.createdAt,
-    }));
+    return orders.map((order) => {
+      const commandeUrl = this.buildOrderUrl(req, order.id);
+
+      return {
+        id: order.id,
+        number: order.number,
+        supplierId: order.supplierId,
+        supplierName: order.supplier.nom,
+        deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
+        deliveryAddress: order.deliveryAddress,
+        totalItems: order.totalItems,
+        totalAmount: Number(order.totalAmount),
+        bonUrl: commandeUrl,
+        commandeUrl,
+        createdAt: order.createdAt,
+      };
+    });
   }
 
-  async resolveBonFilePath(orderId: number, actor: Actor) {
+  async resolveOrderFilePath(orderId: number, actor: Actor) {
     this.ensureCanManageOrders(actor);
 
     const order = await this.prisma.purchaseOrder.findUnique({
@@ -257,6 +265,10 @@ export class OrdersService {
     }
 
     return fullPath;
+  }
+
+  async resolveBonFilePath(orderId: number, actor: Actor) {
+    return this.resolveOrderFilePath(orderId, actor);
   }
 
   private ensureCanManageOrders(actor: Actor) {
@@ -286,20 +298,20 @@ export class OrdersService {
     return `PO-${year}${month}${day}-${paddedId}`;
   }
 
-  private buildBonUrl(
+  private buildOrderUrl(
     req: { protocol: string; get: (name: string) => string | undefined },
     orderId: number,
   ) {
     if (this.publicApiBaseUrl) {
       const normalizedBaseUrl = this.publicApiBaseUrl.replace(/\/$/, '');
-      return `${normalizedBaseUrl}/orders/${orderId}/bon`;
+      return `${normalizedBaseUrl}/orders/${orderId}/commande`;
     }
 
     const host = req.get('host');
-    return `${req.protocol}://${host}/orders/${orderId}/bon`;
+    return `${req.protocol}://${host}/orders/${orderId}/commande`;
   }
 
-  private async generateBonPdf(input: {
+  private async generateCommandePdf(input: {
     filePath: string;
     orderNumber: string;
     supplierName: string;
@@ -316,7 +328,7 @@ export class OrdersService {
 
       doc.pipe(stream);
 
-      doc.fontSize(18).text('Bon de commande');
+      doc.fontSize(18).text('Commande');
       doc.moveDown(0.5);
       doc.fontSize(11).text(`Numero: ${input.orderNumber}`);
       doc.text(`Fournisseur: ${input.supplierName}`);

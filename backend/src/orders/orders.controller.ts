@@ -78,11 +78,11 @@ export class OrdersController {
     );
   }
 
-  @ApiOperation({ summary: 'Download purchase order PDF by order id' })
+  @ApiOperation({ summary: 'Download order PDF by order id' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Get(':id/bon')
-  async downloadBon(
+  @Get(':id/commande')
+  async downloadCommande(
     @Req() req: AuthenticatedRequest,
     @Res() res: Response,
     @Param('id', ParseIntPipe) orderId: number,
@@ -93,12 +93,24 @@ export class OrdersController {
       throw new ForbiddenException('Unauthenticated request');
     }
 
-    const fullPath = await this.ordersService.resolveBonFilePath(orderId, {
+    const fullPath = await this.ordersService.resolveOrderFilePath(orderId, {
       id: user.id,
       role: user.role,
       restaurantId: user.restaurantId,
     });
 
     return res.download(fullPath);
+  }
+
+  @ApiOperation({ summary: 'Download order PDF by order id (legacy path)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/bon')
+  async downloadBonLegacy(
+    @Req() req: AuthenticatedRequest,
+    @Res() res: Response,
+    @Param('id', ParseIntPipe) orderId: number,
+  ) {
+    return this.downloadCommande(req, res, orderId);
   }
 }
