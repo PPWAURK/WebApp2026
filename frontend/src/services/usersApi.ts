@@ -20,8 +20,14 @@ export type UnassignedUser = {
 
 export async function fetchTrainingAccessUsers(
   token: string,
+  filters?: { restaurantId?: number },
 ): Promise<TrainingAccessUser[]> {
-  const response = await fetch(`${API_URL}/users/training-access`, {
+  const query =
+    filters?.restaurantId && filters.restaurantId > 0
+      ? `?restaurantId=${filters.restaurantId}`
+      : '';
+
+  const response = await fetch(`${API_URL}/users/training-access${query}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { API_URL } from '../constants/config';
 import { styles } from '../styles/appStyles';
@@ -29,10 +30,15 @@ type AuthFormProps = {
 };
 
 export function AuthForm(props: AuthFormProps) {
+  const [isRestaurantListOpen, setIsRestaurantListOpen] = useState(false);
+  const selectedRestaurant =
+    props.restaurants.find(
+      (restaurant) => restaurant.id === props.selectedRestaurantId,
+    ) ?? null;
+
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{props.title}</Text>
-      <Text style={styles.subtitle}>{props.text.auth.apiLabel}: {API_URL}</Text>
 
       <View style={styles.authLanguageRow}>
         <Pressable
@@ -67,37 +73,47 @@ export function AuthForm(props: AuthFormProps) {
           />
 
           <Text style={styles.uploadFieldTitle}>{props.text.auth.restaurantLabel}</Text>
-          <View style={styles.uploadChipWrap}>
-            {props.restaurants.map((restaurant) => (
-              <Pressable
-                key={restaurant.id}
-                style={[
-                  styles.uploadChip,
-                  props.selectedRestaurantId === restaurant.id &&
-                    styles.uploadChipActive,
-                ]}
-                onPress={() => props.onSelectRestaurant(restaurant.id)}
-              >
-                <Text
-                  style={[
-                    styles.uploadChipText,
-                    props.selectedRestaurantId === restaurant.id &&
-                      styles.uploadChipTextActive,
-                  ]}
-                >
-                  {restaurant.name}
-                </Text>
-                <Text
-                  style={[
-                    styles.docItemMeta,
-                    props.selectedRestaurantId === restaurant.id &&
-                      styles.trainingTabTextActive,
-                  ]}
-                >
-                  {restaurant.address}
-                </Text>
-              </Pressable>
-            ))}
+          <View style={styles.restaurantSelectWrap}>
+            <Pressable
+              style={styles.restaurantSelectTrigger}
+              onPress={() => setIsRestaurantListOpen((currentValue) => !currentValue)}
+            >
+              <Text style={styles.restaurantSelectTriggerText}>
+                {selectedRestaurant?.name ?? 'Choisir un etablissement'}
+              </Text>
+              <Text style={styles.restaurantSelectChevron}>
+                {isRestaurantListOpen ? '▲' : '▼'}
+              </Text>
+            </Pressable>
+
+            {isRestaurantListOpen ? (
+              <View style={styles.restaurantSelectList}>
+                {props.restaurants.map((restaurant) => (
+                  <Pressable
+                    key={restaurant.id}
+                    style={[
+                      styles.restaurantSelectItem,
+                      props.selectedRestaurantId === restaurant.id &&
+                        styles.restaurantSelectItemActive,
+                    ]}
+                    onPress={() => {
+                      props.onSelectRestaurant(restaurant.id);
+                      setIsRestaurantListOpen(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.restaurantSelectItemText,
+                        props.selectedRestaurantId === restaurant.id &&
+                          styles.restaurantSelectItemTextActive,
+                      ]}
+                    >
+                      {restaurant.name}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
           </View>
 
           {props.restaurants.length === 0 ? (

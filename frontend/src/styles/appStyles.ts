@@ -382,6 +382,54 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 12,
   },
+  restaurantSelectWrap: {
+    gap: 8,
+  },
+  restaurantSelectTrigger: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e0b8ba',
+    backgroundColor: '#fff7f7',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  restaurantSelectTriggerText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  restaurantSelectChevron: {
+    color: '#ab1e24',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  restaurantSelectList: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e0b8ba',
+    backgroundColor: '#fff7f7',
+    overflow: 'hidden',
+  },
+  restaurantSelectItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#efd8d9',
+  },
+  restaurantSelectItemActive: {
+    backgroundColor: '#ab1e24',
+  },
+  restaurantSelectItemText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  restaurantSelectItemTextActive: {
+    color: '#ffffff',
+  },
   error: {
     color: '#b42318',
     fontFamily: 'Manrope_700Bold',

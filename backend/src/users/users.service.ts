@@ -43,8 +43,14 @@ export class UsersService {
     });
   }
 
-  async listUsersTrainingAccess() {
+  async listUsersTrainingAccess(restaurantId?: number) {
     const users = await this.prisma.user.findMany({
+      where: {
+        role: {
+          not: Role.ADMIN,
+        },
+        ...(restaurantId ? { restaurantId } : {}),
+      },
       orderBy: {
         createdAt: 'asc',
       },

@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { sectionsByModule } from '../constants/documentTaxonomy';
+import { fetchRestaurants } from '../services/restaurantsApi';
 import {
   fetchTrainingAccessUsers,
   updateUserTrainingAccess,
   type TrainingAccessUser,
 } from '../services/usersApi';
 import { styles } from '../styles/appStyles';
-import type { TrainingSection } from '../types/auth';
+import type { Restaurant, TrainingSection } from '../types/auth';
 
 type AdminTrainingAccessPanelProps = {
   accessToken: string;
@@ -21,6 +22,11 @@ const allSections = Object.values(sectionsByModule)
   }));
 
 export function AdminTrainingAccessPanel({ accessToken }: AdminTrainingAccessPanelProps) {
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(
+    null,
+  );
+  const [isRestaurantListOpen, setIsRestaurantListOpen] = useState(false);
   const [users, setUsers] = useState<TrainingAccessUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [draftSections, setDraftSections] = useState<TrainingSection[]>([]);
@@ -33,23 +39,25 @@ export function AdminTrainingAccessPanel({ accessToken }: AdminTrainingAccessPan
     setIsLoading(true);
     setError(null);
 
-    void fetchTrainingAccessUsers(accessToken)
+    void fetchRestaurants()
       .then((result) => {
         if (!isActive) {
           return;
         }
 
-        const nonAdminUsers = result.filter((user) => user.role !== 'ADMIN');
-        setUsers(nonAdminUsers);
-        const firstUser = nonAdminUsers[0];
-        if (firstUser) {
-          setSelectedUserId(firstUser.id);
-          setDraftSections(firstUser.trainingAccess);
+        setRestaurants(result);
+        const firstRestaurant = result[0];
+        if (firstRestaurant) {
+          setSelectedRestaurantId(firstRestaurant.id);
         }
       })
       .catch((requestError) => {
         if (isActive) {
-          setError(requestError instanceof Error ? requestError.message : 'Cannot load users');
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : 'Cannot load restaurants',
+          );
         }
       })
       .finally(() => {
@@ -63,10 +71,72 @@ export function AdminTrainingAccessPanel({ accessToken }: AdminTrainingAccessPan
     };
   }, [accessToken]);
 
+  useEffect(() => {
+    if (!selectedRestaurantId) {
+      setUsers([]);
+      setSelectedUserId(null);
+      setDraftSections([]);
+      return;
+    }
+
+    let isActive = true;
+    setIsLoading(true);
+    setError(null);
+
+    void fetchTrainingAccessUsers(accessToken, {
+      restaurantId: selectedRestaurantId,
+    })
+      .then((result) => {
+        if (!isActive) {
+          return;
+        }
+
+        setUsers(result);
+        const firstUser = result[0];
+        if (firstUser) {
+          setSelectedUserId(firstUser.id);
+          setDraftSections(firstUser.trainingAccess);
+        } else {
+          setSelectedUserId(null);
+          setDraftSections([]);
+        }
+      })
+      .catch((requestError) => {
+        if (isActive) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : 'Cannot load users',
+          );
+          setUsers([]);
+          setSelectedUserId(null);
+          setDraftSections([]);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accessToken, selectedRestaurantId]);
+
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
     [selectedUserId, users],
   );
+  const sectionLabelByKey = useMemo(
+    () =>
+      Object.fromEntries(
+        allSections.map((section) => [section.key, section.label]),
+      ) as Record<TrainingSection, string>,
+    [],
+  );
+  const selectedRestaurant =
+    restaurants.find((restaurant) => restaurant.id === selectedRestaurantId) ?? null;
 
   function toggleSection(section: TrainingSection) {
     setDraftSections((current) =>
@@ -106,7 +176,105 @@ export function AdminTrainingAccessPanel({ accessToken }: AdminTrainingAccessPan
         Configure which formation sections each user can view.
       </Text>
 
+      <Text style={styles.uploadFieldTitle}>Restaurant</Text>
+      <View style={styles.restaurantSelectWrap}>
+        <Pressable
+          style={styles.restaurantSelectTrigger}
+          onPress={() => setIsRestaurantListOpen((currentValue) => !currentValue)}
+        >
+          <Text style={styles.restaurantSelectTriggerText}>
+            {selectedRestaurant?.name ?? 'Choose a restaurant'}
+          </Text>
+          <Text style={styles.restaurantSelectChevron}>
+            {isRestaurantListOpen ? '▲' : '▼'}
+          </Text>
+        </Pressable>
+
+        {isRestaurantListOpen ? (
+          <View style={styles.restaurantSelectList}>
+            {restaurants.map((restaurant) => (
+              <Pressable
+                key={restaurant.id}
+                style={[
+                  styles.restaurantSelectItem,
+                  selectedRestaurantId === restaurant.id &&
+                    styles.restaurantSelectItemActive,
+                ]}
+                onPress={() => {
+                  setSelectedRestaurantId(restaurant.id);
+                  setIsRestaurantListOpen(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.restaurantSelectItemText,
+                    selectedRestaurantId === restaurant.id &&
+                      styles.restaurantSelectItemTextActive,
+                  ]}
+                >
+                  {restaurant.name}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+      </View>
+
       {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <Text style={styles.uploadFieldTitle}>Employees and access labels</Text>
+      <View style={styles.docBlock}>
+        {users.length === 0 ? (
+          <Text style={styles.docEmpty}>{isLoading ? 'Loading...' : 'No employee in this restaurant.'}</Text>
+        ) : (
+          users.map((user) => (
+            <Pressable
+              key={user.id}
+              style={[
+                styles.docItem,
+                selectedUserId === user.id && styles.trainingTabActive,
+              ]}
+              onPress={() => {
+                setSelectedUserId(user.id);
+                setDraftSections(user.trainingAccess);
+              }}
+            >
+              <Text
+                style={[
+                  styles.docItemTitle,
+                  selectedUserId === user.id && styles.trainingTabTextActive,
+                ]}
+              >
+                {user.name ?? user.email} ({user.role})
+              </Text>
+              <View style={styles.uploadChipWrap}>
+                {user.trainingAccess.length === 0 ? (
+                  <Text
+                    style={[
+                      styles.docEmpty,
+                      selectedUserId === user.id && styles.trainingTabTextActive,
+                    ]}
+                  >
+                    Aucun acces / 无权限
+                  </Text>
+                ) : (
+                  user.trainingAccess.map((section) => (
+                    <Text
+                      key={`${user.id}-${section}`}
+                      style={[
+                        styles.pill,
+                        selectedUserId === user.id && styles.trainingTabTextActive,
+                      ]}
+                    >
+                      {sectionLabelByKey[section]}
+                    </Text>
+                  ))
+                )}
+              </View>
+            </Pressable>
+          ))
+        )}
+      </View>
 
       <Text style={styles.uploadFieldTitle}>User</Text>
       <View style={styles.uploadChipWrap}>

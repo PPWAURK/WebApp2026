@@ -202,8 +202,6 @@ export function TrainingPage({
                 }}
               >
                 <Text style={styles.docItemTitle}>{item.originalName}</Text>
-                <Text style={styles.docItemMeta}>{new Date(item.uploadedAt).toLocaleString()}</Text>
-                <Text style={styles.docItemLink}>{item.fileUrl}</Text>
               </Pressable>
             ))
           )}

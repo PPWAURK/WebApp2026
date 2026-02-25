@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -6,6 +7,7 @@ import {
   Param,
   ParseIntPipe,
   Patch,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -30,12 +32,24 @@ export class UsersController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('training-access')
-  async listUsersTrainingAccess(@Req() req: AuthenticatedRequest) {
+  async listUsersTrainingAccess(
+    @Req() req: AuthenticatedRequest,
+    @Query('restaurantId') restaurantIdRaw: string | undefined,
+  ) {
     if (req.user?.role !== 'ADMIN') {
       throw new ForbiddenException('Admin only');
     }
 
-    return this.usersService.listUsersTrainingAccess();
+    const restaurantId = restaurantIdRaw ? Number(restaurantIdRaw) : undefined;
+
+    if (
+      restaurantIdRaw &&
+      (!Number.isInteger(restaurantId) || (restaurantId ?? 0) <= 0)
+    ) {
+      throw new BadRequestException('restaurantId must be a positive integer');
+    }
+
+    return this.usersService.listUsersTrainingAccess(restaurantId);
   }
 
   @ApiOperation({ summary: 'Update one user training section access' })
