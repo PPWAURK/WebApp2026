@@ -350,6 +350,38 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 12,
   },
+  productInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  productInfoColumn: {
+    flex: 1,
+    gap: 4,
+  },
+  productGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  productGridItem: {
+    width: '48%',
+  },
+  productImageFrame: {
+    width: 110,
+    height: 110,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#f3dcdd',
+  },
+  productImageThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  productImagePreview: {
+    width: '100%',
+    height: '100%',
+  },
   input: {
     borderRadius: 14,
     borderWidth: 1,
@@ -518,5 +550,28 @@ export const styles = StyleSheet.create({
     color: '#7f1b21',
     fontFamily: 'Manrope_700Bold',
     fontSize: 14,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(36, 12, 14, 0.45)',
+    padding: 18,
+    justifyContent: 'center',
+  },
+  modalCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e4c3c5',
+    backgroundColor: '#fff9f9',
+    maxHeight: '88%',
+  },
+  modalContent: {
+    padding: 14,
+    gap: 10,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
   },
 });

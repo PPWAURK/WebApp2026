@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -12,6 +13,7 @@ import {
 } from 'react-native';
 import { AuthForm } from './src/components/AuthForm';
 import { HeaderDrawer } from './src/components/HeaderDrawer';
+import { OrderRecapPage } from './src/components/OrderRecapPage';
 import { OrdersPage } from './src/components/OrdersPage';
 import { RestaurantFormsPage } from './src/components/RestaurantFormsPage';
 import { SessionCard } from './src/components/SessionCard';
@@ -19,30 +21,119 @@ import { SupplierManagementPage } from './src/components/SupplierManagementPage'
 import { TrainingPage } from './src/components/TrainingPage';
 import { useAuth } from './src/hooks/useAuth';
 import { useLanguage } from './src/hooks/useLanguage';
+import { buildOrderBonUrl, createOrder, fetchOrders, type OrderSummary } from './src/services/ordersApi';
 import { styles } from './src/styles/appStyles';
 import type { MenuPage } from './src/types/menu';
+import type { OrderRecapData } from './src/types/order';
+
+function getTodayDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 export default function App() {
   const auth = useAuth();
   const language = useLanguage();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activePage, setActivePage] = useState<MenuPage>('dashboard');
+  const [orderRecap, setOrderRecap] = useState<OrderRecapData | null>(null);
+  const [orderQuantities, setOrderQuantities] = useState<Record<number, number>>({});
+  const [deliveryDate, setDeliveryDate] = useState(getTodayDateString());
+  const [orderHistory, setOrderHistory] = useState<OrderSummary[]>([]);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [latestCreatedOrder, setLatestCreatedOrder] = useState<{
+    id: number;
+    number: string;
+    bonUrl: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!auth.session) {
       setIsDrawerOpen(false);
       setActivePage('dashboard');
+      setOrderRecap(null);
+      setOrderQuantities({});
+      setDeliveryDate(getTodayDateString());
+      setOrderHistory([]);
+      setLatestCreatedOrder(null);
       return;
     }
 
     if (
-      (activePage === 'orders' || activePage === 'supplierManagement') &&
+      (
+        activePage === 'orders' ||
+        activePage === 'supplierManagement' ||
+        activePage === 'orderRecap'
+      ) &&
       auth.session.user.role !== 'ADMIN' &&
       auth.session.user.role !== 'MANAGER'
     ) {
       setActivePage('dashboard');
+      setOrderRecap(null);
     }
   }, [activePage, auth.session]);
+
+  useEffect(() => {
+    if (!auth.session || activePage !== 'orderRecap') {
+      return;
+    }
+
+    let isActive = true;
+
+    void fetchOrders(auth.session.accessToken)
+      .then((result) => {
+        if (isActive) {
+          setOrderHistory(result);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setOrderHistory([]);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [activePage, auth.session]);
+
+  async function handleSubmitOrder() {
+    if (!auth.session || !orderRecap) {
+      return;
+    }
+
+    setIsSubmittingOrder(true);
+
+    try {
+      const created = await createOrder(auth.session.accessToken, {
+        deliveryDate,
+        items: orderRecap.items,
+      });
+
+      setLatestCreatedOrder(created);
+      const refreshed = await fetchOrders(auth.session.accessToken);
+      setOrderHistory(refreshed);
+    } catch {
+      // keep page state; user can retry
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  }
+
+  function handleDownloadOrderBon(order: { id: number; bonUrl: string }) {
+    const url = order.bonUrl || buildOrderBonUrl(order.id);
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') {
+        window.open(url, '_blank');
+      }
+      return;
+    }
+
+    void Linking.openURL(url);
+  }
 
   const [fontsLoaded] = useFonts({
     Manrope_400Regular,
@@ -83,11 +174,56 @@ export default function App() {
             text={language.text}
             accessToken={auth.session.accessToken}
             language={language.language}
+            quantities={orderQuantities}
+            onQuantitiesChange={setOrderQuantities}
+            onSubmitOrder={(recap) => {
+              setOrderRecap(recap);
+              setLatestCreatedOrder(null);
+              setActivePage('orderRecap');
+            }}
           />
         );
       }
 
       return null;
+    }
+
+    if (activePage === 'orderRecap') {
+      if (!orderRecap) {
+        return (
+          <OrdersPage
+            text={language.text}
+            accessToken={auth.session.accessToken}
+            language={language.language}
+            quantities={orderQuantities}
+            onQuantitiesChange={setOrderQuantities}
+            onSubmitOrder={(recap) => {
+              setOrderRecap(recap);
+              setLatestCreatedOrder(null);
+              setActivePage('orderRecap');
+            }}
+          />
+        );
+      }
+
+      return (
+        <OrderRecapPage
+          text={language.text}
+          language={language.language}
+          recap={orderRecap}
+          deliveryDate={deliveryDate}
+          deliveryAddress={auth.session.user.restaurant?.address ?? ''}
+          isSubmittingOrder={isSubmittingOrder}
+          latestCreatedOrder={latestCreatedOrder}
+          orderHistory={orderHistory}
+          onDeliveryDateChange={setDeliveryDate}
+          onSubmitOrder={() => {
+            void handleSubmitOrder();
+          }}
+          onDownloadOrderBon={handleDownloadOrderBon}
+          onBack={() => setActivePage('orders')}
+        />
+      );
     }
 
     if (activePage === 'supplierManagement') {

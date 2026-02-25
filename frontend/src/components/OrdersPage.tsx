@@ -1,24 +1,34 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 import type { AppText } from '../locales/translations';
 import { fetchProducts, type ProductItem } from '../services/productsApi';
 import { fetchSuppliers, type SupplierItem } from '../services/suppliersApi';
 import { styles } from '../styles/appStyles';
 import type { Language } from '../types/language';
+import type { OrderRecapData } from '../types/order';
 
 type OrdersPageProps = {
   text: AppText;
   accessToken: string;
   language: Language;
+  quantities: Record<number, number>;
+  onQuantitiesChange: (next: Record<number, number>) => void;
+  onSubmitOrder: (recap: OrderRecapData) => void;
 };
 
-export function OrdersPage({ text, accessToken, language }: OrdersPageProps) {
+export function OrdersPage({
+  text,
+  accessToken,
+  language,
+  quantities,
+  onQuantitiesChange,
+  onSubmitOrder,
+}: OrdersPageProps) {
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | 'ALL'>('ALL');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [quantities, setQuantities] = useState<Record<number, number>>({});
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
 
   useEffect(() => {
@@ -62,27 +72,13 @@ export function OrdersPage({ text, accessToken, language }: OrdersPageProps) {
   }, [accessToken, text.orders.loadError]);
 
   function changeQuantity(productId: number, delta: number) {
-    setQuantities((current) => {
-      const next = (current[productId] ?? 0) + delta;
-      const clamped = Math.max(0, next);
-      return {
-        ...current,
-        [productId]: clamped,
-      };
+    const next = (quantities[productId] ?? 0) + delta;
+    const clamped = Math.max(0, next);
+    onQuantitiesChange({
+      ...quantities,
+      [productId]: clamped,
     });
   }
-
-  const summary = useMemo(() => {
-    return products.reduce(
-      (acc, product) => {
-        const qty = quantities[product.id] ?? 0;
-        acc.totalItems += qty;
-        acc.totalAmount += qty * (product.priceHt ?? 0);
-        return acc;
-      },
-      { totalItems: 0, totalAmount: 0 },
-    );
-  }, [products, quantities]);
 
   const supplierProducts = useMemo(() => {
     if (selectedSupplierId === 'ALL') {
@@ -91,6 +87,43 @@ export function OrdersPage({ text, accessToken, language }: OrdersPageProps) {
 
     return products.filter((product) => product.supplierId === selectedSupplierId);
   }, [products, selectedSupplierId]);
+
+  const summary = useMemo(() => {
+    return supplierProducts.reduce(
+      (acc, product) => {
+        const qty = quantities[product.id] ?? 0;
+        acc.totalItems += qty;
+        acc.totalAmount += qty * (product.priceHt ?? 0);
+        return acc;
+      },
+      { totalItems: 0, totalAmount: 0 },
+    );
+  }, [quantities, supplierProducts]);
+
+  const selectedItems = useMemo(() => {
+    return supplierProducts
+      .map((product) => {
+        const quantity = quantities[product.id] ?? 0;
+        if (quantity <= 0) {
+          return null;
+        }
+
+        const price = product.priceHt ?? 0;
+        return {
+          productId: product.id,
+          supplierId: product.supplierId,
+          category: product.category,
+          nameZh: product.nameZh,
+          nameFr: product.nameFr,
+          unit: product.unit,
+          priceHt: product.priceHt,
+          image: product.image,
+          quantity,
+          lineTotal: quantity * price,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+  }, [quantities, supplierProducts]);
 
   const categories = useMemo(() => {
     const unique = Array.from(
@@ -203,30 +236,44 @@ export function OrdersPage({ text, accessToken, language }: OrdersPageProps) {
         <Text style={styles.docEmpty}>{text.orders.emptyForType}</Text>
       ) : null}
 
-      <View style={styles.listBlock}>
+      <View style={[styles.listBlock, styles.productGrid]}>
         {filteredProducts.map((product) => {
           const qty = quantities[product.id] ?? 0;
           const productName =
             language === 'zh' ? product.nameZh : product.nameFr ?? product.nameZh;
           return (
-            <View key={product.id} style={styles.docItem}>
-              <Text style={styles.docItemTitle}>{productName}</Text>
-              {product.reference ? (
-                <Text style={styles.docItemMeta}>
-                  {text.orders.referenceLabel}: {product.reference}
-                </Text>
-              ) : null}
-              {product.unit ? (
-                <Text style={styles.docItemMeta}>
-                  {text.orders.unitLabel}: {product.unit}
-                </Text>
-              ) : null}
-              <Text style={styles.docItemMeta}>
-                {text.orders.priceLabel}:{' '}
-                {product.priceHt === null
-                  ? text.orders.priceNotAvailable
-                  : product.priceHt.toFixed(2)}
-              </Text>
+            <View key={product.id} style={[styles.docItem, styles.productGridItem]}>
+              <View style={styles.productInfoRow}>
+                {product.image ? (
+                  <View style={styles.productImageFrame}>
+                    <Image
+                      source={{ uri: product.image }}
+                      style={styles.productImageThumb}
+                      resizeMode="cover"
+                    />
+                  </View>
+                ) : null}
+
+                <View style={styles.productInfoColumn}>
+                  <Text style={styles.docItemTitle}>{productName}</Text>
+                  {product.reference ? (
+                    <Text style={styles.docItemMeta}>
+                      {text.orders.referenceLabel}: {product.reference}
+                    </Text>
+                  ) : null}
+                  {product.unit ? (
+                    <Text style={styles.docItemMeta}>
+                      {text.orders.unitLabel}: {product.unit}
+                    </Text>
+                  ) : null}
+                  <Text style={styles.docItemMeta}>
+                    {text.orders.priceLabel}:{' '}
+                    {product.priceHt === null
+                      ? text.orders.priceNotAvailable
+                      : product.priceHt.toFixed(2)}
+                  </Text>
+                </View>
+              </View>
 
               <View style={styles.pillRow}>
                 <Pressable
@@ -263,6 +310,13 @@ export function OrdersPage({ text, accessToken, language }: OrdersPageProps) {
       <Pressable
         style={[styles.primaryButton, summary.totalItems === 0 && styles.buttonDisabled]}
         disabled={summary.totalItems === 0}
+        onPress={() => {
+          onSubmitOrder({
+            items: selectedItems,
+            totalItems: summary.totalItems,
+            totalAmount: summary.totalAmount,
+          });
+        }}
       >
         <Text style={styles.primaryButtonText}>{text.orders.submitButton}</Text>
       </Pressable>
