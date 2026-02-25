@@ -16,6 +16,7 @@ export function OrdersPage({ text, accessToken, language }: OrdersPageProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
 
   useEffect(() => {
     let isActive = true;
@@ -70,6 +71,26 @@ export function OrdersPage({ text, accessToken, language }: OrdersPageProps) {
     );
   }, [products, quantities]);
 
+  const categories = useMemo(() => {
+    const unique = Array.from(
+      new Set(
+        products
+          .map((product) => product.category)
+          .filter((value) => typeof value === 'string' && value.trim()),
+      ),
+    );
+
+    return unique.sort((a, b) => a.localeCompare(b));
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    if (selectedCategory === 'ALL') {
+      return products;
+    }
+
+    return products.filter((product) => product.category === selectedCategory);
+  }, [products, selectedCategory]);
+
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{text.orders.title}</Text>
@@ -79,12 +100,60 @@ export function OrdersPage({ text, accessToken, language }: OrdersPageProps) {
 
       {loading ? <Text style={styles.docEmpty}>{text.orders.loading}</Text> : null}
 
+      {categories.length > 0 ? (
+        <>
+          <Text style={styles.uploadFieldTitle}>{text.orders.filterLabel}</Text>
+          <View style={styles.uploadChipWrap}>
+            <Pressable
+              style={[
+                styles.uploadChip,
+                selectedCategory === 'ALL' && styles.uploadChipActive,
+              ]}
+              onPress={() => setSelectedCategory('ALL')}
+            >
+              <Text
+                style={[
+                  styles.uploadChipText,
+                  selectedCategory === 'ALL' && styles.uploadChipTextActive,
+                ]}
+              >
+                {text.orders.allTypes}
+              </Text>
+            </Pressable>
+
+            {categories.map((category) => (
+              <Pressable
+                key={category}
+                style={[
+                  styles.uploadChip,
+                  selectedCategory === category && styles.uploadChipActive,
+                ]}
+                onPress={() => setSelectedCategory(category)}
+              >
+                <Text
+                  style={[
+                    styles.uploadChipText,
+                    selectedCategory === category && styles.uploadChipTextActive,
+                  ]}
+                >
+                  {category}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      ) : null}
+
       {!loading && products.length === 0 ? (
         <Text style={styles.docEmpty}>{text.orders.empty}</Text>
       ) : null}
 
+      {!loading && products.length > 0 && filteredProducts.length === 0 ? (
+        <Text style={styles.docEmpty}>{text.orders.emptyForType}</Text>
+      ) : null}
+
       <View style={styles.listBlock}>
-        {products.map((product) => {
+        {filteredProducts.map((product) => {
           const qty = quantities[product.id] ?? 0;
           const productName =
             language === 'zh' ? product.nameZh : product.nameFr ?? product.nameZh;

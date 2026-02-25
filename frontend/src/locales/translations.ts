@@ -118,8 +118,11 @@ export const translations = {
     orders: {
       title: 'Commande produits',
       subtitle: 'Selectionner les produits puis definir les quantites a commander.',
+      filterLabel: 'Type de produits',
+      allTypes: 'Tous les types',
       loading: 'Chargement des produits...',
       empty: 'Aucun produit disponible',
+      emptyForType: 'Aucun produit pour ce type',
       loadError: 'Impossible de charger les produits',
       referenceLabel: 'Reference',
       unitLabel: 'Unite',
@@ -302,8 +305,11 @@ export const translations = {
     orders: {
       title: '产品下单',
       subtitle: '选择商品并设置下单数量。',
+      filterLabel: '产品类型',
+      allTypes: '全部类型',
       loading: '正在加载商品...',
       empty: '暂无商品',
+      emptyForType: '该类型下暂无商品',
       loadError: '加载商品失败',
       referenceLabel: '编码',
       unitLabel: '单位',

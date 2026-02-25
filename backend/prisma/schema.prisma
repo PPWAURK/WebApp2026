@@ -54,6 +54,13 @@ model Produit {
   @@map("produits")
 }
 
+model Fournisseur {
+  id  Int    @id @default(autoincrement())
+  nom String @db.VarChar(255)
+
+  @@map("fournisseurs")
+}
+
 model Document {
   id               Int             @id @default(autoincrement())
   fileName         String          @unique
