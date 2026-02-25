@@ -123,12 +123,40 @@ export default function App() {
     }
   }
 
-  function handleDownloadOrderBon(order: { id: number; bonUrl: string }) {
+  async function handleDownloadOrderBon(order: { id: number; bonUrl: string; number?: string }) {
     const url = order.bonUrl || buildOrderBonUrl(order.id);
+
     if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined') {
-        window.open(url, '_blank');
+      try {
+        const token = auth.session?.accessToken;
+        const response = await fetch(url, {
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`,
+              }
+            : undefined,
+        });
+
+        if (!response.ok) {
+          throw new Error('ORDER_BON_DOWNLOAD_FAILED');
+        }
+
+        const blob = await response.blob();
+        const objectUrl = window.URL.createObjectURL(blob);
+        const fileName = `${order.number ?? `order-${order.id}`}.pdf`;
+        const anchor = window.document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download = fileName;
+        window.document.body.append(anchor);
+        anchor.click();
+        anchor.remove();
+        window.URL.revokeObjectURL(objectUrl);
+      } catch {
+        if (typeof window !== 'undefined') {
+          window.open(url, '_blank');
+        }
       }
+
       return;
     }
 
@@ -220,7 +248,9 @@ export default function App() {
           onSubmitOrder={() => {
             void handleSubmitOrder();
           }}
-          onDownloadOrderBon={handleDownloadOrderBon}
+          onDownloadOrderBon={(order) => {
+            void handleDownloadOrderBon(order);
+          }}
           onBack={() => setActivePage('orders')}
         />
       );
