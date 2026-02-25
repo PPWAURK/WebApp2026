@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 import type { AppText } from '../locales/translations';
-import type { OrderSummary } from '../services/ordersApi';
 import { styles } from '../styles/appStyles';
 import type { Language } from '../types/language';
 import type { OrderRecapData } from '../types/order';
@@ -14,7 +13,6 @@ type OrderRecapPageProps = {
   deliveryAddress: string;
   isSubmittingOrder: boolean;
   latestCreatedOrder: { id: number; number: string; bonUrl: string } | null;
-  orderHistory: OrderSummary[];
   onDeliveryDateChange: (value: string) => void;
   onSubmitOrder: () => void;
   onDownloadOrderBon: (order: { id: number; bonUrl: string }) => void;
@@ -29,7 +27,6 @@ export function OrderRecapPage({
   deliveryAddress,
   isSubmittingOrder,
   latestCreatedOrder,
-  orderHistory,
   onDeliveryDateChange,
   onSubmitOrder,
   onDownloadOrderBon,
@@ -156,31 +153,6 @@ export function OrderRecapPage({
           {isSubmittingOrder ? text.orders.submittingOrder : text.orders.submitOrderButton}
         </Text>
       </Pressable>
-
-      <View style={styles.docBlock}>
-        <Text style={styles.docBlockTitle}>{text.orders.historyTitle}</Text>
-        {orderHistory.length === 0 ? (
-          <Text style={styles.docEmpty}>{text.orders.historyEmpty}</Text>
-        ) : (
-          orderHistory.map((order) => (
-            <View key={order.id} style={styles.docItem}>
-              <Text style={styles.docItemTitle}>{order.number}</Text>
-              <Text style={styles.docItemMeta}>
-                {text.orders.deliveryDateLabel}: {order.deliveryDate}
-              </Text>
-              <Text style={styles.docItemMeta}>
-                {text.orders.summaryAmount}: {order.totalAmount.toFixed(2)}
-              </Text>
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => onDownloadOrderBon(order)}
-              >
-                <Text style={styles.secondaryButtonText}>{text.orders.downloadBonButton}</Text>
-              </Pressable>
-            </View>
-          ))
-        )}
-      </View>
 
       <Pressable style={styles.primaryButton} onPress={onBack}>
         <Text style={styles.primaryButtonText}>{text.orders.backToOrderButton}</Text>

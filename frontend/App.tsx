@@ -1,11 +1,12 @@
 import { Manrope_400Regular, Manrope_700Bold, useFonts } from '@expo-google-fonts/manrope';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Linking,
   Platform,
+  Pressable,
   SafeAreaView,
   ScrollView,
   Text,
@@ -13,6 +14,7 @@ import {
 } from 'react-native';
 import { AuthForm } from './src/components/AuthForm';
 import { HeaderDrawer } from './src/components/HeaderDrawer';
+import { OrderHistoryPage } from './src/components/OrderHistoryPage';
 import { OrderRecapPage } from './src/components/OrderRecapPage';
 import { OrdersPage } from './src/components/OrdersPage';
 import { RestaurantFormsPage } from './src/components/RestaurantFormsPage';
@@ -43,12 +45,39 @@ export default function App() {
   const [orderQuantities, setOrderQuantities] = useState<Record<number, number>>({});
   const [deliveryDate, setDeliveryDate] = useState(getTodayDateString());
   const [orderHistory, setOrderHistory] = useState<OrderSummary[]>([]);
+  const [isLoadingOrderHistory, setIsLoadingOrderHistory] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [latestCreatedOrder, setLatestCreatedOrder] = useState<{
     id: number;
     number: string;
     bonUrl: string;
   } | null>(null);
+  const scrollViewRef = useRef<ScrollView | null>(null);
+
+  function scrollToBottom() {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  }
+
+  function scrollToTop() {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  }
+
+  async function loadOrderHistory() {
+    if (!auth.session) {
+      setOrderHistory([]);
+      return;
+    }
+
+    setIsLoadingOrderHistory(true);
+    try {
+      const result = await fetchOrders(auth.session.accessToken);
+      setOrderHistory(result);
+    } catch {
+      setOrderHistory([]);
+    } finally {
+      setIsLoadingOrderHistory(false);
+    }
+  }
 
   useEffect(() => {
     if (!auth.session) {
@@ -58,6 +87,7 @@ export default function App() {
       setOrderQuantities({});
       setDeliveryDate(getTodayDateString());
       setOrderHistory([]);
+      setIsLoadingOrderHistory(false);
       setLatestCreatedOrder(null);
       return;
     }
@@ -66,7 +96,8 @@ export default function App() {
       (
         activePage === 'orders' ||
         activePage === 'supplierManagement' ||
-        activePage === 'orderRecap'
+        activePage === 'orderRecap' ||
+        activePage === 'orderHistory'
       ) &&
       auth.session.user.role !== 'ADMIN' &&
       auth.session.user.role !== 'MANAGER'
@@ -77,27 +108,11 @@ export default function App() {
   }, [activePage, auth.session]);
 
   useEffect(() => {
-    if (!auth.session || activePage !== 'orderRecap') {
+    if (!auth.session || activePage !== 'orderHistory') {
       return;
     }
 
-    let isActive = true;
-
-    void fetchOrders(auth.session.accessToken)
-      .then((result) => {
-        if (isActive) {
-          setOrderHistory(result);
-        }
-      })
-      .catch(() => {
-        if (isActive) {
-          setOrderHistory([]);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
+    void loadOrderHistory();
   }, [activePage, auth.session]);
 
   async function handleSubmitOrder() {
@@ -114,8 +129,7 @@ export default function App() {
       });
 
       setLatestCreatedOrder(created);
-      const refreshed = await fetchOrders(auth.session.accessToken);
-      setOrderHistory(refreshed);
+      await loadOrderHistory();
     } catch {
       // keep page state; user can retry
     } finally {
@@ -243,7 +257,6 @@ export default function App() {
           deliveryAddress={auth.session.user.restaurant?.address ?? ''}
           isSubmittingOrder={isSubmittingOrder}
           latestCreatedOrder={latestCreatedOrder}
-          orderHistory={orderHistory}
           onDeliveryDateChange={setDeliveryDate}
           onSubmitOrder={() => {
             void handleSubmitOrder();
@@ -254,6 +267,26 @@ export default function App() {
           onBack={() => setActivePage('orders')}
         />
       );
+    }
+
+    if (activePage === 'orderHistory') {
+      if (auth.session.user.role === 'ADMIN' || auth.session.user.role === 'MANAGER') {
+        return (
+          <OrderHistoryPage
+            text={language.text}
+            orders={orderHistory}
+            isLoading={isLoadingOrderHistory}
+            onRefresh={() => {
+              void loadOrderHistory();
+            }}
+            onDownloadOrderBon={(order) => {
+              void handleDownloadOrderBon(order);
+            }}
+          />
+        );
+      }
+
+      return null;
     }
 
     if (activePage === 'supplierManagement') {
@@ -305,6 +338,7 @@ export default function App() {
             style={styles.keyboardAreaContent}
           >
             <ScrollView
+              ref={scrollViewRef}
               contentContainerStyle={[
                 styles.content,
                 auth.session && styles.contentWithHeader,
@@ -350,6 +384,17 @@ export default function App() {
             )}
             </ScrollView>
           </KeyboardAvoidingView>
+
+          {auth.session && activePage === 'orders' ? (
+            <View style={styles.floatingScrollStack} pointerEvents="box-none">
+              <Pressable style={styles.floatingScrollButton} onPress={scrollToTop}>
+                <Text style={styles.floatingScrollButtonText}>↑</Text>
+              </Pressable>
+              <Pressable style={styles.floatingScrollButton} onPress={scrollToBottom}>
+                <Text style={styles.floatingScrollButtonText}>↓</Text>
+              </Pressable>
+            </View>
+          ) : null}
         </View>
       </SafeAreaView>
     </View>

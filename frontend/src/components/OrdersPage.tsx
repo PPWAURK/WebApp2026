@@ -320,6 +320,7 @@ export function OrdersPage({
       >
         <Text style={styles.primaryButtonText}>{text.orders.submitButton}</Text>
       </Pressable>
+
     </View>
   );
 }
