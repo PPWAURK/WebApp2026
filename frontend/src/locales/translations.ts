@@ -55,36 +55,11 @@ export const translations = {
       intro:
         'Centre de formation interne pour les standards de service, procedures cuisine et hygiene.',
       tabs: {
-        dishTraining: '菜品培训',
-        companyPolicy: '公司规章制度',
-        managementTools: '管理工具',
+        dishTraining: 'Formation de recette',
+        companyPolicy: 'Régles de lentreprise',
+        managementTools: 'Outils de gestion',
       },
-      sections: {
-        dishTraining: {
-          title: '菜品培训',
-          intro: 'Parcours de formation des recettes, presentation et standards de qualite.',
-          item1: 'Fiches recette avec grammage standard',
-          item2: 'Demonstration: preparation et dressage',
-          item3: 'Controle qualite avant service',
-          item4: 'Validation finale avec manager',
-        },
-        companyPolicy: {
-          title: '公司规章制度',
-          intro: 'Regles internes, discipline, hygiene et securite a appliquer chaque jour.',
-          item1: 'Horaires, ponctualite et comportement equipe',
-          item2: 'Regles hygiene et securite alimentaire',
-          item3: 'Procedure incident et escalade manager',
-          item4: 'Protection des donnees et confidentialite',
-        },
-        managementTools: {
-          title: '管理工具',
-          intro: 'Outils de pilotage pour le suivi operationnel quotidien du restaurant.',
-          item1: 'Checklist ouverture et fermeture',
-          item2: 'Suivi KPI: ventes, annulations, ticket moyen',
-          item3: 'Planning equipe et gestion des roles',
-          item4: 'Journal d actions correctives',
-        },
-      },
+
     },
     forms: {
       title: 'Tableaux de restaurant',
@@ -152,32 +127,6 @@ export const translations = {
         dishTraining: '菜品培训',
         companyPolicy: '公司规章制度',
         managementTools: '管理工具',
-      },
-      sections: {
-        dishTraining: {
-          title: '菜品培训',
-          intro: '用于菜品标准、出品速度和口味一致性的培训内容。',
-          item1: '标准配方与克重规范',
-          item2: '备餐与摆盘操作演示',
-          item3: '出品前质量检查流程',
-          item4: '店长最终考核确认',
-        },
-        companyPolicy: {
-          title: '公司规章制度',
-          intro: '用于规范员工行为、卫生安全与门店纪律的制度说明。',
-          item1: '考勤、排班与迟到处理规则',
-          item2: '卫生与食品安全执行标准',
-          item3: '异常事件上报与处理流程',
-          item4: '员工信息与门店数据保密要求',
-        },
-        managementTools: {
-          title: '管理工具',
-          intro: '用于店长和管理层日常运营跟踪的工具集合。',
-          item1: '开店/关店检查清单',
-          item2: '销售、取消单与现金记录看板',
-          item3: '岗位分工与人员调度表',
-          item4: '问题复盘与改进追踪记录',
-        },
       },
     },
     forms: {

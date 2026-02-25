@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from 'react-native';
+import { AdminTrainingAccessPanel } from './AdminTrainingAccessPanel';
 import { AdminUploadPanel } from './AdminUploadPanel';
 import type { AppText } from '../locales/translations';
 import { styles } from '../styles/appStyles';
@@ -35,7 +36,10 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
       </View>
 
       {user.role === 'ADMIN' ? (
-        <AdminUploadPanel accessToken={accessToken} text={text} />
+        <>
+          <AdminTrainingAccessPanel accessToken={accessToken} />
+          <AdminUploadPanel accessToken={accessToken} text={text} />
+        </>
       ) : (
         <View style={styles.card}>
           <Text style={styles.subtitle}>{text.dashboard.uploadPermission}</Text>

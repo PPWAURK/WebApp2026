@@ -99,6 +99,7 @@ export class UploadsService {
   async listLibrary(
     req: { protocol: string; get: (name: string) => string | undefined },
     filters: { module?: string; section?: string; mediaType?: string },
+    authContext: { role?: string; trainingAccess?: string[] | undefined },
   ) {
     const moduleFilter = filters.module
       ? this.parseUploadModule(filters.module)
@@ -115,6 +116,20 @@ export class UploadsService {
       ...(sectionFilter ? { section: sectionFilter } : {}),
       ...(mediaTypeFilter ? { mediaType: mediaTypeFilter } : {}),
     };
+
+    if (authContext.role !== 'ADMIN') {
+      const allowedSections = (authContext.trainingAccess ?? []).filter((section) =>
+        isUploadSection(section),
+      );
+
+      if (!allowedSections.length) {
+        return [];
+      }
+
+      where.section = {
+        in: allowedSections as UploadSection[],
+      };
+    }
 
     const entries = await this.prisma.document.findMany({
       where,

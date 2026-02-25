@@ -21,6 +21,7 @@ model User {
   role          Role          @default(EMPLOYEE)
   isOnProbation Boolean       @default(false)
   workplaceRole WorkplaceRole @default(BOTH)
+  trainingAccess Json?
   documents     Document[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt

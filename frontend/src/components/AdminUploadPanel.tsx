@@ -102,7 +102,14 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
             ]}
             onPress={() => onSelectModule(moduleOption.key as LibraryModule)}
           >
-            <Text style={styles.uploadChipText}>{moduleOption.label}</Text>
+            <Text
+              style={[
+                styles.uploadChipText,
+                selectedModule === moduleOption.key && styles.uploadChipTextActive,
+              ]}
+            >
+              {moduleOption.label}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -118,7 +125,14 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
             ]}
             onPress={() => setSelectedSection(sectionOption.key as LibrarySection)}
           >
-            <Text style={styles.uploadChipText}>{sectionOption.label}</Text>
+            <Text
+              style={[
+                styles.uploadChipText,
+                selectedSection === sectionOption.key && styles.uploadChipTextActive,
+              ]}
+            >
+              {sectionOption.label}
+            </Text>
           </Pressable>
         ))}
       </View>

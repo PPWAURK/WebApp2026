@@ -256,7 +256,18 @@ export class UploadsController {
     @Query('section') section: string | undefined,
     @Query('mediaType') mediaType: string | undefined,
   ) {
-    return this.uploadsService.listLibrary(req, { module, section, mediaType });
+    const authenticatedRequest = req as Request & {
+      user?: { role?: string; trainingAccess?: string[] };
+    };
+
+    return this.uploadsService.listLibrary(
+      req,
+      { module, section, mediaType },
+      {
+        role: authenticatedRequest.user?.role,
+        trainingAccess: authenticatedRequest.user?.trainingAccess,
+      },
+    );
   }
 
   @ApiOperation({ summary: 'Get uploaded file by category and file name' })

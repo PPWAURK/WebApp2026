@@ -1,5 +1,4 @@
 import { Manrope_400Regular, Manrope_700Bold, useFonts } from '@expo-google-fonts/manrope';
-import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import {
@@ -42,7 +41,7 @@ export default function App() {
   if (!fontsLoaded || auth.isLoadingSession || language.isLoadingLanguage) {
     return (
       <SafeAreaView style={styles.loaderPage}>
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#ab1e24" />
       </SafeAreaView>
     );
   }
@@ -57,6 +56,7 @@ export default function App() {
         <TrainingPage
           text={language.text}
           accessToken={auth.session.accessToken}
+          currentUser={auth.session.user}
         />
       );
     }
@@ -76,7 +76,7 @@ export default function App() {
   }
 
   return (
-    <LinearGradient colors={['#f7fbff', '#d9f0ea', '#f5ecd9']} style={styles.page}>
+    <View style={styles.page}>
       <StatusBar style="dark" />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.appFrame}>
@@ -144,6 +144,6 @@ export default function App() {
           </KeyboardAvoidingView>
         </View>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }

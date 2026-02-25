@@ -25,6 +25,7 @@ export const moduleOptions: TaxonomyOption[] = [
 
 export const sectionsByModule: Record<LibraryModule, TaxonomyOption[]> = {
   TRAINING: [
+    { key: 'RECIPE_TRAINING', label: '菜谱培训 / Formation de recette' },
     { key: 'RECIPE', label: '食谱 / Recette' },
     { key: 'MISE_EN_PLACE_SOP', label: '酱汁及半成品菜品出品 SOP' },
   ],

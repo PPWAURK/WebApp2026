@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Prisma } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import type { StringValue } from 'ms';
@@ -62,6 +63,7 @@ export class AuthService {
     role: string;
     isOnProbation: boolean;
     workplaceRole: string;
+    trainingAccess: Prisma.JsonValue | null;
   }) {
     const payload = {
       sub: user.id,
@@ -84,6 +86,9 @@ export class AuthService {
         role: user.role,
         isOnProbation: user.isOnProbation,
         workplaceRole: user.workplaceRole,
+        trainingAccess: this.usersService.normalizeTrainingAccess(
+          user.trainingAccess,
+        ),
       },
     };
   }
@@ -95,6 +100,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid token');
     }
 
-    return user;
+    return {
+      ...user,
+      trainingAccess: this.usersService.normalizeTrainingAccess(user.trainingAccess),
+    };
   }
 }
