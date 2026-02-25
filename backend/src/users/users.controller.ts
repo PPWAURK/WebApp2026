@@ -53,4 +53,32 @@ export class UsersController {
 
     return this.usersService.updateTrainingAccess(userId, sections);
   }
+
+  @ApiOperation({ summary: 'List employees not yet assigned to any restaurant' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('unassigned')
+  listUnassignedUsers(@Req() req: AuthenticatedRequest) {
+    if (req.user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.usersService.listUnassignedEmployees();
+  }
+
+  @ApiOperation({ summary: 'Assign one user to one restaurant' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/restaurant')
+  updateUserRestaurant(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) userId: number,
+    @Body('restaurantId', ParseIntPipe) restaurantId: number,
+  ) {
+    if (req.user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.usersService.assignUserRestaurant(userId, restaurantId);
+  }
 }

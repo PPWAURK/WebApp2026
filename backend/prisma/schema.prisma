@@ -18,6 +18,8 @@ model User {
   email         String        @unique
   passwordHash  String
   name          String?
+  restaurantId  Int?
+  restaurant    Restaurant?   @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
   role          Role          @default(EMPLOYEE)
   isOnProbation Boolean       @default(false)
   workplaceRole WorkplaceRole @default(BOTH)
@@ -25,6 +27,15 @@ model User {
   documents     Document[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+}
+
+model Restaurant {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  address   String
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Document {

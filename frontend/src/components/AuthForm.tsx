@@ -1,7 +1,7 @@
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { API_URL } from '../constants/config';
 import { styles } from '../styles/appStyles';
-import type { AuthMode } from '../types/auth';
+import type { AuthMode, Restaurant } from '../types/auth';
 import type { AppText } from '../locales/translations';
 import type { Language } from '../types/language';
 
@@ -13,12 +13,15 @@ type AuthFormProps = {
   email: string;
   password: string;
   name: string;
+  restaurants: Restaurant[];
+  selectedRestaurantId: number | null;
   rememberMe: boolean;
   isSubmitting: boolean;
   error: string | null;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onNameChange: (value: string) => void;
+  onSelectRestaurant: (restaurantId: number) => void;
   onRememberToggle: () => void;
   onSelectLanguage: (language: Language) => void;
   onSubmit: () => void;
@@ -53,14 +56,54 @@ export function AuthForm(props: AuthFormProps) {
       </View>
 
       {props.mode === 'register' ? (
-        <TextInput
-          autoCapitalize="words"
-          placeholder={props.text.auth.namePlaceholder}
-          placeholderTextColor="#7f8a8a"
-          style={styles.input}
-          value={props.name}
-          onChangeText={props.onNameChange}
-        />
+        <>
+          <TextInput
+            autoCapitalize="words"
+            placeholder={props.text.auth.namePlaceholder}
+            placeholderTextColor="#7f8a8a"
+            style={styles.input}
+            value={props.name}
+            onChangeText={props.onNameChange}
+          />
+
+          <Text style={styles.uploadFieldTitle}>{props.text.auth.restaurantLabel}</Text>
+          <View style={styles.uploadChipWrap}>
+            {props.restaurants.map((restaurant) => (
+              <Pressable
+                key={restaurant.id}
+                style={[
+                  styles.uploadChip,
+                  props.selectedRestaurantId === restaurant.id &&
+                    styles.uploadChipActive,
+                ]}
+                onPress={() => props.onSelectRestaurant(restaurant.id)}
+              >
+                <Text
+                  style={[
+                    styles.uploadChipText,
+                    props.selectedRestaurantId === restaurant.id &&
+                      styles.uploadChipTextActive,
+                  ]}
+                >
+                  {restaurant.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.docItemMeta,
+                    props.selectedRestaurantId === restaurant.id &&
+                      styles.trainingTabTextActive,
+                  ]}
+                >
+                  {restaurant.address}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {props.restaurants.length === 0 ? (
+            <Text style={styles.error}>{props.text.auth.restaurantRequired}</Text>
+          ) : null}
+        </>
       ) : null}
 
       <TextInput

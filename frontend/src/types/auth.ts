@@ -2,6 +2,12 @@ export type Role = 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
 
 export type WorkplaceRole = 'SALLE' | 'CUISINE' | 'BOTH';
 
+export type Restaurant = {
+  id: number;
+  name: string;
+  address: string;
+};
+
 export type TrainingSection =
   | 'RECIPE_TRAINING'
   | 'RECIPE'
@@ -21,6 +27,7 @@ export type User = {
   isOnProbation: boolean;
   workplaceRole: WorkplaceRole;
   trainingAccess: TrainingSection[];
+  restaurant: Restaurant | null;
 };
 
 export type AuthResponse = {

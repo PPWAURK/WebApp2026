@@ -8,6 +8,7 @@ import type { Prisma } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import type { StringValue } from 'ms';
+import { RestaurantsService } from '../restaurants/restaurants.service';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -16,6 +17,7 @@ import { RegisterDto } from './dto/register.dto';
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
+    private readonly restaurantsService: RestaurantsService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -36,7 +38,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.buildAuthResponse(user);
+    const authenticatedUser = await this.usersService.findById(user.id);
+
+    if (!authenticatedUser) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    return this.buildAuthResponse(authenticatedUser);
   }
 
   async register(registerDto: RegisterDto) {
@@ -46,12 +54,21 @@ export class AuthService {
       throw new ConflictException('Email already in use');
     }
 
+    await this.restaurantsService.ensureRestaurantExists(registerDto.restaurantId);
+
     const passwordHash = await bcrypt.hash(registerDto.password, 10);
-    const user = await this.usersService.createEmployee({
+    const createdUser = await this.usersService.createEmployee({
       email: registerDto.email,
       passwordHash,
       name: registerDto.name,
+      restaurantId: registerDto.restaurantId,
     });
+
+    const user = await this.usersService.findById(createdUser.id);
+
+    if (!user) {
+      throw new UnauthorizedException('Unable to create user');
+    }
 
     return this.buildAuthResponse(user);
   }
@@ -64,6 +81,8 @@ export class AuthService {
     isOnProbation: boolean;
     workplaceRole: string;
     trainingAccess: Prisma.JsonValue | null;
+    restaurantId: number | null;
+    restaurant: { id: number; name: string; address: string } | null;
   }) {
     const payload = {
       sub: user.id,
@@ -89,6 +108,7 @@ export class AuthService {
         trainingAccess: this.usersService.normalizeTrainingAccess(
           user.trainingAccess,
         ),
+        restaurant: user.restaurant,
       },
     };
   }

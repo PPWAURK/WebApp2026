@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from 'react-native';
+import { AdminRestaurantPanel } from './AdminRestaurantPanel';
 import { AdminTrainingAccessPanel } from './AdminTrainingAccessPanel';
 import { AdminUploadPanel } from './AdminUploadPanel';
 import type { AppText } from '../locales/translations';
@@ -20,6 +21,11 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           {text.dashboard.welcome} {user.name ?? text.dashboard.fallbackName}
         </Text>
         <Text style={styles.subtitle}>{user.email}</Text>
+        {user.restaurant ? (
+          <Text style={styles.subtitle}>
+            {user.restaurant.name} - {user.restaurant.address}
+          </Text>
+        ) : null}
 
         <View style={styles.pillRow}>
           <Text style={styles.pill}>{text.dashboard.role}: {user.role}</Text>
@@ -37,6 +43,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
 
       {user.role === 'ADMIN' ? (
         <>
+          <AdminRestaurantPanel accessToken={accessToken} />
           <AdminTrainingAccessPanel accessToken={accessToken} />
           <AdminUploadPanel accessToken={accessToken} text={text} />
         </>

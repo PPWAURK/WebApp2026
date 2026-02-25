@@ -19,6 +19,14 @@ export class UsersService {
         id: true,
         email: true,
         name: true,
+        restaurantId: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+          },
+        },
         role: true,
         isOnProbation: true,
         workplaceRole: true,
@@ -44,6 +52,13 @@ export class UsersService {
         id: true,
         email: true,
         name: true,
+        restaurantId: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         role: true,
         trainingAccess: true,
       },
@@ -61,6 +76,7 @@ export class UsersService {
       select: {
         id: true,
         role: true,
+        restaurantId: true,
       },
     });
 
@@ -90,6 +106,13 @@ export class UsersService {
         id: true,
         email: true,
         name: true,
+        restaurantId: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         role: true,
         trainingAccess: true,
       },
@@ -105,12 +128,14 @@ export class UsersService {
     email: string;
     passwordHash: string;
     name?: string;
+    restaurantId: number;
   }) {
     return this.prisma.user.create({
       data: {
         email: params.email,
         passwordHash: params.passwordHash,
         name: params.name,
+        restaurantId: params.restaurantId,
         role: Role.EMPLOYEE,
         isOnProbation: true,
         workplaceRole: WorkplaceRole.BOTH,
@@ -132,5 +157,78 @@ export class UsersService {
 
   private getAllTrainingSections(): UploadSection[] {
     return Object.values(UPLOAD_SECTION_BY_MODULE).flat();
+  }
+
+  listUnassignedEmployees() {
+    return this.prisma.user.findMany({
+      where: {
+        role: {
+          not: Role.ADMIN,
+        },
+        restaurantId: null,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+      },
+    });
+  }
+
+  async assignUserRestaurant(userId: number, restaurantId: number) {
+    const restaurant = await this.prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: { id: true },
+    });
+
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        restaurantId: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role === Role.ADMIN) {
+      throw new BadRequestException('Cannot assign restaurant to ADMIN via this endpoint');
+    }
+
+    if (user.restaurantId) {
+      throw new BadRequestException('User is already assigned to a restaurant');
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        restaurantId,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        restaurantId: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+          },
+        },
+      },
+    });
   }
 }

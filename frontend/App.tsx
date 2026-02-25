@@ -122,12 +122,15 @@ export default function App() {
                 email={auth.email}
                 password={auth.password}
                 name={auth.name}
+                restaurants={auth.restaurants}
+                selectedRestaurantId={auth.selectedRestaurantId}
                 rememberMe={auth.rememberMe}
                 isSubmitting={auth.isSubmitting}
                 error={auth.error}
                 onEmailChange={auth.setEmail}
                 onPasswordChange={auth.setPassword}
                 onNameChange={auth.setName}
+                onSelectRestaurant={auth.setSelectedRestaurantId}
                 onRememberToggle={() =>
                   auth.setRememberMe((currentValue) => !currentValue)
                 }

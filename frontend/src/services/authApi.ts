@@ -5,6 +5,7 @@ type AuthPayload = {
   email: string;
   password: string;
   name?: string;
+  restaurantId?: number;
 };
 
 export async function requestAuth(
