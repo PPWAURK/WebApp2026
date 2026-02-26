@@ -54,6 +54,8 @@ export class OrdersService {
   private readonly cjkFontCandidatePaths = [
     join(process.cwd(), 'assets', 'fonts', 'NotoSansSC-Regular.ttf'),
     join(this.storageRoot, 'assets', 'fonts', 'NotoSansSC-Regular.ttf'),
+    '/System/Library/Fonts/Hiragino Sans GB.ttc',
+    '/System/Library/Fonts/STHeiti Medium.ttc',
   ];
   private readonly cjkFontPath = this.cjkFontCandidatePaths.find((path) =>
     existsSync(path),
@@ -209,8 +211,10 @@ export class OrdersService {
       deliveryDate: payload.deliveryDate,
       deliveryAddress: restaurant.address,
       items: preparedItems.map((item) => ({
-        nameFr: this.recoverUtf8(item.product.designationFr ?? item.product.nomCn),
-        nameZh: this.recoverUtf8(item.product.nomCn),
+        nameFr: this.sanitizeLabel(
+          this.recoverUtf8(item.product.designationFr ?? item.product.nomCn),
+        ),
+        nameZh: this.sanitizeLabel(this.recoverUtf8(item.product.nomCn)),
         unit: item.product.unite?.trim() ? item.product.unite.trim() : '-',
         quantity: item.quantity,
         unitPrice: item.unitPrice,
@@ -309,6 +313,13 @@ export class OrdersService {
             quantity: true,
             unitPriceHt: true,
             lineTotal: true,
+            product: {
+              select: {
+                nomCn: true,
+                designationFr: true,
+                unite: true,
+              },
+            },
           },
         },
       },
@@ -332,9 +343,17 @@ export class OrdersService {
       deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
       deliveryAddress: order.deliveryAddress,
       items: order.items.map((item) => ({
-        nameFr: this.recoverUtf8(item.nameFr ?? item.nameZh),
-        nameZh: this.recoverUtf8(item.nameZh),
-        unit: item.unit?.trim() ? item.unit.trim() : '-',
+        nameFr: this.sanitizeLabel(
+          this.recoverUtf8(item.nameFr ?? item.product.designationFr ?? item.nameZh),
+        ),
+        nameZh: this.sanitizeLabel(
+          this.resolveZhName(item.nameZh, item.product.nomCn),
+        ),
+        unit: item.unit?.trim()
+          ? item.unit.trim()
+          : item.product.unite?.trim()
+            ? item.product.unite.trim()
+            : '-',
         quantity: item.quantity,
         unitPrice: Number(item.unitPriceHt),
         lineTotal: Number(item.lineTotal),
@@ -538,8 +557,8 @@ export class OrdersService {
     input.items.forEach((item, index) => {
       ensureSpace(rowHeight);
       const y = doc.y;
-      const productNameFr = this.truncateText(this.recoverUtf8(item.nameFr), 44);
-      const productNameZh = this.truncateText(this.recoverUtf8(item.nameZh), 44);
+      const productNameFr = this.truncateText(this.sanitizeLabel(item.nameFr), 44);
+      const productNameZh = this.truncateText(this.sanitizeLabel(item.nameZh), 44);
       const orderUnit = item.unit?.trim() ? item.unit.trim() : '-';
       const computedLineTotal = item.quantity * item.unitPrice;
 
@@ -676,6 +695,36 @@ export class OrdersService {
     }
 
     return safeValue;
+  }
+
+  private resolveZhName(
+    snapshotZh: string | null | undefined,
+    productZh: string | null | undefined,
+  ) {
+    const snapshot = this.recoverUtf8(snapshotZh);
+    if (this.containsCjk(snapshot)) {
+      return snapshot;
+    }
+
+    const current = this.recoverUtf8(productZh);
+    if (this.containsCjk(current)) {
+      return current;
+    }
+
+    return snapshot || current || '-';
+  }
+
+  private sanitizeLabel(value: string | null | undefined) {
+    const safeValue = this.recoverUtf8(value);
+    if (!safeValue) {
+      return '-';
+    }
+
+    return safeValue
+      .replace(/[\x00-\x1F\x7F]/g, ' ')
+      .replace(/[+\-±]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   private containsCjk(value: string) {
