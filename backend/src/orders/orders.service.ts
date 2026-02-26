@@ -51,6 +51,16 @@ export class OrdersService {
     join(process.cwd(), 'assets', 'ZHAO', '2-01.png'),
     join(this.storageRoot, 'assets', 'ZHAO-元素element', 'logo', '1.png'),
   ];
+  private readonly decorationCandidatePaths = [
+    join(process.cwd(), 'assets', 'ZHAO', '2-01.png'),
+    join(process.cwd(), 'assets', 'ZHAO-元素element', 'logo', '1.png'),
+    join(process.cwd(), 'assets', 'ZHAO-元素element', 'logo', '2-01.png'),
+    join(process.cwd(), 'assets', 'ZHAO-元素element', 'logo', '3-01.png'),
+    join(process.cwd(), 'assets', 'ZHAO-元素element', 'logo', '3-02.png'),
+  ];
+  private readonly decorationImagePaths = this.decorationCandidatePaths.filter(
+    (path) => existsSync(path),
+  );
   private readonly cjkFontCandidatePaths = [
     join(
       process.cwd(),
@@ -506,6 +516,7 @@ export class OrdersService {
 
       doc.pipe(stream);
 
+      this.drawRandomDecorations(doc);
       this.drawHeader(doc, input);
       this.drawOrderMeta(doc, input);
       this.drawItemsTable(doc, input);
@@ -637,6 +648,7 @@ export class OrdersService {
       const bottomLimit = doc.page.height - doc.page.margins.bottom - 90;
       if (doc.y + requiredHeight > bottomLimit) {
         doc.addPage();
+        this.drawRandomDecorations(doc);
         drawHeaderRow();
       }
     };
@@ -788,6 +800,54 @@ export class OrdersService {
       return value;
     }
     return `${value.slice(0, maxLength - 1)}...`;
+  }
+
+  private drawRandomDecorations(doc: PdfDoc) {
+    if (!this.decorationImagePaths.length) {
+      return;
+    }
+
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+    const placements = [
+      { x: 16, y: 92, width: 72, height: 72 },
+      { x: pageWidth - 86, y: 92, width: 72, height: 72 },
+      { x: 20, y: pageHeight - 120, width: 80, height: 80 },
+      { x: pageWidth - 98, y: pageHeight - 120, width: 80, height: 80 },
+    ];
+
+    const selectedPlacements = this.pickRandomItems(placements, 2);
+
+    doc.save();
+    doc.opacity(0.12);
+
+    selectedPlacements.forEach((placement) => {
+      const imagePath =
+        this.decorationImagePaths[
+          Math.floor(Math.random() * this.decorationImagePaths.length)
+        ];
+
+      doc.image(imagePath, placement.x, placement.y, {
+        fit: [placement.width, placement.height],
+      });
+    });
+
+    doc.restore();
+  }
+
+  private pickRandomItems<T>(items: T[], count: number) {
+    const pool = [...items];
+    const selected: T[] = [];
+
+    while (pool.length && selected.length < count) {
+      const randomIndex = Math.floor(Math.random() * pool.length);
+      const [picked] = pool.splice(randomIndex, 1);
+      if (picked) {
+        selected.push(picked);
+      }
+    }
+
+    return selected;
   }
 
   // ✅ Nouveau: fabrique un vrai libellé FR depuis un champ parfois "mixé"
