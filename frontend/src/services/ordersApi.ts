@@ -139,6 +139,25 @@ export async function fetchOrders(token: string): Promise<OrderSummary[]> {
   return data.map((item) => normalizeOrderSummary(item as RawOrderSummary));
 }
 
+export async function deleteOrder(token: string, orderId: number): Promise<void> {
+  const response = await fetch(`${API_URL}/orders/${orderId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (response.ok) {
+    return;
+  }
+
+  const data = (await response.json()) as { message?: string | string[] };
+  const message = Array.isArray(data.message)
+    ? data.message.join(', ')
+    : data.message ?? 'ORDER_DELETE_FAILED';
+  throw new Error(message);
+}
+
 export function buildOrderBonUrl(orderId: number) {
   return `${API_URL}/orders/${orderId}/commande`;
 }

@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -24,7 +25,13 @@ import { SupplierManagementPage } from './src/components/SupplierManagementPage'
 import { TrainingPage } from './src/components/TrainingPage';
 import { useAuth } from './src/hooks/useAuth';
 import { useLanguage } from './src/hooks/useLanguage';
-import { buildOrderBonUrl, createOrder, fetchOrders, type OrderSummary } from './src/services/ordersApi';
+import {
+  buildOrderBonUrl,
+  createOrder,
+  deleteOrder,
+  fetchOrders,
+  type OrderSummary,
+} from './src/services/ordersApi';
 import { styles } from './src/styles/appStyles';
 import type { MenuPage } from './src/types/menu';
 import type { OrderRecapData } from './src/types/order';
@@ -47,6 +54,7 @@ export default function App() {
   const [deliveryDate, setDeliveryDate] = useState(getTodayDateString());
   const [orderHistory, setOrderHistory] = useState<OrderSummary[]>([]);
   const [isLoadingOrderHistory, setIsLoadingOrderHistory] = useState(false);
+  const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [orderSubmitError, setOrderSubmitError] = useState<string | null>(null);
   const [isUploadingProfilePhoto, setIsUploadingProfilePhoto] = useState(false);
@@ -92,6 +100,7 @@ export default function App() {
       setDeliveryDate(getTodayDateString());
       setOrderHistory([]);
       setIsLoadingOrderHistory(false);
+      setDeletingOrderId(null);
       setOrderSubmitError(null);
       setIsUploadingProfilePhoto(false);
       setProfileError(null);
@@ -188,6 +197,58 @@ export default function App() {
     }
 
     void Linking.openURL(url);
+  }
+
+  async function handleDeleteOrder(order: OrderSummary) {
+    if (!auth.session) {
+      return;
+    }
+
+    const confirmationMessage = language.text.orders.deleteHistoryConfirm;
+    const confirmed =
+      Platform.OS === 'web'
+        ? typeof window !== 'undefined' && window.confirm(confirmationMessage)
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              language.text.orders.deleteHistoryButton,
+              confirmationMessage,
+              [
+                {
+                  text: language.text.orders.deleteHistoryCancel,
+                  style: 'cancel',
+                  onPress: () => resolve(false),
+                },
+                {
+                  text: language.text.orders.deleteHistoryConfirmButton,
+                  style: 'destructive',
+                  onPress: () => resolve(true),
+                },
+              ],
+              { cancelable: true, onDismiss: () => resolve(false) },
+            );
+          });
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingOrderId(order.id);
+    setOrderSubmitError(null);
+
+    try {
+      await deleteOrder(auth.session.accessToken, order.id);
+      setOrderHistory((currentOrders) =>
+        currentOrders.filter((currentOrder) => currentOrder.id !== order.id),
+      );
+    } catch (error) {
+      if (error instanceof Error && error.message.trim()) {
+        setOrderSubmitError(error.message);
+      } else {
+        setOrderSubmitError(language.text.orders.deleteHistoryError);
+      }
+    } finally {
+      setDeletingOrderId(null);
+    }
   }
 
   const [fontsLoaded] = useFonts({
@@ -313,11 +374,15 @@ export default function App() {
             text={language.text}
             orders={orderHistory}
             isLoading={isLoadingOrderHistory}
+            deletingOrderId={deletingOrderId}
             onRefresh={() => {
               void loadOrderHistory();
             }}
             onDownloadOrderBon={(order) => {
               void handleDownloadOrderBon(order);
+            }}
+            onDeleteOrder={(order) => {
+              void handleDeleteOrder(order);
             }}
           />
         );

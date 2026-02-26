@@ -2,6 +2,7 @@ import {
   ForbiddenException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -112,5 +113,26 @@ export class OrdersController {
     @Param('id', ParseIntPipe) orderId: number,
   ) {
     return this.downloadCommande(req, res, orderId);
+  }
+
+  @ApiOperation({ summary: 'Delete purchase order by order id' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  deleteOrder(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) orderId: number,
+  ) {
+    const user = req.user;
+
+    if (!user) {
+      throw new ForbiddenException('Unauthenticated request');
+    }
+
+    return this.ordersService.deleteOrder(orderId, {
+      id: user.id,
+      role: user.role,
+      restaurantId: user.restaurantId,
+    });
   }
 }

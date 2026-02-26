@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
-import { createWriteStream, existsSync, mkdirSync } from 'fs';
+import { createWriteStream, existsSync, mkdirSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -365,6 +365,45 @@ export class OrdersService {
 
   async resolveBonFilePath(orderId: number, actor: Actor) {
     return this.resolveOrderFilePath(orderId, actor);
+  }
+
+  async deleteOrder(orderId: number, actor: Actor) {
+    this.ensureCanManageOrders(actor);
+
+    const order = await this.prisma.purchaseOrder.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        restaurantId: true,
+        bonFileName: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (actor.role !== 'ADMIN' && order.restaurantId !== actor.restaurantId) {
+      throw new ForbiddenException('Order does not belong to your restaurant');
+    }
+
+    await this.prisma.purchaseOrder.delete({
+      where: { id: orderId },
+    });
+
+    const filePath = join(this.ordersDir, order.bonFileName);
+    if (existsSync(filePath)) {
+      try {
+        unlinkSync(filePath);
+      } catch {
+        // Best-effort cleanup only: order deletion should still succeed.
+      }
+    }
+
+    return {
+      success: true,
+      id: orderId,
+    };
   }
 
   private ensureCanManageOrders(actor: Actor) {
