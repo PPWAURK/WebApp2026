@@ -29,7 +29,14 @@ type CommandePdfInput = {
   restaurantName: string;
   deliveryDate: string;
   deliveryAddress: string;
-  items: Array<{ name: string; quantity: number; unitPrice: number; lineTotal: number }>;
+  items: Array<{
+    nameFr: string;
+    nameZh: string;
+    unit: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+  }>;
   totalItems: number;
   totalAmount: number;
 };
@@ -195,7 +202,9 @@ export class OrdersService {
       deliveryDate: payload.deliveryDate,
       deliveryAddress: restaurant.address,
       items: preparedItems.map((item) => ({
-        name: item.product.designationFr ?? item.product.nomCn,
+        nameFr: item.product.designationFr ?? item.product.nomCn,
+        nameZh: item.product.nomCn,
+        unit: item.product.unite ?? 'PC',
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         lineTotal: item.lineTotal,
@@ -430,11 +439,13 @@ export class OrdersService {
   private drawItemsTable(doc: PdfDoc, input: CommandePdfInput) {
     const left = doc.page.margins.left;
     const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const colProduct = Math.floor(contentWidth * 0.5);
+    const colProduct = Math.floor(contentWidth * 0.46);
+    const colOrderUnit = Math.floor(contentWidth * 0.12);
     const colQty = Math.floor(contentWidth * 0.12);
-    const colUnit = Math.floor(contentWidth * 0.19);
-    const colTotal = contentWidth - colProduct - colQty - colUnit;
-    const rowHeight = 24;
+    const colUnitPrice = Math.floor(contentWidth * 0.15);
+    const colTotal =
+      contentWidth - colProduct - colOrderUnit - colQty - colUnitPrice;
+    const rowHeight = 36;
 
     const drawHeaderRow = () => {
       const y = doc.y;
@@ -442,19 +453,28 @@ export class OrdersService {
       doc
         .fillColor(this.pdfColors.white)
         .fontSize(10)
-        .text('Produit', left + 8, y + 7, { width: colProduct - 12 })
-        .text('Qte', left + colProduct + 4, y + 7, {
+        .text('Produit FR / ZH', left + 8, y + 7, { width: colProduct - 12 })
+        .text('Unite', left + colProduct + 4, y + 7, {
+          width: colOrderUnit - 8,
+          align: 'center',
+        })
+        .text('Qte', left + colProduct + colOrderUnit + 4, y + 7, {
           width: colQty - 8,
           align: 'center',
         })
-        .text('PU HT', left + colProduct + colQty + 4, y + 7, {
-          width: colUnit - 8,
+        .text('PU HT', left + colProduct + colOrderUnit + colQty + 4, y + 7, {
+          width: colUnitPrice - 8,
           align: 'right',
         })
-        .text('Total HT', left + colProduct + colQty + colUnit + 4, y + 7, {
+        .text(
+          'Total HT',
+          left + colProduct + colOrderUnit + colQty + colUnitPrice + 4,
+          y + 7,
+          {
           width: colTotal - 8,
           align: 'right',
-        });
+          },
+        );
       doc.y = y + rowHeight;
     };
 
@@ -479,19 +499,42 @@ export class OrdersService {
       doc
         .fillColor(this.pdfColors.text)
         .fontSize(10)
-        .text(this.truncateText(item.name, 50), left + 8, y + 7, { width: colProduct - 12 })
-        .text(String(item.quantity), left + colProduct + 4, y + 7, {
+        .text(this.truncateText(item.nameFr, 44), left + 8, y + 6, {
+          width: colProduct - 12,
+        })
+        .fontSize(9)
+        .fillColor(this.pdfColors.muted)
+        .text(this.truncateText(item.nameZh, 44), left + 8, y + 20, {
+          width: colProduct - 12,
+        })
+        .fillColor(this.pdfColors.text)
+        .fontSize(10)
+        .text(item.unit || 'PC', left + colProduct + 4, y + 12, {
+          width: colOrderUnit - 8,
+          align: 'center',
+        })
+        .text(String(item.quantity), left + colProduct + colOrderUnit + 4, y + 12, {
           width: colQty - 8,
           align: 'center',
         })
-        .text(item.unitPrice.toFixed(2), left + colProduct + colQty + 4, y + 7, {
-          width: colUnit - 8,
+        .text(
+          item.unitPrice.toFixed(2),
+          left + colProduct + colOrderUnit + colQty + 4,
+          y + 12,
+          {
+          width: colUnitPrice - 8,
           align: 'right',
-        })
-        .text(item.lineTotal.toFixed(2), left + colProduct + colQty + colUnit + 4, y + 7, {
+          },
+        )
+        .text(
+          item.lineTotal.toFixed(2),
+          left + colProduct + colOrderUnit + colQty + colUnitPrice + 4,
+          y + 12,
+          {
           width: colTotal - 8,
           align: 'right',
-        });
+          },
+        );
 
       doc
         .moveTo(left, y + rowHeight)
