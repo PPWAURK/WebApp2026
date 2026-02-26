@@ -509,7 +509,6 @@ export class OrdersService {
       this.drawHeader(doc, input);
       this.drawOrderMeta(doc, input);
       this.drawItemsTable(doc, input);
-      this.drawTotals(doc, input);
       this.drawFooter(doc);
 
       doc.end();
@@ -606,9 +605,7 @@ export class OrdersService {
     const colProduct = Math.floor(contentWidth * 0.46);
     const colOrderUnit = Math.floor(contentWidth * 0.12);
     const colQty = Math.floor(contentWidth * 0.12);
-    const colUnitPrice = Math.floor(contentWidth * 0.15);
-    const colTotal =
-      contentWidth - colProduct - colOrderUnit - colQty - colUnitPrice;
+    const colUnitPrice = contentWidth - colProduct - colOrderUnit - colQty;
     const rowHeight = 36;
 
     const drawHeaderRow = () => {
@@ -632,16 +629,7 @@ export class OrdersService {
         .text('PU HT', left + colProduct + colOrderUnit + colQty + 4, y + 7, {
           width: colUnitPrice - 8,
           align: 'right',
-        })
-        .text(
-          'Total HT',
-          left + colProduct + colOrderUnit + colQty + colUnitPrice + 4,
-          y + 7,
-          {
-            width: colTotal - 8,
-            align: 'right',
-          },
-        );
+        });
       doc.y = y + rowHeight;
     };
 
@@ -731,15 +719,6 @@ export class OrdersService {
           y + 12,
           {
             width: colUnitPrice - 8,
-            align: 'right',
-          },
-        )
-        .text(
-          item.lineTotal.toFixed(2),
-          left + colProduct + colOrderUnit + colQty + colUnitPrice + 4,
-          y + 12,
-          {
-            width: colTotal - 8,
             align: 'right',
           },
         );
