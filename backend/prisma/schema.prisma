@@ -48,6 +48,7 @@ model Produit {
   categorie     String   @db.VarChar(20)
   nomCn         String   @map("nom_cn") @db.VarChar(255)
   designationFr String?  @map("designation_fr") @db.VarChar(255)
+  specification String?  @db.VarChar(100)
   unite         String?  @db.VarChar(100)
   prixUHt       Decimal? @map("prix_u_ht") @db.Decimal(10, 2)
   image         String?  @db.Text

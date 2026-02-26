@@ -521,6 +521,7 @@ export class OrdersService {
       this.drawHeader(doc, input);
       this.drawOrderMeta(doc, input);
       this.drawItemsTable(doc, input);
+      this.drawTotals(doc, input);
       this.drawFooter(doc);
 
       doc.end();
@@ -755,28 +756,19 @@ export class OrdersService {
     const y = doc.y;
 
     doc
-      .roundedRect(x, y, cardWidth, 54, 8)
+      .roundedRect(x, y, cardWidth, 36, 8)
       .lineWidth(1)
       .strokeColor(this.pdfColors.primary)
       .stroke();
 
     doc
       .fillColor(this.pdfColors.primaryDark)
-      .fontSize(10)
+      .fontSize(11)
       .text(`Articles total: ${input.totalItems}`, x + 10, y + 12, {
         width: cardWidth - 20,
-      })
-      .fontSize(12)
-      .text(
-        `Montant total HT: ${input.totalAmount.toFixed(2)}`,
-        x + 10,
-        y + 30,
-        {
-          width: cardWidth - 20,
-        },
-      );
+      });
 
-    doc.y = y + 68;
+    doc.y = y + 50;
   }
 
   private drawFooter(doc: PdfDoc) {

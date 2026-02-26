@@ -77,6 +77,7 @@ export class ProductsController {
       category?: string;
       nameZh?: string;
       nameFr?: string | null;
+      specification?: string | null;
       unit?: string | null;
       priceHt?: number | null;
       image?: string | null;

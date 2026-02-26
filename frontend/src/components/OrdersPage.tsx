@@ -261,6 +261,11 @@ export function OrdersPage({
                       {text.orders.referenceLabel}: {product.reference}
                     </Text>
                   ) : null}
+                  {product.specification ? (
+                    <Text style={styles.docItemMeta}>
+                      {text.orders.specificationLabel}: {product.specification}
+                    </Text>
+                  ) : null}
                   {product.unit ? (
                     <Text style={styles.docItemMeta}>
                       {text.orders.unitLabel}: {product.unit}

@@ -7,6 +7,7 @@ export type ProductItem = {
   category: string;
   nameZh: string;
   nameFr: string | null;
+  specification: string | null;
   unit: string | null;
   priceHt: number | null;
   image: string | null;
@@ -19,6 +20,7 @@ type RawProduct = {
   category?: unknown;
   nameZh?: unknown;
   nameFr?: unknown;
+  specification?: unknown;
   unit?: unknown;
   priceHt?: unknown;
   image?: unknown;
@@ -59,6 +61,7 @@ function normalizeProduct(raw: RawProduct, index: number): ProductItem {
     category: typeof raw.category === 'string' ? raw.category : '',
     nameZh,
     nameFr,
+    specification: typeof raw.specification === 'string' ? raw.specification : null,
     unit: typeof raw.unit === 'string' ? raw.unit : null,
     priceHt: raw.priceHt === null || raw.priceHt === undefined ? null : toNumber(raw.priceHt, 0),
     image: typeof raw.image === 'string' ? raw.image : null,
@@ -93,6 +96,7 @@ export async function updateProduct(
     category?: string;
     nameZh?: string;
     nameFr?: string | null;
+    specification?: string | null;
     unit?: string | null;
     priceHt?: number | null;
     image?: string | null;

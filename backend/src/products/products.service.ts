@@ -21,6 +21,7 @@ export class ProductsService {
       category: product.categorie,
       nameZh: product.nomCn,
       nameFr: product.designationFr,
+      specification: product.specification,
       unit: product.unite,
       priceHt: product.prixUHt === null ? null : Number(product.prixUHt),
       image: product.image,
@@ -35,6 +36,7 @@ export class ProductsService {
       category?: string;
       nameZh?: string;
       nameFr?: string | null;
+      specification?: string | null;
       unit?: string | null;
       priceHt?: number | null;
       image?: string | null;
@@ -55,6 +57,7 @@ export class ProductsService {
       categorie?: string;
       nomCn?: string;
       designationFr?: string | null;
+      specification?: string | null;
       unite?: string | null;
       prixUHt?: number | null;
       image?: string | null;
@@ -92,6 +95,10 @@ export class ProductsService {
       data.designationFr = payload.nameFr;
     }
 
+    if (payload.specification !== undefined) {
+      data.specification = payload.specification;
+    }
+
     if (payload.unit !== undefined) {
       data.unite = payload.unit;
     }
@@ -116,6 +123,7 @@ export class ProductsService {
       category: updated.categorie,
       nameZh: updated.nomCn,
       nameFr: updated.designationFr,
+      specification: updated.specification,
       unit: updated.unite,
       priceHt: updated.prixUHt === null ? null : Number(updated.prixUHt),
       image: updated.image,
