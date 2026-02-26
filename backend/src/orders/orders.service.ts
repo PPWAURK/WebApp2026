@@ -280,10 +280,30 @@ export class OrdersService {
 
     const order = await this.prisma.purchaseOrder.findUnique({
       where: { id: orderId },
-      select: {
-        id: true,
-        restaurantId: true,
-        bonFileName: true,
+      include: {
+        supplier: {
+          select: {
+            nom: true,
+          },
+        },
+        restaurant: {
+          select: {
+            name: true,
+          },
+        },
+        items: {
+          orderBy: {
+            id: 'asc',
+          },
+          select: {
+            nameZh: true,
+            nameFr: true,
+            unit: true,
+            quantity: true,
+            unitPriceHt: true,
+            lineTotal: true,
+          },
+        },
       },
     });
 
@@ -296,8 +316,28 @@ export class OrdersService {
     }
 
     const fullPath = join(this.ordersDir, order.bonFileName);
+
+    await this.generateCommandePdf({
+      filePath: fullPath,
+      orderNumber: order.number,
+      supplierName: order.supplier.nom,
+      restaurantName: order.restaurant.name,
+      deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
+      deliveryAddress: order.deliveryAddress,
+      items: order.items.map((item) => ({
+        nameFr: item.nameFr ?? item.nameZh,
+        nameZh: item.nameZh,
+        unit: item.unit?.trim() ? item.unit : 'PC',
+        quantity: item.quantity,
+        unitPrice: Number(item.unitPriceHt),
+        lineTotal: Number(item.lineTotal),
+      })),
+      totalItems: order.totalItems,
+      totalAmount: Number(order.totalAmount),
+    });
+
     if (!existsSync(fullPath)) {
-      throw new NotFoundException('Purchase order file not found');
+      throw new NotFoundException('Order file not found');
     }
 
     return fullPath;
