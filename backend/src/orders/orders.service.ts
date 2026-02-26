@@ -48,7 +48,7 @@ export class OrdersService {
   private readonly publicApiBaseUrl = process.env.PUBLIC_API_BASE_URL;
   private readonly ordersDir = join(this.storageRoot, 'orders');
   private readonly logoCandidatePaths = [
-    join(process.cwd(), 'assets', 'ZHAO', 'logo1.png'),
+    join(process.cwd(), 'assets', 'ZHAO', '2-01.png'),
     join(this.storageRoot, 'assets', 'ZHAO-元素element', 'logo', '1.png'),
   ];
   private readonly cjkFontCandidatePaths = [
