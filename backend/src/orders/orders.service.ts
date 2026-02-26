@@ -813,45 +813,31 @@ export class OrdersService {
 
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
-    const placements = [
-      { x: 16, y: 92, width: 72, height: 72 },
-      { x: pageWidth - 86, y: 92, width: 72, height: 72 },
-      { x: 20, y: pageHeight - 120, width: 80, height: 80 },
-      { x: pageWidth - 98, y: pageHeight - 120, width: 80, height: 80 },
-    ];
-
-    const selectedPlacements = this.pickRandomItems(placements, 2);
+    const margin = 24;
+    const minSize = 44;
+    const maxSize = 110;
+    const imageCount = 2 + Math.floor(Math.random() * 3);
 
     doc.save();
-    doc.opacity(0.12);
+    doc.opacity(0.1 + Math.random() * 0.08);
 
-    selectedPlacements.forEach((placement) => {
+    for (let index = 0; index < imageCount; index += 1) {
+      const size = minSize + Math.floor(Math.random() * (maxSize - minSize + 1));
+      const maxX = Math.max(margin, pageWidth - margin - size);
+      const maxY = Math.max(margin, pageHeight - margin - size);
+      const x = margin + Math.random() * Math.max(1, maxX - margin);
+      const y = margin + Math.random() * Math.max(1, maxY - margin);
       const imagePath =
         this.decorationImagePaths[
           Math.floor(Math.random() * this.decorationImagePaths.length)
         ];
 
-      doc.image(imagePath, placement.x, placement.y, {
-        fit: [placement.width, placement.height],
+      doc.image(imagePath, x, y, {
+        fit: [size, size],
       });
-    });
-
-    doc.restore();
-  }
-
-  private pickRandomItems<T>(items: T[], count: number) {
-    const pool = [...items];
-    const selected: T[] = [];
-
-    while (pool.length && selected.length < count) {
-      const randomIndex = Math.floor(Math.random() * pool.length);
-      const [picked] = pool.splice(randomIndex, 1);
-      if (picked) {
-        selected.push(picked);
-      }
     }
 
-    return selected;
+    doc.restore();
   }
 
   private resolveDecorationImagePaths() {
