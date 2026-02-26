@@ -20,6 +20,8 @@ type CreateOrderPayload = {
   items: Array<{ productId: number; quantity: number }>;
 };
 
+type PdfDoc = InstanceType<typeof PDFDocument>;
+
 type CommandePdfInput = {
   filePath: string;
   orderNumber: string;
@@ -33,6 +35,7 @@ type CommandePdfInput = {
     unit: string;
     quantity: number;
     unitPrice: number;
+    lineTotal: number;
   }>;
   totalItems: number;
   totalAmount: number;
@@ -44,6 +47,10 @@ export class OrdersService {
     process.env.STORAGE_ROOT_PATH ?? join(process.cwd(), 'uploads');
   private readonly publicApiBaseUrl = process.env.PUBLIC_API_BASE_URL;
   private readonly ordersDir = join(this.storageRoot, 'orders');
+  private readonly logoCandidatePaths = [
+    join(process.cwd(), 'assets', 'ZHAO', 'logo1.png'),
+    join(this.storageRoot, 'assets', 'ZHAO-元素element', 'logo', '1.png'),
+  ];
   private readonly cjkFontCandidatePaths = [
     join(process.cwd(), 'assets', 'fonts', 'Noto_Sans_SC', 'static', 'NotoSansSC-Regular.ttf'),
     join(process.cwd(), 'assets', 'fonts', 'NotoSansSC-Regular.ttf'),
@@ -54,6 +61,15 @@ export class OrdersService {
   private readonly cjkFontPath = this.cjkFontCandidatePaths.find((path) =>
     existsSync(path),
   );
+  private readonly pdfColors = {
+    primary: '#ab1e24',
+    primaryDark: '#7f1b21',
+    text: '#1f1f1f',
+    muted: '#6b6b6b',
+    border: '#e4c3c5',
+    rowAlt: '#fdf4f5',
+    white: '#ffffff',
+  };
 
   constructor(private readonly prisma: PrismaService) {
     if (!existsSync(this.ordersDir)) {
@@ -199,6 +215,7 @@ export class OrdersService {
         unit: item.product.unite?.trim() ? item.product.unite.trim() : '-',
         quantity: item.quantity,
         unitPrice: item.unitPrice,
+        lineTotal: item.lineTotal,
       })),
       totalItems,
       totalAmount,
@@ -333,6 +350,7 @@ export class OrdersService {
             : '-',
         quantity: item.quantity,
         unitPrice: Number(item.unitPriceHt),
+        lineTotal: Number(item.quantity) * Number(item.unitPriceHt),
       })),
       totalItems: order.totalItems,
       totalAmount: Number(order.totalAmount),
@@ -396,43 +414,253 @@ export class OrdersService {
 
       doc.pipe(stream);
 
-      if (this.cjkFontPath) {
-        doc.registerFont('CJK', this.cjkFontPath);
-      }
-
-      doc.fontSize(18).text('Commande', { align: 'center' });
-      doc.moveDown();
-
-      doc.fontSize(10).text(`Numero: ${input.orderNumber}`);
-      doc.text(`Fournisseur: ${input.supplierName}`);
-      doc.text(`Etablissement: ${input.restaurantName}`);
-      doc.text(`Date de livraison: ${input.deliveryDate}`);
-      doc.text(`Adresse: ${input.deliveryAddress}`);
-      doc.moveDown();
-
-      input.items.forEach((item) => {
-        const fr = this.sanitizeLabel(item.nameFr);
-        const zh = this.sanitizeLabel(item.nameZh);
-        const lineTotal = item.quantity * item.unitPrice;
-
-        doc.font('Helvetica').fontSize(10).text(`${fr} (${item.unit}) x ${item.quantity}`);
-        if (this.cjkFontPath) {
-          doc.font('CJK');
-        }
-        doc.fontSize(10).text(zh);
-        doc.font('Helvetica').fontSize(10).text(`PU HT: ${item.unitPrice.toFixed(2)}  Total HT: ${lineTotal.toFixed(2)}`);
-        doc.moveDown(0.6);
-      });
-
-      doc.moveDown();
-      doc.font('Helvetica').fontSize(11).text(`Articles total: ${input.totalItems}`);
-      doc.text(`Montant total HT: ${input.totalAmount.toFixed(2)}`);
+      this.drawHeader(doc, input);
+      this.drawOrderMeta(doc, input);
+      this.drawItemsTable(doc, input);
+      this.drawTotals(doc, input);
+      this.drawFooter(doc);
 
       doc.end();
 
       stream.on('finish', () => resolvePromise());
       stream.on('error', (error) => rejectPromise(error));
     });
+  }
+
+  private drawHeader(doc: PdfDoc, input: CommandePdfInput) {
+    const pageWidth = doc.page.width;
+    const left = doc.page.margins.left;
+    const right = pageWidth - doc.page.margins.right;
+    const titleY = doc.y;
+
+    doc
+      .rect(left, titleY, right - left, 46)
+      .fillColor(this.pdfColors.primary)
+      .fill();
+
+    doc
+      .fillColor(this.pdfColors.white)
+      .fontSize(18)
+      .text('Commande', left, titleY + 13, {
+        width: right - left,
+        align: 'center',
+      });
+
+    const logoPath = this.logoCandidatePaths.find((path) => existsSync(path));
+    if (logoPath) {
+      doc.image(logoPath, left + 8, titleY + 6, {
+        fit: [80, 34],
+      });
+    }
+
+    doc
+      .fontSize(10)
+      .text(`Numero: ${input.orderNumber}`, right - 170, titleY + 6, {
+        width: 160,
+        align: 'right',
+      })
+      .text(`Emission: ${new Date().toISOString().slice(0, 10)}`, right - 170, titleY + 20, {
+        width: 160,
+        align: 'right',
+      });
+
+    doc.moveDown(2.8);
+    doc.fillColor(this.pdfColors.text);
+  }
+
+  private drawOrderMeta(doc: PdfDoc, input: CommandePdfInput) {
+    const left = doc.page.margins.left;
+    const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const blockY = doc.y;
+
+    doc
+      .roundedRect(left, blockY, contentWidth, 74, 8)
+      .lineWidth(1)
+      .strokeColor(this.pdfColors.border)
+      .stroke();
+
+    doc
+      .fillColor(this.pdfColors.primaryDark)
+      .fontSize(11)
+      .text(`Fournisseur: ${input.supplierName}`, left + 12, blockY + 10)
+      .text(`Etablissement: ${input.restaurantName}`, left + 12, blockY + 27)
+      .text(`Date de livraison: ${input.deliveryDate}`, left + 12, blockY + 44);
+
+    doc
+      .fillColor(this.pdfColors.text)
+      .fontSize(10)
+      .text(`Adresse: ${input.deliveryAddress}`, left + contentWidth / 2, blockY + 27, {
+        width: contentWidth / 2 - 12,
+      });
+
+    doc.y = blockY + 86;
+  }
+
+  private drawItemsTable(doc: PdfDoc, input: CommandePdfInput) {
+    const left = doc.page.margins.left;
+    const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const colProduct = Math.floor(contentWidth * 0.46);
+    const colOrderUnit = Math.floor(contentWidth * 0.12);
+    const colQty = Math.floor(contentWidth * 0.12);
+    const colUnitPrice = Math.floor(contentWidth * 0.15);
+    const colTotal = contentWidth - colProduct - colOrderUnit - colQty - colUnitPrice;
+    const rowHeight = 36;
+
+    const drawHeaderRow = () => {
+      const y = doc.y;
+      doc.rect(left, y, contentWidth, rowHeight).fillColor(this.pdfColors.primary).fill();
+      doc
+        .fillColor(this.pdfColors.white)
+        .fontSize(10)
+        .text('Produit FR / ZH', left + 8, y + 7, { width: colProduct - 12 })
+        .text('Unite', left + colProduct + 4, y + 7, {
+          width: colOrderUnit - 8,
+          align: 'center',
+        })
+        .text('Qte', left + colProduct + colOrderUnit + 4, y + 7, {
+          width: colQty - 8,
+          align: 'center',
+        })
+        .text('PU HT', left + colProduct + colOrderUnit + colQty + 4, y + 7, {
+          width: colUnitPrice - 8,
+          align: 'right',
+        })
+        .text(
+          'Total HT',
+          left + colProduct + colOrderUnit + colQty + colUnitPrice + 4,
+          y + 7,
+          {
+            width: colTotal - 8,
+            align: 'right',
+          },
+        );
+      doc.y = y + rowHeight;
+    };
+
+    const ensureSpace = (requiredHeight: number) => {
+      const bottomLimit = doc.page.height - doc.page.margins.bottom - 90;
+      if (doc.y + requiredHeight > bottomLimit) {
+        doc.addPage();
+        drawHeaderRow();
+      }
+    };
+
+    drawHeaderRow();
+
+    input.items.forEach((item, index) => {
+      ensureSpace(rowHeight);
+      const y = doc.y;
+      const productNameFr = this.truncateText(this.sanitizeLabel(item.nameFr), 44);
+      const productNameZh = this.truncateText(this.sanitizeLabel(item.nameZh), 44);
+      const orderUnit = item.unit?.trim() ? item.unit.trim() : '-';
+
+      if (index % 2 === 1) {
+        doc.rect(left, y, contentWidth, rowHeight).fillColor(this.pdfColors.rowAlt).fill();
+      }
+
+      doc
+        .fillColor(this.pdfColors.text)
+        .font('Helvetica')
+        .fontSize(10)
+        .text(productNameFr, left + 8, y + 6, {
+          width: colProduct - 12,
+        });
+
+      if (this.cjkFontPath) {
+        doc.font(this.cjkFontPath);
+      }
+
+      doc
+        .fontSize(9)
+        .fillColor(this.pdfColors.muted)
+        .text(productNameZh, left + 8, y + 20, {
+          width: colProduct - 12,
+        });
+
+      doc
+        .font('Helvetica')
+        .fillColor(this.pdfColors.text)
+        .fontSize(10)
+        .text(orderUnit, left + colProduct + 4, y + 12, {
+          width: colOrderUnit - 8,
+          align: 'center',
+        })
+        .text(String(item.quantity), left + colProduct + colOrderUnit + 4, y + 12, {
+          width: colQty - 8,
+          align: 'center',
+        })
+        .text(
+          item.unitPrice.toFixed(2),
+          left + colProduct + colOrderUnit + colQty + 4,
+          y + 12,
+          {
+            width: colUnitPrice - 8,
+            align: 'right',
+          },
+        )
+        .text(
+          item.lineTotal.toFixed(2),
+          left + colProduct + colOrderUnit + colQty + colUnitPrice + 4,
+          y + 12,
+          {
+            width: colTotal - 8,
+            align: 'right',
+          },
+        );
+
+      doc
+        .moveTo(left, y + rowHeight)
+        .lineTo(left + contentWidth, y + rowHeight)
+        .strokeColor(this.pdfColors.border)
+        .lineWidth(0.6)
+        .stroke();
+
+      doc.y = y + rowHeight;
+    });
+
+    doc.moveDown(0.8);
+  }
+
+  private drawTotals(doc: PdfDoc, input: CommandePdfInput) {
+    const cardWidth = 220;
+    const x = doc.page.width - doc.page.margins.right - cardWidth;
+    const y = doc.y;
+
+    doc
+      .roundedRect(x, y, cardWidth, 54, 8)
+      .lineWidth(1)
+      .strokeColor(this.pdfColors.primary)
+      .stroke();
+
+    doc
+      .fillColor(this.pdfColors.primaryDark)
+      .fontSize(10)
+      .text(`Articles total: ${input.totalItems}`, x + 10, y + 12, { width: cardWidth - 20 })
+      .fontSize(12)
+      .text(`Montant total HT: ${input.totalAmount.toFixed(2)}`, x + 10, y + 30, {
+        width: cardWidth - 20,
+      });
+
+    doc.y = y + 68;
+  }
+
+  private drawFooter(doc: PdfDoc) {
+    const footerY = doc.page.height - doc.page.margins.bottom - 20;
+    doc
+      .fontSize(9)
+      .fillColor(this.pdfColors.muted)
+      .text('Document genere automatiquement par la plateforme.', doc.page.margins.left, footerY, {
+        width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
+        align: 'center',
+      });
+  }
+
+  private truncateText(value: string, maxLength: number) {
+    if (value.length <= maxLength) {
+      return value;
+    }
+
+    return `${value.slice(0, maxLength - 1)}...`;
   }
 
   private recoverUtf8(value: string | null | undefined) {
