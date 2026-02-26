@@ -31,6 +31,8 @@ type SupplierManagementPageProps = {
   accessToken: string;
 };
 
+const PRODUCTS_PER_PAGE = 8;
+
 export function SupplierManagementPage({
   text,
   accessToken,
@@ -39,6 +41,8 @@ export function SupplierManagementPage({
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [productFilter, setProductFilter] = useState('');
   const [newSupplierName, setNewSupplierName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isCreatingSupplier, setIsCreatingSupplier] = useState(false);
@@ -94,6 +98,38 @@ export function SupplierManagementPage({
     [products, selectedSupplierId],
   );
 
+  const filteredSupplierProducts = useMemo(() => {
+    const normalizedFilter = productFilter.trim().toLowerCase();
+    if (!normalizedFilter) {
+      return supplierProducts;
+    }
+
+    return supplierProducts.filter((product) => {
+      const fields = [
+        product.nameFr,
+        product.nameZh,
+        product.reference,
+        product.category,
+        product.specification,
+        product.unit,
+      ];
+
+      return fields.some((field) =>
+        typeof field === 'string' && field.toLowerCase().includes(normalizedFilter),
+      );
+    });
+  }, [productFilter, supplierProducts]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredSupplierProducts.length / PRODUCTS_PER_PAGE)),
+    [filteredSupplierProducts.length],
+  );
+
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+    return filteredSupplierProducts.slice(startIndex, startIndex + PRODUCTS_PER_PAGE);
+  }, [currentPage, filteredSupplierProducts]);
+
   const selectedProduct = useMemo(
     () => supplierProducts.find((product) => product.id === selectedProductId) ?? null,
     [selectedProductId, supplierProducts],
@@ -104,6 +140,18 @@ export function SupplierManagementPage({
       setSelectedProductId(supplierProducts[0]?.id ?? null);
     }
   }, [selectedProductId, supplierProducts]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedSupplierId]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [productFilter]);
+
+  useEffect(() => {
+    setCurrentPage((previous) => Math.min(previous, totalPages));
+  }, [totalPages]);
 
   useEffect(() => {
     if (!selectedProduct) {
@@ -324,11 +372,20 @@ export function SupplierManagementPage({
       </View>
 
       <Text style={styles.uploadFieldTitle}>{text.supplierManagement.productsLabel}</Text>
+      <TextInput
+        style={styles.input}
+        placeholder={text.supplierManagement.filterProductsPlaceholder}
+        placeholderTextColor="#a98a8d"
+        value={productFilter}
+        onChangeText={setProductFilter}
+      />
       <View style={[styles.listBlock, styles.productGrid]}>
         {supplierProducts.length === 0 ? (
           <Text style={styles.docEmpty}>{text.supplierManagement.noProduct}</Text>
+        ) : filteredSupplierProducts.length === 0 ? (
+          <Text style={styles.docEmpty}>{text.supplierManagement.noFilteredProduct}</Text>
         ) : (
-          supplierProducts.map((product) => (
+          paginatedProducts.map((product) => (
             <View
               key={product.id}
               style={[
@@ -365,6 +422,16 @@ export function SupplierManagementPage({
                       >
                         {product.nameFr ?? product.nameZh}
                       </Text>
+                      {product.nameFr && product.nameZh && product.nameFr !== product.nameZh ? (
+                        <Text
+                          style={[
+                            styles.docItemMeta,
+                            selectedProductId === product.id && styles.trainingTabTextActive,
+                          ]}
+                        >
+                          {product.nameZh}
+                        </Text>
+                      ) : null}
                       <Text
                         style={[
                           styles.docItemMeta,
@@ -402,15 +469,53 @@ export function SupplierManagementPage({
                     void onDeleteProduct(product);
                   }}
                 >
-                  <Text style={styles.productDeleteIconText}>
-                    {deletingProductId === product.id ? '…' : '🗑'}
-                  </Text>
+                  {deletingProductId === product.id ? (
+                    <Text style={styles.productDeleteLoading}>…</Text>
+                  ) : (
+                    <View style={styles.trashIcon}>
+                      <View style={styles.trashLid} />
+                      <View style={styles.trashBody}>
+                        <View style={styles.trashBar} />
+                        <View style={styles.trashBar} />
+                      </View>
+                    </View>
+                  )}
                 </Pressable>
               </View>
             </View>
           ))
         )}
       </View>
+
+      {filteredSupplierProducts.length > PRODUCTS_PER_PAGE ? (
+        <View style={styles.paginationRow}>
+          <Pressable
+            style={[styles.secondaryButton, currentPage === 1 && styles.buttonDisabled]}
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
+          >
+            <Text style={styles.secondaryButtonText}>
+              {text.supplierManagement.paginationPrevious}
+            </Text>
+          </Pressable>
+
+          <Text style={styles.paginationInfo}>
+            {text.supplierManagement.paginationPageLabel} {currentPage}/{totalPages}
+          </Text>
+
+          <Pressable
+            style={[styles.secondaryButton, currentPage >= totalPages && styles.buttonDisabled]}
+            disabled={currentPage >= totalPages}
+            onPress={() =>
+              setCurrentPage((previous) => Math.min(totalPages, previous + 1))
+            }
+          >
+            <Text style={styles.secondaryButtonText}>
+              {text.supplierManagement.paginationNext}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <Modal
         visible={isEditorOpen && Boolean(selectedProduct)}
