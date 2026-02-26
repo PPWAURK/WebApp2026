@@ -686,12 +686,23 @@ export class OrdersService {
     }
 
     if (!/[\u0080-\u00FF]/.test(safeValue)) {
+      const utf16Recovered = Buffer.from(safeValue, 'latin1').toString('utf16le').trim();
+      if (this.containsCjk(utf16Recovered)) {
+        return utf16Recovered;
+      }
+
       return safeValue;
     }
 
-    const decoded = Buffer.from(safeValue, 'latin1').toString('utf8');
-    if (this.containsCjk(decoded)) {
-      return decoded;
+    const binaryBuffer = Buffer.from(safeValue, 'latin1');
+    const decodedUtf8 = binaryBuffer.toString('utf8').trim();
+    if (this.containsCjk(decodedUtf8)) {
+      return decodedUtf8;
+    }
+
+    const decodedUtf16Le = binaryBuffer.toString('utf16le').trim();
+    if (this.containsCjk(decodedUtf16Le)) {
+      return decodedUtf16Le;
     }
 
     return safeValue;
