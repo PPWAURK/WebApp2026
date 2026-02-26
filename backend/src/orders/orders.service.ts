@@ -51,6 +51,13 @@ export class OrdersService {
     join(process.cwd(), 'assets', 'ZHAO', 'logo1.png'),
     join(this.storageRoot, 'assets', 'ZHAO-元素element', 'logo', '1.png'),
   ];
+  private readonly cjkFontCandidatePaths = [
+    join(process.cwd(), 'assets', 'fonts', 'NotoSansSC-Regular.ttf'),
+    join(this.storageRoot, 'assets', 'fonts', 'NotoSansSC-Regular.ttf'),
+  ];
+  private readonly cjkFontPath = this.cjkFontCandidatePaths.find((path) =>
+    existsSync(path),
+  );
   private readonly pdfColors = {
     primary: '#ab1e24',
     primaryDark: '#7f1b21',
@@ -202,9 +209,9 @@ export class OrdersService {
       deliveryDate: payload.deliveryDate,
       deliveryAddress: restaurant.address,
       items: preparedItems.map((item) => ({
-        nameFr: item.product.designationFr ?? item.product.nomCn,
-        nameZh: item.product.nomCn,
-        unit: item.product.unite ?? 'PC',
+        nameFr: this.recoverUtf8(item.product.designationFr ?? item.product.nomCn),
+        nameZh: this.recoverUtf8(item.product.nomCn),
+        unit: item.product.unite?.trim() ? item.product.unite.trim() : '-',
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         lineTotal: item.lineTotal,
@@ -325,9 +332,9 @@ export class OrdersService {
       deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
       deliveryAddress: order.deliveryAddress,
       items: order.items.map((item) => ({
-        nameFr: item.nameFr ?? item.nameZh,
-        nameZh: item.nameZh,
-        unit: item.unit?.trim() ? item.unit : 'PC',
+        nameFr: this.recoverUtf8(item.nameFr ?? item.nameZh),
+        nameZh: this.recoverUtf8(item.nameZh),
+        unit: item.unit?.trim() ? item.unit.trim() : '-',
         quantity: item.quantity,
         unitPrice: Number(item.unitPriceHt),
         lineTotal: Number(item.lineTotal),
@@ -531,6 +538,10 @@ export class OrdersService {
     input.items.forEach((item, index) => {
       ensureSpace(rowHeight);
       const y = doc.y;
+      const productNameFr = this.truncateText(this.recoverUtf8(item.nameFr), 44);
+      const productNameZh = this.truncateText(this.recoverUtf8(item.nameZh), 44);
+      const orderUnit = item.unit?.trim() ? item.unit.trim() : '-';
+      const computedLineTotal = item.quantity * item.unitPrice;
 
       if (index % 2 === 1) {
         doc.rect(left, y, contentWidth, rowHeight).fillColor(this.pdfColors.rowAlt).fill();
@@ -538,18 +549,28 @@ export class OrdersService {
 
       doc
         .fillColor(this.pdfColors.text)
+        .font('Helvetica')
         .fontSize(10)
-        .text(this.truncateText(item.nameFr, 44), left + 8, y + 6, {
+        .text(productNameFr, left + 8, y + 6, {
           width: colProduct - 12,
-        })
+        });
+
+      if (this.cjkFontPath) {
+        doc.font(this.cjkFontPath);
+      }
+
+      doc
         .fontSize(9)
         .fillColor(this.pdfColors.muted)
-        .text(this.truncateText(item.nameZh, 44), left + 8, y + 20, {
+        .text(productNameZh, left + 8, y + 20, {
           width: colProduct - 12,
-        })
+        });
+
+      doc
+        .font('Helvetica')
         .fillColor(this.pdfColors.text)
         .fontSize(10)
-        .text(item.unit || 'PC', left + colProduct + 4, y + 12, {
+        .text(orderUnit, left + colProduct + 4, y + 12, {
           width: colOrderUnit - 8,
           align: 'center',
         })
@@ -567,7 +588,7 @@ export class OrdersService {
           },
         )
         .text(
-          item.lineTotal.toFixed(2),
+          computedLineTotal.toFixed(2),
           left + colProduct + colOrderUnit + colQty + colUnitPrice + 4,
           y + 12,
           {
@@ -590,6 +611,10 @@ export class OrdersService {
   }
 
   private drawTotals(doc: PdfDoc, input: CommandePdfInput) {
+    const computedTotalAmount = input.items.reduce(
+      (sum, item) => sum + item.quantity * item.unitPrice,
+      0,
+    );
     const cardWidth = 220;
     const x = doc.page.width - doc.page.margins.right - cardWidth;
     const y = doc.y;
@@ -605,7 +630,7 @@ export class OrdersService {
       .fontSize(10)
       .text(`Articles total: ${input.totalItems}`, x + 10, y + 12, { width: cardWidth - 20 })
       .fontSize(12)
-      .text(`Montant total HT: ${input.totalAmount.toFixed(2)}`, x + 10, y + 30, {
+      .text(`Montant total HT: ${computedTotalAmount.toFixed(2)}`, x + 10, y + 30, {
         width: cardWidth - 20,
       });
 
@@ -629,5 +654,31 @@ export class OrdersService {
     }
 
     return `${value.slice(0, maxLength - 1)}...`;
+  }
+
+  private recoverUtf8(value: string | null | undefined) {
+    const safeValue = (value ?? '').trim();
+    if (!safeValue) {
+      return '';
+    }
+
+    if (this.containsCjk(safeValue)) {
+      return safeValue;
+    }
+
+    if (!/[\u0080-\u00FF]/.test(safeValue)) {
+      return safeValue;
+    }
+
+    const decoded = Buffer.from(safeValue, 'latin1').toString('utf8');
+    if (this.containsCjk(decoded)) {
+      return decoded;
+    }
+
+    return safeValue;
+  }
+
+  private containsCjk(value: string) {
+    return /[\u3400-\u9FFF]/.test(value);
   }
 }
