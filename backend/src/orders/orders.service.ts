@@ -5,7 +5,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
-import { createWriteStream, existsSync, mkdirSync, unlinkSync } from 'fs';
+import {
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  unlinkSync,
+} from 'fs';
 import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -51,16 +57,14 @@ export class OrdersService {
     join(process.cwd(), 'assets', 'ZHAO', '2-01.png'),
     join(this.storageRoot, 'assets', 'ZHAO-元素element', 'logo', '1.png'),
   ];
-  private readonly decorationCandidatePaths = [
-    join(process.cwd(), 'assets', 'ZHAO', '2-01.png'),
-    join(process.cwd(), 'assets', 'ZHAO-元素element', 'logo', '1.png'),
-    join(process.cwd(), 'assets', 'ZHAO-元素element', 'logo', '2-01.png'),
-    join(process.cwd(), 'assets', 'ZHAO-元素element', 'logo', '3-01.png'),
-    join(process.cwd(), 'assets', 'ZHAO-元素element', 'logo', '3-02.png'),
-  ];
-  private readonly decorationImagePaths = this.decorationCandidatePaths.filter(
-    (path) => existsSync(path),
+  private readonly redFontDecorationDir = join(
+    process.cwd(),
+    'assets',
+    'ZHAO-元素element',
+    '文字',
+    '红色字体',
   );
+  private readonly decorationImagePaths = this.resolveDecorationImagePaths();
   private readonly cjkFontCandidatePaths = [
     join(
       process.cwd(),
@@ -848,6 +852,16 @@ export class OrdersService {
     }
 
     return selected;
+  }
+
+  private resolveDecorationImagePaths() {
+    if (!existsSync(this.redFontDecorationDir)) {
+      return [] as string[];
+    }
+
+    return readdirSync(this.redFontDecorationDir)
+      .filter((name) => name.toLowerCase().endsWith('.png'))
+      .map((name) => join(this.redFontDecorationDir, name));
   }
 
   // ✅ Nouveau: fabrique un vrai libellé FR depuis un champ parfois "mixé"
