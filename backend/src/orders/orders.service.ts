@@ -719,7 +719,7 @@ export class OrdersService {
   }
 
   private sanitizeLabel(value: string | null | undefined) {
-    const safeValue = this.maybeFixPairSwappedText(this.recoverUtf8(value));
+    const safeValue = this.recoverUtf8(value);
     if (!safeValue) {
       return '-';
     }
@@ -728,42 +728,6 @@ export class OrdersService {
       .replace(/[\x00-\x1F\x7F]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
-  }
-
-  private maybeFixPairSwappedText(value: string) {
-    if (!value || this.containsCjk(value)) {
-      return value;
-    }
-
-    const lowerUpperCount = (value.match(/[a-z][A-Z]/g) ?? []).length;
-    const upperLowerCount = (value.match(/[A-Z][a-z]/g) ?? []).length;
-    if (lowerUpperCount < 2 || lowerUpperCount <= upperLowerCount) {
-      return value;
-    }
-
-    const swapped = this.swapAdjacentChars(value);
-    return this.readabilityScore(swapped) > this.readabilityScore(value)
-      ? swapped
-      : value;
-  }
-
-  private swapAdjacentChars(value: string) {
-    const chars = Array.from(value);
-    for (let index = 0; index + 1 < chars.length; index += 2) {
-      const current = chars[index];
-      chars[index] = chars[index + 1];
-      chars[index + 1] = current;
-    }
-
-    return chars.join('');
-  }
-
-  private readabilityScore(value: string) {
-    const letters = (value.match(/[A-Za-z]/g) ?? []).length;
-    const upperLower = (value.match(/[A-Z][a-z]/g) ?? []).length;
-    const lowerUpper = (value.match(/[a-z][A-Z]/g) ?? []).length;
-    const controls = (value.match(/[\x00-\x1F\x7F]/g) ?? []).length;
-    return letters + upperLower * 4 - lowerUpper * 5 - controls * 20;
   }
 
   private decodeUtf16Be(value: Buffer) {
