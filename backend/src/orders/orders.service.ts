@@ -339,14 +339,12 @@ export class OrdersService {
       deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
       deliveryAddress: order.deliveryAddress,
       items: order.items.map((item) => ({
-        nameFr: this.sanitizeLabel(
-          this.recoverUtf8(item.nameFr ?? item.product.designationFr ?? item.nameZh),
-        ),
+        nameFr: this.sanitizeLabel(this.recoverUtf8(item.product.designationFr ?? item.nameZh)),
         nameZh: this.sanitizeLabel(this.resolveZhName(item.nameZh, item.product.nomCn)),
-        unit: item.unit?.trim()
-          ? item.unit.trim()
-          : item.product.unite?.trim()
-            ? item.product.unite.trim()
+        unit: item.product.unite?.trim()
+          ? item.product.unite.trim()
+          : item.unit?.trim()
+            ? item.unit.trim()
             : '-',
         quantity: item.quantity,
         unitPrice: Number(item.unitPriceHt),
