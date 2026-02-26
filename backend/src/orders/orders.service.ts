@@ -37,6 +37,7 @@ type CommandePdfInput = {
   items: Array<{
     nameFr: string;
     nameZh: string;
+    specification: string;
     unit: string;
     quantity: number;
     unitPrice: number;
@@ -255,6 +256,9 @@ export class OrdersService {
 
         const zhRaw = this.recoverUtf8(item.product.nomCn);
         const nameZh = this.sanitizeLabel(zhRaw);
+        const specification = this.sanitizeLabel(
+          this.recoverUtf8(item.product.specification),
+        );
 
         // ⚠️ unité: ne passe PAS par recoverUtf8 (on évite les heuristiques)
         const unit = this.sanitizeLabel(item.product.unite?.trim() || '-');
@@ -262,6 +266,7 @@ export class OrdersService {
         return {
           nameFr,
           nameZh,
+          specification,
           unit,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
@@ -364,6 +369,7 @@ export class OrdersService {
               select: {
                 nomCn: true,
                 designationFr: true,
+                specification: true,
                 unite: true,
               },
             },
@@ -400,6 +406,9 @@ export class OrdersService {
         const nameZh = this.sanitizeLabel(
           this.resolveZhName(item.nameZh, item.product.nomCn),
         );
+        const specification = this.sanitizeLabel(
+          this.recoverUtf8(item.product.specification),
+        );
 
         // unité: priorité à product.unite puis snapshot item.unit
         // et surtout: pas de recoverUtf8 ici
@@ -410,6 +419,7 @@ export class OrdersService {
         return {
           nameFr,
           nameZh,
+          specification,
           unit,
           quantity: item.quantity,
           unitPrice: Number(item.unitPriceHt),
@@ -619,7 +629,7 @@ export class OrdersService {
     const colOrderUnit = Math.floor(contentWidth * 0.12);
     const colQty = Math.floor(contentWidth * 0.12);
     const colUnitPrice = contentWidth - colProduct - colOrderUnit - colQty;
-    const rowHeight = 36;
+    const rowHeight = 48;
 
     const drawHeaderRow = () => {
       const y = doc.y;
@@ -669,6 +679,10 @@ export class OrdersService {
         this.sanitizeLabel(item.nameZh),
         44,
       );
+      const productSpecification = this.truncateText(
+        this.sanitizeLabel(item.specification),
+        44,
+      );
       const orderUnit = this.sanitizeLabel(item.unit?.trim() || '-');
 
       if (index % 2 === 1) {
@@ -698,6 +712,14 @@ export class OrdersService {
           width: colProduct - 12,
         });
 
+      doc
+        .font('Helvetica')
+        .fontSize(8)
+        .fillColor(this.pdfColors.muted)
+        .text(`Spec: ${productSpecification}`, left + 8, y + 33, {
+          width: colProduct - 12,
+        });
+
       // Unité: police selon contenu (sinon "箱" ne s'affiche pas)
       if (this.cjkFontPath && this.containsCjk(orderUnit)) {
         doc.font(this.cjkFontPath);
@@ -708,7 +730,7 @@ export class OrdersService {
       doc
         .fillColor(this.pdfColors.text)
         .fontSize(10)
-        .text(orderUnit, left + colProduct + 4, y + 12, {
+        .text(orderUnit, left + colProduct + 4, y + 18, {
           width: colOrderUnit - 8,
           align: 'center',
         });
@@ -721,7 +743,7 @@ export class OrdersService {
         .text(
           String(item.quantity),
           left + colProduct + colOrderUnit + 4,
-          y + 12,
+          y + 18,
           {
             width: colQty - 8,
             align: 'center',
@@ -730,7 +752,7 @@ export class OrdersService {
         .text(
           item.unitPrice.toFixed(2),
           left + colProduct + colOrderUnit + colQty + 4,
-          y + 12,
+          y + 18,
           {
             width: colUnitPrice - 8,
             align: 'right',
