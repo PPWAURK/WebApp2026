@@ -68,6 +68,7 @@ export class OrdersService {
   private readonly cjkFontPath = this.cjkFontCandidatePaths.find((path) =>
     existsSync(path),
   );
+
   private readonly pdfColors = {
     primary: '#ab1e24',
     primaryDark: '#7f1b21',
@@ -233,16 +234,29 @@ export class OrdersService {
       restaurantName: restaurant.name,
       deliveryDate: payload.deliveryDate,
       deliveryAddress: restaurant.address,
-      items: preparedItems.map((item) => ({
-        nameFr: this.sanitizeLabel(
-          this.recoverUtf8(item.product.designationFr ?? item.product.nomCn),
-        ),
-        nameZh: this.sanitizeLabel(this.recoverUtf8(item.product.nomCn)),
-        unit: item.product.unite?.trim() ? item.product.unite.trim() : '-',
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        lineTotal: item.lineTotal,
-      })),
+      items: preparedItems.map((item) => {
+        const frRaw = this.recoverUtf8(
+          item.product.designationFr ?? item.product.nomCn,
+        );
+        const nameFr =
+          this.sanitizeLabel(this.makeFrLabel(frRaw)) ||
+          this.sanitizeLabel(frRaw);
+
+        const zhRaw = this.recoverUtf8(item.product.nomCn);
+        const nameZh = this.sanitizeLabel(zhRaw);
+
+        // ⚠️ unité: ne passe PAS par recoverUtf8 (on évite les heuristiques)
+        const unit = this.sanitizeLabel(item.product.unite?.trim() || '-');
+
+        return {
+          nameFr,
+          nameZh,
+          unit,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          lineTotal: item.lineTotal,
+        };
+      }),
       totalItems,
       totalAmount,
     });
@@ -364,22 +378,33 @@ export class OrdersService {
       restaurantName: order.restaurant.name,
       deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
       deliveryAddress: order.deliveryAddress,
-      items: order.items.map((item) => ({
-        nameFr: this.sanitizeLabel(
-          this.recoverUtf8(item.product.designationFr ?? item.nameZh),
-        ),
-        nameZh: this.sanitizeLabel(
+      items: order.items.map((item) => {
+        const frRaw = this.recoverUtf8(
+          item.product.designationFr ?? item.nameZh,
+        );
+        const nameFr =
+          this.sanitizeLabel(this.makeFrLabel(frRaw)) ||
+          this.sanitizeLabel(frRaw);
+
+        const nameZh = this.sanitizeLabel(
           this.resolveZhName(item.nameZh, item.product.nomCn),
-        ),
-        unit: item.product.unite?.trim()
-          ? item.product.unite.trim()
-          : item.unit?.trim()
-            ? item.unit.trim()
-            : '-',
-        quantity: item.quantity,
-        unitPrice: Number(item.unitPriceHt),
-        lineTotal: Number(item.quantity) * Number(item.unitPriceHt),
-      })),
+        );
+
+        // unité: priorité à product.unite puis snapshot item.unit
+        // et surtout: pas de recoverUtf8 ici
+        const unitCandidate =
+          (item.product.unite ?? '').trim() || (item.unit ?? '').trim() || '-';
+        const unit = this.sanitizeLabel(unitCandidate);
+
+        return {
+          nameFr,
+          nameZh,
+          unit,
+          quantity: item.quantity,
+          unitPrice: Number(item.unitPriceHt),
+          lineTotal: Number(item.quantity) * Number(item.unitPriceHt),
+        };
+      }),
       totalItems: order.totalItems,
       totalAmount: Number(order.totalAmount),
     });
@@ -633,6 +658,7 @@ export class OrdersService {
     input.items.forEach((item, index) => {
       ensureSpace(rowHeight);
       const y = doc.y;
+
       const productNameFr = this.truncateText(
         this.sanitizeLabel(item.nameFr),
         44,
@@ -641,7 +667,7 @@ export class OrdersService {
         this.sanitizeLabel(item.nameZh),
         44,
       );
-      const orderUnit = item.unit?.trim() ? item.unit.trim() : '-';
+      const orderUnit = this.sanitizeLabel(item.unit?.trim() || '-');
 
       if (index % 2 === 1) {
         doc
@@ -650,6 +676,7 @@ export class OrdersService {
           .fill();
       }
 
+      // FR
       doc
         .fillColor(this.pdfColors.text)
         .font('Helvetica')
@@ -658,10 +685,10 @@ export class OrdersService {
           width: colProduct - 12,
         });
 
+      // ZH (police CJK)
       if (this.cjkFontPath) {
         doc.font(this.cjkFontPath);
       }
-
       doc
         .fontSize(9)
         .fillColor(this.pdfColors.muted)
@@ -669,14 +696,26 @@ export class OrdersService {
           width: colProduct - 12,
         });
 
+      // Unité: police selon contenu (sinon "箱" ne s'affiche pas)
+      if (this.cjkFontPath && this.containsCjk(orderUnit)) {
+        doc.font(this.cjkFontPath);
+      } else {
+        doc.font('Helvetica');
+      }
+
       doc
-        .font('Helvetica')
         .fillColor(this.pdfColors.text)
         .fontSize(10)
         .text(orderUnit, left + colProduct + 4, y + 12, {
           width: colOrderUnit - 8,
           align: 'center',
-        })
+        });
+
+      // Le reste en Helvetica
+      doc
+        .font('Helvetica')
+        .fillColor(this.pdfColors.text)
+        .fontSize(10)
         .text(
           String(item.quantity),
           left + colProduct + colOrderUnit + 4,
@@ -769,21 +808,34 @@ export class OrdersService {
     if (value.length <= maxLength) {
       return value;
     }
-
     return `${value.slice(0, maxLength - 1)}...`;
   }
 
+  // ✅ Nouveau: fabrique un vrai libellé FR depuis un champ parfois "mixé"
+  private makeFrLabel(value: string) {
+    const withoutCjk = value.replace(/[\u3400-\u9FFF]/g, '');
+    // enlève les tokens d'unité/poids en fin (ex: "箱*8KG", "*8KG", "8KG", "10L", etc.)
+    const withoutTrailingPack = withoutCjk.replace(
+      /(\s*[xX×]?\s*\*?\s*\d+(\.\d+)?\s*(KG|G|L|ML|PCS|PC|CTN|BOT|BIDON|SAC))\s*$/i,
+      '',
+    );
+    return withoutTrailingPack.replace(/\s+/g, ' ').trim();
+  }
+
+  // ✅ Corrigé: ne tente plus utf16 sur de l'ASCII
   private recoverUtf8(value: string | null | undefined) {
     const safeValue = (value ?? '').trim();
     if (!safeValue) return '';
 
     if (this.containsCjk(safeValue)) return safeValue;
 
+    // ASCII pur => on ne touche pas
     if (!/[\u0080-\u00FF]/.test(safeValue)) {
       return safeValue;
     }
 
     const binaryBuffer = Buffer.from(safeValue, 'latin1');
+
     const decodedUtf8 = binaryBuffer.toString('utf8').trim();
     if (this.containsCjk(decodedUtf8)) return decodedUtf8;
 
@@ -791,15 +843,17 @@ export class OrdersService {
     if (
       this.containsCjk(decodedUtf16Be) &&
       !this.hasControlChars(decodedUtf16Be)
-    )
+    ) {
       return decodedUtf16Be;
+    }
 
     const decodedUtf16Le = binaryBuffer.toString('utf16le').trim();
     if (
       this.containsCjk(decodedUtf16Le) &&
       !this.hasControlChars(decodedUtf16Le)
-    )
+    ) {
       return decodedUtf16Le;
+    }
 
     return safeValue;
   }
@@ -822,10 +876,9 @@ export class OrdersService {
   }
 
   private sanitizeLabel(value: string | null | undefined) {
+    // ici on garde recoverUtf8 pour les champs "texte", mais pas utilisé pour unit
     const safeValue = this.recoverUtf8(value);
-    if (!safeValue) {
-      return '-';
-    }
+    if (!safeValue) return '-';
 
     return safeValue
       .replace(/[\x00-\x1F\x7F]/g, ' ')
