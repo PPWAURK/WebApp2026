@@ -388,6 +388,29 @@ export const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
+  productCardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  productCardContentPressable: {
+    flex: 1,
+  },
+  productDeleteIconButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#d99ea1',
+    backgroundColor: '#fff2f2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  productDeleteIconText: {
+    color: '#ab1e24',
+    fontSize: 16,
+    lineHeight: 16,
+  },
   productGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

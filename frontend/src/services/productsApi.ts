@@ -119,6 +119,25 @@ export async function updateProduct(
   return normalizeProduct(data, 0);
 }
 
+export async function deleteProduct(token: string, productId: number): Promise<void> {
+  const response = await fetch(`${API_URL}/products/${productId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (response.ok) {
+    return;
+  }
+
+  const data = (await response.json()) as { message?: string | string[] };
+  const message = Array.isArray(data.message)
+    ? data.message.join(', ')
+    : data.message ?? 'PRODUCT_DELETE_FAILED';
+  throw new Error(message);
+}
+
 export async function uploadProductImage(
   token: string,
   productId: number,

@@ -1,8 +1,19 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import type { AppText } from '../locales/translations';
 import {
+  deleteProduct,
   fetchProducts,
   uploadProductImage,
   updateProduct,
@@ -33,6 +44,7 @@ export function SupplierManagementPage({
   const [isCreatingSupplier, setIsCreatingSupplier] = useState(false);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -208,6 +220,56 @@ export function SupplierManagementPage({
     }
   }
 
+  async function onDeleteProduct(product: ProductItem) {
+    const confirmationMessage = text.supplierManagement.deleteProductConfirm;
+    const confirmed =
+      Platform.OS === 'web'
+        ? typeof window !== 'undefined' && window.confirm(confirmationMessage)
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              text.supplierManagement.deleteProductButton,
+              confirmationMessage,
+              [
+                {
+                  text: text.supplierManagement.deleteProductCancel,
+                  style: 'cancel',
+                  onPress: () => resolve(false),
+                },
+                {
+                  text: text.supplierManagement.deleteProductConfirmButton,
+                  style: 'destructive',
+                  onPress: () => resolve(true),
+                },
+              ],
+              { cancelable: true, onDismiss: () => resolve(false) },
+            );
+          });
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingProductId(product.id);
+    setError(null);
+
+    try {
+      await deleteProduct(accessToken, product.id);
+      setProducts((current) => current.filter((entry) => entry.id !== product.id));
+      if (selectedProductId === product.id) {
+        setSelectedProductId(null);
+        setIsEditorOpen(false);
+      }
+    } catch (deleteError) {
+      if (deleteError instanceof Error && deleteError.message.trim()) {
+        setError(deleteError.message);
+      } else {
+        setError(text.supplierManagement.deleteProductError);
+      }
+    } finally {
+      setDeletingProductId(null);
+    }
+  }
+
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{text.supplierManagement.title}</Text>
@@ -267,67 +329,85 @@ export function SupplierManagementPage({
           <Text style={styles.docEmpty}>{text.supplierManagement.noProduct}</Text>
         ) : (
           supplierProducts.map((product) => (
-            <Pressable
+            <View
               key={product.id}
               style={[
                 styles.docItem,
                 styles.productGridItem,
                 selectedProductId === product.id && styles.trainingTabActive,
               ]}
-              onPress={() => {
-                setSelectedProductId(product.id);
-                setIsEditorOpen(true);
-              }}
             >
-              <View style={styles.productInfoRow}>
-                {product.image ? (
-                  <View style={styles.productImageFrame}>
-                    <Image
-                      source={{ uri: product.image }}
-                      style={styles.productImageThumb}
-                      resizeMode="cover"
-                    />
-                  </View>
-                ) : null}
+              <View style={styles.productCardHeaderRow}>
+                <Pressable
+                  style={styles.productCardContentPressable}
+                  onPress={() => {
+                    setSelectedProductId(product.id);
+                    setIsEditorOpen(true);
+                  }}
+                >
+                  <View style={styles.productInfoRow}>
+                    {product.image ? (
+                      <View style={styles.productImageFrame}>
+                        <Image
+                          source={{ uri: product.image }}
+                          style={styles.productImageThumb}
+                          resizeMode="cover"
+                        />
+                      </View>
+                    ) : null}
 
-                <View style={styles.productInfoColumn}>
-                  <Text
-                    style={[
-                      styles.docItemTitle,
-                      selectedProductId === product.id && styles.trainingTabTextActive,
-                    ]}
-                  >
-                    {product.nameFr ?? product.nameZh}
+                    <View style={styles.productInfoColumn}>
+                      <Text
+                        style={[
+                          styles.docItemTitle,
+                          selectedProductId === product.id && styles.trainingTabTextActive,
+                        ]}
+                      >
+                        {product.nameFr ?? product.nameZh}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.docItemMeta,
+                          selectedProductId === product.id && styles.trainingTabTextActive,
+                        ]}
+                      >
+                        {product.category}
+                      </Text>
+                      {product.specification ? (
+                        <Text
+                          style={[
+                            styles.docItemMeta,
+                            selectedProductId === product.id && styles.trainingTabTextActive,
+                          ]}
+                        >
+                          {text.supplierManagement.fields.specification}: {product.specification}
+                        </Text>
+                      ) : null}
+                      <Text
+                        style={[
+                          styles.docItemMeta,
+                          selectedProductId === product.id && styles.trainingTabTextActive,
+                        ]}
+                      >
+                        {text.supplierManagement.tapToEdit}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  style={styles.productDeleteIconButton}
+                  disabled={deletingProductId === product.id}
+                  onPress={() => {
+                    void onDeleteProduct(product);
+                  }}
+                >
+                  <Text style={styles.productDeleteIconText}>
+                    {deletingProductId === product.id ? '…' : '🗑'}
                   </Text>
-                  <Text
-                    style={[
-                      styles.docItemMeta,
-                      selectedProductId === product.id && styles.trainingTabTextActive,
-                    ]}
-                  >
-                    {product.category}
-                  </Text>
-                  {product.specification ? (
-                    <Text
-                      style={[
-                        styles.docItemMeta,
-                        selectedProductId === product.id && styles.trainingTabTextActive,
-                      ]}
-                    >
-                      {text.supplierManagement.fields.specification}: {product.specification}
-                    </Text>
-                  ) : null}
-                  <Text
-                    style={[
-                      styles.docItemMeta,
-                      selectedProductId === product.id && styles.trainingTabTextActive,
-                    ]}
-                  >
-                    {text.supplierManagement.tapToEdit}
-                  </Text>
-                </View>
+                </Pressable>
               </View>
-            </Pressable>
+            </View>
           ))
         )}
       </View>

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -130,5 +131,21 @@ export class ProductsController {
     }
 
     return this.productsService.updateProductImage(productId, file, req);
+  }
+
+  @ApiOperation({ summary: 'Delete one product' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  deleteProduct(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) productId: number,
+  ) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN' && role !== 'MANAGER') {
+      throw new ForbiddenException('Only ADMIN and MANAGER can delete products');
+    }
+
+    return this.productsService.deleteProduct(productId);
   }
 }

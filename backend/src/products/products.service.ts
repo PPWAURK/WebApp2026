@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -161,6 +162,34 @@ export class ProductsService {
       id: Number(updated.id),
       image: updated.image,
     };
+  }
+
+  async deleteProduct(productId: number) {
+    try {
+      await this.prisma.produit.delete({
+        where: { id: BigInt(productId) },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException('Product not found');
+      }
+
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'Product cannot be deleted because it is linked to existing orders',
+        );
+      }
+
+      throw error;
+    }
+
+    return { success: true, id: productId };
   }
 
   private buildImageUrl(
