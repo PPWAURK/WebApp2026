@@ -52,7 +52,14 @@ export class OrdersService {
     join(this.storageRoot, 'assets', 'ZHAO-元素element', 'logo', '1.png'),
   ];
   private readonly cjkFontCandidatePaths = [
-    join(process.cwd(), 'assets', 'fonts', 'Noto_Sans_SC', 'static', 'NotoSansSC-Regular.ttf'),
+    join(
+      process.cwd(),
+      'assets',
+      'fonts',
+      'Noto_Sans_SC',
+      'static',
+      'NotoSansSC-Regular.ttf',
+    ),
     join(process.cwd(), 'assets', 'fonts', 'NotoSansSC-Regular.ttf'),
     join(this.storageRoot, 'assets', 'fonts', 'NotoSansSC-Regular.ttf'),
     '/System/Library/Fonts/Hiragino Sans GB.ttc',
@@ -101,7 +108,9 @@ export class OrdersService {
 
     for (const item of normalizedItems) {
       if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
-        throw new BadRequestException('Item quantity must be a positive integer');
+        throw new BadRequestException(
+          'Item quantity must be a positive integer',
+        );
       }
     }
 
@@ -121,14 +130,22 @@ export class OrdersService {
       throw new BadRequestException('Some selected products do not exist');
     }
 
-    const productById = new Map(products.map((product) => [Number(product.id), product]));
-    const supplierIds = Array.from(new Set(products.map((product) => product.supplierId)));
+    const productById = new Map(
+      products.map((product) => [Number(product.id), product]),
+    );
+    const supplierIds = Array.from(
+      new Set(products.map((product) => product.supplierId)),
+    );
     if (supplierIds.length !== 1) {
-      throw new BadRequestException('Order must include products from one supplier only');
+      throw new BadRequestException(
+        'Order must include products from one supplier only',
+      );
     }
 
     const supplierId = supplierIds[0];
-    const supplier = await this.prisma.fournisseur.findUnique({ where: { id: supplierId } });
+    const supplier = await this.prisma.fournisseur.findUnique({
+      where: { id: supplierId },
+    });
     if (!supplier) {
       throw new NotFoundException('Supplier not found');
     }
@@ -157,8 +174,14 @@ export class OrdersService {
       };
     });
 
-    const totalItems = preparedItems.reduce((sum, item) => sum + item.quantity, 0);
-    const totalAmount = preparedItems.reduce((sum, item) => sum + item.lineTotal, 0);
+    const totalItems = preparedItems.reduce(
+      (sum, item) => sum + item.quantity,
+      0,
+    );
+    const totalAmount = preparedItems.reduce(
+      (sum, item) => sum + item.lineTotal,
+      0,
+    );
 
     const createdOrder = await this.prisma.purchaseOrder.create({
       data: {
@@ -174,7 +197,10 @@ export class OrdersService {
       },
     });
 
-    const orderNumber = this.buildOrderNumber(createdOrder.id, createdOrder.createdAt);
+    const orderNumber = this.buildOrderNumber(
+      createdOrder.id,
+      createdOrder.createdAt,
+    );
     const orderFileName = `commande-${orderNumber}.pdf`;
 
     await this.prisma.purchaseOrder.update({
@@ -339,8 +365,12 @@ export class OrdersService {
       deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
       deliveryAddress: order.deliveryAddress,
       items: order.items.map((item) => ({
-        nameFr: this.sanitizeLabel(this.recoverUtf8(item.product.designationFr ?? item.nameZh)),
-        nameZh: this.sanitizeLabel(this.resolveZhName(item.nameZh, item.product.nomCn)),
+        nameFr: this.sanitizeLabel(
+          this.recoverUtf8(item.product.designationFr ?? item.nameZh),
+        ),
+        nameZh: this.sanitizeLabel(
+          this.resolveZhName(item.nameZh, item.product.nomCn),
+        ),
         unit: item.product.unite?.trim()
           ? item.product.unite.trim()
           : item.unit?.trim()
@@ -496,10 +526,15 @@ export class OrdersService {
         width: 160,
         align: 'right',
       })
-      .text(`Emission: ${new Date().toISOString().slice(0, 10)}`, right - 170, titleY + 20, {
-        width: 160,
-        align: 'right',
-      });
+      .text(
+        `Emission: ${new Date().toISOString().slice(0, 10)}`,
+        right - 170,
+        titleY + 20,
+        {
+          width: 160,
+          align: 'right',
+        },
+      );
 
     doc.moveDown(2.8);
     doc.fillColor(this.pdfColors.text);
@@ -507,7 +542,8 @@ export class OrdersService {
 
   private drawOrderMeta(doc: PdfDoc, input: CommandePdfInput) {
     const left = doc.page.margins.left;
-    const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const contentWidth =
+      doc.page.width - doc.page.margins.left - doc.page.margins.right;
     const blockY = doc.y;
 
     doc
@@ -526,26 +562,36 @@ export class OrdersService {
     doc
       .fillColor(this.pdfColors.text)
       .fontSize(10)
-      .text(`Adresse: ${input.deliveryAddress}`, left + contentWidth / 2, blockY + 27, {
-        width: contentWidth / 2 - 12,
-      });
+      .text(
+        `Adresse: ${input.deliveryAddress}`,
+        left + contentWidth / 2,
+        blockY + 27,
+        {
+          width: contentWidth / 2 - 12,
+        },
+      );
 
     doc.y = blockY + 86;
   }
 
   private drawItemsTable(doc: PdfDoc, input: CommandePdfInput) {
     const left = doc.page.margins.left;
-    const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const contentWidth =
+      doc.page.width - doc.page.margins.left - doc.page.margins.right;
     const colProduct = Math.floor(contentWidth * 0.46);
     const colOrderUnit = Math.floor(contentWidth * 0.12);
     const colQty = Math.floor(contentWidth * 0.12);
     const colUnitPrice = Math.floor(contentWidth * 0.15);
-    const colTotal = contentWidth - colProduct - colOrderUnit - colQty - colUnitPrice;
+    const colTotal =
+      contentWidth - colProduct - colOrderUnit - colQty - colUnitPrice;
     const rowHeight = 36;
 
     const drawHeaderRow = () => {
       const y = doc.y;
-      doc.rect(left, y, contentWidth, rowHeight).fillColor(this.pdfColors.primary).fill();
+      doc
+        .rect(left, y, contentWidth, rowHeight)
+        .fillColor(this.pdfColors.primary)
+        .fill();
       doc
         .fillColor(this.pdfColors.white)
         .fontSize(10)
@@ -587,12 +633,21 @@ export class OrdersService {
     input.items.forEach((item, index) => {
       ensureSpace(rowHeight);
       const y = doc.y;
-      const productNameFr = this.truncateText(this.sanitizeLabel(item.nameFr), 44);
-      const productNameZh = this.truncateText(this.sanitizeLabel(item.nameZh), 44);
+      const productNameFr = this.truncateText(
+        this.sanitizeLabel(item.nameFr),
+        44,
+      );
+      const productNameZh = this.truncateText(
+        this.sanitizeLabel(item.nameZh),
+        44,
+      );
       const orderUnit = item.unit?.trim() ? item.unit.trim() : '-';
 
       if (index % 2 === 1) {
-        doc.rect(left, y, contentWidth, rowHeight).fillColor(this.pdfColors.rowAlt).fill();
+        doc
+          .rect(left, y, contentWidth, rowHeight)
+          .fillColor(this.pdfColors.rowAlt)
+          .fill();
       }
 
       doc
@@ -622,10 +677,15 @@ export class OrdersService {
           width: colOrderUnit - 8,
           align: 'center',
         })
-        .text(String(item.quantity), left + colProduct + colOrderUnit + 4, y + 12, {
-          width: colQty - 8,
-          align: 'center',
-        })
+        .text(
+          String(item.quantity),
+          left + colProduct + colOrderUnit + 4,
+          y + 12,
+          {
+            width: colQty - 8,
+            align: 'center',
+          },
+        )
         .text(
           item.unitPrice.toFixed(2),
           left + colProduct + colOrderUnit + colQty + 4,
@@ -672,11 +732,18 @@ export class OrdersService {
     doc
       .fillColor(this.pdfColors.primaryDark)
       .fontSize(10)
-      .text(`Articles total: ${input.totalItems}`, x + 10, y + 12, { width: cardWidth - 20 })
-      .fontSize(12)
-      .text(`Montant total HT: ${input.totalAmount.toFixed(2)}`, x + 10, y + 30, {
+      .text(`Articles total: ${input.totalItems}`, x + 10, y + 12, {
         width: cardWidth - 20,
-      });
+      })
+      .fontSize(12)
+      .text(
+        `Montant total HT: ${input.totalAmount.toFixed(2)}`,
+        x + 10,
+        y + 30,
+        {
+          width: cardWidth - 20,
+        },
+      );
 
     doc.y = y + 68;
   }
@@ -686,10 +753,16 @@ export class OrdersService {
     doc
       .fontSize(9)
       .fillColor(this.pdfColors.muted)
-      .text('Document genere automatiquement par la plateforme.', doc.page.margins.left, footerY, {
-        width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
-        align: 'center',
-      });
+      .text(
+        'Document genere automatiquement par la plateforme.',
+        doc.page.margins.left,
+        footerY,
+        {
+          width:
+            doc.page.width - doc.page.margins.left - doc.page.margins.right,
+          align: 'center',
+        },
+      );
   }
 
   private truncateText(value: string, maxLength: number) {
@@ -702,38 +775,31 @@ export class OrdersService {
 
   private recoverUtf8(value: string | null | undefined) {
     const safeValue = (value ?? '').trim();
-    if (!safeValue) {
-      return '';
-    }
+    if (!safeValue) return '';
 
-    if (this.containsCjk(safeValue)) {
-      return safeValue;
-    }
+    if (this.containsCjk(safeValue)) return safeValue;
 
     if (!/[\u0080-\u00FF]/.test(safeValue)) {
-      const utf16Recovered = Buffer.from(safeValue, 'latin1').toString('utf16le').trim();
-      if (this.containsCjk(utf16Recovered)) {
-        return utf16Recovered;
-      }
-
       return safeValue;
     }
 
     const binaryBuffer = Buffer.from(safeValue, 'latin1');
     const decodedUtf8 = binaryBuffer.toString('utf8').trim();
-    if (this.containsCjk(decodedUtf8)) {
-      return decodedUtf8;
-    }
+    if (this.containsCjk(decodedUtf8)) return decodedUtf8;
 
     const decodedUtf16Be = this.decodeUtf16Be(binaryBuffer).trim();
-    if (this.containsCjk(decodedUtf16Be) && !this.hasControlChars(decodedUtf16Be)) {
+    if (
+      this.containsCjk(decodedUtf16Be) &&
+      !this.hasControlChars(decodedUtf16Be)
+    )
       return decodedUtf16Be;
-    }
 
     const decodedUtf16Le = binaryBuffer.toString('utf16le').trim();
-    if (this.containsCjk(decodedUtf16Le) && !this.hasControlChars(decodedUtf16Le)) {
+    if (
+      this.containsCjk(decodedUtf16Le) &&
+      !this.hasControlChars(decodedUtf16Le)
+    )
       return decodedUtf16Le;
-    }
 
     return safeValue;
   }
