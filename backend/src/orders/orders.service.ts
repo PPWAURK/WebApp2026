@@ -625,11 +625,13 @@ export class OrdersService {
     const left = doc.page.margins.left;
     const contentWidth =
       doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const colProduct = Math.floor(contentWidth * 0.46);
+    const colProduct = Math.floor(contentWidth * 0.38);
+    const colSpecification = Math.floor(contentWidth * 0.18);
     const colOrderUnit = Math.floor(contentWidth * 0.12);
-    const colQty = Math.floor(contentWidth * 0.12);
-    const colUnitPrice = contentWidth - colProduct - colOrderUnit - colQty;
-    const rowHeight = 48;
+    const colQty = Math.floor(contentWidth * 0.1);
+    const colUnitPrice =
+      contentWidth - colProduct - colSpecification - colOrderUnit - colQty;
+    const rowHeight = 38;
 
     const drawHeaderRow = () => {
       const y = doc.y;
@@ -641,18 +643,27 @@ export class OrdersService {
         .fillColor(this.pdfColors.white)
         .fontSize(10)
         .text('Produit FR / ZH', left + 8, y + 7, { width: colProduct - 12 })
-        .text('Unite', left + colProduct + 4, y + 7, {
+        .text('Specification', left + colProduct + 4, y + 7, {
+          width: colSpecification - 8,
+          align: 'center',
+        })
+        .text('Unite', left + colProduct + colSpecification + 4, y + 7, {
           width: colOrderUnit - 8,
           align: 'center',
         })
-        .text('Qte', left + colProduct + colOrderUnit + 4, y + 7, {
+        .text('Qte', left + colProduct + colSpecification + colOrderUnit + 4, y + 7, {
           width: colQty - 8,
           align: 'center',
         })
-        .text('PU HT', left + colProduct + colOrderUnit + colQty + 4, y + 7, {
+        .text(
+          'PU HT',
+          left + colProduct + colSpecification + colOrderUnit + colQty + 4,
+          y + 7,
+          {
           width: colUnitPrice - 8,
           align: 'right',
-        });
+          },
+        );
       doc.y = y + rowHeight;
     };
 
@@ -681,7 +692,7 @@ export class OrdersService {
       );
       const productSpecification = this.truncateText(
         this.sanitizeLabel(item.specification),
-        44,
+        26,
       );
       const orderUnit = this.sanitizeLabel(item.unit?.trim() || '-');
 
@@ -712,12 +723,18 @@ export class OrdersService {
           width: colProduct - 12,
         });
 
+      if (this.cjkFontPath && this.containsCjk(productSpecification)) {
+        doc.font(this.cjkFontPath);
+      } else {
+        doc.font('Helvetica');
+      }
+
       doc
-        .font('Helvetica')
-        .fontSize(8)
-        .fillColor(this.pdfColors.muted)
-        .text(`Spec: ${productSpecification}`, left + 8, y + 33, {
-          width: colProduct - 12,
+        .fillColor(this.pdfColors.text)
+        .fontSize(9)
+        .text(productSpecification, left + colProduct + 4, y + 13, {
+          width: colSpecification - 8,
+          align: 'center',
         });
 
       // Unité: police selon contenu (sinon "箱" ne s'affiche pas)
@@ -730,7 +747,7 @@ export class OrdersService {
       doc
         .fillColor(this.pdfColors.text)
         .fontSize(10)
-        .text(orderUnit, left + colProduct + 4, y + 18, {
+        .text(orderUnit, left + colProduct + colSpecification + 4, y + 13, {
           width: colOrderUnit - 8,
           align: 'center',
         });
@@ -742,8 +759,8 @@ export class OrdersService {
         .fontSize(10)
         .text(
           String(item.quantity),
-          left + colProduct + colOrderUnit + 4,
-          y + 18,
+          left + colProduct + colSpecification + colOrderUnit + 4,
+          y + 13,
           {
             width: colQty - 8,
             align: 'center',
@@ -751,8 +768,8 @@ export class OrdersService {
         )
         .text(
           item.unitPrice.toFixed(2),
-          left + colProduct + colOrderUnit + colQty + 4,
-          y + 18,
+          left + colProduct + colSpecification + colOrderUnit + colQty + 4,
+          y + 13,
           {
             width: colUnitPrice - 8,
             align: 'right',
