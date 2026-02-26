@@ -9,7 +9,6 @@ import {
   createWriteStream,
   existsSync,
   mkdirSync,
-  readdirSync,
   unlinkSync,
 } from 'fs';
 import { join } from 'path';
@@ -57,14 +56,12 @@ export class OrdersService {
     join(process.cwd(), 'assets', 'ZHAO', '2-01.png'),
     join(this.storageRoot, 'assets', 'ZHAO-元素element', 'logo', '1.png'),
   ];
-  private readonly redFontDecorationDir = join(
+  private readonly pdfBackgroundPath = join(
     process.cwd(),
     'assets',
-    'ZHAO-元素element',
-    '文字',
-    '红色字体',
+    'ZHAO',
+    'img.png',
   );
-  private readonly decorationImagePaths = this.resolveDecorationImagePaths();
   private readonly cjkFontCandidatePaths = [
     join(
       process.cwd(),
@@ -520,7 +517,7 @@ export class OrdersService {
 
       doc.pipe(stream);
 
-      this.drawRandomDecorations(doc);
+      this.drawBackground(doc);
       this.drawHeader(doc, input);
       this.drawOrderMeta(doc, input);
       this.drawItemsTable(doc, input);
@@ -652,7 +649,7 @@ export class OrdersService {
       const bottomLimit = doc.page.height - doc.page.margins.bottom - 90;
       if (doc.y + requiredHeight > bottomLimit) {
         doc.addPage();
-        this.drawRandomDecorations(doc);
+        this.drawBackground(doc);
         drawHeaderRow();
       }
     };
@@ -806,48 +803,18 @@ export class OrdersService {
     return `${value.slice(0, maxLength - 1)}...`;
   }
 
-  private drawRandomDecorations(doc: PdfDoc) {
-    if (!this.decorationImagePaths.length) {
+  private drawBackground(doc: PdfDoc) {
+    if (!existsSync(this.pdfBackgroundPath)) {
       return;
     }
 
-    const pageWidth = doc.page.width;
-    const pageHeight = doc.page.height;
-    const margin = 24;
-    const minSize = 44;
-    const maxSize = 110;
-    const imageCount = 2 + Math.floor(Math.random() * 3);
-
     doc.save();
-    doc.opacity(0.1 + Math.random() * 0.08);
-
-    for (let index = 0; index < imageCount; index += 1) {
-      const size = minSize + Math.floor(Math.random() * (maxSize - minSize + 1));
-      const maxX = Math.max(margin, pageWidth - margin - size);
-      const maxY = Math.max(margin, pageHeight - margin - size);
-      const x = margin + Math.random() * Math.max(1, maxX - margin);
-      const y = margin + Math.random() * Math.max(1, maxY - margin);
-      const imagePath =
-        this.decorationImagePaths[
-          Math.floor(Math.random() * this.decorationImagePaths.length)
-        ];
-
-      doc.image(imagePath, x, y, {
-        fit: [size, size],
-      });
-    }
-
+    doc.opacity(0.12);
+    doc.image(this.pdfBackgroundPath, 0, 0, {
+      width: doc.page.width,
+      height: doc.page.height,
+    });
     doc.restore();
-  }
-
-  private resolveDecorationImagePaths() {
-    if (!existsSync(this.redFontDecorationDir)) {
-      return [] as string[];
-    }
-
-    return readdirSync(this.redFontDecorationDir)
-      .filter((name) => name.toLowerCase().endsWith('.png'))
-      .map((name) => join(this.redFontDecorationDir, name));
   }
 
   // ✅ Nouveau: fabrique un vrai libellé FR depuis un champ parfois "mixé"
