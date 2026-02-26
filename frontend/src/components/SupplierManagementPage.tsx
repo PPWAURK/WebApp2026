@@ -39,6 +39,7 @@ export function SupplierManagementPage({
   const [editCategory, setEditCategory] = useState('');
   const [editNameZh, setEditNameZh] = useState('');
   const [editNameFr, setEditNameFr] = useState('');
+  const [editSpecification, setEditSpecification] = useState('');
   const [editPriceHt, setEditPriceHt] = useState('');
   const [editImage, setEditImage] = useState('');
 
@@ -97,6 +98,7 @@ export function SupplierManagementPage({
       setEditCategory('');
       setEditNameZh('');
       setEditNameFr('');
+      setEditSpecification('');
       setEditPriceHt('');
       setEditImage('');
       return;
@@ -105,6 +107,7 @@ export function SupplierManagementPage({
     setEditCategory(selectedProduct.category);
     setEditNameZh(selectedProduct.nameZh);
     setEditNameFr(selectedProduct.nameFr ?? '');
+    setEditSpecification(selectedProduct.specification ?? '');
     setEditPriceHt(
       selectedProduct.priceHt === null ? '' : selectedProduct.priceHt.toString(),
     );
@@ -147,6 +150,7 @@ export function SupplierManagementPage({
         category: editCategory.trim(),
         nameZh: editNameZh.trim(),
         nameFr: editNameFr.trim() ? editNameFr.trim() : null,
+        specification: editSpecification.trim() ? editSpecification.trim() : null,
         priceHt: parsedPrice,
       });
 
@@ -303,6 +307,16 @@ export function SupplierManagementPage({
                   >
                     {product.category}
                   </Text>
+                  {product.specification ? (
+                    <Text
+                      style={[
+                        styles.docItemMeta,
+                        selectedProductId === product.id && styles.trainingTabTextActive,
+                      ]}
+                    >
+                      {text.supplierManagement.fields.specification}: {product.specification}
+                    </Text>
+                  ) : null}
                   <Text
                     style={[
                       styles.docItemMeta,
@@ -352,6 +366,13 @@ export function SupplierManagementPage({
                     placeholderTextColor="#a98a8d"
                     value={editNameFr}
                     onChangeText={setEditNameFr}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={text.supplierManagement.fields.specification}
+                    placeholderTextColor="#a98a8d"
+                    value={editSpecification}
+                    onChangeText={setEditSpecification}
                   />
                   <TextInput
                     style={styles.input}
