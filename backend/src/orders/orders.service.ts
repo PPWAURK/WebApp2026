@@ -700,14 +700,14 @@ export class OrdersService {
       return decodedUtf8;
     }
 
-    const decodedUtf16Le = binaryBuffer.toString('utf16le').trim();
-    if (this.containsCjk(decodedUtf16Le)) {
-      return decodedUtf16Le;
+    const decodedUtf16Be = this.decodeUtf16Be(binaryBuffer).trim();
+    if (this.containsCjk(decodedUtf16Be) && !this.hasControlChars(decodedUtf16Be)) {
+      return decodedUtf16Be;
     }
 
-    const decodedUtf16Be = this.decodeUtf16Be(binaryBuffer).trim();
-    if (this.containsCjk(decodedUtf16Be)) {
-      return decodedUtf16Be;
+    const decodedUtf16Le = binaryBuffer.toString('utf16le').trim();
+    if (this.containsCjk(decodedUtf16Le) && !this.hasControlChars(decodedUtf16Le)) {
+      return decodedUtf16Le;
     }
 
     return safeValue;
@@ -756,6 +756,10 @@ export class OrdersService {
     }
 
     return swapped.toString('utf16le');
+  }
+
+  private hasControlChars(value: string) {
+    return /[\x00-\x1F\x7F]/.test(value);
   }
 
   private containsCjk(value: string) {
