@@ -705,6 +705,11 @@ export class OrdersService {
       return decodedUtf16Le;
     }
 
+    const decodedUtf16Be = this.decodeUtf16Be(binaryBuffer).trim();
+    if (this.containsCjk(decodedUtf16Be)) {
+      return decodedUtf16Be;
+    }
+
     return safeValue;
   }
 
@@ -733,9 +738,24 @@ export class OrdersService {
 
     return safeValue
       .replace(/[\x00-\x1F\x7F]/g, ' ')
-      .replace(/[+\-±]/g, '')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  private decodeUtf16Be(value: Buffer) {
+    if (value.length < 2) {
+      return '';
+    }
+
+    const evenLength = value.length - (value.length % 2);
+    const swapped = Buffer.allocUnsafe(evenLength);
+
+    for (let index = 0; index < evenLength; index += 2) {
+      swapped[index] = value[index + 1];
+      swapped[index + 1] = value[index];
+    }
+
+    return swapped.toString('utf16le');
   }
 
   private containsCjk(value: string) {
