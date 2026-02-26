@@ -35,7 +35,6 @@ type CommandePdfInput = {
     unit: string;
     quantity: number;
     unitPrice: number;
-    lineTotal: number;
   }>;
   totalItems: number;
   totalAmount: number;
@@ -45,21 +44,18 @@ type CommandePdfInput = {
 export class OrdersService {
   private readonly storageRoot =
     process.env.STORAGE_ROOT_PATH ?? join(process.cwd(), 'uploads');
-  private readonly publicApiBaseUrl = process.env.PUBLIC_API_BASE_URL;
+
   private readonly ordersDir = join(this.storageRoot, 'orders');
-  private readonly logoCandidatePaths = [
-    join(process.cwd(), 'assets', 'ZHAO', 'logo1.png'),
-    join(this.storageRoot, 'assets', 'ZHAO-元素element', 'logo', '1.png'),
-  ];
-  private readonly cjkFontCandidatePaths = [
-    join(process.cwd(), 'assets', 'fonts', 'NotoSansSC-Regular.ttf'),
-    join(this.storageRoot, 'assets', 'fonts', 'NotoSansSC-Regular.ttf'),
-    '/System/Library/Fonts/Hiragino Sans GB.ttc',
-    '/System/Library/Fonts/STHeiti Medium.ttc',
-  ];
-  private readonly cjkFontPath = this.cjkFontCandidatePaths.find((path) =>
-    existsSync(path),
+
+  private readonly fontPath = join(
+    process.cwd(),
+    'assets',
+    'fonts',
+    'Noto_Sans_SC',
+    'static',
+    'NotoSansSC-Regular.ttf',
   );
+
   private readonly pdfColors = {
     primary: '#ab1e24',
     primaryDark: '#7f1b21',
@@ -81,54 +77,26 @@ export class OrdersService {
     payload: CreateOrderPayload,
     req: { protocol: string; get: (name: string) => string | undefined },
   ) {
-    this.ensureCanManageOrders(actor);
+    if (actor.role !== 'ADMIN' && actor.role !== 'MANAGER') {
+      throw new ForbiddenException('Not allowed');
+    }
 
     if (!actor.restaurantId) {
       throw new BadRequestException('User must be assigned to a restaurant');
     }
 
-    const deliveryDate = this.parseDeliveryDate(payload.deliveryDate);
-
-    if (!payload.items?.length) {
-      throw new BadRequestException('At least one item is required');
-    }
-
-    const normalizedItems = payload.items.map((item) => ({
-      productId: item.productId,
-      quantity: item.quantity,
-    }));
-
-    const distinctProductIds = Array.from(
-      new Set(normalizedItems.map((item) => item.productId)),
-    );
+    const deliveryDate = new Date(`${payload.deliveryDate}T00:00:00.000Z`);
 
     const products = await this.prisma.produit.findMany({
       where: {
         id: {
-          in: distinctProductIds.map((id) => BigInt(id)),
+          in: payload.items.map((i) => BigInt(i.productId)),
         },
       },
     });
 
-    if (products.length !== distinctProductIds.length) {
-      throw new BadRequestException('Some selected products do not exist');
-    }
-
-    const productById = new Map(products.map((product) => [Number(product.id), product]));
-
-    const supplierIds = Array.from(new Set(products.map((product) => product.supplierId)));
-    if (supplierIds.length !== 1) {
-      throw new BadRequestException('Order must include products from one supplier only');
-    }
-
-    const supplierId = supplierIds[0];
-
-    const supplier = await this.prisma.fournisseur.findUnique({
-      where: { id: supplierId },
-    });
-
-    if (!supplier) {
-      throw new NotFoundException('Supplier not found');
+    if (!products.length) {
+      throw new BadRequestException('Products not found');
     }
 
     const restaurant = await this.prisma.restaurant.findUnique({
@@ -139,34 +107,29 @@ export class OrdersService {
       throw new NotFoundException('Restaurant not found');
     }
 
-    const preparedItems = normalizedItems.map((item) => {
-      if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
-        throw new BadRequestException('Item quantity must be a positive integer');
-      }
-
-      const product = productById.get(item.productId);
-      if (!product) {
-        throw new BadRequestException('Selected product does not exist');
-      }
+    const preparedItems = payload.items.map((item) => {
+      const product = products.find((p) => Number(p.id) === item.productId);
+      if (!product) throw new BadRequestException('Invalid product');
 
       const unitPrice = Number(product.prixUHt ?? 0);
-      const lineTotal = unitPrice * item.quantity;
 
       return {
         product,
         quantity: item.quantity,
         unitPrice,
-        lineTotal,
       };
     });
 
-    const totalItems = preparedItems.reduce((sum, item) => sum + item.quantity, 0);
-    const totalAmount = preparedItems.reduce((sum, item) => sum + item.lineTotal, 0);
+    const totalItems = preparedItems.reduce((s, i) => s + i.quantity, 0);
+    const totalAmount = preparedItems.reduce(
+      (s, i) => s + i.quantity * i.unitPrice,
+      0,
+    );
 
-    const createdOrder = await this.prisma.purchaseOrder.create({
+    const order = await this.prisma.purchaseOrder.create({
       data: {
-        number: `PO-TMP-${Date.now()}`,
-        supplierId,
+        number: `PO-${Date.now()}`,
+        supplierId: products[0].supplierId,
         restaurantId: actor.restaurantId,
         createdByUserId: actor.id,
         deliveryDate,
@@ -177,592 +140,73 @@ export class OrdersService {
       },
     });
 
-    const orderNumber = this.buildOrderNumber(createdOrder.id, createdOrder.createdAt);
-    const orderFileName = `commande-${orderNumber}.pdf`;
+    const fileName = `commande-${order.id}.pdf`;
 
     await this.prisma.purchaseOrder.update({
-      where: { id: createdOrder.id },
-      data: {
-        number: orderNumber,
-        bonFileName: orderFileName,
-      },
-    });
-
-    await this.prisma.purchaseOrderItem.createMany({
-      data: preparedItems.map((item) => ({
-        purchaseOrderId: createdOrder.id,
-        productId: item.product.id,
-        supplierId,
-        quantity: item.quantity,
-        unitPriceHt: item.unitPrice,
-        lineTotal: item.lineTotal,
-        nameZh: item.product.nomCn,
-        nameFr: item.product.designationFr,
-        unit: item.product.unite,
-        category: item.product.categorie,
-      })),
+      where: { id: order.id },
+      data: { bonFileName: fileName },
     });
 
     await this.generateCommandePdf({
-      filePath: join(this.ordersDir, orderFileName),
-      orderNumber,
-      supplierName: supplier.nom,
+      filePath: join(this.ordersDir, fileName),
+      orderNumber: order.number,
+      supplierName: 'Fournisseur',
       restaurantName: restaurant.name,
       deliveryDate: payload.deliveryDate,
       deliveryAddress: restaurant.address,
-      items: preparedItems.map((item) => ({
-        nameFr: this.sanitizeLabel(
-          this.recoverUtf8(item.product.designationFr ?? item.product.nomCn),
-        ),
-        nameZh: this.sanitizeLabel(this.recoverUtf8(item.product.nomCn)),
-        unit: item.product.unite?.trim() ? item.product.unite.trim() : '-',
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        lineTotal: item.lineTotal,
+      items: preparedItems.map((i) => ({
+        nameFr: i.product.designationFr ?? '',
+        nameZh: i.product.nomCn,
+        unit: i.product.unite ?? '-',
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
       })),
       totalItems,
       totalAmount,
     });
 
-    const commandeUrl = this.buildOrderUrl(req, createdOrder.id);
-
-    return {
-      id: createdOrder.id,
-      number: orderNumber,
-      supplierId,
-      supplierName: supplier.nom,
-      deliveryDate: payload.deliveryDate,
-      deliveryAddress: restaurant.address,
-      totalItems,
-      totalAmount,
-      bonUrl: commandeUrl,
-      commandeUrl,
-      createdAt: createdOrder.createdAt,
-    };
-  }
-
-  async listOrders(
-    actor: Actor,
-    req: { protocol: string; get: (name: string) => string | undefined },
-  ) {
-    this.ensureCanManageOrders(actor);
-
-    const orders = await this.prisma.purchaseOrder.findMany({
-      where:
-        actor.role === 'ADMIN'
-          ? undefined
-          : {
-              restaurantId: actor.restaurantId ?? -1,
-            },
-      include: {
-        supplier: {
-          select: {
-            id: true,
-            nom: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
-    return orders.map((order) => {
-      const commandeUrl = this.buildOrderUrl(req, order.id);
-
-      return {
-        id: order.id,
-        number: order.number,
-        supplierId: order.supplierId,
-        supplierName: order.supplier.nom,
-        deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
-        deliveryAddress: order.deliveryAddress,
-        totalItems: order.totalItems,
-        totalAmount: Number(order.totalAmount),
-        bonUrl: commandeUrl,
-        commandeUrl,
-        createdAt: order.createdAt,
-      };
-    });
-  }
-
-  async resolveOrderFilePath(orderId: number, actor: Actor) {
-    this.ensureCanManageOrders(actor);
-
-    const order = await this.prisma.purchaseOrder.findUnique({
-      where: { id: orderId },
-      include: {
-        supplier: {
-          select: {
-            nom: true,
-          },
-        },
-        restaurant: {
-          select: {
-            name: true,
-          },
-        },
-        items: {
-          orderBy: {
-            id: 'asc',
-          },
-          select: {
-            nameZh: true,
-            nameFr: true,
-            unit: true,
-            quantity: true,
-            unitPriceHt: true,
-            lineTotal: true,
-            product: {
-              select: {
-                nomCn: true,
-                designationFr: true,
-                unite: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
-
-    if (actor.role !== 'ADMIN' && order.restaurantId !== actor.restaurantId) {
-      throw new ForbiddenException('Order does not belong to your restaurant');
-    }
-
-    const fullPath = join(this.ordersDir, order.bonFileName);
-
-    await this.generateCommandePdf({
-      filePath: fullPath,
-      orderNumber: order.number,
-      supplierName: order.supplier.nom,
-      restaurantName: order.restaurant.name,
-      deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
-      deliveryAddress: order.deliveryAddress,
-      items: order.items.map((item) => ({
-        nameFr: this.sanitizeLabel(
-          this.recoverUtf8(item.nameFr ?? item.product.designationFr ?? item.nameZh),
-        ),
-        nameZh: this.sanitizeLabel(
-          this.resolveZhName(item.nameZh, item.product.nomCn),
-        ),
-        unit: item.unit?.trim()
-          ? item.unit.trim()
-          : item.product.unite?.trim()
-            ? item.product.unite.trim()
-            : '-',
-        quantity: item.quantity,
-        unitPrice: Number(item.unitPriceHt),
-        lineTotal: Number(item.lineTotal),
-      })),
-      totalItems: order.totalItems,
-      totalAmount: Number(order.totalAmount),
-    });
-
-    if (!existsSync(fullPath)) {
-      throw new NotFoundException('Order file not found');
-    }
-
-    return fullPath;
-  }
-
-  async resolveBonFilePath(orderId: number, actor: Actor) {
-    return this.resolveOrderFilePath(orderId, actor);
-  }
-
-  private ensureCanManageOrders(actor: Actor) {
-    if (actor.role !== 'ADMIN' && actor.role !== 'MANAGER') {
-      throw new ForbiddenException('Only ADMIN and MANAGER can access orders');
-    }
-  }
-
-  private parseDeliveryDate(raw: string) {
-    if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-      throw new BadRequestException('deliveryDate must match YYYY-MM-DD');
-    }
-
-    const parsed = new Date(`${raw}T00:00:00.000Z`);
-    if (Number.isNaN(parsed.getTime())) {
-      throw new BadRequestException('deliveryDate is invalid');
-    }
-
-    return parsed;
-  }
-
-  private buildOrderNumber(orderId: number, createdAt: Date) {
-    const year = createdAt.getFullYear();
-    const month = String(createdAt.getMonth() + 1).padStart(2, '0');
-    const day = String(createdAt.getDate()).padStart(2, '0');
-    const paddedId = String(orderId).padStart(4, '0');
-    return `PO-${year}${month}${day}-${paddedId}`;
-  }
-
-  private buildOrderUrl(
-    req: { protocol: string; get: (name: string) => string | undefined },
-    orderId: number,
-  ) {
-    if (this.publicApiBaseUrl) {
-      const normalizedBaseUrl = this.publicApiBaseUrl.replace(/\/$/, '');
-      return `${normalizedBaseUrl}/orders/${orderId}/commande`;
-    }
-
-    const host = req.get('host');
-    return `${req.protocol}://${host}/orders/${orderId}/commande`;
+    return order;
   }
 
   private async generateCommandePdf(input: CommandePdfInput) {
-    await new Promise<void>((resolvePromise, rejectPromise) => {
-      const doc = new PDFDocument({ margin: 36 });
-      const stream = createWriteStream(input.filePath);
+    await new Promise<void>((resolve, reject) => {
+      if (!existsSync(this.fontPath)) {
+        throw new Error('Chinese font not found');
+      }
 
+      const doc = new PDFDocument({ margin: 36 });
+      doc.registerFont('CJK', this.fontPath);
+      doc.font('CJK');
+
+      const stream = createWriteStream(input.filePath);
       doc.pipe(stream);
 
-      this.drawHeader(doc, input);
-      this.drawOrderMeta(doc, input);
-      this.drawItemsTable(doc, input);
-      this.drawTotals(doc, input);
-      this.drawFooter(doc);
+      doc.fontSize(18).text('Commande', { align: 'center' });
+      doc.moveDown();
+
+      doc.fontSize(11).text(`Numero: ${input.orderNumber}`);
+      doc.text(`Restaurant: ${input.restaurantName}`);
+      doc.text(`Livraison: ${input.deliveryDate}`);
+      doc.moveDown();
+
+      input.items.forEach((item) => {
+        doc
+          .fontSize(10)
+          .text(
+            `${item.nameFr} / ${item.nameZh} | ${item.quantity} ${item.unit} x ${item.unitPrice.toFixed(
+              2,
+            )}`,
+          );
+      });
+
+      doc.moveDown();
+      doc.fontSize(12).text(`Total articles: ${input.totalItems}`);
+      doc.text(`Total HT: ${input.totalAmount.toFixed(2)}`);
 
       doc.end();
 
-      stream.on('finish', () => resolvePromise());
-      stream.on('error', (error) => rejectPromise(error));
+      stream.on('finish', resolve);
+      stream.on('error', reject);
     });
-  }
-
-  private drawHeader(doc: PdfDoc, input: CommandePdfInput) {
-    const pageWidth = doc.page.width;
-    const left = doc.page.margins.left;
-    const right = pageWidth - doc.page.margins.right;
-    const titleY = doc.y;
-
-    doc
-      .rect(left, titleY, right - left, 46)
-      .fillColor(this.pdfColors.primary)
-      .fill();
-
-    doc
-      .fillColor(this.pdfColors.white)
-      .fontSize(18)
-      .text('Commande', left, titleY + 13, {
-        width: right - left,
-        align: 'center',
-      });
-
-    const logoPath = this.logoCandidatePaths.find((path) => existsSync(path));
-    if (logoPath) {
-      doc.image(logoPath, left + 8, titleY + 6, {
-        fit: [80, 34],
-      });
-    }
-
-    doc
-      .fontSize(10)
-      .text(`Numero: ${input.orderNumber}`, right - 170, titleY + 6, {
-        width: 160,
-        align: 'right',
-      })
-      .text(`Emission: ${new Date().toISOString().slice(0, 10)}`, right - 170, titleY + 20, {
-        width: 160,
-        align: 'right',
-      });
-
-    doc.moveDown(2.8);
-    doc.fillColor(this.pdfColors.text);
-  }
-
-  private drawOrderMeta(doc: PdfDoc, input: CommandePdfInput) {
-    const left = doc.page.margins.left;
-    const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const blockY = doc.y;
-
-    doc
-      .roundedRect(left, blockY, contentWidth, 74, 8)
-      .lineWidth(1)
-      .strokeColor(this.pdfColors.border)
-      .stroke();
-
-    doc
-      .fillColor(this.pdfColors.primaryDark)
-      .fontSize(11)
-      .text(`Fournisseur: ${input.supplierName}`, left + 12, blockY + 10)
-      .text(`Etablissement: ${input.restaurantName}`, left + 12, blockY + 27)
-      .text(`Date de livraison: ${input.deliveryDate}`, left + 12, blockY + 44);
-
-    doc
-      .fillColor(this.pdfColors.text)
-      .fontSize(10)
-      .text(`Adresse: ${input.deliveryAddress}`, left + contentWidth / 2, blockY + 27, {
-        width: contentWidth / 2 - 12,
-      });
-
-    doc.y = blockY + 86;
-  }
-
-  private drawItemsTable(doc: PdfDoc, input: CommandePdfInput) {
-    const left = doc.page.margins.left;
-    const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const colProduct = Math.floor(contentWidth * 0.46);
-    const colOrderUnit = Math.floor(contentWidth * 0.12);
-    const colQty = Math.floor(contentWidth * 0.12);
-    const colUnitPrice = Math.floor(contentWidth * 0.15);
-    const colTotal =
-      contentWidth - colProduct - colOrderUnit - colQty - colUnitPrice;
-    const rowHeight = 36;
-
-    const drawHeaderRow = () => {
-      const y = doc.y;
-      doc.rect(left, y, contentWidth, rowHeight).fillColor(this.pdfColors.primary).fill();
-      doc
-        .fillColor(this.pdfColors.white)
-        .fontSize(10)
-        .text('Produit FR / ZH', left + 8, y + 7, { width: colProduct - 12 })
-        .text('Unite', left + colProduct + 4, y + 7, {
-          width: colOrderUnit - 8,
-          align: 'center',
-        })
-        .text('Qte', left + colProduct + colOrderUnit + 4, y + 7, {
-          width: colQty - 8,
-          align: 'center',
-        })
-        .text('PU HT', left + colProduct + colOrderUnit + colQty + 4, y + 7, {
-          width: colUnitPrice - 8,
-          align: 'right',
-        })
-        .text(
-          'Total HT',
-          left + colProduct + colOrderUnit + colQty + colUnitPrice + 4,
-          y + 7,
-          {
-          width: colTotal - 8,
-          align: 'right',
-          },
-        );
-      doc.y = y + rowHeight;
-    };
-
-    const ensureSpace = (requiredHeight: number) => {
-      const bottomLimit = doc.page.height - doc.page.margins.bottom - 90;
-      if (doc.y + requiredHeight > bottomLimit) {
-        doc.addPage();
-        drawHeaderRow();
-      }
-    };
-
-    drawHeaderRow();
-
-    input.items.forEach((item, index) => {
-      ensureSpace(rowHeight);
-      const y = doc.y;
-      const productNameFr = this.truncateText(this.sanitizeLabel(item.nameFr), 44);
-      const productNameZh = this.truncateText(this.sanitizeLabel(item.nameZh), 44);
-      const orderUnit = item.unit?.trim() ? item.unit.trim() : '-';
-      const computedLineTotal = item.quantity * item.unitPrice;
-
-      if (index % 2 === 1) {
-        doc.rect(left, y, contentWidth, rowHeight).fillColor(this.pdfColors.rowAlt).fill();
-      }
-
-      doc
-        .fillColor(this.pdfColors.text)
-        .font('Helvetica')
-        .fontSize(10)
-        .text(productNameFr, left + 8, y + 6, {
-          width: colProduct - 12,
-        });
-
-      if (this.cjkFontPath) {
-        doc.font(this.cjkFontPath);
-      }
-
-      doc
-        .fontSize(9)
-        .fillColor(this.pdfColors.muted)
-        .text(productNameZh, left + 8, y + 20, {
-          width: colProduct - 12,
-        });
-
-      doc
-        .font('Helvetica')
-        .fillColor(this.pdfColors.text)
-        .fontSize(10)
-        .text(orderUnit, left + colProduct + 4, y + 12, {
-          width: colOrderUnit - 8,
-          align: 'center',
-        })
-        .text(String(item.quantity), left + colProduct + colOrderUnit + 4, y + 12, {
-          width: colQty - 8,
-          align: 'center',
-        })
-        .text(
-          item.unitPrice.toFixed(2),
-          left + colProduct + colOrderUnit + colQty + 4,
-          y + 12,
-          {
-          width: colUnitPrice - 8,
-          align: 'right',
-          },
-        )
-        .text(
-          computedLineTotal.toFixed(2),
-          left + colProduct + colOrderUnit + colQty + colUnitPrice + 4,
-          y + 12,
-          {
-          width: colTotal - 8,
-          align: 'right',
-          },
-        );
-
-      doc
-        .moveTo(left, y + rowHeight)
-        .lineTo(left + contentWidth, y + rowHeight)
-        .strokeColor(this.pdfColors.border)
-        .lineWidth(0.6)
-        .stroke();
-
-      doc.y = y + rowHeight;
-    });
-
-    doc.moveDown(0.8);
-  }
-
-  private drawTotals(doc: PdfDoc, input: CommandePdfInput) {
-    const computedTotalAmount = input.items.reduce(
-      (sum, item) => sum + item.quantity * item.unitPrice,
-      0,
-    );
-    const cardWidth = 220;
-    const x = doc.page.width - doc.page.margins.right - cardWidth;
-    const y = doc.y;
-
-    doc
-      .roundedRect(x, y, cardWidth, 54, 8)
-      .lineWidth(1)
-      .strokeColor(this.pdfColors.primary)
-      .stroke();
-
-    doc
-      .fillColor(this.pdfColors.primaryDark)
-      .fontSize(10)
-      .text(`Articles total: ${input.totalItems}`, x + 10, y + 12, { width: cardWidth - 20 })
-      .fontSize(12)
-      .text(`Montant total HT: ${computedTotalAmount.toFixed(2)}`, x + 10, y + 30, {
-        width: cardWidth - 20,
-      });
-
-    doc.y = y + 68;
-  }
-
-  private drawFooter(doc: PdfDoc) {
-    const footerY = doc.page.height - doc.page.margins.bottom - 20;
-    doc
-      .fontSize(9)
-      .fillColor(this.pdfColors.muted)
-      .text('Document genere automatiquement par la plateforme.', doc.page.margins.left, footerY, {
-        width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
-        align: 'center',
-      });
-  }
-
-  private truncateText(value: string, maxLength: number) {
-    if (value.length <= maxLength) {
-      return value;
-    }
-
-    return `${value.slice(0, maxLength - 1)}...`;
-  }
-
-  private recoverUtf8(value: string | null | undefined) {
-    const safeValue = (value ?? '').trim();
-    if (!safeValue) {
-      return '';
-    }
-
-    if (this.containsCjk(safeValue)) {
-      return safeValue;
-    }
-
-    if (!/[\u0080-\u00FF]/.test(safeValue)) {
-      const utf16Recovered = Buffer.from(safeValue, 'latin1').toString('utf16le').trim();
-      if (this.containsCjk(utf16Recovered)) {
-        return utf16Recovered;
-      }
-
-      return safeValue;
-    }
-
-    const binaryBuffer = Buffer.from(safeValue, 'latin1');
-    const decodedUtf8 = binaryBuffer.toString('utf8').trim();
-    if (this.containsCjk(decodedUtf8)) {
-      return decodedUtf8;
-    }
-
-    const decodedUtf16Be = this.decodeUtf16Be(binaryBuffer).trim();
-    if (this.containsCjk(decodedUtf16Be) && !this.hasControlChars(decodedUtf16Be)) {
-      return decodedUtf16Be;
-    }
-
-    const decodedUtf16Le = binaryBuffer.toString('utf16le').trim();
-    if (this.containsCjk(decodedUtf16Le) && !this.hasControlChars(decodedUtf16Le)) {
-      return decodedUtf16Le;
-    }
-
-    return safeValue;
-  }
-
-  private resolveZhName(
-    snapshotZh: string | null | undefined,
-    productZh: string | null | undefined,
-  ) {
-    const snapshot = this.recoverUtf8(snapshotZh);
-    if (this.containsCjk(snapshot)) {
-      return snapshot;
-    }
-
-    const current = this.recoverUtf8(productZh);
-    if (this.containsCjk(current)) {
-      return current;
-    }
-
-    return snapshot || current || '-';
-  }
-
-  private sanitizeLabel(value: string | null | undefined) {
-    const safeValue = this.recoverUtf8(value);
-    if (!safeValue) {
-      return '-';
-    }
-
-    return safeValue
-      .replace(/[\x00-\x1F\x7F]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  private decodeUtf16Be(value: Buffer) {
-    if (value.length < 2) {
-      return '';
-    }
-
-    const evenLength = value.length - (value.length % 2);
-    const swapped = Buffer.allocUnsafe(evenLength);
-
-    for (let index = 0; index < evenLength; index += 2) {
-      swapped[index] = value[index + 1];
-      swapped[index + 1] = value[index];
-    }
-
-    return swapped.toString('utf16le');
-  }
-
-  private hasControlChars(value: string) {
-    return /[\x00-\x1F\x7F]/.test(value);
-  }
-
-  private containsCjk(value: string) {
-    return /[\u3400-\u9FFF]/.test(value);
   }
 }
