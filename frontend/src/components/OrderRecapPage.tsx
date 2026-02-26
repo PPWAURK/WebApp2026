@@ -12,6 +12,7 @@ type OrderRecapPageProps = {
   deliveryDate: string;
   deliveryAddress: string;
   isSubmittingOrder: boolean;
+  submitError: string | null;
   latestCreatedOrder: { id: number; number: string; bonUrl: string } | null;
   onDeliveryDateChange: (value: string) => void;
   onSubmitOrder: () => void;
@@ -26,6 +27,7 @@ export function OrderRecapPage({
   deliveryDate,
   deliveryAddress,
   isSubmittingOrder,
+  submitError,
   latestCreatedOrder,
   onDeliveryDateChange,
   onSubmitOrder,
@@ -153,6 +155,8 @@ export function OrderRecapPage({
           {isSubmittingOrder ? text.orders.submittingOrder : text.orders.submitOrderButton}
         </Text>
       </Pressable>
+
+      {submitError ? <Text style={styles.error}>{submitError}</Text> : null}
 
       <Pressable style={styles.primaryButton} onPress={onBack}>
         <Text style={styles.primaryButtonText}>{text.orders.backToOrderButton}</Text>

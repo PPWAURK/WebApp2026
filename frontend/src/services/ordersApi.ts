@@ -94,12 +94,19 @@ export async function createOrder(
     }),
   });
 
+  const data = (await response.json()) as
+    | RawOrderSummary
+    | { message?: string | string[] };
+
   if (!response.ok) {
-    throw new Error('ORDER_CREATE_FAILED');
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'ORDER_CREATE_FAILED';
+    throw new Error(message);
   }
 
-  const data = (await response.json()) as RawOrderSummary;
-  const normalized = normalizeOrderSummary(data);
+  const normalized = normalizeOrderSummary(data as RawOrderSummary);
 
   return {
     id: normalized.id,
@@ -115,11 +122,16 @@ export async function fetchOrders(token: string): Promise<OrderSummary[]> {
     },
   });
 
+  const data = (await response.json()) as unknown;
+
   if (!response.ok) {
-    throw new Error('ORDERS_FETCH_FAILED');
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'ORDERS_FETCH_FAILED';
+    throw new Error(message);
   }
 
-  const data = (await response.json()) as unknown;
   if (!Array.isArray(data)) {
     return [];
   }

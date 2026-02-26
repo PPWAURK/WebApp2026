@@ -48,6 +48,7 @@ export default function App() {
   const [orderHistory, setOrderHistory] = useState<OrderSummary[]>([]);
   const [isLoadingOrderHistory, setIsLoadingOrderHistory] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [orderSubmitError, setOrderSubmitError] = useState<string | null>(null);
   const [isUploadingProfilePhoto, setIsUploadingProfilePhoto] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [latestCreatedOrder, setLatestCreatedOrder] = useState<{
@@ -91,6 +92,7 @@ export default function App() {
       setDeliveryDate(getTodayDateString());
       setOrderHistory([]);
       setIsLoadingOrderHistory(false);
+      setOrderSubmitError(null);
       setIsUploadingProfilePhoto(false);
       setProfileError(null);
       setLatestCreatedOrder(null);
@@ -126,6 +128,7 @@ export default function App() {
     }
 
     setIsSubmittingOrder(true);
+    setOrderSubmitError(null);
 
     try {
       const created = await createOrder(auth.session.accessToken, {
@@ -136,8 +139,12 @@ export default function App() {
       setLatestCreatedOrder(created);
       void handleDownloadOrderBon(created);
       await loadOrderHistory();
-    } catch {
-      // keep page state; user can retry
+    } catch (error) {
+      if (error instanceof Error && error.message.trim()) {
+        setOrderSubmitError(error.message);
+      } else {
+        setOrderSubmitError(language.text.orders.submitOrderError);
+      }
     } finally {
       setIsSubmittingOrder(false);
     }
@@ -285,6 +292,7 @@ export default function App() {
           deliveryDate={deliveryDate}
           deliveryAddress={auth.session.user.restaurant?.address ?? ''}
           isSubmittingOrder={isSubmittingOrder}
+          submitError={orderSubmitError}
           latestCreatedOrder={latestCreatedOrder}
           onDeliveryDateChange={setDeliveryDate}
           onSubmitOrder={() => {
