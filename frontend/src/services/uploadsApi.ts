@@ -1,5 +1,6 @@
 import { API_URL } from '../constants/config';
 import type { LibraryModule, LibrarySection } from '../constants/documentTaxonomy';
+import { throwIfUnauthorized } from './authSession';
 
 export type UploadedFileResponse = {
   fileName: string;
@@ -59,6 +60,8 @@ export async function uploadSingleFile(
     | UploadedFileResponse
     | { message?: string | string[] };
 
+  throwIfUnauthorized(response);
+
   if (!response.ok) {
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
@@ -106,6 +109,8 @@ export async function fetchLibraryFiles(
   const data = (await response.json()) as
     | LibraryFileItem[]
     | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
 
   if (!response.ok) {
     const errorData = data as { message?: string | string[] };

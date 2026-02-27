@@ -1,4 +1,5 @@
 import { API_URL } from '../constants/config';
+import { throwIfUnauthorized } from './authSession';
 
 export type SupplierItem = {
   id: number;
@@ -11,6 +12,8 @@ export async function fetchSuppliers(token: string): Promise<SupplierItem[]> {
       Authorization: `Bearer ${token}`,
     },
   });
+
+  throwIfUnauthorized(response);
 
   if (!response.ok) {
     throw new Error('SUPPLIERS_FETCH_FAILED');
@@ -44,6 +47,8 @@ export async function createSupplier(
     },
     body: JSON.stringify(payload),
   });
+
+  throwIfUnauthorized(response);
 
   if (!response.ok) {
     throw new Error('SUPPLIERS_CREATE_FAILED');

@@ -1,4 +1,5 @@
 import { API_URL } from '../constants/config';
+import { throwIfUnauthorized } from './authSession';
 
 export type ProductItem = {
   id: number;
@@ -75,6 +76,8 @@ export async function fetchProducts(token: string): Promise<ProductItem[]> {
     },
   });
 
+  throwIfUnauthorized(response);
+
   if (!response.ok) {
     throw new Error('PRODUCTS_FETCH_FAILED');
   }
@@ -111,6 +114,8 @@ export async function updateProduct(
     body: JSON.stringify(payload),
   });
 
+  throwIfUnauthorized(response);
+
   if (!response.ok) {
     throw new Error('PRODUCTS_UPDATE_FAILED');
   }
@@ -126,6 +131,8 @@ export async function deleteProduct(token: string, productId: number): Promise<v
       Authorization: `Bearer ${token}`,
     },
   });
+
+  throwIfUnauthorized(response);
 
   if (response.ok) {
     return;
@@ -162,6 +169,8 @@ export async function uploadProductImage(
     },
     body: formData,
   });
+
+  throwIfUnauthorized(response);
 
   if (!response.ok) {
     throw new Error('PRODUCTS_IMAGE_UPLOAD_FAILED');

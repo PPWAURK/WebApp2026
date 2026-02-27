@@ -1,5 +1,6 @@
 import { API_URL } from '../constants/config';
 import type { Restaurant } from '../types/auth';
+import { throwIfUnauthorized } from './authSession';
 
 export async function fetchRestaurants(): Promise<Restaurant[]> {
   const response = await fetch(`${API_URL}/restaurants`);
@@ -30,6 +31,8 @@ export async function createRestaurant(
   });
 
   const data = (await response.json()) as Restaurant | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
 
   if (!response.ok) {
     const errorData = data as { message?: string | string[] };

@@ -1,5 +1,6 @@
 import { API_URL } from '../constants/config';
 import type { OrderRecapItem } from '../types/order';
+import { throwIfUnauthorized } from './authSession';
 
 type RawOrderSummary = {
   id?: unknown;
@@ -98,6 +99,8 @@ export async function createOrder(
     | RawOrderSummary
     | { message?: string | string[] };
 
+  throwIfUnauthorized(response);
+
   if (!response.ok) {
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
@@ -123,6 +126,8 @@ export async function fetchOrders(token: string): Promise<OrderSummary[]> {
   });
 
   const data = (await response.json()) as unknown;
+
+  throwIfUnauthorized(response);
 
   if (!response.ok) {
     const errorData = data as { message?: string | string[] };
@@ -150,6 +155,8 @@ export async function deleteOrder(token: string, orderId: number): Promise<void>
   if (response.ok) {
     return;
   }
+
+  throwIfUnauthorized(response);
 
   const data = (await response.json()) as { message?: string | string[] };
   const message = Array.isArray(data.message)

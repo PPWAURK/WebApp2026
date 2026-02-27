@@ -32,6 +32,7 @@ import {
   fetchOrders,
   type OrderSummary,
 } from './src/services/ordersApi';
+import { onUnauthorized, throwIfUnauthorized } from './src/services/authSession';
 import { styles } from './src/styles/appStyles';
 import type { MenuPage } from './src/types/menu';
 import type { OrderRecapData } from './src/types/order';
@@ -90,6 +91,14 @@ export default function App() {
       setIsLoadingOrderHistory(false);
     }
   }
+
+  useEffect(() => {
+    const unsubscribe = onUnauthorized(() => {
+      void auth.logout();
+    });
+
+    return unsubscribe;
+  }, [auth]);
 
   useEffect(() => {
     if (!auth.session) {
@@ -174,6 +183,7 @@ export default function App() {
         });
 
         if (!response.ok) {
+          throwIfUnauthorized(response);
           throw new Error('ORDER_BON_DOWNLOAD_FAILED');
         }
 

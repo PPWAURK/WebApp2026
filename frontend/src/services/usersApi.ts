@@ -1,5 +1,6 @@
 import { API_URL } from '../constants/config';
 import type { Restaurant, TrainingSection, User } from '../types/auth';
+import { throwIfUnauthorized } from './authSession';
 
 export type TrainingAccessUser = {
   id: number;
@@ -37,6 +38,8 @@ export async function fetchTrainingAccessUsers(
     | TrainingAccessUser[]
     | { message?: string | string[] };
 
+  throwIfUnauthorized(response);
+
   if (!response.ok) {
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
@@ -66,6 +69,8 @@ export async function updateUserTrainingAccess(
     | TrainingAccessUser
     | { message?: string | string[] };
 
+  throwIfUnauthorized(response);
+
   if (!response.ok) {
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
@@ -87,6 +92,8 @@ export async function fetchUnassignedUsers(token: string): Promise<UnassignedUse
   const data = (await response.json()) as
     | UnassignedUser[]
     | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
 
   if (!response.ok) {
     const errorData = data as { message?: string | string[] };
@@ -117,6 +124,8 @@ export async function assignUserRestaurant(
     | { id: number }
     | { message?: string | string[] };
 
+  throwIfUnauthorized(response);
+
   if (!response.ok) {
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
@@ -145,6 +154,8 @@ export async function updateUserManagerRole(
   const data = (await response.json()) as
     | TrainingAccessUser
     | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
 
   if (!response.ok) {
     const errorData = data as { message?: string | string[] };
@@ -189,6 +200,8 @@ export async function uploadMyProfilePhoto(
   });
 
   const data = (await response.json()) as User | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
 
   if (!response.ok) {
     const errorData = data as { message?: string | string[] };
