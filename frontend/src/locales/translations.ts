@@ -15,6 +15,10 @@ export const translations = {
       restaurantRequired: 'Aucun etablissement disponible pour inscription',
       restaurantMissing: 'Veuillez choisir un etablissement',
       requestFailed: 'Impossible de terminer la demande',
+      pendingApprovalSubmitted:
+        'Compte cree. En attente de validation manager avant la premiere connexion.',
+      pendingApprovalRequired:
+        'Compte en attente de validation manager. Impossible de se connecter pour le moment.',
       rememberMe: 'Se souvenir de moi',
       loading: 'Chargement...',
       loginButton: 'Se connecter',
@@ -260,6 +264,19 @@ export const translations = {
       noEmployeeMatch: 'Aucun employe ne correspond a la recherche.',
       loading: 'Chargement...',
       noAccess: 'Aucun acces',
+      accountStatusLabel: 'Compte',
+      accountStatusValues: {
+        approved: 'Valide',
+        pending: 'En attente manager',
+      },
+      approveAccountButton: 'Valider le compte',
+      approveAccountMessage:
+        'Valider cette demande de creation de compte ? L employe pourra se connecter ensuite.',
+      approveAccountCancel: 'Annuler',
+      approveAccountConfirm: 'Valider',
+      approveAccountSaving: 'Validation...',
+      approveAccountDone: 'Compte valide',
+      approveAccountError: 'Impossible de valider la demande de compte',
       probationStatusLabel: 'Statut',
       probationValues: {
         probation: 'Probatoire',
@@ -315,6 +332,8 @@ export const translations = {
       restaurantRequired: '当前没有可选门店，暂时无法注册',
       restaurantMissing: '请先选择门店',
       requestFailed: '请求失败，请稍后重试',
+      pendingApprovalSubmitted: '账号已创建，需经理审核通过后方可首次登录。',
+      pendingApprovalRequired: '账号待经理审核，暂时无法登录。',
       rememberMe: '记住我',
       loading: '加载中...',
       loginButton: '登录',
@@ -557,6 +576,18 @@ export const translations = {
       noEmployeeMatch: '没有符合搜索条件的员工。',
       loading: '加载中...',
       noAccess: '无权限',
+      accountStatusLabel: '账号',
+      accountStatusValues: {
+        approved: '已审核',
+        pending: '待经理审核',
+      },
+      approveAccountButton: '审核账号',
+      approveAccountMessage: '确认通过该账号申请吗？通过后员工即可登录。',
+      approveAccountCancel: '取消',
+      approveAccountConfirm: '通过',
+      approveAccountSaving: '审核中...',
+      approveAccountDone: '已审核通过',
+      approveAccountError: '账号审核失败',
       probationStatusLabel: '状态',
       probationValues: {
         probation: '试用期',

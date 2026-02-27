@@ -7,6 +7,7 @@ export type TrainingAccessUser = {
   email: string;
   name: string | null;
   role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+  isApproved: boolean;
   isOnProbation: boolean;
   trainingAccess: TrainingSection[];
   restaurantId?: number | null;
@@ -249,5 +250,42 @@ export async function confirmUserProbation(
       typeof (data as { isOnProbation?: unknown }).isOnProbation === 'boolean'
         ? ((data as { isOnProbation: boolean }).isOnProbation as boolean)
         : false,
+  };
+}
+
+export async function approveUserAccount(
+  token: string,
+  userId: number,
+): Promise<{ id: number; isApproved: boolean }> {
+  const response = await fetch(`${API_URL}/users/${userId}/approve-account`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = (await response.json()) as
+    | { id?: unknown; isApproved?: unknown; message?: string | string[] }
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to approve account';
+    throw new Error(message);
+  }
+
+  return {
+    id:
+      typeof (data as { id?: unknown }).id === 'number'
+        ? ((data as { id: number }).id as number)
+        : userId,
+    isApproved:
+      typeof (data as { isApproved?: unknown }).isApproved === 'boolean'
+        ? ((data as { isApproved: boolean }).isApproved as boolean)
+        : true,
   };
 }

@@ -89,7 +89,14 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
               props.onClose();
             }}
           >
-            <Text style={styles.drawerItemText}>{item.label}</Text>
+            <Text
+              style={[
+                styles.drawerItemText,
+                props.activePage === item.key && styles.drawerItemTextActive,
+              ]}
+            >
+              {item.label}
+            </Text>
           </Pressable>
         ))}
 
@@ -104,8 +111,24 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
               onPress={() => setIsOrdersGroupOpen((isOpen) => !isOpen)}
             >
               <View style={styles.drawerGroupHeaderRow}>
-                <Text style={styles.drawerItemText}>{props.text.drawer.ordersGroup}</Text>
-                <Text style={styles.drawerGroupChevron}>{isOrdersGroupOpen ? '▾' : '▸'}</Text>
+                <Text
+                  style={[
+                    styles.drawerItemText,
+                    (props.activePage === 'orders' || props.activePage === 'orderHistory') &&
+                      styles.drawerItemTextActive,
+                  ]}
+                >
+                  {props.text.drawer.ordersGroup}
+                </Text>
+                <Text
+                  style={[
+                    styles.drawerGroupChevron,
+                    (props.activePage === 'orders' || props.activePage === 'orderHistory') &&
+                      styles.drawerGroupChevronActive,
+                  ]}
+                >
+                  {isOrdersGroupOpen ? '▾' : '▸'}
+                </Text>
               </View>
             </Pressable>
 
@@ -121,7 +144,14 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
                     props.onClose();
                   }}
                 >
-                  <Text style={styles.drawerSubItemText}>{props.text.drawer.ordersPlace}</Text>
+                  <Text
+                    style={[
+                      styles.drawerSubItemText,
+                      props.activePage === 'orders' && styles.drawerSubItemTextActive,
+                    ]}
+                  >
+                    {props.text.drawer.ordersPlace}
+                  </Text>
                 </Pressable>
 
                 <Pressable
@@ -134,7 +164,14 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
                     props.onClose();
                   }}
                 >
-                  <Text style={styles.drawerSubItemText}>{props.text.drawer.ordersHistory}</Text>
+                  <Text
+                    style={[
+                      styles.drawerSubItemText,
+                      props.activePage === 'orderHistory' && styles.drawerSubItemTextActive,
+                    ]}
+                  >
+                    {props.text.drawer.ordersHistory}
+                  </Text>
                 </Pressable>
               </View>
             ) : null}

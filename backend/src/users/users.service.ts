@@ -48,6 +48,7 @@ export class UsersService {
           },
         },
         role: true,
+        isApproved: true,
         isOnProbation: true,
         workplaceRole: true,
         trainingAccess: true,
@@ -102,6 +103,7 @@ export class UsersService {
           },
         },
         role: true,
+        isApproved: true,
         isOnProbation: true,
         trainingAccess: true,
       },
@@ -178,6 +180,7 @@ export class UsersService {
           },
         },
         role: true,
+        isApproved: true,
         isOnProbation: true,
         trainingAccess: true,
       },
@@ -194,6 +197,7 @@ export class UsersService {
     passwordHash: string;
     name?: string;
     restaurantId: number;
+    isApproved?: boolean;
   }) {
     return this.prisma.user.create({
       data: {
@@ -202,6 +206,7 @@ export class UsersService {
         name: params.name,
         restaurantId: params.restaurantId,
         role: Role.EMPLOYEE,
+        isApproved: params.isApproved ?? true,
         isOnProbation: true,
         workplaceRole: WorkplaceRole.BOTH,
         trainingAccess: this.getAllTrainingSections(),
@@ -355,6 +360,7 @@ export class UsersService {
         name: true,
         role: true,
         restaurantId: true,
+        isApproved: true,
         isOnProbation: true,
         trainingAccess: true,
         restaurant: {
@@ -429,6 +435,56 @@ export class UsersService {
     return updated;
   }
 
+  async approveEmployeeAccount(
+    userId: number,
+    actor: {
+      actorRole: string;
+      actorRestaurantId: number | null;
+    },
+  ) {
+    this.ensureRoleScope(actor);
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        restaurantId: true,
+        isApproved: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role !== Role.EMPLOYEE) {
+      throw new BadRequestException('Only EMPLOYEE accounts can be approved');
+    }
+
+    if (
+      actor.actorRole === Role.MANAGER &&
+      user.restaurantId !== actor.actorRestaurantId
+    ) {
+      throw new BadRequestException('Manager can only approve users in own restaurant');
+    }
+
+    if (user.isApproved) {
+      return { id: user.id, isApproved: true };
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        isApproved: true,
+      },
+      select: {
+        id: true,
+        isApproved: true,
+      },
+    });
+  }
+
   async updateOwnProfilePhoto(
     userId: number,
     file: Express.Multer.File,
@@ -460,6 +516,7 @@ export class UsersService {
         name: true,
         profilePhoto: true,
         role: true,
+        isApproved: true,
         isOnProbation: true,
         workplaceRole: true,
         trainingAccess: true,

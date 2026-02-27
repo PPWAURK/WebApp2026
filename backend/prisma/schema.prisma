@@ -22,6 +22,7 @@ model User {
   restaurantId  Int?
   restaurant    Restaurant?   @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
   role          Role          @default(EMPLOYEE)
+  isApproved    Boolean       @default(true)
   isOnProbation Boolean       @default(false)
   workplaceRole WorkplaceRole @default(BOTH)
   trainingAccess Json?

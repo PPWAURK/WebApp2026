@@ -7,7 +7,13 @@ import {
   persistSession,
 } from '../services/sessionStorage';
 import type { AppText } from '../locales/translations';
-import type { AuthMode, AuthResponse, Restaurant, User } from '../types/auth';
+import type {
+  AuthMode,
+  AuthResponse,
+  RegisterResponse,
+  Restaurant,
+  User,
+} from '../types/auth';
 
 export function useAuth() {
   const [isLoadingSession, setIsLoadingSession] = useState(true);
@@ -83,8 +89,19 @@ export function useAuth() {
             : undefined,
       });
 
-      setSession(authData);
-      await persistSession(authData, rememberMe);
+      if (currentMode === 'register') {
+        const registerData = authData as RegisterResponse;
+        if (registerData.pendingApproval) {
+          setMode('login');
+          setPassword('');
+          setError(text.auth.pendingApprovalSubmitted);
+          return;
+        }
+      }
+
+      const loginData = authData as AuthResponse;
+      setSession(loginData);
+      await persistSession(loginData, rememberMe);
       setPassword('');
     } catch (requestError) {
       if (
@@ -92,6 +109,11 @@ export function useAuth() {
         requestError.message === text.auth.restaurantMissing
       ) {
         setError(requestError.message);
+      } else if (
+        requestError instanceof Error &&
+        requestError.message === 'Account pending manager approval'
+      ) {
+        setError(text.auth.pendingApprovalRequired);
       } else {
         setError(text.auth.requestFailed);
       }

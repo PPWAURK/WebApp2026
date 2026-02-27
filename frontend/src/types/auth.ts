@@ -36,4 +36,10 @@ export type AuthResponse = {
   user: User;
 };
 
+export type RegisterResponse = {
+  pendingApproval: boolean;
+  userId: number;
+  message: string;
+};
+
 export type AuthMode = 'login' | 'register';

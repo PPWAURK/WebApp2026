@@ -4,6 +4,7 @@ import { getSectionsByModule } from '../constants/documentTaxonomy';
 import type { AppText } from '../locales/translations';
 import { fetchRestaurants } from '../services/restaurantsApi';
 import {
+  approveUserAccount,
   fetchTrainingAccessUsers,
   confirmUserProbation,
   updateUserManagerRole,
@@ -39,6 +40,7 @@ export function AdminTrainingAccessPanel({
   const [isConfirmingProbationUserId, setIsConfirmingProbationUserId] = useState<number | null>(
     null,
   );
+  const [isApprovingUserId, setIsApprovingUserId] = useState<number | null>(null);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [isUpdatingRoleUserId, setIsUpdatingRoleUserId] = useState<number | null>(
     null,
@@ -315,6 +317,61 @@ export function AdminTrainingAccessPanel({
     }
   }
 
+  async function handleApproveAccount(user: TrainingAccessUser) {
+    if (user.isApproved) {
+      return;
+    }
+
+    const confirmationMessage = text.adminTraining.approveAccountMessage;
+    const confirmed =
+      Platform.OS === 'web'
+        ? typeof window !== 'undefined' && window.confirm(confirmationMessage)
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              text.adminTraining.approveAccountButton,
+              confirmationMessage,
+              [
+                {
+                  text: text.adminTraining.approveAccountCancel,
+                  style: 'cancel',
+                  onPress: () => resolve(false),
+                },
+                {
+                  text: text.adminTraining.approveAccountConfirm,
+                  style: 'destructive',
+                  onPress: () => resolve(true),
+                },
+              ],
+              { cancelable: true, onDismiss: () => resolve(false) },
+            );
+          });
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsApprovingUserId(user.id);
+    setError(null);
+
+    try {
+      const updated = await approveUserAccount(accessToken, user.id);
+      setUsers((current) =>
+        current.map((entry) =>
+          entry.id === updated.id
+            ? {
+                ...entry,
+                isApproved: updated.isApproved,
+              }
+            : entry,
+        ),
+      );
+    } catch {
+      setError(text.adminTraining.approveAccountError);
+    } finally {
+      setIsApprovingUserId(null);
+    }
+  }
+
   return (
     <View style={styles.uploadCard}>
       <Text style={styles.uploadTitle}>{text.adminTraining.title}</Text>
@@ -412,11 +469,43 @@ export function AdminTrainingAccessPanel({
                   selectedUserId === user.id && styles.trainingTabTextActive,
                 ]}
               >
+                {text.adminTraining.accountStatusLabel}:{' '}
+                {user.isApproved
+                  ? text.adminTraining.accountStatusValues.approved
+                  : text.adminTraining.accountStatusValues.pending}
+              </Text>
+              <Text
+                style={[
+                  styles.docItemMeta,
+                  selectedUserId === user.id && styles.trainingTabTextActive,
+                ]}
+              >
                 {text.adminTraining.probationStatusLabel}:{' '}
                 {user.isOnProbation
                   ? text.adminTraining.probationValues.probation
                   : text.adminTraining.probationValues.official}
               </Text>
+
+              {user.role === 'EMPLOYEE' ? (
+                <Pressable
+                  style={[
+                    styles.secondaryButton,
+                    (user.isApproved || isApprovingUserId === user.id) && styles.buttonDisabled,
+                  ]}
+                  disabled={user.isApproved || isApprovingUserId === user.id}
+                  onPress={() => {
+                    void handleApproveAccount(user);
+                  }}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    {isApprovingUserId === user.id
+                      ? text.adminTraining.approveAccountSaving
+                      : user.isApproved
+                        ? text.adminTraining.approveAccountDone
+                        : text.adminTraining.approveAccountButton}
+                  </Text>
+                </Pressable>
+              ) : null}
               <View style={styles.uploadChipWrap}>
                 {(user.trainingAccess ?? []).length === 0 ? (
                   <Text

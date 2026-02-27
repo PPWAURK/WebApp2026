@@ -125,13 +125,16 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   drawerItemActive: {
-    backgroundColor: '#ab1e24',
-    borderColor: '#e4afb0',
+    backgroundColor: '#f5d7d9',
+    borderColor: '#efc5c7',
   },
   drawerItemText: {
     color: '#ebfffb',
     fontFamily: 'Manrope_700Bold',
     fontSize: 14,
+  },
+  drawerItemTextActive: {
+    color: '#7f1b21',
   },
   drawerGroupWrap: {
     gap: 8,
@@ -146,6 +149,9 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 14,
   },
+  drawerGroupChevronActive: {
+    color: '#7f1b21',
+  },
   drawerSubItemWrap: {
     paddingLeft: 12,
     gap: 8,
@@ -159,13 +165,16 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   drawerSubItemActive: {
-    backgroundColor: '#ab1e24',
-    borderColor: '#e4afb0',
+    backgroundColor: '#f8e3e5',
+    borderColor: '#efc5c7',
   },
   drawerSubItemText: {
     color: '#ebfffb',
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
+  },
+  drawerSubItemTextActive: {
+    color: '#7f1b21',
   },
   languageSection: {
     marginTop: 14,

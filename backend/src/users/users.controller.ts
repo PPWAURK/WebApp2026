@@ -183,6 +183,26 @@ export class UsersController {
     });
   }
 
+  @ApiOperation({ summary: 'Approve employee account request (admin/manager)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/approve-account')
+  approveEmployeeAccount(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) userId: number,
+  ) {
+    const actor = req.user;
+
+    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
+      throw new ForbiddenException('Only ADMIN and MANAGER can access this resource');
+    }
+
+    return this.usersService.approveEmployeeAccount(userId, {
+      actorRole: actor.role,
+      actorRestaurantId: actor.restaurantId,
+    });
+  }
+
   @ApiOperation({ summary: 'Upload profile photo for current user' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

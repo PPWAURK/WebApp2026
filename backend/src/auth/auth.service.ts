@@ -38,6 +38,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (!user.isApproved) {
+      throw new UnauthorizedException('Account pending manager approval');
+    }
+
     const authenticatedUser = await this.usersService.findById(user.id);
 
     if (!authenticatedUser) {
@@ -62,15 +66,14 @@ export class AuthService {
       passwordHash,
       name: registerDto.name,
       restaurantId: registerDto.restaurantId,
+      isApproved: false,
     });
 
-    const user = await this.usersService.findById(createdUser.id);
-
-    if (!user) {
-      throw new UnauthorizedException('Unable to create user');
-    }
-
-    return this.buildAuthResponse(user);
+    return {
+      pendingApproval: true,
+      userId: createdUser.id,
+      message: 'Account created. Waiting manager approval before first login.',
+    };
   }
 
   private async buildAuthResponse(user: {
@@ -120,6 +123,10 @@ export class AuthService {
 
     if (!user) {
       throw new UnauthorizedException('Invalid token');
+    }
+
+    if (!user.isApproved) {
+      throw new UnauthorizedException('Account pending manager approval');
     }
 
     return {
