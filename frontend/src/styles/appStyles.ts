@@ -133,6 +133,40 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 14,
   },
+  drawerGroupWrap: {
+    gap: 8,
+  },
+  drawerGroupHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  drawerGroupChevron: {
+    color: '#ebfffb',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 14,
+  },
+  drawerSubItemWrap: {
+    paddingLeft: 12,
+    gap: 8,
+  },
+  drawerSubItem: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#cf7f83',
+    backgroundColor: '#8e1f26',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  drawerSubItemActive: {
+    backgroundColor: '#ab1e24',
+    borderColor: '#e4afb0',
+  },
+  drawerSubItemText: {
+    color: '#ebfffb',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
   languageSection: {
     marginTop: 14,
     borderTopWidth: 1,

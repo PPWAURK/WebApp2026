@@ -45,8 +45,8 @@ export class SuppliersController {
     @Body('name') name: string | undefined,
   ) {
     const role = req.user?.role;
-    if (role !== 'ADMIN' && role !== 'MANAGER') {
-      throw new ForbiddenException('Only ADMIN and MANAGER can create suppliers');
+    if (role !== 'ADMIN') {
+      throw new ForbiddenException('Only ADMIN can create suppliers');
     }
 
     return this.suppliersService.createSupplier(name ?? '');

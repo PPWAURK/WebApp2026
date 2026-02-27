@@ -7,6 +7,7 @@ export type TrainingAccessUser = {
   email: string;
   name: string | null;
   role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+  isOnProbation: boolean;
   trainingAccess: TrainingSection[];
   restaurantId?: number | null;
   restaurant?: Pick<Restaurant, 'id' | 'name'> | null;
@@ -212,4 +213,41 @@ export async function uploadMyProfilePhoto(
   }
 
   return data as User;
+}
+
+export async function confirmUserProbation(
+  token: string,
+  userId: number,
+): Promise<{ id: number; isOnProbation: boolean }> {
+  const response = await fetch(`${API_URL}/users/${userId}/confirm-probation`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = (await response.json()) as
+    | { id?: unknown; isOnProbation?: unknown; message?: string | string[] }
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to confirm probation status';
+    throw new Error(message);
+  }
+
+  return {
+    id:
+      typeof (data as { id?: unknown }).id === 'number'
+        ? ((data as { id: number }).id as number)
+        : userId,
+    isOnProbation:
+      typeof (data as { isOnProbation?: unknown }).isOnProbation === 'boolean'
+        ? ((data as { isOnProbation: boolean }).isOnProbation as boolean)
+        : false,
+  };
 }

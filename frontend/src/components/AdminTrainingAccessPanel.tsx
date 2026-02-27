@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { getSectionsByModule } from '../constants/documentTaxonomy';
 import type { AppText } from '../locales/translations';
 import { fetchRestaurants } from '../services/restaurantsApi';
 import {
   fetchTrainingAccessUsers,
+  confirmUserProbation,
   updateUserManagerRole,
   updateUserTrainingAccess,
   type TrainingAccessUser,
@@ -35,6 +36,10 @@ export function AdminTrainingAccessPanel({
   const [draftSections, setDraftSections] = useState<TrainingSection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isConfirmingProbationUserId, setIsConfirmingProbationUserId] = useState<number | null>(
+    null,
+  );
+  const [employeeSearch, setEmployeeSearch] = useState('');
   const [isUpdatingRoleUserId, setIsUpdatingRoleUserId] = useState<number | null>(
     null,
   );
@@ -181,6 +186,19 @@ export function AdminTrainingAccessPanel({
   const selectedRestaurant =
     restaurants.find((restaurant) => restaurant.id === selectedRestaurantId) ?? null;
 
+  const visibleUsers = useMemo(() => {
+    const query = employeeSearch.trim().toLowerCase();
+    if (!query) {
+      return users;
+    }
+
+    return users.filter((user) => {
+      const name = user.name?.toLowerCase() ?? '';
+      const email = user.email.toLowerCase();
+      return name.includes(query) || email.includes(query);
+    });
+  }, [employeeSearch, users]);
+
   function toggleSection(section: TrainingSection) {
     setDraftSections((current) =>
       current.includes(section)
@@ -242,6 +260,61 @@ export function AdminTrainingAccessPanel({
     }
   }
 
+  async function handleConfirmProbation(user: TrainingAccessUser) {
+    if (!user.isOnProbation) {
+      return;
+    }
+
+    const confirmationMessage = text.adminTraining.confirmProbationMessage;
+    const confirmed =
+      Platform.OS === 'web'
+        ? typeof window !== 'undefined' && window.confirm(confirmationMessage)
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              text.adminTraining.confirmProbationButton,
+              confirmationMessage,
+              [
+                {
+                  text: text.adminTraining.confirmProbationCancel,
+                  style: 'cancel',
+                  onPress: () => resolve(false),
+                },
+                {
+                  text: text.adminTraining.confirmProbationConfirm,
+                  style: 'destructive',
+                  onPress: () => resolve(true),
+                },
+              ],
+              { cancelable: true, onDismiss: () => resolve(false) },
+            );
+          });
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsConfirmingProbationUserId(user.id);
+    setError(null);
+
+    try {
+      const updated = await confirmUserProbation(accessToken, user.id);
+      setUsers((current) =>
+        current.map((entry) =>
+          entry.id === updated.id
+            ? {
+                ...entry,
+                isOnProbation: updated.isOnProbation,
+              }
+            : entry,
+        ),
+      );
+    } catch {
+      setError(text.adminTraining.confirmProbationError);
+    } finally {
+      setIsConfirmingProbationUserId(null);
+    }
+  }
+
   return (
     <View style={styles.uploadCard}>
       <Text style={styles.uploadTitle}>{text.adminTraining.title}</Text>
@@ -298,13 +371,22 @@ export function AdminTrainingAccessPanel({
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Text style={styles.uploadFieldTitle}>{text.adminTraining.usersAndLabels}</Text>
+      <TextInput
+        style={styles.input}
+        placeholder={text.adminTraining.searchEmployeePlaceholder}
+        placeholderTextColor="#a98a8d"
+        value={employeeSearch}
+        onChangeText={setEmployeeSearch}
+      />
       <View style={styles.docBlock}>
         {users.length === 0 ? (
           <Text style={styles.docEmpty}>
             {isLoading ? text.adminTraining.loading : text.adminTraining.noEmployee}
           </Text>
+        ) : visibleUsers.length === 0 ? (
+          <Text style={styles.docEmpty}>{text.adminTraining.noEmployeeMatch}</Text>
         ) : (
-          users.map((user) => (
+          visibleUsers.map((user) => (
             <Pressable
               key={user.id}
               style={[
@@ -323,6 +405,17 @@ export function AdminTrainingAccessPanel({
                 ]}
               >
                 {user.name ?? user.email} ({text.adminTraining.roleValues[user.role]})
+              </Text>
+              <Text
+                style={[
+                  styles.docItemMeta,
+                  selectedUserId === user.id && styles.trainingTabTextActive,
+                ]}
+              >
+                {text.adminTraining.probationStatusLabel}:{' '}
+                {user.isOnProbation
+                  ? text.adminTraining.probationValues.probation
+                  : text.adminTraining.probationValues.official}
               </Text>
               <View style={styles.uploadChipWrap}>
                 {(user.trainingAccess ?? []).length === 0 ? (
@@ -348,6 +441,28 @@ export function AdminTrainingAccessPanel({
                   ))
                 )}
               </View>
+
+              {user.role === 'EMPLOYEE' ? (
+                <Pressable
+                  style={[
+                    styles.secondaryButton,
+                    (!user.isOnProbation || isConfirmingProbationUserId === user.id) &&
+                      styles.buttonDisabled,
+                  ]}
+                  disabled={!user.isOnProbation || isConfirmingProbationUserId === user.id}
+                  onPress={() => {
+                    void handleConfirmProbation(user);
+                  }}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    {isConfirmingProbationUserId === user.id
+                      ? text.adminTraining.confirmProbationSaving
+                      : user.isOnProbation
+                        ? text.adminTraining.confirmProbationButton
+                        : text.adminTraining.confirmProbationDone}
+                  </Text>
+                </Pressable>
+              ) : null}
 
               {canManageRoles ? (
                 <Pressable

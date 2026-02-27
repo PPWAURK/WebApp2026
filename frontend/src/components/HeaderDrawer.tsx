@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, Text, View } from 'react-native';
 import type { AppText } from '../locales/translations';
 import { styles } from '../styles/appStyles';
@@ -20,18 +20,16 @@ type HeaderDrawerProps = {
 
 export function HeaderDrawer(props: HeaderDrawerProps) {
   const translateX = useRef(new Animated.Value(-280)).current;
+  const [isOrdersGroupOpen, setIsOrdersGroupOpen] = useState(
+    props.activePage === 'orders' || props.activePage === 'orderHistory',
+  );
   const menuItems: Array<{ key: MenuPage; label: string }> = [
     { key: 'dashboard', label: props.text.drawer.dashboard },
     { key: 'profile', label: props.text.drawer.profile },
     { key: 'training', label: props.text.drawer.training },
     { key: 'restaurantForms', label: props.text.drawer.restaurantForms },
-    ...(props.currentUser.role === 'ADMIN' || props.currentUser.role === 'MANAGER'
+    ...(props.currentUser.role === 'ADMIN'
         ? [
-            { key: 'orders' as MenuPage, label: props.text.drawer.orders },
-            {
-              key: 'orderHistory' as MenuPage,
-              label: props.text.drawer.orderHistory,
-            },
             {
               key: 'supplierManagement' as MenuPage,
               label: props.text.drawer.supplierManagement,
@@ -47,6 +45,12 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
       useNativeDriver: Platform.OS !== 'web',
     }).start();
   }, [props.isOpen, translateX]);
+
+  useEffect(() => {
+    if (props.activePage === 'orders' || props.activePage === 'orderHistory') {
+      setIsOrdersGroupOpen(true);
+    }
+  }, [props.activePage]);
 
   return (
     <>
@@ -88,6 +92,54 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
             <Text style={styles.drawerItemText}>{item.label}</Text>
           </Pressable>
         ))}
+
+        {props.currentUser.role === 'ADMIN' || props.currentUser.role === 'MANAGER' ? (
+          <View style={styles.drawerGroupWrap}>
+            <Pressable
+              style={[
+                styles.drawerItem,
+                (props.activePage === 'orders' || props.activePage === 'orderHistory') &&
+                  styles.drawerItemActive,
+              ]}
+              onPress={() => setIsOrdersGroupOpen((isOpen) => !isOpen)}
+            >
+              <View style={styles.drawerGroupHeaderRow}>
+                <Text style={styles.drawerItemText}>{props.text.drawer.ordersGroup}</Text>
+                <Text style={styles.drawerGroupChevron}>{isOrdersGroupOpen ? '▾' : '▸'}</Text>
+              </View>
+            </Pressable>
+
+            {isOrdersGroupOpen ? (
+              <View style={styles.drawerSubItemWrap}>
+                <Pressable
+                  style={[
+                    styles.drawerSubItem,
+                    props.activePage === 'orders' && styles.drawerSubItemActive,
+                  ]}
+                  onPress={() => {
+                    props.onSelectPage('orders');
+                    props.onClose();
+                  }}
+                >
+                  <Text style={styles.drawerSubItemText}>{props.text.drawer.ordersPlace}</Text>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.drawerSubItem,
+                    props.activePage === 'orderHistory' && styles.drawerSubItemActive,
+                  ]}
+                  onPress={() => {
+                    props.onSelectPage('orderHistory');
+                    props.onClose();
+                  }}
+                >
+                  <Text style={styles.drawerSubItemText}>{props.text.drawer.ordersHistory}</Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         <View style={styles.languageSection}>
           <Text style={styles.languageTitle}>{props.text.drawer.languageTitle}</Text>

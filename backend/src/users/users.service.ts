@@ -102,6 +102,7 @@ export class UsersService {
           },
         },
         role: true,
+        isOnProbation: true,
         trainingAccess: true,
       },
     });
@@ -177,6 +178,7 @@ export class UsersService {
           },
         },
         role: true,
+        isOnProbation: true,
         trainingAccess: true,
       },
     });
@@ -353,6 +355,7 @@ export class UsersService {
         name: true,
         role: true,
         restaurantId: true,
+        isOnProbation: true,
         trainingAccess: true,
         restaurant: {
           select: {
@@ -368,6 +371,62 @@ export class UsersService {
       ...updatedUser,
       trainingAccess: this.normalizeTrainingAccess(updatedUser.trainingAccess),
     };
+  }
+
+  async confirmEmployeeProbation(
+    userId: number,
+    actor: {
+      actorId: number;
+      actorRole: string;
+      actorRestaurantId: number | null;
+    },
+  ) {
+    this.ensureRoleScope(actor);
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        restaurantId: true,
+        isOnProbation: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role !== Role.EMPLOYEE) {
+      throw new BadRequestException('Only EMPLOYEE probation can be confirmed');
+    }
+
+    if (
+      actor.actorRole === Role.MANAGER &&
+      user.restaurantId !== actor.actorRestaurantId
+    ) {
+      throw new BadRequestException('Manager can only update users in own restaurant');
+    }
+
+    if (!user.isOnProbation) {
+      return {
+        id: user.id,
+        isOnProbation: false,
+      };
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        isOnProbation: false,
+      },
+      select: {
+        id: true,
+        isOnProbation: true,
+      },
+    });
+
+    return updated;
   }
 
   async updateOwnProfilePhoto(

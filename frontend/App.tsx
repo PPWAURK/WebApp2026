@@ -120,7 +120,6 @@ export default function App() {
     if (
       (
         activePage === 'orders' ||
-        activePage === 'supplierManagement' ||
         activePage === 'orderRecap' ||
         activePage === 'orderHistory'
       ) &&
@@ -129,6 +128,10 @@ export default function App() {
     ) {
       setActivePage('dashboard');
       setOrderRecap(null);
+    }
+
+    if (activePage === 'supplierManagement' && auth.session.user.role !== 'ADMIN') {
+      setActivePage('dashboard');
     }
   }, [activePage, auth.session]);
 
@@ -402,7 +405,7 @@ export default function App() {
     }
 
     if (activePage === 'supplierManagement') {
-      if (auth.session.user.role === 'ADMIN' || auth.session.user.role === 'MANAGER') {
+      if (auth.session.user.role === 'ADMIN') {
         return (
           <SupplierManagementPage
             text={language.text}

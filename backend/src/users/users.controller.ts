@@ -162,6 +162,27 @@ export class UsersController {
     });
   }
 
+  @ApiOperation({ summary: 'Confirm employee probation status (admin/manager)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/confirm-probation')
+  confirmEmployeeProbation(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) userId: number,
+  ) {
+    const actor = req.user;
+
+    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
+      throw new ForbiddenException('Only ADMIN and MANAGER can access this resource');
+    }
+
+    return this.usersService.confirmEmployeeProbation(userId, {
+      actorId: actor.id,
+      actorRole: actor.role,
+      actorRestaurantId: actor.restaurantId,
+    });
+  }
+
   @ApiOperation({ summary: 'Upload profile photo for current user' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

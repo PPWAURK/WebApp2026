@@ -85,8 +85,8 @@ export class ProductsController {
     },
   ) {
     const role = req.user?.role;
-    if (role !== 'ADMIN' && role !== 'MANAGER') {
-      throw new ForbiddenException('Only ADMIN and MANAGER can update products');
+    if (role !== 'ADMIN') {
+      throw new ForbiddenException('Only ADMIN can update products');
     }
 
     return this.productsService.updateProduct(productId, body);
@@ -126,8 +126,8 @@ export class ProductsController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     const role = req.user?.role;
-    if (role !== 'ADMIN' && role !== 'MANAGER') {
-      throw new ForbiddenException('Only ADMIN and MANAGER can update product image');
+    if (role !== 'ADMIN') {
+      throw new ForbiddenException('Only ADMIN can update product image');
     }
 
     return this.productsService.updateProductImage(productId, file, req);
@@ -142,8 +142,8 @@ export class ProductsController {
     @Param('id', ParseIntPipe) productId: number,
   ) {
     const role = req.user?.role;
-    if (role !== 'ADMIN' && role !== 'MANAGER') {
-      throw new ForbiddenException('Only ADMIN and MANAGER can delete products');
+    if (role !== 'ADMIN') {
+      throw new ForbiddenException('Only ADMIN can delete products');
     }
 
     return this.productsService.deleteProduct(productId);
