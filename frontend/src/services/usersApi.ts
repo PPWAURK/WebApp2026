@@ -289,3 +289,24 @@ export async function approveUserAccount(
         : true,
   };
 }
+
+export async function deleteUserAccount(token: string, userId: number): Promise<void> {
+  const response = await fetch(`${API_URL}/users/${userId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  throwIfUnauthorized(response);
+
+  if (response.ok) {
+    return;
+  }
+
+  const data = (await response.json()) as { message?: string | string[] };
+  const message = Array.isArray(data.message)
+    ? data.message.join(', ')
+    : data.message ?? 'Failed to delete account';
+  throw new Error(message);
+}

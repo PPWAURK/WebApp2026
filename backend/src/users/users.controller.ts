@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -198,6 +199,26 @@ export class UsersController {
     }
 
     return this.usersService.approveEmployeeAccount(userId, {
+      actorRole: actor.role,
+      actorRestaurantId: actor.restaurantId,
+    });
+  }
+
+  @ApiOperation({ summary: 'Delete employee account (admin/manager)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  deleteEmployeeAccount(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) userId: number,
+  ) {
+    const actor = req.user;
+
+    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
+      throw new ForbiddenException('Only ADMIN and MANAGER can access this resource');
+    }
+
+    return this.usersService.deleteEmployeeAccount(userId, {
       actorRole: actor.role,
       actorRestaurantId: actor.restaurantId,
     });

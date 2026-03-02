@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
-import { Role, WorkplaceRole } from '@prisma/client';
+import { Prisma, Role, WorkplaceRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   isUploadSection,
@@ -483,6 +482,59 @@ export class UsersService {
         isApproved: true,
       },
     });
+  }
+
+  async deleteEmployeeAccount(
+    userId: number,
+    actor: {
+      actorRole: string;
+      actorRestaurantId: number | null;
+    },
+  ) {
+    this.ensureRoleScope(actor);
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        restaurantId: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role !== Role.EMPLOYEE) {
+      throw new BadRequestException('Only EMPLOYEE accounts can be deleted');
+    }
+
+    if (
+      actor.actorRole === Role.MANAGER &&
+      user.restaurantId !== actor.actorRestaurantId
+    ) {
+      throw new BadRequestException('Manager can only delete users in own restaurant');
+    }
+
+    try {
+      await this.prisma.user.delete({
+        where: { id: userId },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'User cannot be deleted because it is linked to existing records',
+        );
+      }
+
+      throw error;
+    }
+
+    return { success: true, id: userId };
   }
 
   async updateOwnProfilePhoto(
