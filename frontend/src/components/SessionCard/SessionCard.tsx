@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AdminRestaurantPanel } from '../AdminRestaurantPanel';
 import { AdminTrainingAccessPanel } from '../AdminTrainingAccessPanel';
 import { AdminUploadPanel } from '../AdminUploadPanel';
@@ -376,49 +377,46 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           ) : (
             levelUsers.slice(0, 6).map((entry) => (
               <View key={`level-${entry.id}`} style={styles.quickRowCard}>
-                <Text style={styles.quickRowTitle}>{entry.name ?? entry.email}</Text>
-                <Text style={styles.subtitle}>
-                  {text.adminTraining.probationStatusLabel}:{' '}
-                  {entry.isOnProbation
-                    ? text.adminTraining.probationValues.probation
-                    : text.adminTraining.probationValues.official}
-                </Text>
-                <Pressable
-                  style={[
-                    styles.secondaryButton,
-                    (!entry.isOnProbation || isConfirmingUserId === entry.id) &&
-                      styles.buttonDisabled,
-                  ]}
-                  disabled={!entry.isOnProbation || isConfirmingUserId === entry.id}
-                  onPress={() => {
-                    void handleConfirmProbation(entry);
-                  }}
-                >
-                  <Text style={styles.secondaryButtonText}>
-                    {isConfirmingUserId === entry.id
-                      ? text.adminTraining.confirmProbationSaving
-                      : entry.isOnProbation
-                        ? text.adminTraining.confirmProbationButton
-                        : text.adminTraining.confirmProbationDone}
-                  </Text>
-                </Pressable>
+                <View style={styles.quickLevelRow}>
+                  <View style={styles.quickLevelInfo}>
+                    <Text style={styles.quickRowTitle}>{entry.name ?? entry.email}</Text>
+                    <Text style={styles.subtitle}>{entry.email}</Text>
+                    <Text style={styles.subtitle}>
+                      {text.adminTraining.probationStatusLabel}:{' '}
+                      {entry.isOnProbation
+                        ? text.adminTraining.probationValues.probation
+                        : text.adminTraining.probationValues.official}
+                    </Text>
+                  </View>
 
-                <Pressable
-                  style={[
-                    styles.dangerButton,
-                    isDeletingUserId === entry.id && styles.buttonDisabled,
-                  ]}
-                  disabled={isDeletingUserId === entry.id}
-                  onPress={() => {
-                    void handleDeleteUser(entry);
-                  }}
-                >
-                  <Text style={styles.dangerButtonText}>
-                    {isDeletingUserId === entry.id
-                      ? text.dashboard.quickDeleteLoading
-                      : text.dashboard.quickDeleteButton}
-                  </Text>
-                </Pressable>
+                  {entry.isOnProbation ? (
+                    <Pressable
+                      style={[
+                        styles.iconActionButton,
+                        isConfirmingUserId === entry.id && styles.buttonDisabled,
+                      ]}
+                      accessibilityLabel={text.adminTraining.confirmProbationButton}
+                      disabled={isConfirmingUserId === entry.id}
+                      onPress={() => {
+                        void handleConfirmProbation(entry);
+                      }}
+                    >
+                      <Ionicons
+                        name={
+                          isConfirmingUserId === entry.id
+                            ? 'hourglass-outline'
+                            : 'arrow-up-circle-outline'
+                        }
+                        size={20}
+                        color="#7f1b21"
+                      />
+                    </Pressable>
+                  ) : (
+                    <View style={[styles.iconActionButton, styles.iconStateDone]}>
+                      <Ionicons name="checkmark-circle" size={20} color="#2f9e62" />
+                    </View>
+                  )}
+                </View>
               </View>
             ))
           )}
@@ -433,40 +431,51 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           ) : null}
           {latestOrder ? (
             <View style={styles.quickRowCard}>
-              <Text style={styles.quickRowTitle}>{latestOrder.number}</Text>
-              <Text style={styles.subtitle}>
-                {text.orders.deliveryDateLabel}: {latestOrder.deliveryDate}
-              </Text>
-              <Text style={styles.subtitle}>
-                {text.orders.supplierLabel}: {latestOrder.supplierName}
-              </Text>
-              <Text style={styles.subtitle}>
-                {text.orders.summaryItems}: {latestOrder.totalItems}
-              </Text>
+              <View style={styles.quickMetaInlineRow}>
+                <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
+                  {text.orders.orderNumberLabel}
+                </Text>
+                <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
+                  {text.orders.deliveryDateLabel}
+                </Text>
+                <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
+                  {text.orders.supplierLabel}
+                </Text>
+                <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
+                  {text.orders.summaryItems}
+                </Text>
+                {Platform.OS === 'web' ? <View style={styles.quickEyeSpacer} /> : null}
+              </View>
 
-              {Platform.OS === 'web' ? (
-                <>
-                  <Text style={styles.subtitle}>{text.dashboard.quickPreviewLabel}</Text>
-                  {orderPreviewLoading ? (
-                    <Text style={styles.subtitle}>{text.adminTraining.loading}</Text>
-                  ) : (
-                    <Text style={styles.subtitle}>{text.dashboard.quickPreviewUnavailable}</Text>
-                  )}
+              <View style={styles.quickMetaInlineRow}>
+                <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
+                  {latestOrder.number}
+                </Text>
+                <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
+                  {latestOrder.deliveryDate}
+                </Text>
+                <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
+                  {latestOrder.supplierName}
+                </Text>
+                <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
+                  {latestOrder.totalItems}
+                </Text>
 
+                {Platform.OS === 'web' ? (
                   <Pressable
                     style={[
-                      styles.secondaryButton,
+                      styles.eyePreviewButton,
                       (!orderPreviewUrl || orderPreviewLoading) && styles.buttonDisabled,
                     ]}
                     disabled={!orderPreviewUrl || orderPreviewLoading}
                     onPress={() => setIsOrderPreviewOpen(true)}
                   >
-                    <Text style={styles.secondaryButtonText}>
-                      {text.dashboard.quickPreviewOpenButton}
-                    </Text>
+                    <Ionicons name="eye-outline" size={20} color="#7f1b21" />
                   </Pressable>
-                </>
-              ) : (
+                ) : null}
+              </View>
+
+              {Platform.OS === 'web' ? null : (
                 <Pressable
                   style={styles.secondaryButton}
                   onPress={() => {

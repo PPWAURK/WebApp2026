@@ -61,10 +61,49 @@ export const styles = StyleSheet.create({
     padding: 10,
     gap: 6,
   },
+  quickLevelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  quickLevelInfo: {
+    flex: 1,
+    gap: 4,
+  },
   quickRowTitle: {
     color: '#7f1b21',
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
+  },
+  quickMetaInlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  quickInlineCell: {
+    flex: 1,
+  },
+  quickMetaHeaderText: {
+    color: '#8d5458',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
+    textTransform: 'uppercase',
+  },
+  quickMetaValueText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  quickMetaInlineText: {
+    color: '#8d5458',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+    flex: 1,
+  },
+  quickEyeSpacer: {
+    width: 34,
   },
   errorText: {
     color: '#b42318',
@@ -147,6 +186,30 @@ export const styles = StyleSheet.create({
     color: '#7f1b21',
     fontFamily: 'Manrope_700Bold',
     fontSize: 14,
+  },
+  eyePreviewButton: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#d39a9d',
+    borderRadius: 17,
+    backgroundColor: '#fffafa',
+  },
+  iconActionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#d39a9d',
+    backgroundColor: '#fffafa',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconStateDone: {
+    borderColor: '#b9e6cc',
+    backgroundColor: '#f2fff7',
   },
   dangerButton: {
     alignItems: 'center',
