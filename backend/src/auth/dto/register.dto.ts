@@ -9,11 +9,11 @@ import {
 } from 'class-validator';
 
 export class RegisterDto {
-  @IsEmail()
+  @IsEmail({}, { message: 'INVALID_EMAIL' })
   email: string;
 
-  @IsString()
-  @MinLength(8)
+  @IsString({ message: 'PASSWORD_REQUIRED' })
+  @MinLength(8, { message: 'PASSWORD_TOO_SHORT' })
   password: string;
 
   @IsOptional()
@@ -21,7 +21,7 @@ export class RegisterDto {
   @MaxLength(100)
   name?: string;
 
-  @IsInt()
-  @Min(1)
+  @IsInt({ message: 'RESTAURANT_REQUIRED' })
+  @Min(1, { message: 'RESTAURANT_REQUIRED' })
   restaurantId: number;
 }

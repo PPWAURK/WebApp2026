@@ -44,6 +44,38 @@ export function useAuth() {
     void initSession();
   }, []);
 
+  function mapAuthErrorMessage(rawMessage: string, currentMode: AuthMode, text: AppText) {
+    if (rawMessage === text.auth.restaurantMissing || rawMessage.includes('RESTAURANT_REQUIRED')) {
+      return text.auth.restaurantMissing;
+    }
+
+    if (rawMessage.includes('ACCOUNT_PENDING_APPROVAL')) {
+      return text.auth.pendingApprovalRequired;
+    }
+
+    if (rawMessage.includes('INVALID_EMAIL')) {
+      return text.auth.invalidEmail;
+    }
+
+    if (rawMessage.includes('USER_NOT_FOUND')) {
+      return text.auth.userNotFound;
+    }
+
+    if (rawMessage.includes('INCORRECT_PASSWORD')) {
+      return text.auth.incorrectPassword;
+    }
+
+    if (rawMessage.includes('EMAIL_ALREADY_REGISTERED')) {
+      return text.auth.emailAlreadyRegistered;
+    }
+
+    if (rawMessage.includes('PASSWORD_TOO_SHORT')) {
+      return text.auth.passwordTooShort;
+    }
+
+    return currentMode === 'login' ? text.auth.loginFailed : text.auth.registerFailed;
+  }
+
   useEffect(() => {
     let isActive = true;
 
@@ -104,18 +136,10 @@ export function useAuth() {
       await persistSession(loginData, rememberMe);
       setPassword('');
     } catch (requestError) {
-      if (
-        requestError instanceof Error &&
-        requestError.message === text.auth.restaurantMissing
-      ) {
-        setError(requestError.message);
-      } else if (
-        requestError instanceof Error &&
-        requestError.message === 'Account pending manager approval'
-      ) {
-        setError(text.auth.pendingApprovalRequired);
+      if (requestError instanceof Error) {
+        setError(mapAuthErrorMessage(requestError.message, currentMode, text));
       } else {
-        setError(text.auth.requestFailed);
+        setError(currentMode === 'login' ? text.auth.loginFailed : text.auth.registerFailed);
       }
     } finally {
       setIsSubmitting(false);

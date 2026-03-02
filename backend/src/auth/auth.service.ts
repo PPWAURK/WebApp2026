@@ -26,7 +26,7 @@ export class AuthService {
     const user = await this.usersService.findByEmail(loginDto.email);
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('USER_NOT_FOUND');
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -35,11 +35,11 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('INCORRECT_PASSWORD');
     }
 
     if (!user.isApproved) {
-      throw new UnauthorizedException('Account pending manager approval');
+      throw new UnauthorizedException('ACCOUNT_PENDING_APPROVAL');
     }
 
     const authenticatedUser = await this.usersService.findById(user.id);
@@ -55,7 +55,7 @@ export class AuthService {
     const existingUser = await this.usersService.findByEmail(registerDto.email);
 
     if (existingUser) {
-      throw new ConflictException('Email already in use');
+      throw new ConflictException('EMAIL_ALREADY_REGISTERED');
     }
 
     await this.restaurantsService.ensureRestaurantExists(registerDto.restaurantId);
@@ -72,7 +72,7 @@ export class AuthService {
     return {
       pendingApproval: true,
       userId: createdUser.id,
-      message: 'Account created. Waiting manager approval before first login.',
+      message: 'ACCOUNT_PENDING_APPROVAL',
     };
   }
 
@@ -126,7 +126,7 @@ export class AuthService {
     }
 
     if (!user.isApproved) {
-      throw new UnauthorizedException('Account pending manager approval');
+      throw new UnauthorizedException('ACCOUNT_PENDING_APPROVAL');
     }
 
     return {
