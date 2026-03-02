@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Body,
   Controller,
@@ -7,6 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -79,22 +81,34 @@ export class OrdersController {
     );
   }
 
-  @ApiOperation({ summary: 'Top ordered products grouped by supplier for dashboard' })
+  @ApiOperation({ summary: 'Top 5 ordered products for dashboard (optionally filtered by supplier)' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('dashboard/top-products')
-  topOrderedProducts(@Req() req: AuthenticatedRequest) {
+  topOrderedProducts(
+    @Req() req: AuthenticatedRequest,
+    @Query('supplierId') supplierIdRaw?: string,
+  ) {
     const user = req.user;
 
     if (!user) {
       throw new ForbiddenException('Unauthenticated request');
     }
 
+    if (supplierIdRaw && !/^\d+$/.test(supplierIdRaw)) {
+      throw new BadRequestException('supplierId must be a positive integer');
+    }
+
+    const supplierId = supplierIdRaw ? Number(supplierIdRaw) : undefined;
+    if (supplierId !== undefined && supplierId <= 0) {
+      throw new BadRequestException('supplierId must be a positive integer');
+    }
+
     return this.ordersService.getTopOrderedProductsBySupplier({
       id: user.id,
       role: user.role,
       restaurantId: user.restaurantId,
-    });
+    }, supplierId);
   }
 
   @ApiOperation({ summary: 'Download order PDF by order id' })

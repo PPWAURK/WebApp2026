@@ -31,6 +31,7 @@ import {
   type OrderSummary,
   type TopOrderedProduct,
 } from '../../services/ordersApi';
+import { fetchSuppliers, type SupplierItem } from '../../services/suppliersApi';
 
 type SessionCardProps = {
   user: User;
@@ -74,6 +75,8 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [topProducts, setTopProducts] = useState<TopOrderedProduct[]>([]);
   const [topProductsLoading, setTopProductsLoading] = useState(false);
   const [topProductsError, setTopProductsError] = useState<string | null>(null);
+  const [chartSuppliers, setChartSuppliers] = useState<SupplierItem[]>([]);
+  const [selectedChartSupplierId, setSelectedChartSupplierId] = useState<number | null>(null);
   const [orderPreviewUrl, setOrderPreviewUrl] = useState<string | null>(null);
   const [orderPreviewLoading, setOrderPreviewLoading] = useState(false);
   const [isOrderPreviewOpen, setIsOrderPreviewOpen] = useState(false);
@@ -168,10 +171,53 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     }
 
     let isActive = true;
+
+    void fetchSuppliers(accessToken)
+      .then((result) => {
+        if (!isActive) {
+          return;
+        }
+
+        setChartSuppliers(result);
+        setSelectedChartSupplierId((current) => {
+          if (current && result.some((supplier) => supplier.id === current)) {
+            return current;
+          }
+
+          return result[0]?.id ?? null;
+        });
+      })
+      .catch(() => {
+        if (!isActive) {
+          return;
+        }
+
+        setChartSuppliers([]);
+        setSelectedChartSupplierId(null);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accessToken, isManager]);
+
+  useEffect(() => {
+    if (!isManager) {
+      return;
+    }
+
+    if (!selectedChartSupplierId) {
+      setTopProducts([]);
+      setTopProductsError(null);
+      setTopProductsLoading(false);
+      return;
+    }
+
+    let isActive = true;
     setTopProductsLoading(true);
     setTopProductsError(null);
 
-    void fetchTopOrderedProductsBySupplier(accessToken)
+    void fetchTopOrderedProductsBySupplier(accessToken, selectedChartSupplierId)
       .then((result) => {
         if (!isActive) {
           return;
@@ -194,7 +240,12 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     return () => {
       isActive = false;
     };
-  }, [accessToken, isManager, text.dashboard.topProductsLoadError]);
+  }, [
+    accessToken,
+    isManager,
+    selectedChartSupplierId,
+    text.dashboard.topProductsLoadError,
+  ]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -601,13 +652,43 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         <Text style={styles.quickBlockTitle}>{text.dashboard.topProductsTitle}</Text>
         <Text style={styles.subtitle}>{text.dashboard.topProductsSubtitle}</Text>
 
+        {chartSuppliers.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chartSupplierTabs}
+          >
+            {chartSuppliers.map((supplier) => {
+              const isActive = supplier.id === selectedChartSupplierId;
+              return (
+                <Pressable
+                  key={`chart-supplier-${supplier.id}`}
+                  style={[styles.chartSupplierChip, isActive && styles.chartSupplierChipActive]}
+                  onPress={() => setSelectedChartSupplierId(supplier.id)}
+                >
+                  <Text
+                    style={[
+                      styles.chartSupplierChipText,
+                      isActive && styles.chartSupplierChipTextActive,
+                    ]}
+                  >
+                    {supplier.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : (
+          <Text style={styles.subtitle}>{text.dashboard.topProductsEmpty}</Text>
+        )}
+
         {topProductsLoading ? (
           <Text style={styles.subtitle}>{text.adminTraining.loading}</Text>
         ) : null}
 
         {topProductsError ? <Text style={styles.errorText}>{topProductsError}</Text> : null}
 
-        {!topProductsLoading && !topProductsError && topProducts.length === 0 ? (
+        {!topProductsLoading && !topProductsError && chartSuppliers.length > 0 && topProducts.length === 0 ? (
           <Text style={styles.subtitle}>{text.dashboard.topProductsEmpty}</Text>
         ) : null}
 

@@ -177,8 +177,14 @@ export async function deleteOrder(token: string, orderId: number): Promise<void>
 
 export async function fetchTopOrderedProductsBySupplier(
   token: string,
+  supplierId?: number,
 ): Promise<TopOrderedProduct[]> {
-  const response = await fetch(`${API_URL}/orders/dashboard/top-products`, {
+  const query =
+    typeof supplierId === 'number' && Number.isInteger(supplierId) && supplierId > 0
+      ? `?supplierId=${supplierId}`
+      : '';
+
+  const response = await fetch(`${API_URL}/orders/dashboard/top-products${query}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

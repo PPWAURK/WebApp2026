@@ -451,15 +451,40 @@ export class OrdersService {
     return this.resolveOrderFilePath(orderId, actor);
   }
 
-  async getTopOrderedProductsBySupplier(actor: Actor): Promise<TopProductAggregate[]> {
+  async getTopOrderedProductsBySupplier(
+    actor: Actor,
+    supplierId?: number,
+  ): Promise<TopProductAggregate[]> {
     this.ensureCanManageOrders(actor);
 
-    const whereClause =
+    if (supplierId !== undefined) {
+      const supplier = await this.prisma.fournisseur.findUnique({
+        where: { id: supplierId },
+        select: { id: true },
+      });
+
+      if (!supplier) {
+        throw new NotFoundException('Supplier not found');
+      }
+    }
+
+    const baseWhereClause =
       actor.role === 'ADMIN'
         ? actor.restaurantId
           ? { purchaseOrder: { restaurantId: actor.restaurantId } }
           : undefined
         : { purchaseOrder: { restaurantId: actor.restaurantId ?? -1 } };
+
+    const whereClause =
+      supplierId === undefined
+        ? baseWhereClause
+        : {
+            ...(baseWhereClause ?? {}),
+            purchaseOrder: {
+              ...(baseWhereClause?.purchaseOrder ?? {}),
+              supplierId,
+            },
+          };
 
     const items = await this.prisma.purchaseOrderItem.findMany({
       where: whereClause,

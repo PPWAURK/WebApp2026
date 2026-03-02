@@ -106,6 +106,32 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
   },
+  chartSupplierTabs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 2,
+  },
+  chartSupplierChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#dfb0b2',
+    backgroundColor: '#fffafa',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  chartSupplierChipActive: {
+    borderColor: '#b75d62',
+    backgroundColor: '#f8e2e4',
+  },
+  chartSupplierChipText: {
+    color: '#8d5458',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  chartSupplierChipTextActive: {
+    color: '#7a181d',
+  },
   chartRowHeader: {
     flexDirection: 'row',
     alignItems: 'center',
