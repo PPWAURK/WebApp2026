@@ -51,6 +51,10 @@ export class AuthService {
       throw new UnauthorizedException('ACCOUNT_PENDING_APPROVAL');
     }
 
+    if (loginDto.language === 'fr' || loginDto.language === 'zh') {
+      await this.usersService.updatePreferredLanguage(user.id, loginDto.language);
+    }
+
     const authenticatedUser = await this.usersService.findById(user.id);
 
     if (!authenticatedUser) {
@@ -76,6 +80,10 @@ export class AuthService {
       name: registerDto.name,
       restaurantId: registerDto.restaurantId,
       isApproved: false,
+      preferredLanguage:
+        registerDto.language === 'fr' || registerDto.language === 'zh'
+          ? registerDto.language
+          : 'fr',
     });
 
     return {
@@ -109,10 +117,18 @@ export class AuthService {
     });
 
     try {
+      const effectiveLanguage =
+        dto.language === 'fr' || dto.language === 'zh'
+          ? dto.language
+          : user.preferredLanguage === 'zh'
+            ? 'zh'
+            : 'fr';
+
       await this.mailService.sendForgotPasswordEmail({
         email: user.email,
         recipientName: user.name,
         resetToken: plainToken,
+        language: effectiveLanguage,
       });
     } catch {
       // Keep API response stable to avoid leaking account state.

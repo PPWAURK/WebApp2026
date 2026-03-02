@@ -208,6 +208,7 @@ export class UsersService {
     name?: string;
     restaurantId: number;
     isApproved?: boolean;
+    preferredLanguage?: 'fr' | 'zh';
   }) {
     return this.prisma.user.create({
       data: {
@@ -219,6 +220,7 @@ export class UsersService {
         employeeLevel: EmployeeLevel.L0_PROBATION,
         isApproved: params.isApproved ?? true,
         isOnProbation: true,
+        preferredLanguage: params.preferredLanguage ?? 'fr',
         workplaceRole: WorkplaceRole.BOTH,
         trainingAccess: this.getAllTrainingSections(),
       },
@@ -500,6 +502,7 @@ export class UsersService {
         id: true,
         email: true,
         name: true,
+        preferredLanguage: true,
         isApproved: true,
       },
     });
@@ -508,6 +511,7 @@ export class UsersService {
       await this.mailService.sendAccountApprovedEmail({
         email: updated.email,
         recipientName: updated.name,
+        language: updated.preferredLanguage === 'zh' ? 'zh' : 'fr',
       });
     } catch {
       // Approval must not fail when mail provider is unavailable.
@@ -572,6 +576,18 @@ export class UsersService {
         role: true,
         employeeLevel: true,
         isOnProbation: true,
+      },
+    });
+  }
+
+  async updatePreferredLanguage(userId: number, language: 'fr' | 'zh') {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        preferredLanguage: language,
+      },
+      select: {
+        id: true,
       },
     });
   }

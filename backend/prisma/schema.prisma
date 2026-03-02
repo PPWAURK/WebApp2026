@@ -25,6 +25,7 @@ model User {
   employeeLevel EmployeeLevel @default(L0_PROBATION)
   isApproved    Boolean       @default(true)
   isOnProbation Boolean       @default(false)
+  preferredLanguage String    @default("fr") @map("preferred_language") @db.VarChar(5)
   workplaceRole WorkplaceRole @default(BOTH)
   trainingAccess Json?
   documents     Document[]

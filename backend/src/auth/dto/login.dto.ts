@@ -1,4 +1,4 @@
-import { IsEmail, IsString } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString } from 'class-validator';
 
 export class LoginDto {
   @IsEmail({}, { message: 'INVALID_EMAIL' })
@@ -6,4 +6,8 @@ export class LoginDto {
 
   @IsString({ message: 'PASSWORD_REQUIRED' })
   password: string;
+
+  @IsOptional()
+  @IsIn(['fr', 'zh'], { message: 'INVALID_LANGUAGE' })
+  language?: 'fr' | 'zh';
 }

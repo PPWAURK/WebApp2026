@@ -6,6 +6,10 @@ import nodemailer from 'nodemailer';
 export class MailService {
   constructor(private readonly configService: ConfigService) {}
 
+  private normalizeLanguage(value?: string): 'fr' | 'zh' {
+    return value === 'zh' ? 'zh' : 'fr';
+  }
+
   private escapeHtml(value: string) {
     return value
       .replace(/&/g, '&amp;')
@@ -51,7 +55,7 @@ export class MailService {
           <tr>
             <td style="padding:22px 24px;background:#b51e24;color:#fff5f5;">
               ${logoHtml}
-              <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;opacity:0.9;">ZHAO Restaurant</div>
+              <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;opacity:0.9;">ZHAO Plateforme</div>
               <h1 style="margin:8px 0 0;font-size:22px;line-height:1.3;color:#fff5f5;">${safeTitle}</h1>
             </td>
           </tr>
@@ -136,6 +140,7 @@ export class MailService {
     email: string;
     resetToken: string;
     recipientName?: string | null;
+    language?: 'fr' | 'zh';
   }) {
     const config = this.getMailConfig();
     if (!config.enabled) {
@@ -145,29 +150,48 @@ export class MailService {
     const resetUrl = `${config.appWebUrl ?? ''}`.replace(/\/$/, '');
     const fullResetUrl = `${resetUrl}#/reset-password?token=${encodeURIComponent(input.resetToken)}`;
     const greeting = input.recipientName?.trim() || input.email;
-    const intro = `Bonjour ${greeting},`;
+    const language = this.normalizeLanguage(input.language);
+    const intro =
+      language === 'zh' ? `你好 ${greeting}，` : `Bonjour ${greeting},`;
     const body =
-      'Nous avons recu une demande de reinitialisation de votre mot de passe. ' +
-      'Cliquez sur le bouton ci-dessous pour definir un nouveau mot de passe.\n\n' +
-      'Ce lien est valide pendant 30 minutes.';
+      language === 'zh'
+        ? '我们收到了你的密码重置请求。请点击下方按钮设置新密码。\n\n此链接30分钟内有效。'
+        :
+          'Nous avons recu une demande de reinitialisation de votre mot de passe. ' +
+          'Cliquez sur le bouton ci-dessous pour definir un nouveau mot de passe.\n\n' +
+          'Ce lien est valide pendant 30 minutes.';
+    const subject =
+      language === 'zh' ? '重置密码请求' : 'Reinitialisation du mot de passe';
+    const footer =
+      language === 'zh'
+        ? '如果这不是你的操作，请忽略此邮件。链接将在30分钟后失效。'
+        : 'Si vous n etes pas a l origine de cette demande, ignorez simplement ce message. Ce lien expire dans 30 minutes.';
+    const buttonLabel =
+      language === 'zh'
+        ? '重置我的密码'
+        : 'Reinitialiser mon mot de passe';
+    const textTail =
+      language === 'zh'
+        ? '如果这不是你的操作，请直接忽略此邮件。'
+        : 'Si vous n etes pas a l origine de cette demande, ignorez simplement ce message.';
+    const linkLabel = language === 'zh' ? '重置链接' : 'Lien de reinitialisation';
 
     await this.sendMail({
       to: input.email,
-      subject: 'Reinitialisation du mot de passe',
+      subject,
       text:
         `${intro}\n\n` +
         `${body}\n\n` +
-        `Lien de reinitialisation: ${fullResetUrl}\n\n` +
-        'Si vous n etes pas a l origine de cette demande, ignorez simplement ce message.',
+        `${linkLabel}: ${fullResetUrl}\n\n` +
+        textTail,
       html: this.buildEmailLayout({
-        title: 'Reinitialisation du mot de passe',
+        title: subject,
         intro,
         body,
-        buttonLabel: 'Reinitialiser mon mot de passe',
+        buttonLabel,
         buttonUrl: fullResetUrl,
         logoUrl: config.logoUrl,
-        footer:
-          'Si vous n etes pas a l origine de cette demande, ignorez simplement ce message. Ce lien expire dans 30 minutes.',
+        footer,
       }),
     });
   }
@@ -175,24 +199,32 @@ export class MailService {
   async sendAccountApprovedEmail(input: {
     email: string;
     recipientName?: string | null;
+    language?: 'fr' | 'zh';
   }) {
     const config = this.getMailConfig();
     const appUrl = `${config.appWebUrl ?? ''}`.replace(/\/$/, '');
     const greeting = input.recipientName?.trim() || input.email;
-    const intro = `Bonjour ${greeting},`;
+    const language = this.normalizeLanguage(input.language);
+    const intro = language === 'zh' ? `你好 ${greeting}，` : `Bonjour ${greeting},`;
     const body =
-      'Bonne nouvelle: votre compte a ete approuve par votre manager. ' +
-      'Vous pouvez maintenant vous connecter et acceder a votre espace.';
+      language === 'zh'
+        ? '好消息：你的账号已通过经理审核。现在你可以登录并访问平台。'
+        :
+          'Bonne nouvelle: votre compte a ete approuve par votre manager. ' +
+          'Vous pouvez maintenant vous connecter et acceder a votre espace.';
+    const subject = language === 'zh' ? '账号审核通过' : 'Compte approuve';
+    const buttonLabel =
+      language === 'zh' ? '前往登录' : 'Acceder a la connexion';
 
     await this.sendMail({
       to: input.email,
-      subject: 'Compte approuve',
+      subject,
       text: `${intro}\n\n${body}${appUrl ? `\n\nConnexion: ${appUrl}` : ''}`,
       html: this.buildEmailLayout({
-        title: 'Compte approuve',
+        title: subject,
         intro,
         body,
-        buttonLabel: appUrl ? 'Acceder a la connexion' : undefined,
+        buttonLabel: appUrl ? buttonLabel : undefined,
         buttonUrl: appUrl || undefined,
         logoUrl: config.logoUrl,
       }),

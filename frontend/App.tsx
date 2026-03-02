@@ -606,8 +606,8 @@ export default function App() {
             onSelectLanguage={(nextLanguage) => {
               void language.setLanguage(nextLanguage);
             }}
-            onSubmit={() => void auth.submitAuth(auth.mode, language.text)}
-            onForgotPassword={() => void auth.forgotPassword(language.text)}
+            onSubmit={() => void auth.submitAuth(auth.mode, language.text, language.language)}
+            onForgotPassword={() => void auth.forgotPassword(language.text, language.language)}
             onToggleMode={auth.toggleMode}
             onBackToLanding={() => goToPreAuthLanding()}
           />

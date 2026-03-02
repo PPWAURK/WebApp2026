@@ -2,6 +2,36 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export type PreAuthRoute = 'landing' | 'auth' | 'resetPassword';
 
+function canUseBrowserLocation() {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return Boolean(
+    window.location &&
+      typeof window.location.hash === 'string' &&
+      typeof window.location.pathname === 'string' &&
+      typeof window.location.search === 'string',
+  );
+}
+
+function canUseBrowserHistory() {
+  return Boolean(
+    canUseBrowserLocation() &&
+      window.history &&
+      typeof window.history.pushState === 'function' &&
+      typeof window.history.replaceState === 'function',
+  );
+}
+
+function canListenBrowserNavigation() {
+  return Boolean(
+    canUseBrowserLocation() &&
+      typeof window.addEventListener === 'function' &&
+      typeof window.removeEventListener === 'function',
+  );
+}
+
 function normalizeToken(value: string | null | undefined): string | null {
   if (!value) {
     return null;
@@ -37,7 +67,7 @@ function normalizeRoute(value: string | null | undefined): PreAuthRoute {
 }
 
 function getRouteFromLocation(): { route: PreAuthRoute; resetToken: string | null } {
-  if (typeof window === 'undefined') {
+  if (!canUseBrowserLocation()) {
     return { route: 'landing', resetToken: null };
   }
 
@@ -84,13 +114,13 @@ export function usePreAuthRouter() {
     route: PreAuthRoute;
     resetToken: string | null;
   }>(() =>
-    typeof window === 'undefined'
+    !canUseBrowserLocation()
       ? { route: 'landing', resetToken: null }
       : getRouteFromLocation(),
   );
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    if (!canListenBrowserNavigation()) {
       return;
     }
 
@@ -118,7 +148,7 @@ export function usePreAuthRouter() {
         resetToken: normalizedResetToken,
       });
 
-      if (typeof window === 'undefined') {
+      if (!canUseBrowserHistory()) {
         return;
       }
 

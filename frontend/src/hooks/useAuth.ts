@@ -14,6 +14,7 @@ import type {
   Restaurant,
   User,
 } from '../types/auth';
+import type { Language } from '../types/language';
 
 export function useAuth() {
   const [isLoadingSession, setIsLoadingSession] = useState(true);
@@ -103,7 +104,7 @@ export function useAuth() {
     };
   }, []);
 
-  async function submitAuth(currentMode: AuthMode, text: AppText) {
+  async function submitAuth(currentMode: AuthMode, text: AppText, language: Language) {
     setIsSubmitting(true);
     setError(null);
     setNotice(null);
@@ -121,6 +122,7 @@ export function useAuth() {
           currentMode === 'register' && selectedRestaurantId
             ? selectedRestaurantId
             : undefined,
+        language,
       });
 
       if (currentMode === 'register') {
@@ -148,7 +150,7 @@ export function useAuth() {
     }
   }
 
-  async function forgotPassword(text: AppText) {
+  async function forgotPassword(text: AppText, language: Language) {
     const normalizedEmail = email.trim();
 
     if (!normalizedEmail) {
@@ -161,7 +163,7 @@ export function useAuth() {
     setNotice(null);
 
     try {
-      await requestForgotPassword(normalizedEmail);
+      await requestForgotPassword(normalizedEmail, language);
       setNotice(text.auth.resetEmailSent);
     } catch (requestError) {
       if (requestError instanceof Error && requestError.message.includes('INVALID_EMAIL')) {

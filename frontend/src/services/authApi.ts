@@ -1,4 +1,5 @@
 import { API_URL } from '../constants/config';
+import type { Language } from '../types/language';
 import type { AuthMode, AuthResponse, RegisterResponse } from '../types/auth';
 
 type AuthPayload = {
@@ -6,6 +7,7 @@ type AuthPayload = {
   password: string;
   name?: string;
   restaurantId?: number;
+  language?: Language;
 };
 
 export async function requestAuth(
@@ -36,13 +38,16 @@ export async function requestAuth(
   return data as AuthResponse | RegisterResponse;
 }
 
-export async function requestForgotPassword(email: string): Promise<{ message: string }> {
+export async function requestForgotPassword(
+  email: string,
+  language: Language,
+): Promise<{ message: string }> {
   const response = await fetch(`${API_URL}/auth/forgot-password`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, language }),
   });
 
   const data = (await response.json()) as { message?: string | string[] };
