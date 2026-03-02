@@ -79,6 +79,24 @@ export class OrdersController {
     );
   }
 
+  @ApiOperation({ summary: 'Top ordered products grouped by supplier for dashboard' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('dashboard/top-products')
+  topOrderedProducts(@Req() req: AuthenticatedRequest) {
+    const user = req.user;
+
+    if (!user) {
+      throw new ForbiddenException('Unauthenticated request');
+    }
+
+    return this.ordersService.getTopOrderedProductsBySupplier({
+      id: user.id,
+      role: user.role,
+      restaurantId: user.restaurantId,
+    });
+  }
+
   @ApiOperation({ summary: 'Download order PDF by order id' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

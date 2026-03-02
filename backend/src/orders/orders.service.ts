@@ -25,6 +25,18 @@ type CreateOrderPayload = {
   items: Array<{ productId: number; quantity: number }>;
 };
 
+type SupplierProductAggregate = {
+  supplierId: number;
+  supplierName: string;
+  products: Array<{
+    productId: number;
+    nameFr: string;
+    nameZh: string;
+    totalQuantity: number;
+    orderCount: number;
+  }>;
+};
+
 type PdfDoc = InstanceType<typeof PDFDocument>;
 
 type CommandePdfInput = {
@@ -439,6 +451,112 @@ export class OrdersService {
 
   async resolveBonFilePath(orderId: number, actor: Actor) {
     return this.resolveOrderFilePath(orderId, actor);
+  }
+
+  async getTopOrderedProductsBySupplier(actor: Actor): Promise<SupplierProductAggregate[]> {
+    this.ensureCanManageOrders(actor);
+
+    const whereClause =
+      actor.role === 'ADMIN'
+        ? actor.restaurantId
+          ? { purchaseOrder: { restaurantId: actor.restaurantId } }
+          : undefined
+        : { purchaseOrder: { restaurantId: actor.restaurantId ?? -1 } };
+
+    const items = await this.prisma.purchaseOrderItem.findMany({
+      where: whereClause,
+      include: {
+        purchaseOrder: {
+          select: {
+            supplierId: true,
+            supplier: {
+              select: {
+                nom: true,
+              },
+            },
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            designationFr: true,
+            nomCn: true,
+          },
+        },
+      },
+      orderBy: {
+        id: 'desc',
+      },
+      take: 1200,
+    });
+
+    const supplierMap = new Map<
+      number,
+      {
+        supplierName: string;
+        products: Map<
+          number,
+          {
+            nameFr: string;
+            nameZh: string;
+            totalQuantity: number;
+            orderCount: number;
+          }
+        >;
+      }
+    >();
+
+    for (const item of items) {
+      const supplierId = item.purchaseOrder.supplierId;
+      const supplierName = item.purchaseOrder.supplier.nom;
+      const productId = Number(item.product.id);
+
+      const supplierEntry = supplierMap.get(supplierId) ?? {
+        supplierName,
+        products: new Map(),
+      };
+
+      const productEntry = supplierEntry.products.get(productId) ?? {
+        nameFr: this.sanitizeLabel(this.recoverUtf8(item.product.designationFr)),
+        nameZh: this.sanitizeLabel(this.recoverUtf8(item.product.nomCn)),
+        totalQuantity: 0,
+        orderCount: 0,
+      };
+
+      productEntry.totalQuantity += item.quantity;
+      productEntry.orderCount += 1;
+
+      supplierEntry.products.set(productId, productEntry);
+      supplierMap.set(supplierId, supplierEntry);
+    }
+
+    return Array.from(supplierMap.entries())
+      .map(([supplierId, supplierEntry]) => ({
+        supplierId,
+        supplierName: supplierEntry.supplierName,
+        products: Array.from(supplierEntry.products.entries())
+          .map(([productId, productEntry]) => ({
+            productId,
+            nameFr: productEntry.nameFr,
+            nameZh: productEntry.nameZh,
+            totalQuantity: productEntry.totalQuantity,
+            orderCount: productEntry.orderCount,
+          }))
+          .sort((left, right) => right.totalQuantity - left.totalQuantity)
+          .slice(0, 4),
+      }))
+      .sort((left, right) => {
+        const leftTotal = left.products.reduce(
+          (sum, product) => sum + product.totalQuantity,
+          0,
+        );
+        const rightTotal = right.products.reduce(
+          (sum, product) => sum + product.totalQuantity,
+          0,
+        );
+        return rightTotal - leftTotal;
+      })
+      .slice(0, 5);
   }
 
   async deleteOrder(orderId: number, actor: Actor) {

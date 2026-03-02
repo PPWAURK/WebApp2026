@@ -117,6 +117,10 @@ export const translations = {
       levelModalTitle: 'Changer le niveau employe',
       levelModalClose: 'Fermer',
       levelUpdateError: 'Impossible de mettre a jour le niveau employe',
+      topProductsTitle: 'Produits les plus commandes',
+      topProductsSubtitle: 'Classement par fournisseur',
+      topProductsLoadError: 'Impossible de charger le graphique des produits',
+      topProductsEmpty: 'Aucune commande disponible pour construire le graphique.',
       levels: {
         L0_PROBATION: 'Partenaire en periode d essai',
         L1_PARTNER: 'Partenaire niveau 1',
@@ -493,6 +497,10 @@ export const translations = {
       levelModalTitle: '调整员工等级',
       levelModalClose: '关闭',
       levelUpdateError: '更新员工等级失败',
+      topProductsTitle: '高频下单商品',
+      topProductsSubtitle: '按供应商分组',
+      topProductsLoadError: '商品图表加载失败',
+      topProductsEmpty: '暂无订单数据可用于统计。',
       levels: {
         L0_PROBATION: '试用期伙伴',
         L1_PARTNER: '一级伙伴(普通伙伴)',

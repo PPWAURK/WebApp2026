@@ -23,6 +23,12 @@ export const styles = StyleSheet.create({
     flexGrow: 1,
     minWidth: 280,
   },
+  managerLeftColumn: {
+    flexBasis: 320,
+    flexGrow: 1,
+    minWidth: 280,
+    gap: 12,
+  },
   quickColumn: {
     flexBasis: 420,
     flexGrow: 1,
@@ -86,6 +92,48 @@ export const styles = StyleSheet.create({
     color: '#7f1b21',
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
+  },
+  chartSupplierBlock: {
+    borderWidth: 1,
+    borderColor: '#edd3d5',
+    backgroundColor: '#fffdfd',
+    borderRadius: 12,
+    padding: 10,
+    gap: 8,
+  },
+  chartSupplierTitle: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  chartRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  chartRowLabel: {
+    color: '#8d5458',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+    flex: 1,
+  },
+  chartRowValue: {
+    color: '#7a181d',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  chartTrack: {
+    width: '100%',
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: '#f4dfe0',
+    overflow: 'hidden',
+  },
+  chartBar: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: '#d86e73',
   },
   quickMetaInlineRow: {
     flexDirection: 'row',

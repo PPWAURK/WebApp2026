@@ -24,7 +24,13 @@ import {
   updateUserLevel,
   type TrainingAccessUser,
 } from '../../services/usersApi';
-import { buildOrderBonUrl, fetchOrders, type OrderSummary } from '../../services/ordersApi';
+import {
+  buildOrderBonUrl,
+  fetchOrders,
+  fetchTopOrderedProductsBySupplier,
+  type OrderSummary,
+  type SupplierTopProducts,
+} from '../../services/ordersApi';
 
 type SessionCardProps = {
   user: User;
@@ -65,6 +71,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [latestOrder, setLatestOrder] = useState<OrderSummary | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
+  const [topProducts, setTopProducts] = useState<SupplierTopProducts[]>([]);
+  const [topProductsLoading, setTopProductsLoading] = useState(false);
+  const [topProductsError, setTopProductsError] = useState<string | null>(null);
   const [orderPreviewUrl, setOrderPreviewUrl] = useState<string | null>(null);
   const [orderPreviewLoading, setOrderPreviewLoading] = useState(false);
   const [isOrderPreviewOpen, setIsOrderPreviewOpen] = useState(false);
@@ -152,6 +161,40 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
       isActive = false;
     };
   }, [accessToken, isManager, text.dashboard.quickLoadOrderError]);
+
+  useEffect(() => {
+    if (!isManager) {
+      return;
+    }
+
+    let isActive = true;
+    setTopProductsLoading(true);
+    setTopProductsError(null);
+
+    void fetchTopOrderedProductsBySupplier(accessToken)
+      .then((result) => {
+        if (!isActive) {
+          return;
+        }
+
+        setTopProducts(result);
+      })
+      .catch(() => {
+        if (isActive) {
+          setTopProductsError(text.dashboard.topProductsLoadError);
+          setTopProducts([]);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setTopProductsLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accessToken, isManager, text.dashboard.topProductsLoadError]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -552,32 +595,89 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     );
   }
 
+  function renderTopProductsChart() {
+    return (
+      <View style={styles.quickBlock}>
+        <Text style={styles.quickBlockTitle}>{text.dashboard.topProductsTitle}</Text>
+        <Text style={styles.subtitle}>{text.dashboard.topProductsSubtitle}</Text>
+
+        {topProductsLoading ? (
+          <Text style={styles.subtitle}>{text.adminTraining.loading}</Text>
+        ) : null}
+
+        {topProductsError ? <Text style={styles.errorText}>{topProductsError}</Text> : null}
+
+        {!topProductsLoading && !topProductsError && topProducts.length === 0 ? (
+          <Text style={styles.subtitle}>{text.dashboard.topProductsEmpty}</Text>
+        ) : null}
+
+        {topProducts.map((supplier) => {
+          const maxQuantity = Math.max(
+            ...supplier.products.map((product) => product.totalQuantity),
+            1,
+          );
+
+          return (
+            <View key={`supplier-${supplier.supplierId}`} style={styles.chartSupplierBlock}>
+              <Text style={styles.chartSupplierTitle}>{supplier.supplierName}</Text>
+
+              {supplier.products.map((product) => {
+                const ratio = Math.max(8, Math.round((product.totalQuantity / maxQuantity) * 100));
+                const productLabel =
+                  product.nameFr?.trim() || product.nameZh?.trim() || `${product.productId}`;
+
+                return (
+                  <View key={`supplier-${supplier.supplierId}-product-${product.productId}`}>
+                    <View style={styles.chartRowHeader}>
+                      <Text style={styles.chartRowLabel} numberOfLines={1}>
+                        {productLabel}
+                      </Text>
+                      <Text style={styles.chartRowValue}>{product.totalQuantity}</Text>
+                    </View>
+
+                    <View style={styles.chartTrack}>
+                      <View style={[styles.chartBar, { width: `${ratio}%` }]} />
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          );
+        })}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.stackCardWrap}>
       <View style={isManager ? styles.managerDashboardLayout : undefined}>
-        <View style={[styles.card, isManager && styles.managerLeftCard]}>
-          <Text style={styles.title}>
-            {text.dashboard.welcome} {user.name ?? text.dashboard.fallbackName}
-          </Text>
-          <Text style={styles.subtitle}>{user.email}</Text>
-          {user.restaurant ? (
-            <Text style={styles.subtitle}>
-              {user.restaurant.name} - {user.restaurant.address}
+        <View style={isManager ? styles.managerLeftColumn : undefined}>
+          <View style={[styles.card, isManager && styles.managerLeftCard]}>
+            <Text style={styles.title}>
+              {text.dashboard.welcome} {user.name ?? text.dashboard.fallbackName}
             </Text>
-          ) : null}
+            <Text style={styles.subtitle}>{user.email}</Text>
+            {user.restaurant ? (
+              <Text style={styles.subtitle}>
+                {user.restaurant.name} - {user.restaurant.address}
+              </Text>
+            ) : null}
 
-          <View style={styles.pillRow}>
-            <Text style={styles.pill}>{text.dashboard.role}: {roleLabel}</Text>
-            <Text style={styles.pill}>{text.dashboard.workplace}: {workplaceLabel}</Text>
+            <View style={styles.pillRow}>
+              <Text style={styles.pill}>{text.dashboard.role}: {roleLabel}</Text>
+              <Text style={styles.pill}>{text.dashboard.workplace}: {workplaceLabel}</Text>
+            </View>
+
+            <Text style={styles.meta}>
+              {text.dashboard.probation}: {user.isOnProbation ? text.dashboard.yes : text.dashboard.no}
+            </Text>
+
+            <Pressable style={styles.secondaryButton} onPress={onLogout}>
+              <Text style={styles.secondaryButtonText}>{text.dashboard.logout}</Text>
+            </Pressable>
           </View>
 
-          <Text style={styles.meta}>
-            {text.dashboard.probation}: {user.isOnProbation ? text.dashboard.yes : text.dashboard.no}
-          </Text>
-
-          <Pressable style={styles.secondaryButton} onPress={onLogout}>
-            <Text style={styles.secondaryButtonText}>{text.dashboard.logout}</Text>
-          </Pressable>
+          {isManager ? renderTopProductsChart() : null}
         </View>
 
         {isManager ? renderManagerQuickBlocks() : null}

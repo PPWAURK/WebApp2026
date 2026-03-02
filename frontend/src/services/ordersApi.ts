@@ -29,6 +29,18 @@ export type OrderSummary = {
   createdAt: string;
 };
 
+export type SupplierTopProducts = {
+  supplierId: number;
+  supplierName: string;
+  products: Array<{
+    productId: number;
+    nameFr: string;
+    nameZh: string;
+    totalQuantity: number;
+    orderCount: number;
+  }>;
+};
+
 export type CreatedOrderResult = {
   id: number;
   number: string;
@@ -163,6 +175,32 @@ export async function deleteOrder(token: string, orderId: number): Promise<void>
     ? data.message.join(', ')
     : data.message ?? 'ORDER_DELETE_FAILED';
   throw new Error(message);
+}
+
+export async function fetchTopOrderedProductsBySupplier(
+  token: string,
+): Promise<SupplierTopProducts[]> {
+  const response = await fetch(`${API_URL}/orders/dashboard/top-products`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = (await response.json()) as
+    | SupplierTopProducts[]
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to load top ordered products';
+    throw new Error(message);
+  }
+
+  return data as SupplierTopProducts[];
 }
 
 export function buildOrderBonUrl(orderId: number) {
