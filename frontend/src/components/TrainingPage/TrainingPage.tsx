@@ -4,11 +4,11 @@ import {
   getSectionsByModule,
   type LibraryModule,
   type LibrarySection,
-} from '../constants/documentTaxonomy';
-import type { AppText } from '../locales/translations';
-import { fetchLibraryFiles, type LibraryFileItem } from '../services/uploadsApi';
-import { styles } from '../styles/appStyles';
-import type { User } from '../types/auth';
+} from '../../constants/documentTaxonomy';
+import type { AppText } from '../../locales/translations';
+import { fetchLibraryFiles, type LibraryFileItem } from '../../services/uploadsApi';
+import { styles } from './TrainingPage.styles';
+import type { User } from '../../types/auth';
 
 type TrainingPageProps = {
   text: AppText;

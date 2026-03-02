@@ -3,15 +3,15 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import {
   createRestaurant,
   fetchRestaurants,
-} from '../services/restaurantsApi';
+} from '../../services/restaurantsApi';
 import {
   assignUserRestaurant,
   fetchUnassignedUsers,
   type UnassignedUser,
-} from '../services/usersApi';
-import type { AppText } from '../locales/translations';
-import { styles } from '../styles/appStyles';
-import type { Restaurant } from '../types/auth';
+} from '../../services/usersApi';
+import type { AppText } from '../../locales/translations';
+import { styles } from './AdminRestaurantPanel.styles';
+import type { Restaurant } from '../../types/auth';
 
 type AdminRestaurantPanelProps = {
   accessToken: string;

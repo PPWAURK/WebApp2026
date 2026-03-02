@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
-import type { AppText } from '../locales/translations';
-import { styles } from '../styles/appStyles';
-import type { Language } from '../types/language';
-import type { OrderRecapData } from '../types/order';
+import type { AppText } from '../../locales/translations';
+import { styles } from './OrderRecapPage.styles';
+import type { Language } from '../../types/language';
+import type { OrderRecapData } from '../../types/order';
 
 type OrderRecapPageProps = {
   text: AppText;

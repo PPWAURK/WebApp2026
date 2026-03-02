@@ -1,10 +1,10 @@
 import { Pressable, Text, View } from 'react-native';
-import { AdminRestaurantPanel } from './AdminRestaurantPanel';
-import { AdminTrainingAccessPanel } from './AdminTrainingAccessPanel';
-import { AdminUploadPanel } from './AdminUploadPanel';
-import type { AppText } from '../locales/translations';
-import { styles } from '../styles/appStyles';
-import type { User } from '../types/auth';
+import { AdminRestaurantPanel } from '../AdminRestaurantPanel';
+import { AdminTrainingAccessPanel } from '../AdminTrainingAccessPanel';
+import { AdminUploadPanel } from '../AdminUploadPanel';
+import type { AppText } from '../../locales/translations';
+import { styles } from './SessionCard.styles';
+import type { User } from '../../types/auth';
 
 type SessionCardProps = {
   user: User;

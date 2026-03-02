@@ -6,13 +6,13 @@ import {
   getSectionsByModule,
   type LibraryModule,
   type LibrarySection,
-} from '../constants/documentTaxonomy';
-import type { AppText } from '../locales/translations';
+} from '../../constants/documentTaxonomy';
+import type { AppText } from '../../locales/translations';
 import {
   uploadSingleFile,
   type UploadedFileResponse,
-} from '../services/uploadsApi';
-import { styles } from '../styles/appStyles';
+} from '../../services/uploadsApi';
+import { styles } from './AdminUploadPanel.styles';
 
 type AdminUploadPanelProps = {
   accessToken: string;

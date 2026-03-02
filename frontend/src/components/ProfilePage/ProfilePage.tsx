@@ -1,9 +1,9 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { Image, Pressable, Text, View } from 'react-native';
-import type { AppText } from '../locales/translations';
-import { uploadMyProfilePhoto } from '../services/usersApi';
-import { styles } from '../styles/appStyles';
-import type { User } from '../types/auth';
+import type { AppText } from '../../locales/translations';
+import { uploadMyProfilePhoto } from '../../services/usersApi';
+import { styles } from './ProfilePage.styles';
+import type { User } from '../../types/auth';
 
 type ProfilePageProps = {
   text: AppText;

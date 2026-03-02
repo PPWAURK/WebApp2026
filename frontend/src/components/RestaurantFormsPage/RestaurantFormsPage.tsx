@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
-import type { AppText } from '../locales/translations';
-import { styles } from '../styles/appStyles';
+import type { AppText } from '../../locales/translations';
+import { styles } from './RestaurantFormsPage.styles';
 
 type RestaurantFormsPageProps = {
   text: AppText;

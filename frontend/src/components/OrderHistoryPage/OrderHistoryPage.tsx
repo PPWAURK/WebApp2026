@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
-import type { AppText } from '../locales/translations';
-import type { OrderSummary } from '../services/ordersApi';
-import { styles } from '../styles/appStyles';
+import type { AppText } from '../../locales/translations';
+import type { OrderSummary } from '../../services/ordersApi';
+import { styles } from './OrderHistoryPage.styles';
 
 type OrderHistoryPageProps = {
   text: AppText;

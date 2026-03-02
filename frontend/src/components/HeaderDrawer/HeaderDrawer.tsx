@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, Text, View } from 'react-native';
-import type { AppText } from '../locales/translations';
-import { styles } from '../styles/appStyles';
-import type { Language } from '../types/language';
-import type { MenuPage } from '../types/menu';
-import type { User } from '../types/auth';
+import type { AppText } from '../../locales/translations';
+import { styles } from './HeaderDrawer.styles';
+import type { Language } from '../../types/language';
+import type { MenuPage } from '../../types/menu';
+import type { User } from '../../types/auth';
 
 type HeaderDrawerProps = {
   isOpen: boolean;

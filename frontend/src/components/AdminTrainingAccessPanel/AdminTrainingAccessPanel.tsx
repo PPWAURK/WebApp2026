@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, Text, TextInput, View } from 'react-native';
-import { getSectionsByModule } from '../constants/documentTaxonomy';
-import type { AppText } from '../locales/translations';
-import { fetchRestaurants } from '../services/restaurantsApi';
+import { getSectionsByModule } from '../../constants/documentTaxonomy';
+import type { AppText } from '../../locales/translations';
+import { fetchRestaurants } from '../../services/restaurantsApi';
 import {
   approveUserAccount,
   fetchTrainingAccessUsers,
@@ -10,9 +10,9 @@ import {
   updateUserManagerRole,
   updateUserTrainingAccess,
   type TrainingAccessUser,
-} from '../services/usersApi';
-import { styles } from '../styles/appStyles';
-import type { Restaurant, TrainingSection, User } from '../types/auth';
+} from '../../services/usersApi';
+import { styles } from './AdminTrainingAccessPanel.styles';
+import type { Restaurant, TrainingSection, User } from '../../types/auth';
 
 type AdminTrainingAccessPanelProps = {
   accessToken: string;

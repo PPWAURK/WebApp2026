@@ -11,20 +11,20 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import type { AppText } from '../locales/translations';
+import type { AppText } from '../../locales/translations';
 import {
   deleteProduct,
   fetchProducts,
   uploadProductImage,
   updateProduct,
   type ProductItem,
-} from '../services/productsApi';
+} from '../../services/productsApi';
 import {
   createSupplier,
   fetchSuppliers,
   type SupplierItem,
-} from '../services/suppliersApi';
-import { styles } from '../styles/appStyles';
+} from '../../services/suppliersApi';
+import { styles } from './SupplierManagementPage.styles';
 
 type SupplierManagementPageProps = {
   text: AppText;
