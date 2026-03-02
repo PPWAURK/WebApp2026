@@ -118,7 +118,7 @@ export const translations = {
       levelModalClose: 'Fermer',
       levelUpdateError: 'Impossible de mettre a jour le niveau employe',
       topProductsTitle: 'Produits les plus commandes',
-      topProductsSubtitle: 'Histogramme par mois et produit (barre = quantite)',
+      topProductsSubtitle: 'Graphique lineaire par mois et produit (axe Y = quantite)',
       topProductsLoadError: 'Impossible de charger le graphique des produits',
       topProductsEmpty: 'Aucune commande disponible pour construire le graphique.',
       levels: {
@@ -498,7 +498,7 @@ export const translations = {
       levelModalClose: '关闭',
       levelUpdateError: '更新员工等级失败',
       topProductsTitle: '高频下单商品',
-      topProductsSubtitle: '按月份和商品名称统计（柱高 = 数量）',
+      topProductsSubtitle: '按月份和商品名称的折线图（Y轴 = 数量）',
       topProductsLoadError: '商品图表加载失败',
       topProductsEmpty: '暂无订单数据可用于统计。',
       levels: {

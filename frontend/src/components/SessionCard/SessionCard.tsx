@@ -696,38 +696,95 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={styles.histogramWrap}
-            contentContainerStyle={styles.histogramScrollContent}
+            style={styles.chartWrap}
+            contentContainerStyle={styles.chartScrollContent}
           >
             {(() => {
               const maxQuantity = Math.max(
                 ...topProducts.map((product) => product.totalQuantity),
                 1,
               );
+              const yTicks = [0, 0.25, 0.5, 0.75, 1];
+              const axisLeft = 34;
+              const axisTop = 14;
+              const plotHeight = 176;
+              const axisBottom = axisTop + plotHeight;
+              const pointGap = 96;
+              const axisRight = axisLeft + (topProducts.length - 1) * pointGap;
 
-              return topProducts.map((product) => {
-                const label =
-                  product.nameFr?.trim() || product.nameZh?.trim() || `${product.productId}`;
-                const ratio = Math.max(0.12, Math.min(1, product.totalQuantity / maxQuantity));
-
-                return (
-                  <View
-                    key={`hist-${product.month}-${product.supplierId}-${product.productId}`}
-                    style={styles.histogramColumn}
-                  >
-                    <Text style={styles.histogramValue}>{product.totalQuantity}</Text>
-                    <View style={styles.histogramTrack}>
-                      <View style={[styles.histogramBar, { height: `${ratio * 100}%` }]} />
-                    </View>
-                    <Text style={styles.histogramSupplier} numberOfLines={1}>
-                      {product.month}
-                    </Text>
-                    <Text style={styles.histogramLabel} numberOfLines={2}>
-                      {label}
-                    </Text>
-                  </View>
-                );
+              const points = topProducts.map((product, index) => {
+                const ratio = Math.max(0, Math.min(1, product.totalQuantity / maxQuantity));
+                return {
+                  product,
+                  x: axisLeft + index * pointGap,
+                  y: axisTop + (1 - ratio) * plotHeight,
+                };
               });
+
+              return (
+                <View style={[styles.lineChartCanvas, { width: axisRight + 24 }]}>
+                  {yTicks.map((tick) => {
+                    const y = axisTop + (1 - tick) * plotHeight;
+                    const tickLabel = Math.round(maxQuantity * tick);
+
+                    return (
+                      <View key={`tick-${tick}`} style={[styles.lineChartGridRow, { top: y }]}> 
+                        <Text style={styles.lineChartYLabel}>{tickLabel}</Text>
+                        <View style={styles.lineChartGridLine} />
+                      </View>
+                    );
+                  })}
+
+                  <View style={[styles.lineChartAxisY, { left: axisLeft, top: axisTop, height: plotHeight }]} />
+                  <View style={[styles.lineChartAxisX, { left: axisLeft, top: axisBottom, width: axisRight - axisLeft }]} />
+
+                  {points.slice(0, -1).map((point, index) => {
+                    const nextPoint = points[index + 1];
+                    const dx = nextPoint.x - point.x;
+                    const dy = nextPoint.y - point.y;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+
+                    return (
+                      <View
+                        key={`segment-${point.product.month}-${point.product.productId}`}
+                        style={[
+                          styles.lineChartSegment,
+                          {
+                            left: point.x + dx / 2 - length / 2,
+                            top: point.y + dy / 2 - 1,
+                            width: length,
+                            transform: [{ rotate: `${angle}deg` }],
+                          },
+                        ]}
+                      />
+                    );
+                  })}
+
+                  {points.map(({ product, x, y }) => {
+                    const label =
+                      product.nameFr?.trim() || product.nameZh?.trim() || `${product.productId}`;
+
+                    return (
+                      <View key={`point-${product.month}-${product.supplierId}-${product.productId}`}>
+                        <View style={[styles.lineChartPoint, { left: x - 4, top: y - 4 }]} />
+                        <Text style={[styles.lineChartValue, { left: x - 18, top: y - 24 }]}>
+                          {product.totalQuantity}
+                        </Text>
+                        <Text style={[styles.lineChartMonthLabel, { left: x - 30, top: axisBottom + 8 }]}> 
+                          {product.month}
+                        </Text>
+                        <Text
+                          style={[styles.lineChartProductLabel, { left: x - 40, top: axisBottom + 24 }]}
+                          numberOfLines={2}
+                        >
+                          {label}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              );
             })()}
           </ScrollView>
         ) : null}
