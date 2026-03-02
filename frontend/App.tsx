@@ -514,6 +514,7 @@ export default function App() {
             rememberMe={auth.rememberMe}
             isSubmitting={auth.isSubmitting}
             error={auth.error}
+            notice={auth.notice}
             onEmailChange={auth.setEmail}
             onPasswordChange={auth.setPassword}
             onNameChange={auth.setName}
@@ -525,6 +526,7 @@ export default function App() {
               void language.setLanguage(nextLanguage);
             }}
             onSubmit={() => void auth.submitAuth(auth.mode, language.text)}
+            onForgotPassword={() => void auth.forgotPassword(language.text)}
             onToggleMode={auth.toggleMode}
             onBackToLanding={() => goToPreAuthLanding()}
           />

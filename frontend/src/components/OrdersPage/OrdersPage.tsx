@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Image, Pressable, Text, TextInput, View } from 'react-native';
 import type { AppText } from '../../locales/translations';
 import { fetchProducts, type ProductItem } from '../../services/productsApi';
 import { fetchSuppliers, type SupplierItem } from '../../services/suppliersApi';
@@ -30,6 +30,7 @@ export function OrdersPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [productSearch, setProductSearch] = useState('');
 
   useEffect(() => {
     let isActive = true;
@@ -138,12 +139,33 @@ export function OrdersPage({
   }, [supplierProducts]);
 
   const filteredProducts = useMemo(() => {
-    if (selectedCategory === 'ALL') {
-      return supplierProducts;
-    }
+    const normalizedQuery = productSearch.trim().toLowerCase();
 
-    return supplierProducts.filter((product) => product.category === selectedCategory);
-  }, [selectedCategory, supplierProducts]);
+    return supplierProducts.filter((product) => {
+      const matchCategory =
+        selectedCategory === 'ALL' || product.category === selectedCategory;
+
+      if (!matchCategory) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const nameFr = (product.nameFr ?? '').toLowerCase();
+      const nameZh = (product.nameZh ?? '').toLowerCase();
+      const reference = (product.reference ?? '').toLowerCase();
+      const specification = (product.specification ?? '').toLowerCase();
+
+      return (
+        nameFr.includes(normalizedQuery) ||
+        nameZh.includes(normalizedQuery) ||
+        reference.includes(normalizedQuery) ||
+        specification.includes(normalizedQuery)
+      );
+    });
+  }, [productSearch, selectedCategory, supplierProducts]);
 
   return (
     <View style={styles.card}>
@@ -187,6 +209,13 @@ export function OrdersPage({
       {categories.length > 0 ? (
         <>
           <Text style={styles.uploadFieldTitle}>{text.orders.filterLabel}</Text>
+          <TextInput
+            style={styles.searchInput}
+            value={productSearch}
+            onChangeText={setProductSearch}
+            placeholder={text.orders.searchProductsPlaceholder}
+            placeholderTextColor="#aa777b"
+          />
           <View style={styles.uploadChipWrap}>
             <Pressable
               style={[

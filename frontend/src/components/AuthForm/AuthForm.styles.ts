@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 const RED = '#ab1e24';
 const BORDER = '#d9a7aa';
 const LIGHT_RED = '#d86e73';
+const PALE_RED = '#e5b0b3';
 const CARD_BG = '#f2f2f2';
 const INPUT_HEIGHT = 40;
 
@@ -135,6 +136,11 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
   },
+  notice: {
+    color: '#1f7a47',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
   rememberRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -202,11 +208,16 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButton: {
-    backgroundColor: LIGHT_RED,
     borderRadius: 6,
     paddingVertical: 13,
     alignItems: 'center',
     marginTop: 8,
+  },
+  primaryButtonActive: {
+    backgroundColor: RED,
+  },
+  primaryButtonDisabled: {
+    backgroundColor: PALE_RED,
   },
   buttonDisabled: {
     opacity: 0.65,

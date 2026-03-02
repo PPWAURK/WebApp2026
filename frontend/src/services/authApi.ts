@@ -35,3 +35,52 @@ export async function requestAuth(
 
   return data as AuthResponse | RegisterResponse;
 }
+
+export async function requestForgotPassword(email: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = (await response.json()) as { message?: string | string[] };
+
+  if (!response.ok) {
+    const message = Array.isArray(data.message)
+      ? data.message.join(', ')
+      : data.message ?? 'Une erreur est survenue';
+    throw new Error(message);
+  }
+
+  return {
+    message: Array.isArray(data.message) ? data.message.join(', ') : data.message ?? 'OK',
+  };
+}
+
+export async function requestResetPassword(
+  token: string,
+  password: string,
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token, password }),
+  });
+
+  const data = (await response.json()) as { message?: string | string[] };
+
+  if (!response.ok) {
+    const message = Array.isArray(data.message)
+      ? data.message.join(', ')
+      : data.message ?? 'Une erreur est survenue';
+    throw new Error(message);
+  }
+
+  return {
+    message: Array.isArray(data.message) ? data.message.join(', ') : data.message ?? 'OK',
+  };
+}

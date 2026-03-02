@@ -46,16 +46,31 @@ export const styles = StyleSheet.create({
   },
   tabsWrap: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
-    paddingRight: 6,
+    paddingRight: 10,
+    paddingVertical: 4,
+  },
+  tabsRail: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ddb2b6',
+    backgroundColor: '#fff2f3',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  tabsScroll: {
+    width: '100%',
   },
   tabChip: {
+    flexShrink: 0,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: '#dfb0b2',
     backgroundColor: '#fffafa',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    maxWidth: 220,
   },
   tabChipActive: {
     borderColor: '#b75d62',
@@ -64,7 +79,7 @@ export const styles = StyleSheet.create({
   tabChipText: {
     color: '#8d5458',
     fontFamily: 'Manrope_700Bold',
-    fontSize: 11,
+    fontSize: 12,
   },
   tabChipTextActive: {
     color: '#7a181d',
@@ -77,8 +92,8 @@ export const styles = StyleSheet.create({
   filterChip: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#e3bcbf',
-    backgroundColor: '#fffafb',
+    borderColor: '#d39a9d',
+    backgroundColor: '#fff4f5',
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
@@ -87,12 +102,20 @@ export const styles = StyleSheet.create({
     backgroundColor: '#f7dfe1',
   },
   filterChipText: {
-    color: '#94595d',
+    color: '#8a464b',
     fontFamily: 'Manrope_700Bold',
     fontSize: 11,
   },
   filterChipTextActive: {
-    color: '#7f1b21',
+    color: '#6f1218',
+  },
+  filterSection: {
+    gap: 6,
+  },
+  filterSectionTitle: {
+    color: '#7a2328',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
   },
   searchInput: {
     borderWidth: 1,
@@ -129,6 +152,24 @@ export const styles = StyleSheet.create({
     color: '#7a181d',
     fontFamily: 'Manrope_700Bold',
     fontSize: 18,
+  },
+  deltaPieRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  deltaPieLegend: {
+    gap: 2,
+  },
+  deltaLegendCurrent: {
+    color: '#c83d45',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
+  },
+  deltaLegendPrevious: {
+    color: '#a57074',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
   },
   comparisonCard: {
     borderRadius: 14,

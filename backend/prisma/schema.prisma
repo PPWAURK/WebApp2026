@@ -28,9 +28,23 @@ model User {
   workplaceRole WorkplaceRole @default(BOTH)
   trainingAccess Json?
   documents     Document[]
+  passwordResetTokens PasswordResetToken[]
   purchaseOrders PurchaseOrder[] @relation("CreatedByUser")
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique @map("token_hash") @db.VarChar(128)
+  expiresAt DateTime @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, expiresAt])
+  @@map("password_reset_tokens")
 }
 
 model Restaurant {

@@ -19,6 +19,7 @@ type AuthFormProps = {
   rememberMe: boolean;
   isSubmitting: boolean;
   error: string | null;
+  notice?: string | null;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onNameChange: (value: string) => void;
@@ -26,6 +27,7 @@ type AuthFormProps = {
   onRememberToggle: () => void;
   onSelectLanguage: (language: Language) => void;
   onSubmit: () => void;
+  onForgotPassword: () => void;
   onToggleMode: () => void;
   onBackToLanding?: () => void;
 };
@@ -40,6 +42,18 @@ export function AuthForm(props: AuthFormProps) {
     props.restaurants.find(
       (restaurant) => restaurant.id === props.selectedRestaurantId,
     ) ?? null;
+
+  const hasEmail = props.email.trim().length > 0;
+  const hasPassword = props.password.trim().length > 0;
+  const hasName = props.name.trim().length > 0;
+  const hasRestaurant = props.selectedRestaurantId !== null;
+
+  const isFormValid =
+    props.mode === 'login'
+      ? hasEmail && hasPassword
+      : hasName && hasEmail && hasPassword && hasRestaurant;
+
+  const isSubmitDisabled = props.isSubmitting || !isFormValid;
 
   return (
     <View style={styles.card}>
@@ -203,17 +217,22 @@ export function AuthForm(props: AuthFormProps) {
             <Text style={styles.rememberLabel}>{props.text.auth.rememberMe}</Text>
           </Pressable>
 
-          <Pressable>
+          <Pressable onPress={props.onForgotPassword}>
             <Text style={styles.forgotText}>{props.text.auth.forgotPassword}</Text>
           </Pressable>
         </View>
       ) : null}
 
       {props.error ? <Text style={styles.error}>{props.error}</Text> : null}
+      {props.notice ? <Text style={styles.notice}>{props.notice}</Text> : null}
 
       <Pressable
-        disabled={props.isSubmitting}
-        style={[styles.primaryButton, props.isSubmitting && styles.buttonDisabled]}
+        disabled={isSubmitDisabled}
+        style={[
+          styles.primaryButton,
+          isSubmitDisabled ? styles.primaryButtonDisabled : styles.primaryButtonActive,
+          props.isSubmitting && styles.buttonDisabled,
+        ]}
         onPress={props.onSubmit}
       >
         <Text style={styles.primaryButtonText}>

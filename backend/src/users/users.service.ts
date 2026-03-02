@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { EmployeeLevel, Prisma, Role, WorkplaceRole } from '@prisma/client';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   isUploadSection,
@@ -9,7 +10,10 @@ import {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+  ) {}
 
   private readonly publicApiBaseUrl = process.env.PUBLIC_API_BASE_URL;
 
@@ -487,16 +491,32 @@ export class UsersService {
       return { id: user.id, isApproved: true };
     }
 
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
         isApproved: true,
       },
       select: {
         id: true,
+        email: true,
+        name: true,
         isApproved: true,
       },
     });
+
+    try {
+      await this.mailService.sendAccountApprovedEmail({
+        email: updated.email,
+        recipientName: updated.name,
+      });
+    } catch {
+      // Approval must not fail when mail provider is unavailable.
+    }
+
+    return {
+      id: updated.id,
+      isApproved: updated.isApproved,
+    };
   }
 
   async updateEmployeeLevel(

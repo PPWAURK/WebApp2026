@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import type { AppText } from '../../locales/translations';
 import {
   fetchOrderHistoryAnalytics,
@@ -223,6 +224,12 @@ export function OrderHistoryPage({
     1,
   );
 
+  const pieTotal = (analytics?.current.totalItems ?? 0) + (analytics?.previous.totalItems ?? 0);
+  const pieRatio = pieTotal > 0 ? (analytics?.current.totalItems ?? 0) / pieTotal : 0.5;
+  const pieRadius = 20;
+  const pieCircumference = 2 * Math.PI * pieRadius;
+  const pieCurrentDash = pieCircumference * pieRatio;
+
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
@@ -239,40 +246,56 @@ export function OrderHistoryPage({
       {!isLoading && orders.length === 0 ? <Text style={styles.docEmpty}>{text.orders.historyEmpty}</Text> : null}
 
       {groupedOrders.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsWrap}>
-          {groupedOrders.map((supplierGroup) => {
-            const isActive = supplierGroup.supplierKey === selectedSupplierKey;
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>{text.orders.supplierTabsTitle}</Text>
+          <View style={styles.tabsRail}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.tabsScroll}
+            contentContainerStyle={styles.tabsWrap}
+          >
+            {groupedOrders.map((supplierGroup) => {
+              const isActive = supplierGroup.supplierKey === selectedSupplierKey;
+              return (
+                <Pressable
+                  key={`tab-${supplierGroup.supplierKey}`}
+                  style={[styles.tabChip, isActive && styles.tabChipActive]}
+                  onPress={() => setSelectedSupplierKey(supplierGroup.supplierKey)}
+                >
+                  <Text
+                    style={[styles.tabChipText, isActive && styles.tabChipTextActive]}
+                    numberOfLines={1}
+                  >
+                    {supplierGroup.supplierName}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          </View>
+        </View>
+      ) : null}
+
+      <View style={styles.filterSection}>
+        <Text style={styles.filterSectionTitle}>{text.orders.periodTabsTitle}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
+          {PERIODS.map((periodOption) => {
+            const isActive = periodOption.key === period;
             return (
               <Pressable
-                key={`tab-${supplierGroup.supplierKey}`}
-                style={[styles.tabChip, isActive && styles.tabChipActive]}
-                onPress={() => setSelectedSupplierKey(supplierGroup.supplierKey)}
+                key={`period-${periodOption.key}`}
+                style={[styles.filterChip, isActive && styles.filterChipActive]}
+                onPress={() => setPeriod(periodOption.key)}
               >
-                <Text style={[styles.tabChipText, isActive && styles.tabChipTextActive]}>
-                  {supplierGroup.supplierName}
+                <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                  {text.orders[periodOption.textKey]}
                 </Text>
               </Pressable>
             );
           })}
         </ScrollView>
-      ) : null}
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
-        {PERIODS.map((periodOption) => {
-          const isActive = periodOption.key === period;
-          return (
-            <Pressable
-              key={`period-${periodOption.key}`}
-              style={[styles.filterChip, isActive && styles.filterChipActive]}
-              onPress={() => setPeriod(periodOption.key)}
-            >
-              <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
-                {text.orders[periodOption.textKey]}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      </View>
 
       <TextInput
         style={styles.searchInput}
@@ -282,22 +305,25 @@ export function OrderHistoryPage({
         onChangeText={setSearch}
       />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
-        {SORTS.map((sortOption) => {
-          const isActive = sortOption.key === sortBy;
-          return (
-            <Pressable
-              key={`sort-${sortOption.key}`}
-              style={[styles.filterChip, isActive && styles.filterChipActive]}
-              onPress={() => setSortBy(sortOption.key)}
-            >
-              <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
-                {text.orders[sortOption.textKey]}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      <View style={styles.filterSection}>
+        <Text style={styles.filterSectionTitle}>{text.orders.sortTabsTitle}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
+          {SORTS.map((sortOption) => {
+            const isActive = sortOption.key === sortBy;
+            return (
+              <Pressable
+                key={`sort-${sortOption.key}`}
+                style={[styles.filterChip, isActive && styles.filterChipActive]}
+                onPress={() => setSortBy(sortOption.key)}
+              >
+                <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                  {text.orders[sortOption.textKey]}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {analyticsLoading ? <Text style={styles.docEmpty}>{text.orders.loading}</Text> : null}
       {analyticsError ? <Text style={styles.docEmpty}>{analyticsError}</Text> : null}
@@ -319,6 +345,33 @@ export function OrderHistoryPage({
             </View>
             <View style={styles.kpiCard}>
               <Text style={styles.kpiLabel}>{text.orders.kpiDeltaVsPrevious}</Text>
+              <View style={styles.deltaPieRow}>
+                <Svg width={52} height={52} viewBox="0 0 52 52">
+                  <Circle
+                    cx="26"
+                    cy="26"
+                    r={pieRadius}
+                    stroke="#d8a4a7"
+                    strokeWidth="10"
+                    fill="none"
+                  />
+                  <Circle
+                    cx="26"
+                    cy="26"
+                    r={pieRadius}
+                    stroke="#c83d45"
+                    strokeWidth="10"
+                    fill="none"
+                    strokeDasharray={`${pieCurrentDash} ${pieCircumference}`}
+                    strokeLinecap="round"
+                    transform="rotate(-90 26 26)"
+                  />
+                </Svg>
+                <View style={styles.deltaPieLegend}>
+                  <Text style={styles.deltaLegendCurrent}>{text.orders.thisMonthLabel}</Text>
+                  <Text style={styles.deltaLegendPrevious}>{text.orders.lastMonthLabel}</Text>
+                </View>
+              </View>
               <Text style={styles.kpiValue}>{analytics.delta.itemsRate ?? 0}%</Text>
             </View>
           </View>

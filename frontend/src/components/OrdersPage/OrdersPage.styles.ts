@@ -25,6 +25,17 @@ export const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#e3c6c8',
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    color: '#7f1b21',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
   uploadChip: {
     borderRadius: 999,
     borderWidth: 1,

@@ -7,11 +7,16 @@ import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { createHash, randomBytes } from 'crypto';
 import type { StringValue } from 'ms';
+import { MailService } from '../mail/mail.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { RestaurantsService } from '../restaurants/restaurants.service';
 import { UsersService } from '../users/users.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +25,11 @@ export class AuthService {
     private readonly restaurantsService: RestaurantsService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
   ) {}
+
+  private readonly resetTokenLifetimeMinutes = 30;
 
   async login(loginDto: LoginDto) {
     const user = await this.usersService.findByEmail(loginDto.email);
@@ -73,6 +82,93 @@ export class AuthService {
       pendingApproval: true,
       userId: createdUser.id,
       message: 'ACCOUNT_PENDING_APPROVAL',
+    };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const normalizedEmail = dto.email.trim().toLowerCase();
+    const user = await this.usersService.findByEmail(normalizedEmail);
+
+    if (!user) {
+      return {
+        success: true,
+        message: 'PASSWORD_RESET_EMAIL_SENT_IF_EXISTS',
+      };
+    }
+
+    const plainToken = randomBytes(32).toString('hex');
+    const tokenHash = this.hashResetToken(plainToken);
+    const expiresAt = new Date(Date.now() + this.resetTokenLifetimeMinutes * 60 * 1000);
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+      },
+    });
+
+    try {
+      await this.mailService.sendForgotPasswordEmail({
+        email: user.email,
+        recipientName: user.name,
+        resetToken: plainToken,
+      });
+    } catch {
+      // Keep API response stable to avoid leaking account state.
+    }
+
+    return {
+      success: true,
+      message: 'PASSWORD_RESET_EMAIL_SENT_IF_EXISTS',
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const tokenHash = this.hashResetToken(dto.token);
+    const now = new Date();
+
+    const resetRecord = await this.prisma.passwordResetToken.findFirst({
+      where: {
+        tokenHash,
+        consumedAt: null,
+        expiresAt: {
+          gt: now,
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!resetRecord) {
+      throw new UnauthorizedException('INVALID_OR_EXPIRED_RESET_TOKEN');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: resetRecord.user.id },
+        data: {
+          passwordHash,
+        },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: resetRecord.id },
+        data: {
+          consumedAt: now,
+        },
+      }),
+    ]);
+
+    return {
+      success: true,
+      message: 'PASSWORD_RESET_SUCCESS',
     };
   }
 
@@ -133,5 +229,9 @@ export class AuthService {
       ...user,
       trainingAccess: this.usersService.normalizeTrainingAccess(user.trainingAccess),
     };
+  }
+
+  private hashResetToken(value: string) {
+    return createHash('sha256').update(value).digest('hex');
   }
 }

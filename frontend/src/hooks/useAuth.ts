@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { requestAuth } from '../services/authApi';
+import { requestAuth, requestForgotPassword } from '../services/authApi';
 import { fetchRestaurants } from '../services/restaurantsApi';
 import {
   clearSession,
@@ -26,6 +26,7 @@ export function useAuth() {
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [session, setSession] = useState<AuthResponse | null>(null);
 
   useEffect(() => {
@@ -105,6 +106,7 @@ export function useAuth() {
   async function submitAuth(currentMode: AuthMode, text: AppText) {
     setIsSubmitting(true);
     setError(null);
+    setNotice(null);
 
     try {
       if (currentMode === 'register' && !selectedRestaurantId) {
@@ -126,7 +128,7 @@ export function useAuth() {
         if (registerData.pendingApproval) {
           setMode('login');
           setPassword('');
-          setError(text.auth.pendingApprovalSubmitted);
+          setNotice(text.auth.pendingApprovalSubmitted);
           return;
         }
       }
@@ -146,6 +148,32 @@ export function useAuth() {
     }
   }
 
+  async function forgotPassword(text: AppText) {
+    const normalizedEmail = email.trim();
+
+    if (!normalizedEmail) {
+      setError(text.auth.invalidEmail);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      await requestForgotPassword(normalizedEmail);
+      setNotice(text.auth.resetEmailSent);
+    } catch (requestError) {
+      if (requestError instanceof Error && requestError.message.includes('INVALID_EMAIL')) {
+        setError(text.auth.invalidEmail);
+      } else {
+        setError(text.auth.resetEmailFailed);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function logout() {
     setSession(null);
     setEmail('');
@@ -157,6 +185,7 @@ export function useAuth() {
 
   function toggleMode() {
     setError(null);
+    setNotice(null);
     setMode((currentMode) => (currentMode === 'login' ? 'register' : 'login'));
   }
 
@@ -185,6 +214,7 @@ export function useAuth() {
     name,
     rememberMe,
     error,
+    notice,
     session,
     restaurants,
     selectedRestaurantId,
@@ -194,6 +224,7 @@ export function useAuth() {
     setSelectedRestaurantId,
     setRememberMe,
     submitAuth,
+    forgotPassword,
     logout,
     toggleMode,
     updateSessionUser,
