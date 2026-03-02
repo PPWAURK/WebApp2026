@@ -162,14 +162,17 @@ export const styles = StyleSheet.create({
     backgroundColor: '#d86e73',
   },
   histogramWrap: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: 10,
     minHeight: 220,
   },
+  histogramScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10,
+    minHeight: 220,
+    paddingRight: 6,
+  },
   histogramColumn: {
-    flex: 1,
+    width: 88,
     alignItems: 'center',
     gap: 6,
   },
@@ -179,7 +182,7 @@ export const styles = StyleSheet.create({
     fontSize: 11,
   },
   histogramTrack: {
-    width: '100%',
+    width: 64,
     height: 140,
     borderRadius: 10,
     borderWidth: 1,

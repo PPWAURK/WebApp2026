@@ -33,6 +33,7 @@ export type TopOrderedProduct = {
   productId: number;
   supplierId: number;
   supplierName: string;
+  month: string;
   nameFr: string;
   nameZh: string;
   totalQuantity: number;

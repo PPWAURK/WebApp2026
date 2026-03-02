@@ -693,38 +693,43 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         ) : null}
 
         {topProducts.length > 0 ? (
-          <View style={styles.histogramWrap}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.histogramWrap}
+            contentContainerStyle={styles.histogramScrollContent}
+          >
             {(() => {
               const maxQuantity = Math.max(
                 ...topProducts.map((product) => product.totalQuantity),
                 1,
               );
 
-              return topProducts.map((product, index) => {
+              return topProducts.map((product) => {
                 const label =
                   product.nameFr?.trim() || product.nameZh?.trim() || `${product.productId}`;
-                const ratio = Math.max(
-                  0.12,
-                  Math.min(1, product.totalQuantity / maxQuantity),
-                );
+                const ratio = Math.max(0.12, Math.min(1, product.totalQuantity / maxQuantity));
 
                 return (
-                  <View key={`hist-${product.supplierId}-${product.productId}`} style={styles.histogramColumn}>
+                  <View
+                    key={`hist-${product.month}-${product.supplierId}-${product.productId}`}
+                    style={styles.histogramColumn}
+                  >
                     <Text style={styles.histogramValue}>{product.totalQuantity}</Text>
                     <View style={styles.histogramTrack}>
                       <View style={[styles.histogramBar, { height: `${ratio * 100}%` }]} />
                     </View>
-                    <Text style={styles.histogramLabel} numberOfLines={2}>
-                      {`${index + 1}. ${label}`}
-                    </Text>
                     <Text style={styles.histogramSupplier} numberOfLines={1}>
-                      {product.supplierName}
+                      {product.month}
+                    </Text>
+                    <Text style={styles.histogramLabel} numberOfLines={2}>
+                      {label}
                     </Text>
                   </View>
                 );
               });
             })()}
-          </View>
+          </ScrollView>
         ) : null}
       </View>
     );

@@ -29,6 +29,7 @@ type TopProductAggregate = {
   productId: number;
   supplierId: number;
   supplierName: string;
+  month: string;
   nameFr: string;
   nameZh: string;
   totalQuantity: number;
@@ -492,6 +493,7 @@ export class OrdersService {
         purchaseOrder: {
           select: {
             supplierId: true,
+            deliveryDate: true,
             supplier: {
               select: {
                 nom: true,
@@ -508,33 +510,43 @@ export class OrdersService {
         },
       },
       orderBy: {
-        id: 'desc',
+        id: 'asc',
       },
-      take: 1200,
+      take: 2400,
     });
 
-    const productMap = new Map<
-      string,
-      {
-        productId: number;
-        supplierId: number;
-        supplierName: string;
-        nameFr: string;
-        nameZh: string;
-        totalQuantity: number;
-        orderCount: number;
-      }
-    >();
+    const productTotals = new Map<number, number>();
+
+    for (const item of items) {
+      const productId = Number(item.product.id);
+      const total = productTotals.get(productId) ?? 0;
+      productTotals.set(productId, total + item.quantity);
+    }
+
+    const topProductIds = new Set(
+      Array.from(productTotals.entries())
+        .sort((left, right) => right[1] - left[1])
+        .slice(0, 5)
+        .map(([productId]) => productId),
+    );
+
+    const productMonthMap = new Map<string, TopProductAggregate>();
 
     for (const item of items) {
       const supplierId = item.purchaseOrder.supplierId;
       const productId = Number(item.product.id);
-      const productKey = `${supplierId}:${productId}`;
+      if (!topProductIds.has(productId)) {
+        continue;
+      }
 
-      const productEntry = productMap.get(productKey) ?? {
+      const month = item.purchaseOrder.deliveryDate.toISOString().slice(0, 7);
+      const productKey = `${month}:${supplierId}:${productId}`;
+
+      const productEntry = productMonthMap.get(productKey) ?? {
         productId,
         supplierId,
         supplierName: item.purchaseOrder.supplier.nom,
+        month,
         nameFr: this.sanitizeLabel(this.recoverUtf8(item.product.designationFr)),
         nameZh: this.sanitizeLabel(this.recoverUtf8(item.product.nomCn)),
         totalQuantity: 0,
@@ -544,12 +556,16 @@ export class OrdersService {
       productEntry.totalQuantity += item.quantity;
       productEntry.orderCount += 1;
 
-      productMap.set(productKey, productEntry);
+      productMonthMap.set(productKey, productEntry);
     }
 
-    return Array.from(productMap.values())
-      .sort((left, right) => right.totalQuantity - left.totalQuantity)
-      .slice(0, 5);
+    return Array.from(productMonthMap.values()).sort((left, right) => {
+      if (left.month !== right.month) {
+        return left.month.localeCompare(right.month);
+      }
+
+      return right.totalQuantity - left.totalQuantity;
+    });
   }
 
   async deleteOrder(orderId: number, actor: Actor) {
