@@ -6,6 +6,72 @@ import nodemailer from 'nodemailer';
 export class MailService {
   constructor(private readonly configService: ConfigService) {}
 
+  private escapeHtml(value: string) {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  private buildEmailLayout(input: {
+    title: string;
+    intro: string;
+    body: string;
+    buttonLabel?: string;
+    buttonUrl?: string;
+    footer?: string;
+    logoUrl?: string;
+  }) {
+    const safeTitle = this.escapeHtml(input.title);
+    const safeIntro = this.escapeHtml(input.intro);
+    const safeBody = this.escapeHtml(input.body).replace(/\n/g, '<br/>');
+    const safeFooter = this.escapeHtml(
+      input.footer ?? 'Si vous avez une question, contactez votre manager.',
+    );
+    const buttonHtml =
+      input.buttonLabel && input.buttonUrl
+        ? `<p style="margin:24px 0 16px;">
+            <a href="${input.buttonUrl}"
+               style="display:inline-block;padding:12px 20px;background:#b51e24;color:#fff7f7;text-decoration:none;border-radius:999px;font-weight:700;">
+              ${this.escapeHtml(input.buttonLabel)}
+            </a>
+          </p>
+          <p style="font-size:13px;line-height:1.5;color:#7e5b5b;word-break:break-all;">${this.escapeHtml(input.buttonUrl)}</p>`
+        : '';
+    const logoHtml = input.logoUrl
+      ? `<img src="${this.escapeHtml(input.logoUrl)}" alt="ZHAO" width="72" height="72"
+           style="display:block;width:72px;height:72px;border-radius:12px;object-fit:cover;border:1px solid rgba(255,255,255,0.45);margin-bottom:10px;"/>`
+      : '';
+
+    return `
+      <div style="margin:0;padding:24px;background:#f8f1eb;font-family:Arial,sans-serif;color:#472325;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;margin:0 auto;background:#fff8f2;border:1px solid #ead4c8;border-radius:16px;overflow:hidden;">
+          <tr>
+            <td style="padding:22px 24px;background:#b51e24;color:#fff5f5;">
+              ${logoHtml}
+              <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;opacity:0.9;">ZHAO Restaurant</div>
+              <h1 style="margin:8px 0 0;font-size:22px;line-height:1.3;color:#fff5f5;">${safeTitle}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px;">
+              <p style="margin:0 0 12px;font-size:16px;line-height:1.6;color:#4f2c2e;">${safeIntro}</p>
+              <p style="margin:0;font-size:15px;line-height:1.7;color:#644346;">${safeBody}</p>
+              ${buttonHtml}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 24px;border-top:1px solid #edd9cc;font-size:12px;line-height:1.6;color:#8c6f6f;">
+              ${safeFooter}
+            </td>
+          </tr>
+        </table>
+      </div>
+    `.trim();
+  }
+
   private getMailConfig() {
     const host = this.configService.get<string>('MAIL_HOST');
     const portRaw = this.configService.get<string>('MAIL_PORT');
@@ -13,6 +79,7 @@ export class MailService {
     const pass = this.configService.get<string>('MAIL_PASS');
     const from = this.configService.get<string>('MAIL_FROM');
     const appWebUrl = this.configService.get<string>('APP_WEB_URL');
+    const logoUrl = this.configService.get<string>('MAIL_LOGO_URL');
 
     const port = portRaw ? Number(portRaw) : 587;
 
@@ -23,6 +90,7 @@ export class MailService {
       pass,
       from,
       appWebUrl,
+      logoUrl,
       enabled:
         Boolean(host) &&
         Number.isFinite(port) &&
@@ -75,21 +143,32 @@ export class MailService {
     }
 
     const resetUrl = `${config.appWebUrl ?? ''}`.replace(/\/$/, '');
-    const fullResetUrl = `${resetUrl}/reset-password?token=${encodeURIComponent(input.resetToken)}`;
+    const fullResetUrl = `${resetUrl}#/reset-password?token=${encodeURIComponent(input.resetToken)}`;
     const greeting = input.recipientName?.trim() || input.email;
+    const intro = `Bonjour ${greeting},`;
+    const body =
+      'Nous avons recu une demande de reinitialisation de votre mot de passe. ' +
+      'Cliquez sur le bouton ci-dessous pour definir un nouveau mot de passe.\n\n' +
+      'Ce lien est valide pendant 30 minutes.';
 
     await this.sendMail({
       to: input.email,
       subject: 'Reinitialisation du mot de passe',
       text:
-        `Bonjour ${greeting},\n\n` +
-        `Cliquez sur ce lien pour reinitialiser votre mot de passe:\n${fullResetUrl}\n\n` +
-        'Ce lien expire dans 30 minutes.',
-      html:
-        `<p>Bonjour ${greeting},</p>` +
-        `<p>Cliquez sur ce lien pour reinitialiser votre mot de passe:</p>` +
-        `<p><a href="${fullResetUrl}">${fullResetUrl}</a></p>` +
-        '<p>Ce lien expire dans 30 minutes.</p>',
+        `${intro}\n\n` +
+        `${body}\n\n` +
+        `Lien de reinitialisation: ${fullResetUrl}\n\n` +
+        'Si vous n etes pas a l origine de cette demande, ignorez simplement ce message.',
+      html: this.buildEmailLayout({
+        title: 'Reinitialisation du mot de passe',
+        intro,
+        body,
+        buttonLabel: 'Reinitialiser mon mot de passe',
+        buttonUrl: fullResetUrl,
+        logoUrl: config.logoUrl,
+        footer:
+          'Si vous n etes pas a l origine de cette demande, ignorez simplement ce message. Ce lien expire dans 30 minutes.',
+      }),
     });
   }
 
@@ -97,17 +176,26 @@ export class MailService {
     email: string;
     recipientName?: string | null;
   }) {
+    const config = this.getMailConfig();
+    const appUrl = `${config.appWebUrl ?? ''}`.replace(/\/$/, '');
     const greeting = input.recipientName?.trim() || input.email;
+    const intro = `Bonjour ${greeting},`;
+    const body =
+      'Bonne nouvelle: votre compte a ete approuve par votre manager. ' +
+      'Vous pouvez maintenant vous connecter et acceder a votre espace.';
 
     await this.sendMail({
       to: input.email,
       subject: 'Compte approuve',
-      text:
-        `Bonjour ${greeting},\n\n` +
-        'Votre compte a ete approuve par votre manager. Vous pouvez maintenant vous connecter.',
-      html:
-        `<p>Bonjour ${greeting},</p>` +
-        '<p>Votre compte a ete approuve par votre manager. Vous pouvez maintenant vous connecter.</p>',
+      text: `${intro}\n\n${body}${appUrl ? `\n\nConnexion: ${appUrl}` : ''}`,
+      html: this.buildEmailLayout({
+        title: 'Compte approuve',
+        intro,
+        body,
+        buttonLabel: appUrl ? 'Acceder a la connexion' : undefined,
+        buttonUrl: appUrl || undefined,
+        logoUrl: config.logoUrl,
+      }),
     });
   }
 }

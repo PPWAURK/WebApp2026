@@ -21,6 +21,7 @@ import { OrderRecapPage } from './src/components/OrderRecapPage';
 import { OrdersPage } from './src/components/OrdersPage';
 import { PreLoginHome } from './src/components/PreLoginHome';
 import { ProfilePage } from './src/components/ProfilePage';
+import { ResetPasswordForm } from './src/components/ResetPasswordForm';
 import { RestaurantFormsPage } from './src/components/RestaurantFormsPage';
 import { SessionCard } from './src/components/SessionCard';
 import { SupplierManagementPage } from './src/components/SupplierManagementPage';
@@ -36,6 +37,7 @@ import {
   type OrderSummary,
 } from './src/services/ordersApi';
 import { onUnauthorized, throwIfUnauthorized } from './src/services/authSession';
+import { requestResetPassword } from './src/services/authApi';
 import { styles } from './src/styles/App.styles';
 import type { MenuPage } from './src/types/menu';
 import type { OrderRecapData } from './src/types/order';
@@ -57,6 +59,7 @@ export default function App() {
   const preAuthRoute = preAuthRouter.route;
   const goToPreAuthLanding = preAuthRouter.goToLanding;
   const goToPreAuthAuth = preAuthRouter.goToAuth;
+  const preAuthResetToken = preAuthRouter.resetToken;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activePage, setActivePage] = useState<MenuPage>('dashboard');
   const [displayPage, setDisplayPage] = useState<MenuPage>('dashboard');
@@ -81,6 +84,10 @@ export default function App() {
   const loginLoaderOpacity = useRef(new Animated.Value(0)).current;
   const loginLoaderScale = useRef(new Animated.Value(0.86)).current;
   const loginLoaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [resetPassword, setResetPassword] = useState('');
+  const [isSubmittingResetPassword, setIsSubmittingResetPassword] = useState(false);
+  const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
+  const [resetPasswordNotice, setResetPasswordNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') {
@@ -166,6 +173,15 @@ export default function App() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (preAuthRoute !== 'resetPassword') {
+      setResetPassword('');
+      setResetPasswordError(null);
+      setResetPasswordNotice(null);
+      setIsSubmittingResetPassword(false);
+    }
+  }, [preAuthRoute]);
 
   useEffect(() => {
     if (!auth.session) {
@@ -489,6 +505,71 @@ export default function App() {
   function renderPublicContent() {
     if (preAuthRoute === 'landing') {
       return <PreLoginHome text={language.text} onStart={() => goToPreAuthAuth()} />;
+    }
+
+    if (preAuthRoute === 'resetPassword') {
+      return (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboardAreaContent}
+        >
+          <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content}>
+            <ResetPasswordForm
+              text={language.text}
+              password={resetPassword}
+              isSubmitting={isSubmittingResetPassword}
+              error={resetPasswordError}
+              notice={resetPasswordNotice}
+              hasToken={Boolean(preAuthResetToken)}
+              onPasswordChange={setResetPassword}
+              onSubmit={() => {
+                if (!preAuthResetToken) {
+                  setResetPasswordError(language.text.auth.resetTokenMissing);
+                  return;
+                }
+
+                if (resetPassword.trim().length < 8) {
+                  setResetPasswordError(language.text.auth.passwordTooShort);
+                  return;
+                }
+
+                setIsSubmittingResetPassword(true);
+                setResetPasswordError(null);
+                setResetPasswordNotice(null);
+
+                void requestResetPassword(preAuthResetToken, resetPassword)
+                  .then(() => {
+                    setResetPassword('');
+                    setResetPasswordNotice(language.text.auth.resetPasswordSuccess);
+                    setTimeout(() => {
+                      goToPreAuthAuth();
+                    }, 900);
+                  })
+                  .catch((error: unknown) => {
+                    if (
+                      error instanceof Error &&
+                      error.message.includes('INVALID_OR_EXPIRED_RESET_TOKEN')
+                    ) {
+                      setResetPasswordError(language.text.auth.resetTokenInvalidOrExpired);
+                      return;
+                    }
+
+                    if (error instanceof Error && error.message.includes('PASSWORD_TOO_SHORT')) {
+                      setResetPasswordError(language.text.auth.passwordTooShort);
+                      return;
+                    }
+
+                    setResetPasswordError(language.text.auth.resetPasswordFailed);
+                  })
+                  .finally(() => {
+                    setIsSubmittingResetPassword(false);
+                  });
+              }}
+              onBackToLogin={() => goToPreAuthAuth()}
+            />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      );
     }
 
     return (
