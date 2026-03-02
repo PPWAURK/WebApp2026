@@ -5,6 +5,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -230,6 +231,18 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
       });
   }, [accountSearch, users]);
 
+  const deletionUsers = useMemo(() => {
+    const query = accountSearch.trim().toLowerCase();
+    return users.filter((entry) => {
+      if (!query) {
+        return true;
+      }
+
+      const name = entry.name?.toLowerCase() ?? '';
+      return name.includes(query) || entry.email.toLowerCase().includes(query);
+    });
+  }, [accountSearch, users]);
+
   const levelUsers = useMemo(() => {
     const query = levelSearch.trim().toLowerCase();
     return users.filter((entry) => {
@@ -378,25 +391,45 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                     : text.adminTraining.approveAccountButton}
                   </Text>
                 </Pressable>
-
-              <Pressable
-                style={[
-                  styles.dangerButton,
-                  isDeletingUserId === entry.id && styles.buttonDisabled,
-                ]}
-                disabled={isDeletingUserId === entry.id}
-                onPress={() => {
-                  void handleDeleteUser(entry);
-                }}
-              >
-                <Text style={styles.dangerButtonText}>
-                  {isDeletingUserId === entry.id
-                    ? text.dashboard.quickDeleteLoading
-                    : text.dashboard.quickDeleteButton}
-                </Text>
-              </Pressable>
             </View>
           ))}
+
+          <View style={styles.quickSectionDivider}>
+            <Text style={styles.quickSectionTitle}>{text.dashboard.quickDeleteSectionTitle}</Text>
+          </View>
+
+          {deletionUsers.length === 0 ? (
+            <Text style={styles.subtitle}>{text.dashboard.quickNoEmployee}</Text>
+          ) : (
+            deletionUsers.slice(0, 4).map((entry) => (
+              <View key={`delete-${entry.id}`} style={styles.quickRowCard}>
+                <View style={styles.quickLevelRow}>
+                  <View style={styles.quickLevelInfo}>
+                    <Text style={styles.quickRowTitle}>{entry.name ?? entry.email}</Text>
+                    <Text style={styles.subtitle}>{entry.email}</Text>
+                  </View>
+
+                <Pressable
+                  style={[
+                    styles.iconDeleteButton,
+                    isDeletingUserId === entry.id && styles.buttonDisabled,
+                  ]}
+                  accessibilityLabel={text.dashboard.quickDeleteButton}
+                  disabled={isDeletingUserId === entry.id}
+                  onPress={() => {
+                    void handleDeleteUser(entry);
+                  }}
+                >
+                  <Ionicons
+                    name={isDeletingUserId === entry.id ? 'hourglass-outline' : 'trash-outline'}
+                    size={20}
+                    color="#ab1e24"
+                  />
+                </Pressable>
+                </View>
+              </View>
+            ))
+          )}
         </View>
 
         <View style={styles.quickBlock}>
@@ -592,7 +625,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         onRequestClose={() => setLevelEditorUser(null)}
       >
         <View style={styles.previewModalBackdrop}>
-          <View style={styles.previewModalCard}>
+          <View style={styles.levelModalCard}>
             <View style={styles.previewModalHeader}>
               <Text style={styles.quickBlockTitle}>{text.dashboard.levelModalTitle}</Text>
               <Pressable
@@ -603,7 +636,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
               </Pressable>
             </View>
 
-            <View style={styles.levelListWrap}>
+            <ScrollView style={styles.levelListWrap} contentContainerStyle={styles.levelListContent}>
               {EMPLOYEE_LEVELS.map((level) => (
                 <Pressable
                   key={level}
@@ -631,7 +664,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                   </Text>
                 </Pressable>
               ))}
-            </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>

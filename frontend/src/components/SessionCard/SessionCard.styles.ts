@@ -76,6 +76,17 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
   },
+  quickSectionDivider: {
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#ead0d2',
+  },
+  quickSectionTitle: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
   quickMetaInlineRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -128,6 +139,17 @@ export const styles = StyleSheet.create({
   previewModalCard: {
     width: '96%',
     maxWidth: 980,
+    backgroundColor: '#fff9f9',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#e2b9bb',
+    padding: 14,
+    gap: 12,
+  },
+  levelModalCard: {
+    width: '94%',
+    maxWidth: 620,
+    maxHeight: '80%',
     backgroundColor: '#fff9f9',
     borderRadius: 18,
     borderWidth: 1,
@@ -207,9 +229,22 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  iconDeleteButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#d88084',
+    backgroundColor: '#fff1f2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   levelListWrap: {
+    maxHeight: 460,
+  },
+  levelListContent: {
     gap: 8,
-    maxHeight: 380,
+    paddingBottom: 8,
   },
   levelListItem: {
     borderWidth: 1,
@@ -227,6 +262,7 @@ export const styles = StyleSheet.create({
     color: '#7f1b21',
     fontFamily: 'Manrope_700Bold',
     fontSize: 12,
+    flexShrink: 1,
   },
   levelListItemTextActive: {
     color: '#7a181d',
