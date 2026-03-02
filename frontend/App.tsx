@@ -7,10 +7,8 @@ import {
   KeyboardAvoidingView,
   Linking,
   Platform,
-  Pressable,
   SafeAreaView,
   ScrollView,
-  Text,
   View,
 } from 'react-native';
 import { AuthForm } from './src/components/AuthForm';
@@ -18,6 +16,7 @@ import { HeaderDrawer } from './src/components/HeaderDrawer';
 import { OrderHistoryPage } from './src/components/OrderHistoryPage';
 import { OrderRecapPage } from './src/components/OrderRecapPage';
 import { OrdersPage } from './src/components/OrdersPage';
+import { PreLoginHome } from './src/components/PreLoginHome';
 import { ProfilePage } from './src/components/ProfilePage';
 import { RestaurantFormsPage } from './src/components/RestaurantFormsPage';
 import { SessionCard } from './src/components/SessionCard';
@@ -25,6 +24,7 @@ import { SupplierManagementPage } from './src/components/SupplierManagementPage'
 import { TrainingPage } from './src/components/TrainingPage';
 import { useAuth } from './src/hooks/useAuth';
 import { useLanguage } from './src/hooks/useLanguage';
+import { usePreAuthRouter } from './src/hooks/usePreAuthRouter';
 import {
   buildOrderBonUrl,
   createOrder,
@@ -33,7 +33,7 @@ import {
   type OrderSummary,
 } from './src/services/ordersApi';
 import { onUnauthorized, throwIfUnauthorized } from './src/services/authSession';
-import { styles } from './src/styles/appStyles';
+import { styles } from './src/styles/App.styles';
 import type { MenuPage } from './src/types/menu';
 import type { OrderRecapData } from './src/types/order';
 
@@ -48,6 +48,10 @@ function getTodayDateString() {
 export default function App() {
   const auth = useAuth();
   const language = useLanguage();
+  const preAuthRouter = usePreAuthRouter();
+  const preAuthRoute = preAuthRouter.route;
+  const goToPreAuthLanding = preAuthRouter.goToLanding;
+  const goToPreAuthAuth = preAuthRouter.goToAuth;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activePage, setActivePage] = useState<MenuPage>('dashboard');
   const [orderRecap, setOrderRecap] = useState<OrderRecapData | null>(null);
@@ -67,13 +71,57 @@ export default function App() {
   } | null>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
 
-  function scrollToBottom() {
-    scrollViewRef.current?.scrollToEnd({ animated: true });
-  }
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') {
+      return;
+    }
 
-  function scrollToTop() {
-    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-  }
+    const styleId = 'webapp-auth-input-overrides';
+    if (document.getElementById(styleId)) {
+      return;
+    }
+
+    const styleElement = document.createElement('style');
+    styleElement.id = styleId;
+    styleElement.textContent = `
+      input,
+      textarea {
+        outline: none !important;
+        box-shadow: none !important;
+      }
+
+      input {
+        box-sizing: border-box !important;
+        height: 100% !important;
+        line-height: normal !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+      }
+
+      input:focus,
+      textarea:focus {
+        outline: none !important;
+        box-shadow: none !important;
+      }
+
+      input:-webkit-autofill,
+      input:-webkit-autofill:hover,
+      input:-webkit-autofill:focus {
+        -webkit-text-fill-color: #ab1e24 !important;
+        caret-color: #ab1e24 !important;
+        -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+        box-shadow: 0 0 0px 1000px white inset !important;
+        padding-right: 10px !important;
+        transition: background-color 9999s ease-in-out 0s;
+      }
+    `;
+
+    document.head.appendChild(styleElement);
+
+    return () => {
+      styleElement.remove();
+    };
+  }, []);
 
   async function loadOrderHistory() {
     if (!auth.session) {
@@ -103,6 +151,7 @@ export default function App() {
   useEffect(() => {
     if (!auth.session) {
       setIsDrawerOpen(false);
+      goToPreAuthLanding(true);
       setActivePage('dashboard');
       setOrderRecap(null);
       setOrderQuantities({});
@@ -133,7 +182,7 @@ export default function App() {
     if (activePage === 'supplierManagement' && auth.session.user.role !== 'ADMIN') {
       setActivePage('dashboard');
     }
-  }, [activePage, auth.session]);
+  }, [activePage, auth.session, goToPreAuthLanding]);
 
   useEffect(() => {
     if (!auth.session || activePage !== 'orderHistory') {
@@ -269,6 +318,76 @@ export default function App() {
     Manrope_700Bold,
   });
 
+  function handleProceedToOrderRecap(recap: OrderRecapData) {
+    setOrderRecap(recap);
+    setLatestCreatedOrder(null);
+    setActivePage('orderRecap');
+  }
+
+  function renderOrderBuilder() {
+    if (!auth.session) {
+      return null;
+    }
+
+    return (
+      <OrdersPage
+        text={language.text}
+        accessToken={auth.session.accessToken}
+        language={language.language}
+        quantities={orderQuantities}
+        onQuantitiesChange={setOrderQuantities}
+        onSubmitOrder={handleProceedToOrderRecap}
+      />
+    );
+  }
+
+  function renderPublicContent() {
+    if (preAuthRoute === 'landing') {
+      return <PreLoginHome text={language.text} onStart={() => goToPreAuthAuth()} />;
+    }
+
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardAreaContent}
+      >
+        <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content}>
+          <AuthForm
+            mode={auth.mode}
+            title={
+              auth.mode === 'login'
+                ? language.text.auth.loginTitle
+                : language.text.auth.registerTitle
+            }
+            text={language.text}
+            language={language.language}
+            email={auth.email}
+            password={auth.password}
+            name={auth.name}
+            restaurants={auth.restaurants}
+            selectedRestaurantId={auth.selectedRestaurantId}
+            rememberMe={auth.rememberMe}
+            isSubmitting={auth.isSubmitting}
+            error={auth.error}
+            onEmailChange={auth.setEmail}
+            onPasswordChange={auth.setPassword}
+            onNameChange={auth.setName}
+            onSelectRestaurant={auth.setSelectedRestaurantId}
+            onRememberToggle={() =>
+              auth.setRememberMe((currentValue) => !currentValue)
+            }
+            onSelectLanguage={(nextLanguage) => {
+              void language.setLanguage(nextLanguage);
+            }}
+            onSubmit={() => void auth.submitAuth(auth.mode, language.text)}
+            onToggleMode={auth.toggleMode}
+            onBackToLanding={() => goToPreAuthLanding()}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
   if (!fontsLoaded || auth.isLoadingSession || language.isLoadingLanguage) {
     return (
       <SafeAreaView style={styles.loaderPage}>
@@ -281,6 +400,9 @@ export default function App() {
     if (!auth.session) {
       return null;
     }
+
+    const canAccessOrders =
+      auth.session.user.role === 'ADMIN' || auth.session.user.role === 'MANAGER';
 
     if (activePage === 'training') {
       return (
@@ -320,42 +442,12 @@ export default function App() {
     }
 
     if (activePage === 'orders') {
-      if (auth.session.user.role === 'ADMIN' || auth.session.user.role === 'MANAGER') {
-        return (
-          <OrdersPage
-            text={language.text}
-            accessToken={auth.session.accessToken}
-            language={language.language}
-            quantities={orderQuantities}
-            onQuantitiesChange={setOrderQuantities}
-            onSubmitOrder={(recap) => {
-              setOrderRecap(recap);
-              setLatestCreatedOrder(null);
-              setActivePage('orderRecap');
-            }}
-          />
-        );
-      }
-
-      return null;
+      return canAccessOrders ? renderOrderBuilder() : null;
     }
 
     if (activePage === 'orderRecap') {
       if (!orderRecap) {
-        return (
-          <OrdersPage
-            text={language.text}
-            accessToken={auth.session.accessToken}
-            language={language.language}
-            quantities={orderQuantities}
-            onQuantitiesChange={setOrderQuantities}
-            onSubmitOrder={(recap) => {
-              setOrderRecap(recap);
-              setLatestCreatedOrder(null);
-              setActivePage('orderRecap');
-            }}
-          />
-        );
+        return renderOrderBuilder();
       }
 
       return (
@@ -381,7 +473,7 @@ export default function App() {
     }
 
     if (activePage === 'orderHistory') {
-      if (auth.session.user.role === 'ADMIN' || auth.session.user.role === 'MANAGER') {
+      if (canAccessOrders) {
         return (
           <OrderHistoryPage
             text={language.text}
@@ -448,68 +540,24 @@ export default function App() {
             />
           ) : null}
 
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.keyboardAreaContent}
-          >
-            <ScrollView
-              ref={scrollViewRef}
-              contentContainerStyle={[
-                styles.content,
-                auth.session && styles.contentWithHeader,
-              ]}
+          {!auth.session ? (
+            renderPublicContent()
+          ) : (
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={styles.keyboardAreaContent}
             >
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{language.text.appBadge}</Text>
-            </View>
-
-            {!auth.session ? (
-              <AuthForm
-                mode={auth.mode}
-                title={
-                  auth.mode === 'login'
-                    ? language.text.auth.loginTitle
-                    : language.text.auth.registerTitle
-                }
-                text={language.text}
-                language={language.language}
-                email={auth.email}
-                password={auth.password}
-                name={auth.name}
-                restaurants={auth.restaurants}
-                selectedRestaurantId={auth.selectedRestaurantId}
-                rememberMe={auth.rememberMe}
-                isSubmitting={auth.isSubmitting}
-                error={auth.error}
-                onEmailChange={auth.setEmail}
-                onPasswordChange={auth.setPassword}
-                onNameChange={auth.setName}
-                onSelectRestaurant={auth.setSelectedRestaurantId}
-                onRememberToggle={() =>
-                  auth.setRememberMe((currentValue) => !currentValue)
-                }
-                onSelectLanguage={(nextLanguage) => {
-                  void language.setLanguage(nextLanguage);
-                }}
-                onSubmit={() => void auth.submitAuth(auth.mode, language.text)}
-                onToggleMode={auth.toggleMode}
-              />
-            ) : (
-              renderAuthenticatedContent()
-            )}
-            </ScrollView>
-          </KeyboardAvoidingView>
-
-          {auth.session && activePage === 'orders' ? (
-            <View style={styles.floatingScrollStack} pointerEvents="box-none">
-              <Pressable style={styles.floatingScrollButton} onPress={scrollToTop}>
-                <Text style={styles.floatingScrollButtonText}>↑</Text>
-              </Pressable>
-              <Pressable style={styles.floatingScrollButton} onPress={scrollToBottom}>
-                <Text style={styles.floatingScrollButtonText}>↓</Text>
-              </Pressable>
-            </View>
-          ) : null}
+              <ScrollView
+                ref={scrollViewRef}
+                contentContainerStyle={[
+                  styles.content,
+                  auth.session && styles.contentWithHeader,
+                ]}
+              >
+                {renderAuthenticatedContent()}
+              </ScrollView>
+            </KeyboardAvoidingView>
+          )}
         </View>
       </SafeAreaView>
     </View>

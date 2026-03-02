@@ -3,6 +3,23 @@ import type { Language } from '../types/language';
 export const translations = {
   fr: {
     appBadge: 'MVP Gestion Restaurant',
+    landing: {
+      title: 'Pilotez votre restaurant avant le service',
+      subtitle:
+        'Une seule plateforme pour coordonner equipe, commandes fournisseurs et standards operationnels.',
+      primaryCta: 'Rejoins nous !',
+      backButton: 'Retour a la page d accueil',
+      highlights: {
+        shift: 'Brief equipe et suivi de poste en quelques secondes',
+        orders: 'Commandes produits centralisees avec recap avant validation',
+        training: 'Bibliotheque formation et documents de restaurant toujours a jour',
+      },
+      metrics: {
+        restaurants: 'Restaurants equipes',
+        files: 'Documents operationnels',
+        support: 'Support manager',
+      },
+    },
     auth: {
       loginTitle: 'Connexion equipe',
       registerTitle: 'Creer un compte employe',
@@ -20,6 +37,7 @@ export const translations = {
       pendingApprovalRequired:
         'Compte en attente de validation manager. Impossible de se connecter pour le moment.',
       rememberMe: 'Se souvenir de moi',
+      forgotPassword: 'Mot de passe oublie ?',
       loading: 'Chargement...',
       loginButton: 'Se connecter',
       registerButton: 'Creer le compte',
@@ -320,6 +338,22 @@ export const translations = {
   },
   zh: {
     appBadge: '餐厅管理 MVP',
+    landing: {
+      title: '在开店前，高效管理整家门店',
+      subtitle: '将员工协作、供应商下单和培训资料集中到同一个平台。',
+      primaryCta: '加入我们 ！',
+      backButton: '返回欢迎页',
+      highlights: {
+        shift: '班前分工与岗位跟进，一屏完成',
+        orders: '统一采购下单，提交前自动汇总确认',
+        training: '培训资料和店铺文件持续同步更新',
+      },
+      metrics: {
+        restaurants: '已接入门店',
+        files: '运营文档',
+        support: '经理支持',
+      },
+    },
     auth: {
       loginTitle: '员工登录',
       registerTitle: '创建员工账号',
@@ -335,6 +369,7 @@ export const translations = {
       pendingApprovalSubmitted: '账号已创建，需经理审核通过后方可首次登录。',
       pendingApprovalRequired: '账号待经理审核，暂时无法登录。',
       rememberMe: '记住我',
+      forgotPassword: '忘记密码？',
       loading: '加载中...',
       loginButton: '登录',
       registerButton: '创建账号',
