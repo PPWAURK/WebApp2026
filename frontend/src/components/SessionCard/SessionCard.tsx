@@ -29,7 +29,7 @@ import {
   fetchOrders,
   fetchTopOrderedProductsBySupplier,
   type OrderSummary,
-  type SupplierTopProducts,
+  type TopOrderedProduct,
 } from '../../services/ordersApi';
 
 type SessionCardProps = {
@@ -71,7 +71,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [latestOrder, setLatestOrder] = useState<OrderSummary | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
-  const [topProducts, setTopProducts] = useState<SupplierTopProducts[]>([]);
+  const [topProducts, setTopProducts] = useState<TopOrderedProduct[]>([]);
   const [topProductsLoading, setTopProductsLoading] = useState(false);
   const [topProductsError, setTopProductsError] = useState<string | null>(null);
   const [orderPreviewUrl, setOrderPreviewUrl] = useState<string | null>(null);
@@ -611,39 +611,40 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           <Text style={styles.subtitle}>{text.dashboard.topProductsEmpty}</Text>
         ) : null}
 
-        {topProducts.map((supplier) => {
-          const maxQuantity = Math.max(
-            ...supplier.products.map((product) => product.totalQuantity),
-            1,
-          );
+        {topProducts.length > 0 ? (
+          <View style={styles.histogramWrap}>
+            {(() => {
+              const maxQuantity = Math.max(
+                ...topProducts.map((product) => product.totalQuantity),
+                1,
+              );
 
-          return (
-            <View key={`supplier-${supplier.supplierId}`} style={styles.chartSupplierBlock}>
-              <Text style={styles.chartSupplierTitle}>{supplier.supplierName}</Text>
-
-              {supplier.products.map((product) => {
-                const ratio = Math.max(8, Math.round((product.totalQuantity / maxQuantity) * 100));
-                const productLabel =
+              return topProducts.map((product, index) => {
+                const label =
                   product.nameFr?.trim() || product.nameZh?.trim() || `${product.productId}`;
+                const ratio = Math.max(
+                  0.12,
+                  Math.min(1, product.totalQuantity / maxQuantity),
+                );
 
                 return (
-                  <View key={`supplier-${supplier.supplierId}-product-${product.productId}`}>
-                    <View style={styles.chartRowHeader}>
-                      <Text style={styles.chartRowLabel} numberOfLines={1}>
-                        {productLabel}
-                      </Text>
-                      <Text style={styles.chartRowValue}>{product.totalQuantity}</Text>
+                  <View key={`hist-${product.supplierId}-${product.productId}`} style={styles.histogramColumn}>
+                    <Text style={styles.histogramValue}>{product.totalQuantity}</Text>
+                    <View style={styles.histogramTrack}>
+                      <View style={[styles.histogramBar, { height: `${ratio * 100}%` }]} />
                     </View>
-
-                    <View style={styles.chartTrack}>
-                      <View style={[styles.chartBar, { width: `${ratio}%` }]} />
-                    </View>
+                    <Text style={styles.histogramLabel} numberOfLines={2}>
+                      {`${index + 1}. ${label}`}
+                    </Text>
+                    <Text style={styles.histogramSupplier} numberOfLines={1}>
+                      {product.supplierName}
+                    </Text>
                   </View>
                 );
-              })}
-            </View>
-          );
-        })}
+              });
+            })()}
+          </View>
+        ) : null}
       </View>
     );
   }

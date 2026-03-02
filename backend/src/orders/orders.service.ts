@@ -25,16 +25,14 @@ type CreateOrderPayload = {
   items: Array<{ productId: number; quantity: number }>;
 };
 
-type SupplierProductAggregate = {
+type TopProductAggregate = {
+  productId: number;
   supplierId: number;
   supplierName: string;
-  products: Array<{
-    productId: number;
-    nameFr: string;
-    nameZh: string;
-    totalQuantity: number;
-    orderCount: number;
-  }>;
+  nameFr: string;
+  nameZh: string;
+  totalQuantity: number;
+  orderCount: number;
 };
 
 type PdfDoc = InstanceType<typeof PDFDocument>;
@@ -453,7 +451,7 @@ export class OrdersService {
     return this.resolveOrderFilePath(orderId, actor);
   }
 
-  async getTopOrderedProductsBySupplier(actor: Actor): Promise<SupplierProductAggregate[]> {
+  async getTopOrderedProductsBySupplier(actor: Actor): Promise<TopProductAggregate[]> {
     this.ensureCanManageOrders(actor);
 
     const whereClause =
@@ -490,33 +488,28 @@ export class OrdersService {
       take: 1200,
     });
 
-    const supplierMap = new Map<
-      number,
+    const productMap = new Map<
+      string,
       {
+        productId: number;
+        supplierId: number;
         supplierName: string;
-        products: Map<
-          number,
-          {
-            nameFr: string;
-            nameZh: string;
-            totalQuantity: number;
-            orderCount: number;
-          }
-        >;
+        nameFr: string;
+        nameZh: string;
+        totalQuantity: number;
+        orderCount: number;
       }
     >();
 
     for (const item of items) {
       const supplierId = item.purchaseOrder.supplierId;
-      const supplierName = item.purchaseOrder.supplier.nom;
       const productId = Number(item.product.id);
+      const productKey = `${supplierId}:${productId}`;
 
-      const supplierEntry = supplierMap.get(supplierId) ?? {
-        supplierName,
-        products: new Map(),
-      };
-
-      const productEntry = supplierEntry.products.get(productId) ?? {
+      const productEntry = productMap.get(productKey) ?? {
+        productId,
+        supplierId,
+        supplierName: item.purchaseOrder.supplier.nom,
         nameFr: this.sanitizeLabel(this.recoverUtf8(item.product.designationFr)),
         nameZh: this.sanitizeLabel(this.recoverUtf8(item.product.nomCn)),
         totalQuantity: 0,
@@ -526,36 +519,11 @@ export class OrdersService {
       productEntry.totalQuantity += item.quantity;
       productEntry.orderCount += 1;
 
-      supplierEntry.products.set(productId, productEntry);
-      supplierMap.set(supplierId, supplierEntry);
+      productMap.set(productKey, productEntry);
     }
 
-    return Array.from(supplierMap.entries())
-      .map(([supplierId, supplierEntry]) => ({
-        supplierId,
-        supplierName: supplierEntry.supplierName,
-        products: Array.from(supplierEntry.products.entries())
-          .map(([productId, productEntry]) => ({
-            productId,
-            nameFr: productEntry.nameFr,
-            nameZh: productEntry.nameZh,
-            totalQuantity: productEntry.totalQuantity,
-            orderCount: productEntry.orderCount,
-          }))
-          .sort((left, right) => right.totalQuantity - left.totalQuantity)
-          .slice(0, 4),
-      }))
-      .sort((left, right) => {
-        const leftTotal = left.products.reduce(
-          (sum, product) => sum + product.totalQuantity,
-          0,
-        );
-        const rightTotal = right.products.reduce(
-          (sum, product) => sum + product.totalQuantity,
-          0,
-        );
-        return rightTotal - leftTotal;
-      })
+    return Array.from(productMap.values())
+      .sort((left, right) => right.totalQuantity - left.totalQuantity)
       .slice(0, 5);
   }
 

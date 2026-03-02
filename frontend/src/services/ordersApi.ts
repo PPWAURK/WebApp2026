@@ -29,16 +29,14 @@ export type OrderSummary = {
   createdAt: string;
 };
 
-export type SupplierTopProducts = {
+export type TopOrderedProduct = {
+  productId: number;
   supplierId: number;
   supplierName: string;
-  products: Array<{
-    productId: number;
-    nameFr: string;
-    nameZh: string;
-    totalQuantity: number;
-    orderCount: number;
-  }>;
+  nameFr: string;
+  nameZh: string;
+  totalQuantity: number;
+  orderCount: number;
 };
 
 export type CreatedOrderResult = {
@@ -179,7 +177,7 @@ export async function deleteOrder(token: string, orderId: number): Promise<void>
 
 export async function fetchTopOrderedProductsBySupplier(
   token: string,
-): Promise<SupplierTopProducts[]> {
+): Promise<TopOrderedProduct[]> {
   const response = await fetch(`${API_URL}/orders/dashboard/top-products`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -187,7 +185,7 @@ export async function fetchTopOrderedProductsBySupplier(
   });
 
   const data = (await response.json()) as
-    | SupplierTopProducts[]
+    | TopOrderedProduct[]
     | { message?: string | string[] };
 
   throwIfUnauthorized(response);
@@ -200,7 +198,7 @@ export async function fetchTopOrderedProductsBySupplier(
     throw new Error(message);
   }
 
-  return data as SupplierTopProducts[];
+  return data as TopOrderedProduct[];
 }
 
 export function buildOrderBonUrl(orderId: number) {
