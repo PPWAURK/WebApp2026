@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -13,6 +15,7 @@ import {
 } from 'react-native';
 import { AuthForm } from './src/components/AuthForm';
 import { HeaderDrawer } from './src/components/HeaderDrawer';
+import { LoginSvgLoader } from './src/components/LoginSvgLoader';
 import { OrderHistoryPage } from './src/components/OrderHistoryPage';
 import { OrderRecapPage } from './src/components/OrderRecapPage';
 import { OrdersPage } from './src/components/OrdersPage';
@@ -45,6 +48,8 @@ function getTodayDateString() {
   return `${year}-${month}-${day}`;
 }
 
+const DISABLE_POST_LOGIN_REDIRECT = false;
+
 export default function App() {
   const auth = useAuth();
   const language = useLanguage();
@@ -54,6 +59,8 @@ export default function App() {
   const goToPreAuthAuth = preAuthRouter.goToAuth;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activePage, setActivePage] = useState<MenuPage>('dashboard');
+  const [displayPage, setDisplayPage] = useState<MenuPage>('dashboard');
+  const [isLoginTransitionLoading, setIsLoginTransitionLoading] = useState(false);
   const [orderRecap, setOrderRecap] = useState<OrderRecapData | null>(null);
   const [orderQuantities, setOrderQuantities] = useState<Record<number, number>>({});
   const [deliveryDate, setDeliveryDate] = useState(getTodayDateString());
@@ -70,6 +77,10 @@ export default function App() {
     bonUrl: string;
   } | null>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
+  const pageTransition = useRef(new Animated.Value(1)).current;
+  const loginLoaderOpacity = useRef(new Animated.Value(0)).current;
+  const loginLoaderScale = useRef(new Animated.Value(0.86)).current;
+  const loginLoaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') {
@@ -149,10 +160,23 @@ export default function App() {
   }, [auth]);
 
   useEffect(() => {
+    return () => {
+      if (loginLoaderTimeoutRef.current) {
+        clearTimeout(loginLoaderTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!auth.session) {
       setIsDrawerOpen(false);
       goToPreAuthLanding(true);
       setActivePage('dashboard');
+      setDisplayPage('dashboard');
+      setIsLoginTransitionLoading(false);
+      loginLoaderOpacity.setValue(0);
+      loginLoaderScale.setValue(0.86);
+      pageTransition.setValue(1);
       setOrderRecap(null);
       setOrderQuantities({});
       setDeliveryDate(getTodayDateString());
@@ -183,6 +207,127 @@ export default function App() {
       setActivePage('dashboard');
     }
   }, [activePage, auth.session, goToPreAuthLanding]);
+
+  useEffect(() => {
+    if (!auth.session || preAuthRoute !== 'auth') {
+      return;
+    }
+
+    if (loginLoaderTimeoutRef.current) {
+      clearTimeout(loginLoaderTimeoutRef.current);
+      loginLoaderTimeoutRef.current = null;
+    }
+
+    setIsLoginTransitionLoading(true);
+    loginLoaderOpacity.setValue(0);
+    loginLoaderScale.setValue(0.86);
+
+    Animated.parallel([
+      Animated.timing(loginLoaderOpacity, {
+        toValue: 1,
+        duration: 360,
+        easing: Easing.out(Easing.exp),
+        useNativeDriver: true,
+      }),
+      Animated.timing(loginLoaderScale, {
+        toValue: 1,
+        duration: 420,
+        easing: Easing.out(Easing.exp),
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    if (DISABLE_POST_LOGIN_REDIRECT) {
+      return;
+    }
+
+    loginLoaderTimeoutRef.current = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(loginLoaderOpacity, {
+          toValue: 0,
+          duration: 360,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(loginLoaderScale, {
+          toValue: 1.04,
+          duration: 360,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start(({ finished }) => {
+        if (finished) {
+          setIsLoginTransitionLoading(false);
+        }
+      });
+    }, 2000);
+  }, [
+    auth.session,
+    loginLoaderOpacity,
+    loginLoaderScale,
+    preAuthRoute,
+  ]);
+
+  useEffect(() => {
+    if (!auth.session) {
+      return;
+    }
+
+    if (activePage === displayPage) {
+      return;
+    }
+
+    pageTransition.stopAnimation();
+
+    Animated.timing(pageTransition, {
+      toValue: 0,
+      duration: 120,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (!finished) {
+        return;
+      }
+
+      setDisplayPage(activePage);
+      pageTransition.setValue(0);
+
+      Animated.timing(pageTransition, {
+        toValue: 1,
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [activePage, auth.session, displayPage, pageTransition]);
+
+  useEffect(() => {
+    if (!auth.session) {
+      return;
+    }
+
+    if (auth.session.user.role !== 'ADMIN' && auth.session.user.role !== 'MANAGER') {
+      return;
+    }
+
+    let isActive = true;
+
+    void fetchOrders(auth.session.accessToken)
+      .then((result) => {
+        if (isActive) {
+          setOrderHistory(result);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setOrderHistory([]);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [auth.session]);
 
   useEffect(() => {
     if (!auth.session || activePage !== 'orderHistory') {
@@ -396,7 +541,7 @@ export default function App() {
     );
   }
 
-  function renderAuthenticatedContent() {
+  function renderAuthenticatedContent(page: MenuPage) {
     if (!auth.session) {
       return null;
     }
@@ -404,7 +549,7 @@ export default function App() {
     const canAccessOrders =
       auth.session.user.role === 'ADMIN' || auth.session.user.role === 'MANAGER';
 
-    if (activePage === 'training') {
+    if (page === 'training') {
       return (
         <TrainingPage
           text={language.text}
@@ -414,7 +559,7 @@ export default function App() {
       );
     }
 
-    if (activePage === 'profile') {
+    if (page === 'profile') {
       return (
         <ProfilePage
           text={language.text}
@@ -437,15 +582,15 @@ export default function App() {
       );
     }
 
-    if (activePage === 'restaurantForms') {
+    if (page === 'restaurantForms') {
       return <RestaurantFormsPage text={language.text} />;
     }
 
-    if (activePage === 'orders') {
+    if (page === 'orders') {
       return canAccessOrders ? renderOrderBuilder() : null;
     }
 
-    if (activePage === 'orderRecap') {
+    if (page === 'orderRecap') {
       if (!orderRecap) {
         return renderOrderBuilder();
       }
@@ -472,11 +617,12 @@ export default function App() {
       );
     }
 
-    if (activePage === 'orderHistory') {
+    if (page === 'orderHistory') {
       if (canAccessOrders) {
         return (
           <OrderHistoryPage
             text={language.text}
+            accessToken={auth.session.accessToken}
             orders={orderHistory}
             isLoading={isLoadingOrderHistory}
             deletingOrderId={deletingOrderId}
@@ -496,7 +642,7 @@ export default function App() {
       return null;
     }
 
-    if (activePage === 'supplierManagement') {
+    if (page === 'supplierManagement') {
       if (auth.session.user.role === 'ADMIN') {
         return (
           <SupplierManagementPage
@@ -524,7 +670,7 @@ export default function App() {
       <StatusBar style="dark" />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.appFrame}>
-          {auth.session ? (
+          {auth.session && !isLoginTransitionLoading ? (
             <HeaderDrawer
               isOpen={isDrawerOpen}
               text={language.text}
@@ -542,6 +688,19 @@ export default function App() {
 
           {!auth.session ? (
             renderPublicContent()
+          ) : isLoginTransitionLoading ? (
+            <Animated.View style={[styles.loginLoaderFullscreen, { opacity: loginLoaderOpacity }]}>
+              <Animated.View
+                style={[
+                  styles.loginLoaderCard,
+                  {
+                    transform: [{ scale: loginLoaderScale }],
+                  },
+                ]}
+              >
+                <LoginSvgLoader />
+              </Animated.View>
+            </Animated.View>
           ) : (
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -554,7 +713,24 @@ export default function App() {
                   auth.session && styles.contentWithHeader,
                 ]}
               >
-                {renderAuthenticatedContent()}
+                <Animated.View
+                  style={[
+                    styles.pageTransitionLayer,
+                    {
+                      opacity: pageTransition,
+                      transform: [
+                        {
+                          translateY: pageTransition.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [10, 0],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  {renderAuthenticatedContent(displayPage)}
+                </Animated.View>
               </ScrollView>
             </KeyboardAvoidingView>
           )}

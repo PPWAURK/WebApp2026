@@ -149,6 +149,43 @@ export class OrdersController {
     );
   }
 
+  @ApiOperation({ summary: 'Order history analytics by supplier and period' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('history/analytics')
+  historyAnalytics(
+    @Req() req: AuthenticatedRequest,
+    @Query('supplierId') supplierIdRaw?: string,
+    @Query('period') periodRaw?: string,
+  ) {
+    const user = req.user;
+
+    if (!user) {
+      throw new ForbiddenException('Unauthenticated request');
+    }
+
+    if (supplierIdRaw && !/^\d+$/.test(supplierIdRaw)) {
+      throw new BadRequestException('supplierId must be a positive integer');
+    }
+
+    const supplierId = supplierIdRaw ? Number(supplierIdRaw) : undefined;
+    if (supplierId !== undefined && supplierId <= 0) {
+      throw new BadRequestException('supplierId must be a positive integer');
+    }
+
+    return this.ordersService.getOrderHistoryAnalytics(
+      {
+        id: user.id,
+        role: user.role,
+        restaurantId: user.restaurantId,
+      },
+      {
+        supplierId,
+        period: periodRaw,
+      },
+    );
+  }
+
   @ApiOperation({ summary: 'Download order PDF by order id' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

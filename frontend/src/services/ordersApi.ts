@@ -46,6 +46,51 @@ export type CreatedOrderResult = {
   bonUrl: string;
 };
 
+export type OrderHistoryAnalytics = {
+  period: '7d' | '30d' | 'this_month' | 'last_month' | 'all';
+  current: {
+    orders: number;
+    totalItems: number;
+    totalAmount: number;
+    uniqueProducts: number;
+    avgOrderAmount: number;
+    avgOrderItems: number;
+  };
+  previous: {
+    orders: number;
+    totalItems: number;
+    totalAmount: number;
+    uniqueProducts: number;
+    avgOrderAmount: number;
+    avgOrderItems: number;
+  };
+  delta: {
+    items: number;
+    amount: number;
+    orders: number;
+    uniqueProducts: number;
+    itemsRate: number | null;
+    amountRate: number | null;
+  };
+  topProducts: Array<{
+    productId: number;
+    totalQuantity: number;
+    nameFr: string;
+    nameZh: string;
+  }>;
+  busiestDay: {
+    date: string;
+    totalItems: number;
+    orders: number;
+  } | null;
+  monthlyTrend: Array<{
+    month: string;
+    orders: number;
+    totalItems: number;
+    totalAmount: number;
+  }>;
+};
+
 function toNumber(value: unknown, fallback = 0) {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
@@ -256,4 +301,48 @@ export async function fetchTopOrderedProductMonths(
 
 export function buildOrderBonUrl(orderId: number) {
   return `${API_URL}/orders/${orderId}/commande`;
+}
+
+export async function fetchOrderHistoryAnalytics(
+  token: string,
+  options?: {
+    supplierId?: number;
+    period?: '7d' | '30d' | 'this_month' | 'last_month' | 'all';
+  },
+): Promise<OrderHistoryAnalytics> {
+  const query = new URLSearchParams();
+  if (
+    options?.supplierId !== undefined &&
+    Number.isInteger(options.supplierId) &&
+    options.supplierId > 0
+  ) {
+    query.set('supplierId', String(options.supplierId));
+  }
+  if (options?.period) {
+    query.set('period', options.period);
+  }
+
+  const queryString = query.toString();
+  const response = await fetch(
+    `${API_URL}/orders/history/analytics${queryString ? `?${queryString}` : ''}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const data = (await response.json()) as OrderHistoryAnalytics | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'ORDER_HISTORY_ANALYTICS_FAILED';
+    throw new Error(message);
+  }
+
+  return data as OrderHistoryAnalytics;
 }

@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import {
   createWriteStream,
@@ -34,6 +35,27 @@ type TopProductAggregate = {
   nameZh: string;
   totalQuantity: number;
   orderCount: number;
+};
+
+type HistoryAnalyticsPeriod =
+  | '7d'
+  | '30d'
+  | 'this_month'
+  | 'last_month'
+  | 'all';
+
+type HistoryAnalyticsQuery = {
+  supplierId?: number;
+  period?: string;
+};
+
+type HistoryAnalyticsTotals = {
+  orders: number;
+  totalItems: number;
+  totalAmount: number;
+  uniqueProducts: number;
+  avgOrderAmount: number;
+  avgOrderItems: number;
 };
 
 type PdfDoc = InstanceType<typeof PDFDocument>;
@@ -660,6 +682,191 @@ export class OrdersService {
     ).sort((left, right) => right.localeCompare(left));
   }
 
+  async getOrderHistoryAnalytics(actor: Actor, query: HistoryAnalyticsQuery) {
+    this.ensureCanManageOrders(actor);
+
+    const supplierId = query.supplierId;
+    if (supplierId !== undefined) {
+      const supplier = await this.prisma.fournisseur.findUnique({
+        where: { id: supplierId },
+        select: { id: true },
+      });
+
+      if (!supplier) {
+        throw new NotFoundException('Supplier not found');
+      }
+    }
+
+    const period = this.normalizeHistoryPeriod(query.period);
+    const { start, end, previousStart, previousEnd } = this.resolveHistoryPeriodRange(period);
+
+    const currentWhere = this.buildOrderAnalyticsWhere(actor, supplierId, start, end);
+    const previousWhere = this.buildOrderAnalyticsWhere(
+      actor,
+      supplierId,
+      previousStart,
+      previousEnd,
+    );
+
+    const [currentOrders, previousOrders, currentItems, previousItems, trendOrders] =
+      await Promise.all([
+        this.prisma.purchaseOrder.findMany({
+          where: currentWhere,
+          select: {
+            id: true,
+            deliveryDate: true,
+            totalItems: true,
+            totalAmount: true,
+          },
+          orderBy: {
+            deliveryDate: 'desc',
+          },
+        }),
+        this.prisma.purchaseOrder.findMany({
+          where: previousWhere,
+          select: {
+            id: true,
+            deliveryDate: true,
+            totalItems: true,
+            totalAmount: true,
+          },
+        }),
+        this.prisma.purchaseOrderItem.findMany({
+          where: {
+            purchaseOrder: currentWhere,
+          },
+          select: {
+            productId: true,
+            quantity: true,
+            product: {
+              select: {
+                designationFr: true,
+                nomCn: true,
+              },
+            },
+          },
+        }),
+        this.prisma.purchaseOrderItem.findMany({
+          where: {
+            purchaseOrder: previousWhere,
+          },
+          select: {
+            productId: true,
+            quantity: true,
+          },
+        }),
+        this.prisma.purchaseOrder.findMany({
+          where: this.buildOrderAnalyticsWhere(
+            actor,
+            supplierId,
+            new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 5, 1)),
+            undefined,
+          ),
+          select: {
+            deliveryDate: true,
+            totalItems: true,
+            totalAmount: true,
+          },
+          orderBy: {
+            deliveryDate: 'asc',
+          },
+        }),
+      ]);
+
+    const currentTotals = this.computeHistoryTotals(currentOrders, currentItems);
+    const previousTotals = this.computeHistoryTotals(previousOrders, previousItems);
+
+    const deltaItems = currentTotals.totalItems - previousTotals.totalItems;
+    const deltaAmount = currentTotals.totalAmount - previousTotals.totalAmount;
+    const deltaOrders = currentTotals.orders - previousTotals.orders;
+    const deltaUniqueProducts =
+      currentTotals.uniqueProducts - previousTotals.uniqueProducts;
+
+    const topProductsMap = new Map<
+      number,
+      { productId: number; totalQuantity: number; nameFr: string; nameZh: string }
+    >();
+
+    for (const item of currentItems) {
+      const productId = Number(item.productId);
+      const entry = topProductsMap.get(productId) ?? {
+        productId,
+        totalQuantity: 0,
+        nameFr: this.sanitizeLabel(this.recoverUtf8(item.product.designationFr)),
+        nameZh: this.sanitizeLabel(this.recoverUtf8(item.product.nomCn)),
+      };
+
+      entry.totalQuantity += item.quantity;
+      topProductsMap.set(productId, entry);
+    }
+
+    const topProducts = Array.from(topProductsMap.values())
+      .sort((left, right) => right.totalQuantity - left.totalQuantity)
+      .slice(0, 5);
+
+    const dayMap = new Map<string, { date: string; totalItems: number; orders: number }>();
+    for (const order of currentOrders) {
+      const date = order.deliveryDate.toISOString().slice(0, 10);
+      const entry = dayMap.get(date) ?? { date, totalItems: 0, orders: 0 };
+      entry.totalItems += order.totalItems;
+      entry.orders += 1;
+      dayMap.set(date, entry);
+    }
+
+    const busiestDay = Array.from(dayMap.values()).sort((left, right) => {
+      if (left.totalItems !== right.totalItems) {
+        return right.totalItems - left.totalItems;
+      }
+
+      return right.orders - left.orders;
+    })[0] ?? null;
+
+    const trendMap = new Map<
+      string,
+      { month: string; orders: number; totalItems: number; totalAmount: number }
+    >();
+    for (const order of trendOrders) {
+      const month = order.deliveryDate.toISOString().slice(0, 7);
+      const entry = trendMap.get(month) ?? {
+        month,
+        orders: 0,
+        totalItems: 0,
+        totalAmount: 0,
+      };
+      entry.orders += 1;
+      entry.totalItems += order.totalItems;
+      entry.totalAmount += Number(order.totalAmount);
+      trendMap.set(month, entry);
+    }
+
+    const monthlyTrend = Array.from(trendMap.values())
+      .sort((left, right) => left.month.localeCompare(right.month))
+      .slice(-6);
+
+    return {
+      period,
+      current: currentTotals,
+      previous: previousTotals,
+      delta: {
+        items: deltaItems,
+        amount: Number(deltaAmount.toFixed(2)),
+        orders: deltaOrders,
+        uniqueProducts: deltaUniqueProducts,
+        itemsRate:
+          previousTotals.totalItems > 0
+            ? Number(((deltaItems / previousTotals.totalItems) * 100).toFixed(1))
+            : null,
+        amountRate:
+          previousTotals.totalAmount > 0
+            ? Number(((deltaAmount / previousTotals.totalAmount) * 100).toFixed(1))
+            : null,
+      },
+      topProducts,
+      busiestDay,
+      monthlyTrend,
+    };
+  }
+
   async deleteOrder(orderId: number, actor: Actor) {
     this.ensureCanManageOrders(actor);
 
@@ -696,6 +903,146 @@ export class OrdersService {
     return {
       success: true,
       id: orderId,
+    };
+  }
+
+  private normalizeHistoryPeriod(raw?: string): HistoryAnalyticsPeriod {
+    if (!raw) {
+      return 'this_month';
+    }
+
+    if (
+      raw === '7d' ||
+      raw === '30d' ||
+      raw === 'this_month' ||
+      raw === 'last_month' ||
+      raw === 'all'
+    ) {
+      return raw;
+    }
+
+    throw new BadRequestException('period must be one of 7d, 30d, this_month, last_month, all');
+  }
+
+  private resolveHistoryPeriodRange(period: HistoryAnalyticsPeriod) {
+    const now = new Date();
+    const todayUtc = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+    );
+
+    if (period === '7d') {
+      const start = new Date(todayUtc);
+      start.setUTCDate(start.getUTCDate() - 6);
+
+      const previousEnd = new Date(start);
+      const previousStart = new Date(start);
+      previousStart.setUTCDate(previousStart.getUTCDate() - 7);
+
+      return {
+        start,
+        end: undefined,
+        previousStart,
+        previousEnd,
+      };
+    }
+
+    if (period === '30d') {
+      const start = new Date(todayUtc);
+      start.setUTCDate(start.getUTCDate() - 29);
+
+      const previousEnd = new Date(start);
+      const previousStart = new Date(start);
+      previousStart.setUTCDate(previousStart.getUTCDate() - 30);
+
+      return {
+        start,
+        end: undefined,
+        previousStart,
+        previousEnd,
+      };
+    }
+
+    if (period === 'this_month') {
+      const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      const previousStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+
+      return {
+        start,
+        end: undefined,
+        previousStart,
+        previousEnd: start,
+      };
+    }
+
+    if (period === 'last_month') {
+      const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+      const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      const previousStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, 1));
+
+      return {
+        start,
+        end,
+        previousStart,
+        previousEnd: start,
+      };
+    }
+
+    return {
+      start: undefined,
+      end: undefined,
+      previousStart: undefined,
+      previousEnd: undefined,
+    };
+  }
+
+  private buildOrderAnalyticsWhere(
+    actor: Actor,
+    supplierId?: number,
+    start?: Date,
+    end?: Date,
+  ): Prisma.PurchaseOrderWhereInput {
+    const where: Prisma.PurchaseOrderWhereInput = {};
+
+    if (actor.role !== 'ADMIN') {
+      where.restaurantId = actor.restaurantId ?? -1;
+    } else if (actor.restaurantId) {
+      where.restaurantId = actor.restaurantId;
+    }
+
+    if (supplierId !== undefined) {
+      where.supplierId = supplierId;
+    }
+
+    if (start || end) {
+      where.deliveryDate = {
+        ...(start ? { gte: start } : {}),
+        ...(end ? { lt: end } : {}),
+      };
+    }
+
+    return where;
+  }
+
+  private computeHistoryTotals(
+    orders: Array<{ totalItems: number; totalAmount: Prisma.Decimal | number }>,
+    items: Array<{ productId: bigint | number }>,
+  ): HistoryAnalyticsTotals {
+    const ordersCount = orders.length;
+    const totalItems = orders.reduce((sum, order) => sum + Number(order.totalItems), 0);
+    const totalAmount = orders.reduce(
+      (sum, order) => sum + Number(order.totalAmount),
+      0,
+    );
+    const uniqueProducts = new Set(items.map((item) => Number(item.productId))).size;
+
+    return {
+      orders: ordersCount,
+      totalItems,
+      totalAmount: Number(totalAmount.toFixed(2)),
+      uniqueProducts,
+      avgOrderAmount:
+        ordersCount > 0 ? Number((totalAmount / ordersCount).toFixed(2)) : 0,
+      avgOrderItems: ordersCount > 0 ? Number((totalItems / ordersCount).toFixed(1)) : 0,
     };
   }
 

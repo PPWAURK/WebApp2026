@@ -1,17 +1,22 @@
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
-  listBlock: {
-    gap: 8,
-    marginTop: 4,
-  },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: 'rgba(255,255,255,0.94)',
     borderRadius: 22,
     padding: 18,
     borderWidth: 1,
     borderColor: '#e8c3c4',
     gap: 12,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  headerTextWrap: {
+    flex: 1,
+    gap: 4,
   },
   title: {
     color: '#7a181d',
@@ -24,10 +29,200 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_400Regular',
     fontSize: 13,
   },
-  docEmpty: {
-    color: '#a06a6f',
+  refreshButton: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#d39a9d',
+    backgroundColor: '#fff9f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  refreshButtonText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  tabsWrap: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingRight: 6,
+  },
+  tabChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#dfb0b2',
+    backgroundColor: '#fffafa',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  tabChipActive: {
+    borderColor: '#b75d62',
+    backgroundColor: '#f8e2e4',
+  },
+  tabChipText: {
+    color: '#8d5458',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  tabChipTextActive: {
+    color: '#7a181d',
+  },
+  filtersRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingRight: 6,
+  },
+  filterChip: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e3bcbf',
+    backgroundColor: '#fffafb',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  filterChipActive: {
+    borderColor: '#ba5960',
+    backgroundColor: '#f7dfe1',
+  },
+  filterChipText: {
+    color: '#94595d',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  filterChipTextActive: {
+    color: '#7f1b21',
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#e3c6c8',
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    color: '#7f1b21',
     fontFamily: 'Manrope_400Regular',
     fontSize: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  kpiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  kpiCard: {
+    minWidth: 130,
+    flex: 1,
+    borderRadius: 12,
+    backgroundColor: '#fff8f8',
+    borderWidth: 1,
+    borderColor: '#ead1d3',
+    padding: 10,
+    gap: 4,
+  },
+  kpiLabel: {
+    color: '#8f5f62',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  kpiValue: {
+    color: '#7a181d',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 18,
+  },
+  comparisonCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e7c8cb',
+    backgroundColor: '#fff6f7',
+    padding: 10,
+    gap: 6,
+  },
+  comparisonTitle: {
+    color: '#7a181d',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  comparisonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  comparisonLabel: {
+    color: '#8f5f62',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  comparisonValue: {
+    color: '#7a2328',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  comparisonTrack: {
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: '#f2dfe1',
+    overflow: 'hidden',
+  },
+  comparisonBarCurrent: {
+    height: '100%',
+    minWidth: 6,
+    backgroundColor: '#c83d45',
+  },
+  comparisonBarPrevious: {
+    height: '100%',
+    minWidth: 6,
+    backgroundColor: '#d8a4a7',
+  },
+  comparisonDelta: {
+    color: '#8d5458',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  insightsCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ecd4d6',
+    backgroundColor: '#ffffff',
+    padding: 10,
+    gap: 4,
+  },
+  insightsTitle: {
+    color: '#7a181d',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  insightLine: {
+    color: '#8f5f62',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+  },
+  listBlock: {
+    gap: 8,
+    marginTop: 4,
+  },
+  dateGroup: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#efdfe0',
+    backgroundColor: '#ffffff',
+    padding: 8,
+    gap: 8,
+  },
+  dateHeaderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateTitle: {
+    color: '#8f5f62',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  dateSummary: {
+    color: '#9a686c',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
   },
   docItem: {
     borderRadius: 10,
@@ -48,16 +243,57 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_400Regular',
     fontSize: 12,
   },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  actionButtonHalf: {
+    flex: 1,
+  },
   secondaryButton: {
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#d39a9d',
     borderRadius: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   secondaryButtonText: {
     color: '#7f1b21',
     fontFamily: 'Manrope_700Bold',
-    fontSize: 14,
+    fontSize: 13,
+  },
+  trendCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e9d0d2',
+    backgroundColor: '#fffbfb',
+    padding: 10,
+    gap: 6,
+  },
+  trendTitle: {
+    color: '#7a181d',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  trendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  trendMonth: {
+    color: '#8f5f62',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  trendMeta: {
+    color: '#7a2328',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  docEmpty: {
+    color: '#a06a6f',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 13,
   },
 });

@@ -25,6 +25,32 @@ export const styles = StyleSheet.create({
   contentWithHeader: {
     paddingTop: 12,
   },
+  pageTransitionLayer: {
+    flex: 1,
+  },
+  loginLoaderFullscreen: {
+    flex: 1,
+    backgroundColor: '#b51e24',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loginLoaderCard: {
+    width: 620,
+    maxWidth: '96%',
+    borderRadius: 34,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 18,
+    paddingVertical: 28,
+    paddingHorizontal: 24,
+  },
+  loginLoaderText: {
+    color: '#f2e0cb',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 16,
+  },
   loaderPage: {
     flex: 1,
     justifyContent: 'center',

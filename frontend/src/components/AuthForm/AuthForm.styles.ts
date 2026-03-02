@@ -17,7 +17,7 @@ export const styles = StyleSheet.create({
     borderColor: '#e8c3c4',
     gap: 10,
     alignSelf: 'center',
-    height:'65%',
+    height:'68%',
   },
   logo: {
     width: '100%',
