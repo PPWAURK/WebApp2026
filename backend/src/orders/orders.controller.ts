@@ -88,6 +88,7 @@ export class OrdersController {
   topOrderedProducts(
     @Req() req: AuthenticatedRequest,
     @Query('supplierId') supplierIdRaw?: string,
+    @Query('month') monthRaw?: string,
   ) {
     const user = req.user;
 
@@ -104,11 +105,48 @@ export class OrdersController {
       throw new BadRequestException('supplierId must be a positive integer');
     }
 
+    if (monthRaw && !/^\d{4}-\d{2}$/.test(monthRaw)) {
+      throw new BadRequestException('month must match YYYY-MM');
+    }
+
     return this.ordersService.getTopOrderedProductsBySupplier({
       id: user.id,
       role: user.role,
       restaurantId: user.restaurantId,
-    }, supplierId);
+    }, supplierId, monthRaw);
+  }
+
+  @ApiOperation({ summary: 'List available months for top-products chart' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('dashboard/top-product-months')
+  topOrderedProductMonths(
+    @Req() req: AuthenticatedRequest,
+    @Query('supplierId') supplierIdRaw?: string,
+  ) {
+    const user = req.user;
+
+    if (!user) {
+      throw new ForbiddenException('Unauthenticated request');
+    }
+
+    if (supplierIdRaw && !/^\d+$/.test(supplierIdRaw)) {
+      throw new BadRequestException('supplierId must be a positive integer');
+    }
+
+    const supplierId = supplierIdRaw ? Number(supplierIdRaw) : undefined;
+    if (supplierId !== undefined && supplierId <= 0) {
+      throw new BadRequestException('supplierId must be a positive integer');
+    }
+
+    return this.ordersService.getTopOrderedProductMonths(
+      {
+        id: user.id,
+        role: user.role,
+        restaurantId: user.restaurantId,
+      },
+      supplierId,
+    );
   }
 
   @ApiOperation({ summary: 'Download order PDF by order id' })

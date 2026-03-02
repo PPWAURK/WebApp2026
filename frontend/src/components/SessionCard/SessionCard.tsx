@@ -27,6 +27,7 @@ import {
 import {
   buildOrderBonUrl,
   fetchOrders,
+  fetchTopOrderedProductMonths,
   fetchTopOrderedProductsBySupplier,
   type OrderSummary,
   type TopOrderedProduct,
@@ -77,6 +78,8 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [topProductsError, setTopProductsError] = useState<string | null>(null);
   const [chartSuppliers, setChartSuppliers] = useState<SupplierItem[]>([]);
   const [selectedChartSupplierId, setSelectedChartSupplierId] = useState<number | null>(null);
+  const [chartMonths, setChartMonths] = useState<string[]>([]);
+  const [selectedChartMonth, setSelectedChartMonth] = useState<string | null>(null);
   const [orderPreviewUrl, setOrderPreviewUrl] = useState<string | null>(null);
   const [orderPreviewLoading, setOrderPreviewLoading] = useState(false);
   const [isOrderPreviewOpen, setIsOrderPreviewOpen] = useState(false);
@@ -207,6 +210,54 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     }
 
     if (!selectedChartSupplierId) {
+      setChartMonths([]);
+      setSelectedChartMonth(null);
+      return;
+    }
+
+    let isActive = true;
+
+    void fetchTopOrderedProductMonths(accessToken, selectedChartSupplierId)
+      .then((months) => {
+        if (!isActive) {
+          return;
+        }
+
+        setChartMonths(months);
+        setSelectedChartMonth((current) => {
+          if (current && months.includes(current)) {
+            return current;
+          }
+          return months[0] ?? null;
+        });
+      })
+      .catch(() => {
+        if (!isActive) {
+          return;
+        }
+
+        setChartMonths([]);
+        setSelectedChartMonth(null);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accessToken, isManager, selectedChartSupplierId]);
+
+  useEffect(() => {
+    if (!isManager) {
+      return;
+    }
+
+    if (!selectedChartSupplierId) {
+      setTopProducts([]);
+      setTopProductsError(null);
+      setTopProductsLoading(false);
+      return;
+    }
+
+    if (!selectedChartMonth) {
       setTopProducts([]);
       setTopProductsError(null);
       setTopProductsLoading(false);
@@ -217,7 +268,11 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     setTopProductsLoading(true);
     setTopProductsError(null);
 
-    void fetchTopOrderedProductsBySupplier(accessToken, selectedChartSupplierId)
+    void fetchTopOrderedProductsBySupplier(
+      accessToken,
+      selectedChartSupplierId,
+      selectedChartMonth,
+    )
       .then((result) => {
         if (!isActive) {
           return;
@@ -243,6 +298,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   }, [
     accessToken,
     isManager,
+    selectedChartMonth,
     selectedChartSupplierId,
     text.dashboard.topProductsLoadError,
   ]);
@@ -682,6 +738,34 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           <Text style={styles.subtitle}>{text.dashboard.topProductsEmpty}</Text>
         )}
 
+        {chartMonths.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chartSupplierTabs}
+          >
+            {chartMonths.map((month) => {
+              const isActive = month === selectedChartMonth;
+              return (
+                <Pressable
+                  key={`chart-month-${month}`}
+                  style={[styles.chartSupplierChip, isActive && styles.chartSupplierChipActive]}
+                  onPress={() => setSelectedChartMonth(month)}
+                >
+                  <Text
+                    style={[
+                      styles.chartSupplierChipText,
+                      isActive && styles.chartSupplierChipTextActive,
+                    ]}
+                  >
+                    {month}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : null}
+
         {topProductsLoading ? (
           <Text style={styles.subtitle}>{text.adminTraining.loading}</Text>
         ) : null}
@@ -706,7 +790,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
               );
               const yTicks = [0, 0.25, 0.5, 0.75, 1];
               const axisLeft = 34;
-              const axisTop = 14;
+              const axisTop = 34;
               const plotHeight = 176;
               const axisBottom = axisTop + plotHeight;
               const pointGap = 96;
@@ -771,11 +855,8 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                         <Text style={[styles.lineChartValue, { left: x - 18, top: y - 24 }]}>
                           {product.totalQuantity}
                         </Text>
-                        <Text style={[styles.lineChartMonthLabel, { left: x - 30, top: axisBottom + 8 }]}> 
-                          {product.month}
-                        </Text>
                         <Text
-                          style={[styles.lineChartProductLabel, { left: x - 40, top: axisBottom + 24 }]}
+                          style={[styles.lineChartProductLabel, { left: x - 40, top: axisBottom + 10 }]}
                           numberOfLines={2}
                         >
                           {label}

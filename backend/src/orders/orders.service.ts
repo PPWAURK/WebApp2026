@@ -455,6 +455,7 @@ export class OrdersService {
   async getTopOrderedProductsBySupplier(
     actor: Actor,
     supplierId?: number,
+    month?: string,
   ): Promise<TopProductAggregate[]> {
     this.ensureCanManageOrders(actor);
 
@@ -469,23 +470,39 @@ export class OrdersService {
       }
     }
 
-    const baseWhereClause =
-      actor.role === 'ADMIN'
-        ? actor.restaurantId
-          ? { purchaseOrder: { restaurantId: actor.restaurantId } }
-          : undefined
-        : { purchaseOrder: { restaurantId: actor.restaurantId ?? -1 } };
+    const purchaseOrderWhere: {
+      restaurantId?: number;
+      supplierId?: number;
+      deliveryDate?: {
+        gte: Date;
+        lt: Date;
+      };
+    } = {};
+
+    if (actor.role !== 'ADMIN') {
+      purchaseOrderWhere.restaurantId = actor.restaurantId ?? -1;
+    } else if (actor.restaurantId) {
+      purchaseOrderWhere.restaurantId = actor.restaurantId;
+    }
+
+    if (supplierId !== undefined) {
+      purchaseOrderWhere.supplierId = supplierId;
+    }
+
+    if (month) {
+      const { start, end } = this.parseMonthRange(month);
+      purchaseOrderWhere.deliveryDate = {
+        gte: start,
+        lt: end,
+      };
+    }
 
     const whereClause =
-      supplierId === undefined
-        ? baseWhereClause
-        : {
-            ...(baseWhereClause ?? {}),
-            purchaseOrder: {
-              ...(baseWhereClause?.purchaseOrder ?? {}),
-              supplierId,
-            },
-          };
+      Object.keys(purchaseOrderWhere).length > 0
+        ? {
+            purchaseOrder: purchaseOrderWhere,
+          }
+        : undefined;
 
     const items = await this.prisma.purchaseOrderItem.findMany({
       where: whereClause,
@@ -514,6 +531,36 @@ export class OrdersService {
       },
       take: 2400,
     });
+
+    if (month) {
+      const productMap = new Map<string, TopProductAggregate>();
+
+      for (const item of items) {
+        const itemSupplierId = item.purchaseOrder.supplierId;
+        const productId = Number(item.product.id);
+        const productKey = `${itemSupplierId}:${productId}`;
+
+        const productEntry = productMap.get(productKey) ?? {
+          productId,
+          supplierId: itemSupplierId,
+          supplierName: item.purchaseOrder.supplier.nom,
+          month,
+          nameFr: this.sanitizeLabel(this.recoverUtf8(item.product.designationFr)),
+          nameZh: this.sanitizeLabel(this.recoverUtf8(item.product.nomCn)),
+          totalQuantity: 0,
+          orderCount: 0,
+        };
+
+        productEntry.totalQuantity += item.quantity;
+        productEntry.orderCount += 1;
+
+        productMap.set(productKey, productEntry);
+      }
+
+      return Array.from(productMap.values())
+        .sort((left, right) => right.totalQuantity - left.totalQuantity)
+        .slice(0, 5);
+    }
 
     const productTotals = new Map<number, number>();
 
@@ -566,6 +613,51 @@ export class OrdersService {
 
       return right.totalQuantity - left.totalQuantity;
     });
+  }
+
+  async getTopOrderedProductMonths(actor: Actor, supplierId?: number): Promise<string[]> {
+    this.ensureCanManageOrders(actor);
+
+    if (supplierId !== undefined) {
+      const supplier = await this.prisma.fournisseur.findUnique({
+        where: { id: supplierId },
+        select: { id: true },
+      });
+
+      if (!supplier) {
+        throw new NotFoundException('Supplier not found');
+      }
+    }
+
+    const whereClause =
+      actor.role === 'ADMIN'
+        ? actor.restaurantId
+          ? {
+              restaurantId: actor.restaurantId,
+              ...(supplierId !== undefined ? { supplierId } : {}),
+            }
+          : supplierId !== undefined
+            ? { supplierId }
+            : undefined
+        : {
+            restaurantId: actor.restaurantId ?? -1,
+            ...(supplierId !== undefined ? { supplierId } : {}),
+          };
+
+    const orders = await this.prisma.purchaseOrder.findMany({
+      where: whereClause,
+      select: {
+        deliveryDate: true,
+      },
+      orderBy: {
+        deliveryDate: 'desc',
+      },
+      take: 2400,
+    });
+
+    return Array.from(
+      new Set(orders.map((order) => order.deliveryDate.toISOString().slice(0, 7))),
+    ).sort((left, right) => right.localeCompare(left));
   }
 
   async deleteOrder(orderId: number, actor: Actor) {
@@ -624,6 +716,25 @@ export class OrdersService {
     }
 
     return parsed;
+  }
+
+  private parseMonthRange(raw: string) {
+    if (!/^\d{4}-\d{2}$/.test(raw)) {
+      throw new BadRequestException('month must match YYYY-MM');
+    }
+
+    const [yearRaw, monthRaw] = raw.split('-');
+    const year = Number(yearRaw);
+    const month = Number(monthRaw);
+
+    if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+      throw new BadRequestException('month must be valid');
+    }
+
+    const start = new Date(Date.UTC(year, month - 1, 1));
+    const end = new Date(Date.UTC(year, month, 1));
+
+    return { start, end };
   }
 
   private buildOrderNumber(orderId: number, createdAt: Date) {

@@ -223,14 +223,6 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 10,
   },
-  lineChartMonthLabel: {
-    position: 'absolute',
-    width: 60,
-    textAlign: 'center',
-    color: '#8d5458',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 10,
-  },
   lineChartProductLabel: {
     position: 'absolute',
     width: 80,

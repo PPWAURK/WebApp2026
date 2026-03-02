@@ -179,17 +179,25 @@ export async function deleteOrder(token: string, orderId: number): Promise<void>
 export async function fetchTopOrderedProductsBySupplier(
   token: string,
   supplierId?: number,
+  month?: string,
 ): Promise<TopOrderedProduct[]> {
-  const query =
-    typeof supplierId === 'number' && Number.isInteger(supplierId) && supplierId > 0
-      ? `?supplierId=${supplierId}`
-      : '';
+  const query = new URLSearchParams();
+  if (typeof supplierId === 'number' && Number.isInteger(supplierId) && supplierId > 0) {
+    query.set('supplierId', String(supplierId));
+  }
+  if (typeof month === 'string' && /^\d{4}-\d{2}$/.test(month)) {
+    query.set('month', month);
+  }
+  const queryString = query.toString();
 
-  const response = await fetch(`${API_URL}/orders/dashboard/top-products${query}`, {
+  const response = await fetch(
+    `${API_URL}/orders/dashboard/top-products${queryString ? `?${queryString}` : ''}`,
+    {
     headers: {
       Authorization: `Bearer ${token}`,
     },
-  });
+    },
+  );
 
   const data = (await response.json()) as
     | TopOrderedProduct[]
@@ -206,6 +214,44 @@ export async function fetchTopOrderedProductsBySupplier(
   }
 
   return data as TopOrderedProduct[];
+}
+
+export async function fetchTopOrderedProductMonths(
+  token: string,
+  supplierId?: number,
+): Promise<string[]> {
+  const query = new URLSearchParams();
+  if (typeof supplierId === 'number' && Number.isInteger(supplierId) && supplierId > 0) {
+    query.set('supplierId', String(supplierId));
+  }
+
+  const queryString = query.toString();
+  const response = await fetch(
+    `${API_URL}/orders/dashboard/top-product-months${queryString ? `?${queryString}` : ''}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const data = (await response.json()) as unknown;
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to load top ordered months';
+    throw new Error(message);
+  }
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.filter((value): value is string => typeof value === 'string');
 }
 
 export function buildOrderBonUrl(orderId: number) {
