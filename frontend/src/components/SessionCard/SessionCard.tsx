@@ -15,12 +15,12 @@ import { AdminTrainingAccessPanel } from '../AdminTrainingAccessPanel';
 import { AdminUploadPanel } from '../AdminUploadPanel';
 import type { AppText } from '../../locales/translations';
 import { styles } from './SessionCard.styles';
-import type { User } from '../../types/auth';
+import type { EmployeeLevel, User } from '../../types/auth';
 import {
   approveUserAccount,
-  confirmUserProbation,
   deleteUserAccount,
   fetchTrainingAccessUsers,
+  updateUserLevel,
   type TrainingAccessUser,
 } from '../../services/usersApi';
 import { buildOrderBonUrl, fetchOrders, type OrderSummary } from '../../services/ordersApi';
@@ -31,6 +31,20 @@ type SessionCardProps = {
   text: AppText;
   onLogout: () => void;
 };
+
+const EMPLOYEE_LEVELS: EmployeeLevel[] = [
+  'L0_PROBATION',
+  'L1_PARTNER',
+  'L2_PARTNER',
+  'L3_PARTNER',
+  'L4_EXCELLENT',
+  'L5_PAM',
+  'L5_AM',
+  'L6_PM',
+  'L6_MA',
+  'L7_PDI',
+  'L7_D',
+];
 
 export function SessionCard({ user, accessToken, text, onLogout }: SessionCardProps) {
   const roleLabel = text.dashboard.roleValues[user.role];
@@ -43,8 +57,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [accountSearch, setAccountSearch] = useState('');
   const [levelSearch, setLevelSearch] = useState('');
   const [isApprovingUserId, setIsApprovingUserId] = useState<number | null>(null);
-  const [isConfirmingUserId, setIsConfirmingUserId] = useState<number | null>(null);
+  const [isUpdatingLevelUserId, setIsUpdatingLevelUserId] = useState<number | null>(null);
   const [isDeletingUserId, setIsDeletingUserId] = useState<number | null>(null);
+  const [levelEditorUser, setLevelEditorUser] = useState<TrainingAccessUser | null>(null);
 
   const [latestOrder, setLatestOrder] = useState<OrderSummary | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
@@ -75,7 +90,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           return;
         }
 
-        setUsers(result.filter((entry) => entry.role === 'EMPLOYEE'));
+        setUsers(
+          result.filter((entry) => entry.role !== 'ADMIN' && entry.id !== user.id),
+        );
       })
       .catch(() => {
         if (isActive) {
@@ -92,7 +109,14 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     return () => {
       isActive = false;
     };
-  }, [accessToken, isManager, text.dashboard.managerRestaurantMissing, text.dashboard.quickLoadUsersError, user.restaurant?.id]);
+  }, [
+    accessToken,
+    isManager,
+    text.dashboard.managerRestaurantMissing,
+    text.dashboard.quickLoadUsersError,
+    user.id,
+    user.restaurant?.id,
+  ]);
 
   useEffect(() => {
     if (!isManager) {
@@ -261,28 +285,40 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     }
   }
 
-  async function handleConfirmProbation(entry: TrainingAccessUser) {
+  async function handleUpdateEmployeeLevel(entry: TrainingAccessUser, level: EmployeeLevel) {
+    const levelLabel = text.dashboard.levels[level];
     const confirmed = await confirmAction(
-      text.dashboard.quickLevelTitle,
-      text.adminTraining.confirmProbationMessage,
+      text.dashboard.levelModalTitle,
+      `${text.dashboard.levelModalTitle}: ${levelLabel} ?`,
       text.adminTraining.confirmProbationConfirm,
     );
+
     if (!confirmed) {
       return;
     }
 
-    setIsConfirmingUserId(entry.id);
+    setIsUpdatingLevelUserId(entry.id);
+    setUsersError(null);
+
     try {
-      const updated = await confirmUserProbation(accessToken, entry.id);
+      const updated = await updateUserLevel(accessToken, entry.id, level);
       setUsers((current) =>
         current.map((userEntry) =>
           userEntry.id === updated.id
-            ? { ...userEntry, isOnProbation: updated.isOnProbation }
+            ? {
+                ...userEntry,
+                role: updated.role,
+                employeeLevel: updated.employeeLevel,
+                isOnProbation: updated.isOnProbation,
+              }
             : userEntry,
         ),
       );
+      setLevelEditorUser((current) => (current?.id === entry.id ? null : current));
+    } catch {
+      setUsersError(text.dashboard.levelUpdateError);
     } finally {
-      setIsConfirmingUserId(null);
+      setIsUpdatingLevelUserId(null);
     }
   }
 
@@ -382,40 +418,31 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                     <Text style={styles.quickRowTitle}>{entry.name ?? entry.email}</Text>
                     <Text style={styles.subtitle}>{entry.email}</Text>
                     <Text style={styles.subtitle}>
-                      {text.adminTraining.probationStatusLabel}:{' '}
-                      {entry.isOnProbation
-                        ? text.adminTraining.probationValues.probation
-                        : text.adminTraining.probationValues.official}
+                      {text.dashboard.employeeLevelLabel}: {text.dashboard.levels[entry.employeeLevel]}
                     </Text>
                   </View>
 
-                  {entry.isOnProbation ? (
-                    <Pressable
-                      style={[
-                        styles.iconActionButton,
-                        isConfirmingUserId === entry.id && styles.buttonDisabled,
-                      ]}
-                      accessibilityLabel={text.adminTraining.confirmProbationButton}
-                      disabled={isConfirmingUserId === entry.id}
-                      onPress={() => {
-                        void handleConfirmProbation(entry);
-                      }}
-                    >
-                      <Ionicons
-                        name={
-                          isConfirmingUserId === entry.id
-                            ? 'hourglass-outline'
-                            : 'arrow-up-circle-outline'
-                        }
-                        size={20}
-                        color="#7f1b21"
-                      />
-                    </Pressable>
-                  ) : (
-                    <View style={[styles.iconActionButton, styles.iconStateDone]}>
-                      <Ionicons name="checkmark-circle" size={20} color="#2f9e62" />
-                    </View>
-                  )}
+                  <Pressable
+                    style={[
+                      styles.iconActionButton,
+                      isUpdatingLevelUserId === entry.id && styles.buttonDisabled,
+                    ]}
+                    accessibilityLabel={text.dashboard.levelModalTitle}
+                    disabled={isUpdatingLevelUserId === entry.id}
+                    onPress={() => {
+                      setLevelEditorUser(entry);
+                    }}
+                  >
+                    <Ionicons
+                      name={
+                        isUpdatingLevelUserId === entry.id
+                          ? 'hourglass-outline'
+                          : 'arrow-up-circle-outline'
+                      }
+                      size={20}
+                      color="#7f1b21"
+                    />
+                  </Pressable>
                 </View>
               </View>
             ))
@@ -557,6 +584,57 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           </View>
         </Modal>
       ) : null}
+
+      <Modal
+        visible={levelEditorUser !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLevelEditorUser(null)}
+      >
+        <View style={styles.previewModalBackdrop}>
+          <View style={styles.previewModalCard}>
+            <View style={styles.previewModalHeader}>
+              <Text style={styles.quickBlockTitle}>{text.dashboard.levelModalTitle}</Text>
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => setLevelEditorUser(null)}
+              >
+                <Text style={styles.secondaryButtonText}>{text.dashboard.levelModalClose}</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.levelListWrap}>
+              {EMPLOYEE_LEVELS.map((level) => (
+                <Pressable
+                  key={level}
+                  style={[
+                    styles.levelListItem,
+                    levelEditorUser?.employeeLevel === level && styles.levelListItemActive,
+                    isUpdatingLevelUserId === levelEditorUser?.id && styles.buttonDisabled,
+                  ]}
+                  disabled={isUpdatingLevelUserId === levelEditorUser?.id}
+                  onPress={() => {
+                    if (!levelEditorUser) {
+                      return;
+                    }
+
+                    void handleUpdateEmployeeLevel(levelEditorUser, level);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.levelListItemText,
+                      levelEditorUser?.employeeLevel === level && styles.levelListItemTextActive,
+                    ]}
+                  >
+                    {text.dashboard.levels[level]}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {user.role === 'ADMIN' ? (
         <>

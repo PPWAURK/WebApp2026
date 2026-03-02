@@ -22,6 +22,7 @@ model User {
   restaurantId  Int?
   restaurant    Restaurant?   @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
   role          Role          @default(EMPLOYEE)
+  employeeLevel EmployeeLevel @default(L0_PROBATION)
   isApproved    Boolean       @default(true)
   isOnProbation Boolean       @default(false)
   workplaceRole WorkplaceRole @default(BOTH)
@@ -137,6 +138,20 @@ enum WorkplaceRole {
   SALLE
   CUISINE
   BOTH
+}
+
+enum EmployeeLevel {
+  L0_PROBATION
+  L1_PARTNER
+  L2_PARTNER
+  L3_PARTNER
+  L4_EXCELLENT
+  L5_PAM
+  L5_AM
+  L6_PM
+  L6_MA
+  L7_PDI
+  L7_D
 }
 
 enum UploadCategory {

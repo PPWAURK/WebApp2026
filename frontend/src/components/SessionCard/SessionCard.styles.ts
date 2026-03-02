@@ -207,9 +207,29 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconStateDone: {
-    borderColor: '#b9e6cc',
-    backgroundColor: '#f2fff7',
+  levelListWrap: {
+    gap: 8,
+    maxHeight: 380,
+  },
+  levelListItem: {
+    borderWidth: 1,
+    borderColor: '#dfb0b2',
+    backgroundColor: '#fffafa',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  levelListItemActive: {
+    backgroundColor: '#f8e2e4',
+    borderColor: '#d79ea1',
+  },
+  levelListItemText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  levelListItemTextActive: {
+    color: '#7a181d',
   },
   dangerButton: {
     alignItems: 'center',

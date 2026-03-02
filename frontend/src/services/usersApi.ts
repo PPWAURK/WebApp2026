@@ -1,5 +1,5 @@
 import { API_URL } from '../constants/config';
-import type { Restaurant, TrainingSection, User } from '../types/auth';
+import type { EmployeeLevel, Restaurant, TrainingSection, User } from '../types/auth';
 import { throwIfUnauthorized } from './authSession';
 
 export type TrainingAccessUser = {
@@ -7,6 +7,7 @@ export type TrainingAccessUser = {
   email: string;
   name: string | null;
   role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+  employeeLevel: EmployeeLevel;
   isApproved: boolean;
   isOnProbation: boolean;
   trainingAccess: TrainingSection[];
@@ -309,4 +310,58 @@ export async function deleteUserAccount(token: string, userId: number): Promise<
     ? data.message.join(', ')
     : data.message ?? 'Failed to delete account';
   throw new Error(message);
+}
+
+export async function updateUserLevel(
+  token: string,
+  userId: number,
+  level: EmployeeLevel,
+): Promise<{ id: number; employeeLevel: EmployeeLevel; role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE'; isOnProbation: boolean }> {
+  const response = await fetch(`${API_URL}/users/${userId}/level`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ level }),
+  });
+
+  const data = (await response.json()) as
+    | {
+        id?: unknown;
+        employeeLevel?: unknown;
+        role?: unknown;
+        isOnProbation?: unknown;
+        message?: string | string[];
+      }
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to update employee level';
+    throw new Error(message);
+  }
+
+  return {
+    id: typeof (data as { id?: unknown }).id === 'number' ? (data as { id: number }).id : userId,
+    employeeLevel:
+      typeof (data as { employeeLevel?: unknown }).employeeLevel === 'string'
+        ? ((data as { employeeLevel: EmployeeLevel }).employeeLevel as EmployeeLevel)
+        : level,
+    role:
+      typeof (data as { role?: unknown }).role === 'string'
+        ? ((data as { role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE' }).role as
+            | 'ADMIN'
+            | 'MANAGER'
+            | 'EMPLOYEE')
+        : 'EMPLOYEE',
+    isOnProbation:
+      typeof (data as { isOnProbation?: unknown }).isOnProbation === 'boolean'
+        ? (data as { isOnProbation: boolean }).isOnProbation
+        : level === 'L0_PROBATION',
+  };
 }

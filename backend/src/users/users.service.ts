@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, Role, WorkplaceRole } from '@prisma/client';
+import { EmployeeLevel, Prisma, Role, WorkplaceRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   isUploadSection,
@@ -47,6 +47,7 @@ export class UsersService {
           },
         },
         role: true,
+        employeeLevel: true,
         isApproved: true,
         isOnProbation: true,
         workplaceRole: true,
@@ -84,7 +85,11 @@ export class UsersService {
                 not: Role.ADMIN,
               },
             }
-          : { role: Role.EMPLOYEE }),
+          : {
+              role: {
+                not: Role.ADMIN,
+              },
+            }),
         ...(effectiveRestaurantId ? { restaurantId: effectiveRestaurantId } : {}),
       },
       orderBy: {
@@ -102,6 +107,7 @@ export class UsersService {
           },
         },
         role: true,
+        employeeLevel: true,
         isApproved: true,
         isOnProbation: true,
         trainingAccess: true,
@@ -179,6 +185,7 @@ export class UsersService {
           },
         },
         role: true,
+        employeeLevel: true,
         isApproved: true,
         isOnProbation: true,
         trainingAccess: true,
@@ -205,6 +212,7 @@ export class UsersService {
         name: params.name,
         restaurantId: params.restaurantId,
         role: Role.EMPLOYEE,
+        employeeLevel: EmployeeLevel.L0_PROBATION,
         isApproved: params.isApproved ?? true,
         isOnProbation: true,
         workplaceRole: WorkplaceRole.BOTH,
@@ -358,6 +366,7 @@ export class UsersService {
         email: true,
         name: true,
         role: true,
+        employeeLevel: true,
         restaurantId: true,
         isApproved: true,
         isOnProbation: true,
@@ -416,6 +425,8 @@ export class UsersService {
     if (!user.isOnProbation) {
       return {
         id: user.id,
+        role: Role.EMPLOYEE,
+        employeeLevel: EmployeeLevel.L1_PARTNER,
         isOnProbation: false,
       };
     }
@@ -423,10 +434,14 @@ export class UsersService {
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
+        role: Role.EMPLOYEE,
+        employeeLevel: EmployeeLevel.L1_PARTNER,
         isOnProbation: false,
       },
       select: {
         id: true,
+        role: true,
+        employeeLevel: true,
         isOnProbation: true,
       },
     });
@@ -480,6 +495,63 @@ export class UsersService {
       select: {
         id: true,
         isApproved: true,
+      },
+    });
+  }
+
+  async updateEmployeeLevel(
+    userId: number,
+    level: EmployeeLevel,
+    actor: {
+      actorId: number;
+      actorRole: string;
+      actorRestaurantId: number | null;
+    },
+  ) {
+    this.ensureRoleScope(actor);
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        restaurantId: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role === Role.ADMIN) {
+      throw new BadRequestException('Cannot update ADMIN level');
+    }
+
+    if (actor.actorRole === Role.MANAGER && actor.actorId === userId) {
+      throw new BadRequestException('Manager cannot update own level');
+    }
+
+    if (
+      actor.actorRole === Role.MANAGER &&
+      user.restaurantId !== actor.actorRestaurantId
+    ) {
+      throw new BadRequestException('Manager can only update users in own restaurant');
+    }
+
+    const nextRole = this.deriveRoleFromLevel(level);
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        employeeLevel: level,
+        role: nextRole,
+        isOnProbation: level === EmployeeLevel.L0_PROBATION,
+      },
+      select: {
+        id: true,
+        role: true,
+        employeeLevel: true,
+        isOnProbation: true,
       },
     });
   }
@@ -568,6 +640,7 @@ export class UsersService {
         name: true,
         profilePhoto: true,
         role: true,
+        employeeLevel: true,
         isApproved: true,
         isOnProbation: true,
         workplaceRole: true,
@@ -599,5 +672,18 @@ export class UsersService {
 
     const host = req.get('host');
     return `${req.protocol}://${host}/uploads/images/${fileName}`;
+  }
+
+  private deriveRoleFromLevel(level: EmployeeLevel) {
+    if (
+      level === EmployeeLevel.L6_PM ||
+      level === EmployeeLevel.L6_MA ||
+      level === EmployeeLevel.L7_PDI ||
+      level === EmployeeLevel.L7_D
+    ) {
+      return Role.MANAGER;
+    }
+
+    return Role.EMPLOYEE;
   }
 }

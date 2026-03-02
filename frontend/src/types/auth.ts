@@ -2,6 +2,19 @@ export type Role = 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
 
 export type WorkplaceRole = 'SALLE' | 'CUISINE' | 'BOTH';
 
+export type EmployeeLevel =
+  | 'L0_PROBATION'
+  | 'L1_PARTNER'
+  | 'L2_PARTNER'
+  | 'L3_PARTNER'
+  | 'L4_EXCELLENT'
+  | 'L5_PAM'
+  | 'L5_AM'
+  | 'L6_PM'
+  | 'L6_MA'
+  | 'L7_PDI'
+  | 'L7_D';
+
 export type Restaurant = {
   id: number;
   name: string;
@@ -25,6 +38,7 @@ export type User = {
   name: string | null;
   profilePhoto: string | null;
   role: Role;
+  employeeLevel: EmployeeLevel;
   isOnProbation: boolean;
   workplaceRole: WorkplaceRole;
   trainingAccess: TrainingSection[];

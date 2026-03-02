@@ -15,6 +15,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { EmployeeLevel } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { existsSync, mkdirSync } from 'fs';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -222,6 +223,36 @@ export class UsersController {
       actorRole: actor.role,
       actorRestaurantId: actor.restaurantId,
     });
+  }
+
+  @ApiOperation({ summary: 'Update employee level (admin/manager)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/level')
+  updateEmployeeLevel(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) userId: number,
+    @Body('level') levelRaw: string | undefined,
+  ) {
+    const actor = req.user;
+
+    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
+      throw new ForbiddenException('Only ADMIN and MANAGER can access this resource');
+    }
+
+    if (!levelRaw || !Object.values(EmployeeLevel).includes(levelRaw as EmployeeLevel)) {
+      throw new BadRequestException('Invalid employee level');
+    }
+
+    return this.usersService.updateEmployeeLevel(
+      userId,
+      levelRaw as EmployeeLevel,
+      {
+        actorId: actor.id,
+        actorRole: actor.role,
+        actorRestaurantId: actor.restaurantId,
+      },
+    );
   }
 
   @ApiOperation({ summary: 'Upload profile photo for current user' })
