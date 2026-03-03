@@ -123,3 +123,26 @@ export async function fetchLibraryFiles(
 
   return data as LibraryFileItem[];
 }
+
+export async function deleteLibraryFile(
+  token: string,
+  documentId: number,
+): Promise<void> {
+  const response = await fetch(`${API_URL}/uploads/library/${documentId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = (await response.json()) as { success?: boolean; message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const message = Array.isArray(data.message)
+      ? data.message.join(', ')
+      : data.message ?? 'Failed to delete media file';
+    throw new Error(message);
+  }
+}

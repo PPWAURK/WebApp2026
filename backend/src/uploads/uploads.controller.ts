@@ -2,8 +2,11 @@ import {
   Body,
   BadRequestException,
   Controller,
+  Delete,
+  ForbiddenException,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Query,
   Req,
@@ -279,5 +282,24 @@ export class UploadsController {
   ) {
     const filePath = this.uploadsService.resolveFilePath(category, fileName);
     return res.sendFile(filePath);
+  }
+
+  @ApiOperation({ summary: 'Delete one library media file (admin only)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete('library/:documentId')
+  deleteLibraryEntry(
+    @Req() req: Request,
+    @Param('documentId', ParseIntPipe) documentId: number,
+  ) {
+    const authenticatedRequest = req as Request & {
+      user?: { role?: string };
+    };
+
+    if (authenticatedRequest.user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.uploadsService.deleteLibraryEntry(documentId);
   }
 }

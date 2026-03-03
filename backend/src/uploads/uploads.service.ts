@@ -10,7 +10,7 @@ import {
   UploadSection,
   type Prisma,
 } from '@prisma/client';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, unlinkSync } from 'fs';
 import { basename, isAbsolute, join, resolve } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -156,6 +156,38 @@ export class UploadsService {
     }
 
     return fullPath;
+  }
+
+  async deleteLibraryEntry(documentId: number) {
+    const existing = await this.prisma.document.findUnique({
+      where: {
+        id: documentId,
+      },
+      select: {
+        id: true,
+        fileName: true,
+        category: true,
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Media not found');
+    }
+
+    await this.prisma.document.delete({
+      where: {
+        id: documentId,
+      },
+    });
+
+    const filePath = join(this.storageDirs[existing.category], basename(existing.fileName));
+    if (existsSync(filePath)) {
+      unlinkSync(filePath);
+    }
+
+    return {
+      success: true,
+    };
   }
 
   private buildFileUrl(
