@@ -308,7 +308,14 @@ export class UsersService {
     return Object.values(UPLOAD_SECTION_BY_MODULE).flat();
   }
 
-  async getTrainingAccessByLevel(level: EmployeeLevel): Promise<UploadSection[]> {
+  async getTrainingAccessByLevel(
+    level: EmployeeLevel,
+    role?: string,
+  ): Promise<UploadSection[]> {
+    if (role === Role.ADMIN) {
+      return this.getAllTrainingSections();
+    }
+
     const profile = await this.prisma.employeeLevelAccessProfile.findUnique({
       where: {
         employeeLevel: level,

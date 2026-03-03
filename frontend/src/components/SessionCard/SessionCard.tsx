@@ -915,18 +915,6 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         </ScrollView>
 
         <Pressable
-          style={[styles.secondaryButton, whatsNewUploading && styles.buttonDisabled]}
-          disabled={whatsNewUploading}
-          onPress={() => {
-            void handleWhatsNewUpload();
-          }}
-        >
-          <Text style={styles.secondaryButtonText}>
-            {whatsNewUploading ? text.upload.uploading : text.dashboard.whatsNewAttachCta}
-          </Text>
-        </Pressable>
-
-        <Pressable
           style={[styles.whatsNewPublishButton, whatsNewPublishing && styles.buttonDisabled]}
           disabled={whatsNewPublishing}
           onPress={() => {
@@ -935,6 +923,18 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         >
           <Text style={styles.whatsNewPublishButtonText}>
             {whatsNewPublishing ? text.dashboard.whatsNewPublishing : text.dashboard.whatsNewCta}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.secondaryButton, whatsNewUploading && styles.buttonDisabled]}
+          disabled={whatsNewUploading}
+          onPress={() => {
+            void handleWhatsNewUpload();
+          }}
+        >
+          <Text style={styles.secondaryButtonText}>
+            {whatsNewUploading ? text.upload.uploading : text.dashboard.whatsNewAttachCta}
           </Text>
         </Pressable>
 
@@ -1467,9 +1467,11 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
             </Pressable>
           </View>
 
-          <View style={!isSupervisor ? styles.employeeNewsSpacing : undefined}>
-            {renderNewsFeedCard()}
-          </View>
+          {!isAdmin ? (
+            <View style={!isSupervisor ? styles.employeeNewsSpacing : undefined}>
+              {renderNewsFeedCard()}
+            </View>
+          ) : null}
 
           {isAdmin ? renderLevelQuickBlock() : null}
 
@@ -1481,7 +1483,6 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                 currentUser={user}
                 text={text}
               />
-              <AdminUploadPanel accessToken={accessToken} text={text} />
             </>
           ) : null}
 
@@ -1491,7 +1492,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         {isSupervisor ? (
           <View style={styles.quickColumn}>
             {!isAdmin ? renderLevelQuickBlock() : null}
+            {isAdmin ? renderNewsFeedCard() : null}
             {isAdmin ? renderWhatsNewUploadCard() : null}
+            {isAdmin ? <AdminUploadPanel accessToken={accessToken} text={text} /> : null}
             {renderManagerQuickBlocks()}
           </View>
         ) : null}

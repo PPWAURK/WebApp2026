@@ -209,6 +209,7 @@ export class AuthService {
 
     const trainingAccess = await this.usersService.getTrainingAccessByLevel(
       user.employeeLevel,
+      user.role,
     );
 
     return {
@@ -246,6 +247,7 @@ export class AuthService {
 
     const trainingAccess = await this.usersService.getTrainingAccessByLevel(
       user.employeeLevel,
+      user.role,
     );
 
     return {
