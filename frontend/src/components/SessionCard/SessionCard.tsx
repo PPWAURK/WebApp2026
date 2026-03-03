@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Linking,
   Modal,
   Platform,
@@ -15,6 +14,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { AdminRestaurantPanel } from '../AdminRestaurantPanel';
 import { AdminTrainingAccessPanel } from '../AdminTrainingAccessPanel';
 import { AdminUploadPanel } from '../AdminUploadPanel';
+import { ConfirmDialog } from '../ConfirmDialog';
 import type { AppText } from '../../locales/translations';
 import { styles } from './SessionCard.styles';
 import type { EmployeeLevel, User } from '../../types/auth';
@@ -130,6 +130,22 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [newsFeedMonths, setNewsFeedMonths] = useState<string[]>([]);
   const [selectedNewsMonth, setSelectedNewsMonth] = useState<string>('ALL');
   const [deletingNewsId, setDeletingNewsId] = useState<number | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    confirmLabel: string;
+    cancelLabel: string;
+    destructive: boolean;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    confirmLabel: '',
+    cancelLabel: text.adminTraining.confirmProbationCancel,
+    destructive: true,
+  });
+  const confirmResolverRef = useRef<((value: boolean) => void) | null>(null);
 
   useEffect(() => {
     if (!isSupervisor) {
@@ -629,21 +645,25 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   }
 
   async function confirmAction(title: string, message: string, confirmLabel: string) {
-    if (Platform.OS === 'web') {
-      return typeof window !== 'undefined' && window.confirm(message);
-    }
-
     return new Promise<boolean>((resolve) => {
-      Alert.alert(
+      confirmResolverRef.current = resolve;
+      setConfirmDialog({
+        visible: true,
         title,
         message,
-        [
-          { text: text.adminTraining.confirmProbationCancel, style: 'cancel', onPress: () => resolve(false) },
-          { text: confirmLabel, style: 'destructive', onPress: () => resolve(true) },
-        ],
-        { cancelable: true, onDismiss: () => resolve(false) },
-      );
+        confirmLabel,
+        cancelLabel: text.adminTraining.confirmProbationCancel,
+        destructive: true,
+      });
     });
+  }
+
+  function closeConfirmDialog(value: boolean) {
+    if (confirmResolverRef.current) {
+      confirmResolverRef.current(value);
+      confirmResolverRef.current = null;
+    }
+    setConfirmDialog((current) => ({ ...current, visible: false }));
   }
 
   async function handleApproveAccount(entry: TrainingAccessUser) {
@@ -1585,6 +1605,17 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           </View>
         </View>
       </Modal>
+
+      <ConfirmDialog
+        visible={confirmDialog.visible}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        cancelLabel={confirmDialog.cancelLabel}
+        confirmLabel={confirmDialog.confirmLabel}
+        destructive={confirmDialog.destructive}
+        onCancel={() => closeConfirmDialog(false)}
+        onConfirm={() => closeConfirmDialog(true)}
+      />
 
     </View>
   );

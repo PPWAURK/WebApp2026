@@ -1,6 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
-import { useEffect, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Linking, Pressable, Text, View } from 'react-native';
 import {
   getModuleOptions,
   getSectionsByModule,
@@ -15,6 +15,7 @@ import {
   uploadSingleFile,
   type UploadedFileResponse,
 } from '../../services/uploadsApi';
+import { ConfirmDialog } from '../ConfirmDialog';
 import { styles } from './AdminUploadPanel.styles';
 
 type AdminUploadPanelProps = {
@@ -46,6 +47,8 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
   const [libraryError, setLibraryError] = useState<string | null>(null);
   const [isDeletingId, setIsDeletingId] = useState<number | null>(null);
+  const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
+  const confirmDeleteResolverRef = useRef<((value: boolean) => void) | null>(null);
 
   const availableSections = sectionsByModule[selectedModule];
 
@@ -135,21 +138,19 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
   }
 
   async function confirmDelete(): Promise<boolean> {
-    if (Platform.OS === 'web') {
-      return typeof window !== 'undefined' && window.confirm(text.upload.deleteConfirmMessage);
+    return new Promise<boolean>((resolve) => {
+      confirmDeleteResolverRef.current = resolve;
+      setConfirmDialogVisible(true);
+    });
+  }
+
+  function closeConfirmDelete(value: boolean) {
+    if (confirmDeleteResolverRef.current) {
+      confirmDeleteResolverRef.current(value);
+      confirmDeleteResolverRef.current = null;
     }
 
-    return new Promise<boolean>((resolve) => {
-      Alert.alert(
-        text.upload.deleteConfirmTitle,
-        text.upload.deleteConfirmMessage,
-        [
-          { text: text.adminTraining.confirmProbationCancel, style: 'cancel', onPress: () => resolve(false) },
-          { text: text.upload.deleteConfirmAction, style: 'destructive', onPress: () => resolve(true) },
-        ],
-        { cancelable: true, onDismiss: () => resolve(false) },
-      );
-    });
+    setConfirmDialogVisible(false);
   }
 
   async function handleDeleteLibraryItem(item: LibraryFileItem) {
@@ -295,6 +296,17 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
           </View>
         ))}
       </View>
+
+      <ConfirmDialog
+        visible={confirmDialogVisible}
+        title={text.upload.deleteConfirmTitle}
+        message={text.upload.deleteConfirmMessage}
+        cancelLabel={text.adminTraining.confirmProbationCancel}
+        confirmLabel={text.upload.deleteConfirmAction}
+        destructive
+        onCancel={() => closeConfirmDelete(false)}
+        onConfirm={() => closeConfirmDelete(true)}
+      />
     </View>
   );
 }

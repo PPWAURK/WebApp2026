@@ -1,10 +1,8 @@
 import * as DocumentPicker from 'expo-document-picker';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Image,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -24,6 +22,7 @@ import {
   fetchSuppliers,
   type SupplierItem,
 } from '../../services/suppliersApi';
+import { ConfirmDialog } from '../ConfirmDialog';
 import { styles } from './SupplierManagementPage.styles';
 
 type SupplierManagementPageProps = {
@@ -51,6 +50,8 @@ export function SupplierManagementPage({
   const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
+  const confirmDeleteResolverRef = useRef<((value: boolean) => void) | null>(null);
 
   const [editCategory, setEditCategory] = useState('');
   const [editNameZh, setEditNameZh] = useState('');
@@ -269,29 +270,10 @@ export function SupplierManagementPage({
   }
 
   async function onDeleteProduct(product: ProductItem) {
-    const confirmationMessage = text.supplierManagement.deleteProductConfirm;
-    const confirmed =
-      Platform.OS === 'web'
-        ? typeof window !== 'undefined' && window.confirm(confirmationMessage)
-        : await new Promise<boolean>((resolve) => {
-            Alert.alert(
-              text.supplierManagement.deleteProductButton,
-              confirmationMessage,
-              [
-                {
-                  text: text.supplierManagement.deleteProductCancel,
-                  style: 'cancel',
-                  onPress: () => resolve(false),
-                },
-                {
-                  text: text.supplierManagement.deleteProductConfirmButton,
-                  style: 'destructive',
-                  onPress: () => resolve(true),
-                },
-              ],
-              { cancelable: true, onDismiss: () => resolve(false) },
-            );
-          });
+    const confirmed = await new Promise<boolean>((resolve) => {
+      confirmDeleteResolverRef.current = resolve;
+      setConfirmDialogVisible(true);
+    });
 
     if (!confirmed) {
       return;
@@ -316,6 +298,14 @@ export function SupplierManagementPage({
     } finally {
       setDeletingProductId(null);
     }
+  }
+
+  function closeDeleteProductDialog(value: boolean) {
+    if (confirmDeleteResolverRef.current) {
+      confirmDeleteResolverRef.current(value);
+      confirmDeleteResolverRef.current = null;
+    }
+    setConfirmDialogVisible(false);
   }
 
   return (
@@ -619,6 +609,17 @@ export function SupplierManagementPage({
           </View>
         </View>
       </Modal>
+
+      <ConfirmDialog
+        visible={confirmDialogVisible}
+        title={text.supplierManagement.deleteProductButton}
+        message={text.supplierManagement.deleteProductConfirm}
+        cancelLabel={text.supplierManagement.deleteProductCancel}
+        confirmLabel={text.supplierManagement.deleteProductConfirmButton}
+        destructive
+        onCancel={() => closeDeleteProductDialog(false)}
+        onConfirm={() => closeDeleteProductDialog(true)}
+      />
     </View>
   );
 }

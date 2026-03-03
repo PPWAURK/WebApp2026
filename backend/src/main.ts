@@ -19,11 +19,8 @@ async function bootstrap() {
     }),
   );
 
-  const corsOrigins = process.env.CORS_ORIGIN?.split(',').map((origin) =>
-    origin.trim(),
-  );
   app.enableCors({
-    origin: corsOrigins?.length ? corsOrigins : true,
+    origin: true,
     credentials: true,
   });
 

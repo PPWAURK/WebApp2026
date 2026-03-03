@@ -1,0 +1,135 @@
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+
+type ConfirmDialogProps = {
+  visible: boolean;
+  title: string;
+  message: string;
+  cancelLabel: string;
+  confirmLabel: string;
+  destructive?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+};
+
+export function ConfirmDialog({
+  visible,
+  title,
+  message,
+  cancelLabel,
+  confirmLabel,
+  destructive,
+  onCancel,
+  onConfirm,
+}: ConfirmDialogProps) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+    >
+      <View style={styles.backdrop}>
+        <View style={styles.card}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.message}>{message}</Text>
+
+          <View style={styles.actions}>
+            <Pressable style={styles.cancelButton} onPress={onCancel}>
+              <Text style={styles.cancelText}>{cancelLabel}</Text>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.confirmButton,
+                destructive ? styles.confirmButtonDanger : styles.confirmButtonPrimary,
+              ]}
+              onPress={onConfirm}
+            >
+              <Text
+                style={[
+                  styles.confirmText,
+                  destructive ? styles.confirmTextDanger : styles.confirmTextPrimary,
+                ]}
+              >
+                {confirmLabel}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(36, 20, 22, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e3c0c3',
+    backgroundColor: '#fffdfd',
+    padding: 14,
+    gap: 10,
+  },
+  title: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 16,
+  },
+  message: {
+    color: '#8b5a5e',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  cancelButton: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#dfb0b2',
+    backgroundColor: '#fffafa',
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  confirmButton: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  confirmButtonPrimary: {
+    borderColor: '#d39a9d',
+    backgroundColor: '#f9eaeb',
+  },
+  confirmButtonDanger: {
+    borderColor: '#d88084',
+    backgroundColor: '#fff1f2',
+  },
+  cancelText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  confirmText: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  confirmTextPrimary: {
+    color: '#7f1b21',
+  },
+  confirmTextDanger: {
+    color: '#ab1e24',
+  },
+});
