@@ -141,6 +141,56 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') {
+      return;
+    }
+
+    const lockDurationMs = 450;
+    const lastClickAt = new WeakMap<Element, number>();
+
+    function handleWebClickCapture(event: MouseEvent) {
+      if (event.defaultPrevented) {
+        return;
+      }
+
+      if (event.button !== 0) {
+        return;
+      }
+
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+      }
+
+      const rawTarget = event.target;
+      if (!(rawTarget instanceof Element)) {
+        return;
+      }
+
+      const clickableTarget = rawTarget.closest('button, [role="button"], a');
+      if (!clickableTarget) {
+        return;
+      }
+
+      const now = Date.now();
+      const previousClick = lastClickAt.get(clickableTarget);
+
+      if (typeof previousClick === 'number' && now - previousClick < lockDurationMs) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
+      lastClickAt.set(clickableTarget, now);
+    }
+
+    document.addEventListener('click', handleWebClickCapture, true);
+
+    return () => {
+      document.removeEventListener('click', handleWebClickCapture, true);
+    };
+  }, []);
+
   async function loadOrderHistory() {
     if (!auth.session) {
       setOrderHistory([]);

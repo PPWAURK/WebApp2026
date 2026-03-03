@@ -61,9 +61,9 @@ export const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     color: '#7a181d',
     fontFamily: 'Manrope_400Regular',
-    fontSize: 13,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    fontSize: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   error: {
     color: '#b42318',

@@ -25,7 +25,7 @@ export function OrdersPage({
   onSubmitOrder,
 }: OrdersPageProps) {
   const { width } = useWindowDimensions();
-  const isSmallScreen = width < 400;
+  const isSmallScreen = width < 560;
 
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);
@@ -276,8 +276,11 @@ export function OrdersPage({
           const infoRowStyle = isSmallScreen
             ? { flexDirection: 'column' as const, alignItems: 'flex-start' as const }
             : styles.productInfoRow;
+          const productGridItemStyle = isSmallScreen
+            ? styles.productGridItemSmall
+            : styles.productGridItem;
           return (
-            <View key={product.id} style={[styles.docItem, styles.productGridItem]}>
+            <View key={product.id} style={[styles.docItem, productGridItemStyle]}>
               <View style={infoRowStyle}>
                 {product.image ? (
                   <View style={[styles.productImageFrame, isSmallScreen && styles.productImageFrameSmall]}>
@@ -289,7 +292,7 @@ export function OrdersPage({
                   </View>
                 ) : null}
 
-                <View style={styles.productInfoColumn}>
+                <View style={[styles.productInfoColumn, isSmallScreen && styles.productInfoColumnSmall]}>
                   <Text style={styles.docItemTitle}>{productName}</Text>
                   {product.reference ? (
                     <Text style={styles.docItemMeta}>

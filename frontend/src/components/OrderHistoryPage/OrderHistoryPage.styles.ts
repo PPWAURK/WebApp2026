@@ -120,13 +120,13 @@ export const styles = StyleSheet.create({
   searchInput: {
     borderWidth: 1,
     borderColor: '#e3c6c8',
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: '#ffffff',
     color: '#7f1b21',
     fontFamily: 'Manrope_400Regular',
-    fontSize: 13,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    fontSize: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   kpiGrid: {
     flexDirection: 'row',

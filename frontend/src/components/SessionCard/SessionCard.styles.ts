@@ -105,18 +105,18 @@ export const styles = StyleSheet.create({
     fontSize: 15,
   },
   quickSearchInput: {
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#dfb0b2',
     backgroundColor: '#ffffff',
     color: '#7a181d',
     fontFamily: 'Manrope_400Regular',
-    fontSize: 13,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    fontSize: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   whatsNewMessageInput: {
-    minHeight: 92,
+    minHeight: 120,
   },
   quickRowCard: {
     borderRadius: 12,

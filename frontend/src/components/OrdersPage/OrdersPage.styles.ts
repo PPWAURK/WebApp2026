@@ -28,13 +28,13 @@ export const styles = StyleSheet.create({
   searchInput: {
     borderWidth: 1,
     borderColor: '#e3c6c8',
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: '#ffffff',
     color: '#7f1b21',
     fontFamily: 'Manrope_400Regular',
-    fontSize: 13,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    fontSize: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   uploadChip: {
     borderRadius: 999,
@@ -125,11 +125,13 @@ export const styles = StyleSheet.create({
     color: '#7a2328',
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
+    flexShrink: 1,
   },
   docItemMeta: {
     color: '#996165',
     fontFamily: 'Manrope_400Regular',
     fontSize: 12,
+    flexShrink: 1,
   },
   productInfoRow: {
     flexDirection: 'row',
@@ -138,7 +140,12 @@ export const styles = StyleSheet.create({
   },
   productInfoColumn: {
     flex: 1,
+    minWidth: 0,
     gap: 4,
+  },
+  productInfoColumnSmall: {
+    width: '100%',
+    gap: 2,
   },
   productGrid: {
     flexDirection: 'row',
@@ -147,6 +154,9 @@ export const styles = StyleSheet.create({
   },
   productGridItem: {
     width: '48%',
+  },
+  productGridItemSmall: {
+    width: '100%',
   },
   productImageFrame: {
     width: 110,
@@ -157,7 +167,7 @@ export const styles = StyleSheet.create({
   },
   productImageFrameSmall: {
     width: '100%',
-    height: 100,
+    height: 180,
   },
   productImageThumb: {
     width: '100%',

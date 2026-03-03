@@ -58,11 +58,13 @@ export const styles = StyleSheet.create({
     color: '#7a2328',
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
+    flexShrink: 1,
   },
   docItemMeta: {
     color: '#996165',
     fontFamily: 'Manrope_400Regular',
     fontSize: 12,
+    flexShrink: 1,
   },
   productInfoRow: {
     flexDirection: 'row',
@@ -71,7 +73,12 @@ export const styles = StyleSheet.create({
   },
   productInfoColumn: {
     flex: 1,
+    minWidth: 0,
     gap: 4,
+  },
+  productInfoColumnSmall: {
+    width: '100%',
+    gap: 2,
   },
   productGrid: {
     flexDirection: 'row',
@@ -81,12 +88,19 @@ export const styles = StyleSheet.create({
   productGridItem: {
     width: '48%',
   },
+  productGridItemSmall: {
+    width: '100%',
+  },
   productImageFrame: {
     width: 110,
     height: 110,
     borderRadius: 10,
     overflow: 'hidden',
     backgroundColor: '#f3dcdd',
+  },
+  productImageFrameSmall: {
+    width: '100%',
+    height: 180,
   },
   productImageThumb: {
     width: '100%',

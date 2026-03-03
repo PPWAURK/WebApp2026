@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Image, Pressable, Text, useWindowDimensions, View } from 'react-native';
 import type { AppText } from '../../locales/translations';
 import { styles } from './OrderRecapPage.styles';
 import type { Language } from '../../types/language';
@@ -34,6 +34,8 @@ export function OrderRecapPage({
   onDownloadOrderBon,
   onBack,
 }: OrderRecapPageProps) {
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 560;
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const dateOptions = useMemo(() => {
@@ -120,15 +122,21 @@ export function OrderRecapPage({
       <View style={[styles.listBlock, styles.productGrid]}>
         {recap.items.map((item) => {
           const productName = language === 'zh' ? item.nameZh : item.nameFr ?? item.nameZh;
+          const infoRowStyle = isSmallScreen
+            ? { flexDirection: 'column' as const, alignItems: 'flex-start' as const }
+            : styles.productInfoRow;
+          const productGridItemStyle = isSmallScreen
+            ? styles.productGridItemSmall
+            : styles.productGridItem;
           return (
-            <View key={`${item.productId}-${item.quantity}`} style={[styles.docItem, styles.productGridItem]}>
-              <View style={styles.productInfoRow}>
+            <View key={`${item.productId}-${item.quantity}`} style={[styles.docItem, productGridItemStyle]}>
+              <View style={infoRowStyle}>
                 {item.image ? (
-                  <View style={styles.productImageFrame}>
+                  <View style={[styles.productImageFrame, isSmallScreen && styles.productImageFrameSmall]}>
                     <Image source={{ uri: item.image }} style={styles.productImageThumb} resizeMode="cover" />
                   </View>
                 ) : null}
-                <View style={styles.productInfoColumn}>
+                <View style={[styles.productInfoColumn, isSmallScreen && styles.productInfoColumnSmall]}>
                   <Text style={styles.docItemTitle}>{productName}</Text>
                   <Text style={styles.docItemMeta}>{text.orders.quantityLabel}: {item.quantity}</Text>
                   <Text style={styles.docItemMeta}>{text.orders.priceLabel}: {item.priceHt === null ? text.orders.priceNotAvailable : item.priceHt.toFixed(2)}</Text>
