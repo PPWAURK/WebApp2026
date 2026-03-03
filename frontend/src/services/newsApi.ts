@@ -27,15 +27,24 @@ export type NewsPostItem = {
   } | null;
 };
 
+export type NewsFeedResponse = {
+  items: NewsPostItem[];
+  availableMonths: string[];
+};
+
 export async function fetchNewsFeed(
   token: string,
   options?: {
     limit?: number;
+    month?: string;
   },
-): Promise<NewsPostItem[]> {
+): Promise<NewsFeedResponse> {
   const params = new URLSearchParams();
   if (options?.limit) {
     params.set('limit', `${options.limit}`);
+  }
+  if (options?.month) {
+    params.set('month', options.month);
   }
 
   const query = params.toString();
@@ -47,7 +56,7 @@ export async function fetchNewsFeed(
     },
   });
 
-  const data = (await response.json()) as NewsPostItem[] | { message?: string | string[] };
+  const data = (await response.json()) as NewsFeedResponse | { message?: string | string[] };
 
   throwIfUnauthorized(response);
 
@@ -59,7 +68,7 @@ export async function fetchNewsFeed(
     throw new Error(message);
   }
 
-  return data as NewsPostItem[];
+  return data as NewsFeedResponse;
 }
 
 export async function createNewsPost(
@@ -113,6 +122,26 @@ export async function markNewsAsRead(token: string, newsId: number): Promise<voi
     const message = Array.isArray(data.message)
       ? data.message.join(', ')
       : data.message ?? 'Failed to mark news as read';
+    throw new Error(message);
+  }
+}
+
+export async function deleteNewsPost(token: string, newsId: number): Promise<void> {
+  const response = await fetch(`${API_URL}/news/${newsId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = (await response.json()) as { success?: boolean; message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const message = Array.isArray(data.message)
+      ? data.message.join(', ')
+      : data.message ?? 'Failed to delete news post';
     throw new Error(message);
   }
 }

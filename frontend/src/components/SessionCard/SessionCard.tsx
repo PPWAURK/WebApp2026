@@ -19,12 +19,6 @@ import type { AppText } from '../../locales/translations';
 import { styles } from './SessionCard.styles';
 import type { EmployeeLevel, User } from '../../types/auth';
 import {
-  getModuleOptions,
-  getSectionsByModule,
-  type LibraryModule,
-  type LibrarySection,
-} from '../../constants/documentTaxonomy';
-import {
   approveUserAccount,
   deleteUserAccount,
   fetchTrainingAccessUsers,
@@ -43,6 +37,7 @@ import { fetchSuppliers, type SupplierItem } from '../../services/suppliersApi';
 import { uploadSingleFile, type UploadedFileResponse } from '../../services/uploadsApi';
 import {
   createNewsPost,
+  deleteNewsPost,
   fetchNewsFeed,
   markNewsAsRead,
   type NewsAudience,
@@ -81,6 +76,9 @@ const PICKER_TYPES = [
   'text/plain',
 ];
 
+const NEWS_ATTACHMENT_MODULE = 'TRAINING';
+const NEWS_ATTACHMENT_SECTION = 'RECIPE_TRAINING';
+
 export function SessionCard({ user, accessToken, text, onLogout }: SessionCardProps) {
   const roleLabel = text.dashboard.roleValues[user.role];
   const workplaceLabel = text.dashboard.workplaceValues[user.workplaceRole];
@@ -117,8 +115,6 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [orderPreviewUrl, setOrderPreviewUrl] = useState<string | null>(null);
   const [orderPreviewLoading, setOrderPreviewLoading] = useState(false);
   const [isOrderPreviewOpen, setIsOrderPreviewOpen] = useState(false);
-  const [whatsNewModule, setWhatsNewModule] = useState<LibraryModule>('TRAINING');
-  const [whatsNewSection, setWhatsNewSection] = useState<LibrarySection>('RECIPE_TRAINING');
   const [whatsNewUploading, setWhatsNewUploading] = useState(false);
   const [whatsNewError, setWhatsNewError] = useState<string | null>(null);
   const [whatsNewLastUpload, setWhatsNewLastUpload] = useState<UploadedFileResponse | null>(
@@ -131,6 +127,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [newsFeed, setNewsFeed] = useState<NewsPostItem[]>([]);
   const [newsFeedLoading, setNewsFeedLoading] = useState(false);
   const [newsFeedError, setNewsFeedError] = useState<string | null>(null);
+  const [newsFeedMonths, setNewsFeedMonths] = useState<string[]>([]);
+  const [selectedNewsMonth, setSelectedNewsMonth] = useState<string>('ALL');
+  const [deletingNewsId, setDeletingNewsId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isSupervisor) {
@@ -419,36 +418,32 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     };
   }, [accessToken, latestOrder]);
 
-  const whatsNewModuleOptions = useMemo(() => getModuleOptions(text), [text]);
-  const whatsNewSectionsByModule = useMemo(() => getSectionsByModule(text), [text]);
-  const whatsNewSections = whatsNewSectionsByModule[whatsNewModule];
-
-  useEffect(() => {
-    const sectionExists = whatsNewSections.some((section) => section.key === whatsNewSection);
-    if (sectionExists) {
-      return;
-    }
-
-    const firstSection = whatsNewSections[0];
-    if (firstSection) {
-      setWhatsNewSection(firstSection.key as LibrarySection);
-    }
-  }, [whatsNewSection, whatsNewSections]);
-
   useEffect(() => {
     let isActive = true;
     setNewsFeedLoading(true);
     setNewsFeedError(null);
 
-    void fetchNewsFeed(accessToken, { limit: 12 })
-      .then((items) => {
+    void fetchNewsFeed(accessToken, {
+      limit: 24,
+      month: selectedNewsMonth === 'ALL' ? undefined : selectedNewsMonth,
+    })
+      .then((payload) => {
         if (isActive) {
-          setNewsFeed(items);
+          setNewsFeed(payload.items);
+          setNewsFeedMonths(payload.availableMonths);
+
+          if (
+            selectedNewsMonth !== 'ALL' &&
+            !payload.availableMonths.includes(selectedNewsMonth)
+          ) {
+            setSelectedNewsMonth('ALL');
+          }
         }
       })
       .catch(() => {
         if (isActive) {
           setNewsFeed([]);
+          setNewsFeedMonths([]);
           setNewsFeedError(text.dashboard.newsLoadError);
         }
       })
@@ -461,7 +456,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     return () => {
       isActive = false;
     };
-  }, [accessToken, text.dashboard.newsLoadError]);
+  }, [accessToken, selectedNewsMonth, text.dashboard.newsLoadError]);
 
   const employeeRestaurantOptions = useMemo(() => {
     const restaurantsMap = new Map<number, string>();
@@ -732,14 +727,6 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     }
   }
 
-  function onSelectWhatsNewModule(nextModule: LibraryModule) {
-    setWhatsNewModule(nextModule);
-    const firstSection = whatsNewSectionsByModule[nextModule][0];
-    if (firstSection) {
-      setWhatsNewSection(firstSection.key as LibrarySection);
-    }
-  }
-
   async function handleWhatsNewUpload() {
     setWhatsNewError(null);
 
@@ -769,8 +756,8 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           file: (asset as { file?: File }).file,
         },
         {
-          module: whatsNewModule,
-          section: whatsNewSection,
+          module: NEWS_ATTACHMENT_MODULE,
+          section: NEWS_ATTACHMENT_SECTION,
         },
       );
       setWhatsNewLastUpload(response);
@@ -798,12 +785,15 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         title,
         message,
         audience: whatsNewAudience,
-        module: whatsNewModule,
-        section: whatsNewSection,
         attachmentDocumentId: whatsNewLastUpload?.documentId,
       });
 
-      setNewsFeed((current) => [createdPost, ...current].slice(0, 12));
+      setNewsFeed((current) => [createdPost, ...current]);
+      setNewsFeedMonths((current) => {
+        const createdDate = new Date(createdPost.createdAt);
+        const month = `${createdDate.getUTCFullYear()}-${`${createdDate.getUTCMonth() + 1}`.padStart(2, '0')}`;
+        return current.includes(month) ? current : [month, ...current];
+      });
       setWhatsNewTitle('');
       setWhatsNewMessage('');
       setWhatsNewAudience('ALL');
@@ -834,10 +824,46 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     }
   }
 
+  async function handleDeleteNews(post: NewsPostItem) {
+    if (!isAdmin) {
+      return;
+    }
+
+    const confirmed = await confirmAction(
+      text.dashboard.newsDeleteTitle,
+      text.dashboard.newsDeleteMessage,
+      text.dashboard.newsDeleteConfirm,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingNewsId(post.id);
+    setNewsFeedError(null);
+    try {
+      await deleteNewsPost(accessToken, post.id);
+      setNewsFeed((current) => current.filter((item) => item.id !== post.id));
+    } catch {
+      setNewsFeedError(text.dashboard.newsDeleteError);
+    } finally {
+      setDeletingNewsId(null);
+    }
+  }
+
   function renderWhatsNewUploadCard() {
     return (
-      <View style={styles.quickBlock}>
-        <Text style={styles.quickBlockTitle}>{text.dashboard.whatsNewTitle}</Text>
+      <View style={[styles.quickBlock, styles.whatsNewHighlightBlock]}>
+        <View style={styles.whatsNewHeader}>
+          <View style={styles.whatsNewHeaderMain}>
+            <View style={styles.whatsNewHeaderIconWrap}>
+              <Ionicons name="megaphone-outline" size={18} color="#ffffff" />
+            </View>
+            <View style={styles.whatsNewHeaderTitleWrap}>
+              <Text style={styles.quickBlockTitle}>{text.dashboard.whatsNewTitle}</Text>
+            </View>
+          </View>
+        </View>
+
         <Text style={styles.subtitle}>{text.dashboard.whatsNewSubtitle}</Text>
 
         <TextInput
@@ -888,50 +914,6 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           })}
         </ScrollView>
 
-        <Text style={styles.quickSectionTitle}>{text.upload.moduleLabel}</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chartSupplierTabs}
-        >
-          {whatsNewModuleOptions.map((moduleOption) => {
-            const isActive = whatsNewModule === moduleOption.key;
-            return (
-              <Pressable
-                key={`whats-new-module-${moduleOption.key}`}
-                style={[styles.chartSupplierChip, isActive && styles.chartSupplierChipActive]}
-                onPress={() => onSelectWhatsNewModule(moduleOption.key as LibraryModule)}
-              >
-                <Text style={[styles.chartSupplierChipText, isActive && styles.chartSupplierChipTextActive]}>
-                  {moduleOption.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        <Text style={styles.quickSectionTitle}>{text.upload.sectionLabel}</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chartSupplierTabs}
-        >
-          {whatsNewSections.map((sectionOption) => {
-            const isActive = whatsNewSection === sectionOption.key;
-            return (
-              <Pressable
-                key={`whats-new-section-${sectionOption.key}`}
-                style={[styles.chartSupplierChip, isActive && styles.chartSupplierChipActive]}
-                onPress={() => setWhatsNewSection(sectionOption.key as LibrarySection)}
-              >
-                <Text style={[styles.chartSupplierChipText, isActive && styles.chartSupplierChipTextActive]}>
-                  {sectionOption.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
         <Pressable
           style={[styles.secondaryButton, whatsNewUploading && styles.buttonDisabled]}
           disabled={whatsNewUploading}
@@ -945,13 +927,13 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         </Pressable>
 
         <Pressable
-          style={[styles.secondaryButton, whatsNewPublishing && styles.buttonDisabled]}
+          style={[styles.whatsNewPublishButton, whatsNewPublishing && styles.buttonDisabled]}
           disabled={whatsNewPublishing}
           onPress={() => {
             void handlePublishWhatsNew();
           }}
         >
-          <Text style={styles.secondaryButtonText}>
+          <Text style={styles.whatsNewPublishButtonText}>
             {whatsNewPublishing ? text.dashboard.whatsNewPublishing : text.dashboard.whatsNewCta}
           </Text>
         </Pressable>
@@ -959,20 +941,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         {whatsNewError ? <Text style={styles.errorText}>{whatsNewError}</Text> : null}
 
         {whatsNewLastUpload ? (
-          <View style={styles.quickRowCard}>
+          <View style={styles.whatsNewAttachmentCard}>
             <Text style={styles.quickRowTitle}>{text.dashboard.whatsNewAttachmentReady}</Text>
             <Text style={styles.subtitle}>{whatsNewLastUpload.originalName}</Text>
-            <Text style={styles.subtitle}>
-              {text.upload.resultModule}:{' '}
-              {whatsNewModuleOptions.find((option) => option.key === whatsNewLastUpload.module)
-                ?.label ?? whatsNewLastUpload.module}
-            </Text>
-            <Text style={styles.subtitle}>
-              {text.upload.resultSection}:{' '}
-              {whatsNewSectionsByModule[whatsNewLastUpload.module].find(
-                (option) => option.key === whatsNewLastUpload.section,
-              )?.label ?? whatsNewLastUpload.section}
-            </Text>
           </View>
         ) : null}
       </View>
@@ -983,14 +954,63 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     const unreadCount = newsFeed.filter((item) => !item.isRead).length;
 
     return (
-      <View style={styles.quickBlock}>
+      <View style={[styles.quickBlock, styles.newsFeedHighlightBlock]}>
         <View style={styles.quickNewsHeader}>
-          <Text style={styles.quickBlockTitle}>{text.dashboard.newsFeedTitle}</Text>
+          <View style={styles.newsFeedTitleRow}>
+            <View style={styles.newsFeedIconWrap}>
+              <Ionicons name="sparkles-outline" size={16} color="#ffffff" />
+            </View>
+            <View>
+              <Text style={styles.quickBlockTitle}>{text.dashboard.newsFeedTitle}</Text>
+              <Text style={styles.newsFeedKicker}>FIL D'INFORMATION</Text>
+            </View>
+          </View>
           {unreadCount > 0 ? (
             <Text style={styles.quickUnreadBadge}>{`${unreadCount} ${text.dashboard.newsUnreadLabel}`}</Text>
           ) : null}
         </View>
-        <Text style={styles.subtitle}>{text.dashboard.newsFeedSubtitle}</Text>
+        <View style={styles.newsFeedIntroStrip}>
+          <Text style={styles.subtitle}>{text.dashboard.newsFeedSubtitle}</Text>
+        </View>
+
+        <Text style={styles.quickSectionTitle}>{text.dashboard.newsMonthFilterLabel}</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chartSupplierTabs}
+        >
+          <Pressable
+            style={[
+              styles.chartSupplierChip,
+              selectedNewsMonth === 'ALL' && styles.chartSupplierChipActive,
+            ]}
+            onPress={() => setSelectedNewsMonth('ALL')}
+          >
+            <Text
+              style={[
+                styles.chartSupplierChipText,
+                selectedNewsMonth === 'ALL' && styles.chartSupplierChipTextActive,
+              ]}
+            >
+              {text.dashboard.newsMonthFilterAll}
+            </Text>
+          </Pressable>
+
+          {newsFeedMonths.map((month) => {
+            const isActive = selectedNewsMonth === month;
+            return (
+              <Pressable
+                key={`news-month-${month}`}
+                style={[styles.chartSupplierChip, isActive && styles.chartSupplierChipActive]}
+                onPress={() => setSelectedNewsMonth(month)}
+              >
+                <Text style={[styles.chartSupplierChipText, isActive && styles.chartSupplierChipTextActive]}>
+                  {month}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
 
         {newsFeedLoading ? <Text style={styles.subtitle}>{text.adminTraining.loading}</Text> : null}
         {newsFeedError ? <Text style={styles.errorText}>{newsFeedError}</Text> : null}
@@ -1015,6 +1035,23 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
             </Text>
             {post.attachment ? (
               <Text style={styles.quickNewsLink}>{post.attachment.originalName}</Text>
+            ) : null}
+
+            {isAdmin ? (
+              <Pressable
+                style={[styles.iconDeleteButton, deletingNewsId === post.id && styles.buttonDisabled]}
+                accessibilityLabel={text.dashboard.newsDeleteButton}
+                disabled={deletingNewsId === post.id}
+                onPress={() => {
+                  void handleDeleteNews(post);
+                }}
+              >
+                <Ionicons
+                  name={deletingNewsId === post.id ? 'hourglass-outline' : 'trash-outline'}
+                  size={18}
+                  color="#ab1e24"
+                />
+              </Pressable>
             ) : null}
           </Pressable>
         ))}
@@ -1430,7 +1467,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
             </Pressable>
           </View>
 
-          {renderNewsFeedCard()}
+          <View style={!isSupervisor ? styles.employeeNewsSpacing : undefined}>
+            {renderNewsFeedCard()}
+          </View>
 
           {isAdmin ? renderLevelQuickBlock() : null}
 
@@ -1544,11 +1583,6 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         </View>
       </Modal>
 
-      {user.role === 'EMPLOYEE' ? (
-        <View style={styles.card}>
-          <Text style={styles.subtitle}>{text.dashboard.uploadPermission}</Text>
-        </View>
-      ) : null}
     </View>
   );
 }

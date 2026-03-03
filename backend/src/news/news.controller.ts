@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -64,6 +65,7 @@ export class NewsController {
   listNewsPosts(
     @Req() req: AuthenticatedRequest,
     @Query('limit') limitRaw: string | undefined,
+    @Query('month') month: string | undefined,
   ) {
     const actor = req.user;
     if (!actor?.id || !actor.role) {
@@ -81,7 +83,24 @@ export class NewsController {
       role: actor.role,
       trainingAccess: actor.trainingAccess,
       limit,
+      month,
     });
+  }
+
+  @ApiOperation({ summary: 'Delete one news post (admin only)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  deleteNewsPost(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) newsId: number,
+  ) {
+    const actor = req.user;
+    if (!actor?.id || actor.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.newsService.deleteNewsPost(newsId);
   }
 
   @ApiOperation({ summary: 'Mark one news post as read for current user' })

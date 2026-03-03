@@ -127,6 +127,7 @@ export class NewsService {
       role: string;
       trainingAccess?: string[];
       limit?: number;
+      month?: string;
     },
   ) {
     const limit =
@@ -163,8 +164,22 @@ export class NewsService {
       ];
     }
 
+    const monthRange = this.parseMonthRange(context.month);
+
+    const whereWithMonth: Prisma.NewsPostWhereInput = {
+      ...where,
+      ...(monthRange
+        ? {
+            createdAt: {
+              gte: monthRange.start,
+              lt: monthRange.end,
+            },
+          }
+        : {}),
+    };
+
     const rows = await this.prisma.newsPost.findMany({
-      where,
+      where: whereWithMonth,
       orderBy: {
         createdAt: 'desc',
       },
@@ -190,30 +205,76 @@ export class NewsService {
       },
     });
 
-    return rows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      message: row.message,
-      audience: row.audience,
-      module: row.module,
-      section: row.section,
-      createdAt: row.createdAt,
-      isRead: row.reads.length > 0,
-      createdBy: row.createdByUser,
-      attachment: row.attachmentDocument
-        ? {
-            documentId: row.attachmentDocument.id,
-            originalName: row.attachmentDocument.originalName,
-            mimeType: row.attachmentDocument.mimeType,
-            mediaType: row.attachmentDocument.mediaType,
-            fileUrl: this.buildFileUrl(
-              req,
-              row.attachmentDocument.category,
-              row.attachmentDocument.fileName,
-            ),
-          }
-        : null,
-    }));
+    const monthRows = await this.prisma.newsPost.findMany({
+      where,
+      select: {
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    const availableMonths = Array.from(
+      new Set(
+        monthRows.map((entry) => {
+          const year = entry.createdAt.getUTCFullYear();
+          const month = `${entry.createdAt.getUTCMonth() + 1}`.padStart(2, '0');
+          return `${year}-${month}`;
+        }),
+      ),
+    );
+
+    return {
+      items: rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        message: row.message,
+        audience: row.audience,
+        module: row.module,
+        section: row.section,
+        createdAt: row.createdAt,
+        isRead: row.reads.length > 0,
+        createdBy: row.createdByUser,
+        attachment: row.attachmentDocument
+          ? {
+              documentId: row.attachmentDocument.id,
+              originalName: row.attachmentDocument.originalName,
+              mimeType: row.attachmentDocument.mimeType,
+              mediaType: row.attachmentDocument.mediaType,
+              fileUrl: this.buildFileUrl(
+                req,
+                row.attachmentDocument.category,
+                row.attachmentDocument.fileName,
+              ),
+            }
+          : null,
+      })),
+      availableMonths,
+    };
+  }
+
+  async deleteNewsPost(newsPostId: number) {
+    const existing = await this.prisma.newsPost.findUnique({
+      where: {
+        id: newsPostId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('News post not found');
+    }
+
+    await this.prisma.newsPost.delete({
+      where: {
+        id: newsPostId,
+      },
+    });
+
+    return { success: true };
   }
 
   async markNewsAsRead(newsPostId: number, userId: number) {
@@ -292,6 +353,29 @@ export class NewsService {
     }
 
     return section;
+  }
+
+  private parseMonthRange(month: string | undefined) {
+    if (!month) {
+      return null;
+    }
+
+    const match = /^(\d{4})-(\d{2})$/.exec(month);
+    if (!match) {
+      throw new BadRequestException('Invalid month format. Use YYYY-MM');
+    }
+
+    const parsedYear = Number(match[1]);
+    const parsedMonth = Number(match[2]);
+
+    if (!Number.isInteger(parsedYear) || !Number.isInteger(parsedMonth) || parsedMonth < 1 || parsedMonth > 12) {
+      throw new BadRequestException('Invalid month value');
+    }
+
+    const start = new Date(Date.UTC(parsedYear, parsedMonth - 1, 1, 0, 0, 0));
+    const end = new Date(Date.UTC(parsedYear, parsedMonth, 1, 0, 0, 0));
+
+    return { start, end };
   }
 
   private buildFileUrl(
