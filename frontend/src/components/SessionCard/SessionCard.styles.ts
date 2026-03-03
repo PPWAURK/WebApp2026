@@ -59,6 +59,9 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
   },
+  whatsNewMessageInput: {
+    minHeight: 92,
+  },
   quickRowCard: {
     borderRadius: 12,
     borderWidth: 1,
@@ -92,6 +95,33 @@ export const styles = StyleSheet.create({
     color: '#7f1b21',
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
+  },
+  quickNewsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  quickUnreadBadge: {
+    color: '#7a181d',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#dfb0b2',
+    backgroundColor: '#fff1f2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  quickNewsUnreadCard: {
+    borderColor: '#db8f94',
+    backgroundColor: '#fff4f5',
+  },
+  quickNewsLink: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+    textDecorationLine: 'underline',
   },
   restaurantFilterBlock: {
     gap: 6,

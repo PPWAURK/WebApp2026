@@ -3,6 +3,7 @@ import type { LibraryModule, LibrarySection } from '../constants/documentTaxonom
 import { throwIfUnauthorized } from './authSession';
 
 export type UploadedFileResponse = {
+  documentId: number;
   fileName: string;
   category: 'images' | 'videos' | 'documents';
   originalName: string;

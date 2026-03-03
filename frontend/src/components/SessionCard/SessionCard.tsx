@@ -11,12 +11,19 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { AdminRestaurantPanel } from '../AdminRestaurantPanel';
 import { AdminTrainingAccessPanel } from '../AdminTrainingAccessPanel';
 import { AdminUploadPanel } from '../AdminUploadPanel';
 import type { AppText } from '../../locales/translations';
 import { styles } from './SessionCard.styles';
 import type { EmployeeLevel, User } from '../../types/auth';
+import {
+  getModuleOptions,
+  getSectionsByModule,
+  type LibraryModule,
+  type LibrarySection,
+} from '../../constants/documentTaxonomy';
 import {
   approveUserAccount,
   deleteUserAccount,
@@ -33,6 +40,14 @@ import {
   type TopOrderedProduct,
 } from '../../services/ordersApi';
 import { fetchSuppliers, type SupplierItem } from '../../services/suppliersApi';
+import { uploadSingleFile, type UploadedFileResponse } from '../../services/uploadsApi';
+import {
+  createNewsPost,
+  fetchNewsFeed,
+  markNewsAsRead,
+  type NewsAudience,
+  type NewsPostItem,
+} from '../../services/newsApi';
 
 type SessionCardProps = {
   user: User;
@@ -53,6 +68,17 @@ const EMPLOYEE_LEVELS: EmployeeLevel[] = [
   'L6_MA',
   'L7_PDI',
   'L7_D',
+];
+
+const PICKER_TYPES = [
+  'image/*',
+  'video/*',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
 ];
 
 export function SessionCard({ user, accessToken, text, onLogout }: SessionCardProps) {
@@ -91,6 +117,20 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [orderPreviewUrl, setOrderPreviewUrl] = useState<string | null>(null);
   const [orderPreviewLoading, setOrderPreviewLoading] = useState(false);
   const [isOrderPreviewOpen, setIsOrderPreviewOpen] = useState(false);
+  const [whatsNewModule, setWhatsNewModule] = useState<LibraryModule>('TRAINING');
+  const [whatsNewSection, setWhatsNewSection] = useState<LibrarySection>('RECIPE_TRAINING');
+  const [whatsNewUploading, setWhatsNewUploading] = useState(false);
+  const [whatsNewError, setWhatsNewError] = useState<string | null>(null);
+  const [whatsNewLastUpload, setWhatsNewLastUpload] = useState<UploadedFileResponse | null>(
+    null,
+  );
+  const [whatsNewTitle, setWhatsNewTitle] = useState('');
+  const [whatsNewMessage, setWhatsNewMessage] = useState('');
+  const [whatsNewAudience, setWhatsNewAudience] = useState<NewsAudience>('ALL');
+  const [whatsNewPublishing, setWhatsNewPublishing] = useState(false);
+  const [newsFeed, setNewsFeed] = useState<NewsPostItem[]>([]);
+  const [newsFeedLoading, setNewsFeedLoading] = useState(false);
+  const [newsFeedError, setNewsFeedError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isSupervisor) {
@@ -379,6 +419,50 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     };
   }, [accessToken, latestOrder]);
 
+  const whatsNewModuleOptions = useMemo(() => getModuleOptions(text), [text]);
+  const whatsNewSectionsByModule = useMemo(() => getSectionsByModule(text), [text]);
+  const whatsNewSections = whatsNewSectionsByModule[whatsNewModule];
+
+  useEffect(() => {
+    const sectionExists = whatsNewSections.some((section) => section.key === whatsNewSection);
+    if (sectionExists) {
+      return;
+    }
+
+    const firstSection = whatsNewSections[0];
+    if (firstSection) {
+      setWhatsNewSection(firstSection.key as LibrarySection);
+    }
+  }, [whatsNewSection, whatsNewSections]);
+
+  useEffect(() => {
+    let isActive = true;
+    setNewsFeedLoading(true);
+    setNewsFeedError(null);
+
+    void fetchNewsFeed(accessToken, { limit: 12 })
+      .then((items) => {
+        if (isActive) {
+          setNewsFeed(items);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setNewsFeed([]);
+          setNewsFeedError(text.dashboard.newsLoadError);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setNewsFeedLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accessToken, text.dashboard.newsLoadError]);
+
   const employeeRestaurantOptions = useMemo(() => {
     const restaurantsMap = new Map<number, string>();
 
@@ -648,151 +732,445 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     }
   }
 
+  function onSelectWhatsNewModule(nextModule: LibraryModule) {
+    setWhatsNewModule(nextModule);
+    const firstSection = whatsNewSectionsByModule[nextModule][0];
+    if (firstSection) {
+      setWhatsNewSection(firstSection.key as LibrarySection);
+    }
+  }
+
+  async function handleWhatsNewUpload() {
+    setWhatsNewError(null);
+
+    const result = await DocumentPicker.getDocumentAsync({
+      multiple: false,
+      type: PICKER_TYPES,
+      copyToCacheDirectory: true,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    if (!asset) {
+      return;
+    }
+
+    setWhatsNewUploading(true);
+    try {
+      const response = await uploadSingleFile(
+        accessToken,
+        {
+          uri: asset.uri,
+          name: asset.name,
+          mimeType: asset.mimeType ?? undefined,
+          file: (asset as { file?: File }).file,
+        },
+        {
+          module: whatsNewModule,
+          section: whatsNewSection,
+        },
+      );
+      setWhatsNewLastUpload(response);
+    } catch {
+      setWhatsNewError(text.upload.error);
+    } finally {
+      setWhatsNewUploading(false);
+    }
+  }
+
+  async function handlePublishWhatsNew() {
+    const title = whatsNewTitle.trim();
+    const message = whatsNewMessage.trim();
+
+    if (!title || !message) {
+      setWhatsNewError(text.dashboard.whatsNewValidationError);
+      return;
+    }
+
+    setWhatsNewPublishing(true);
+    setWhatsNewError(null);
+
+    try {
+      const createdPost = await createNewsPost(accessToken, {
+        title,
+        message,
+        audience: whatsNewAudience,
+        module: whatsNewModule,
+        section: whatsNewSection,
+        attachmentDocumentId: whatsNewLastUpload?.documentId,
+      });
+
+      setNewsFeed((current) => [createdPost, ...current].slice(0, 12));
+      setWhatsNewTitle('');
+      setWhatsNewMessage('');
+      setWhatsNewAudience('ALL');
+      setWhatsNewLastUpload(null);
+    } catch {
+      setWhatsNewError(text.dashboard.whatsNewPublishError);
+    } finally {
+      setWhatsNewPublishing(false);
+    }
+  }
+
+  async function handleOpenNews(post: NewsPostItem) {
+    if (post.attachment?.fileUrl) {
+      void Linking.openURL(post.attachment.fileUrl);
+    }
+
+    if (post.isRead) {
+      return;
+    }
+
+    try {
+      await markNewsAsRead(accessToken, post.id);
+      setNewsFeed((current) =>
+        current.map((item) => (item.id === post.id ? { ...item, isRead: true } : item)),
+      );
+    } catch {
+      // Keep read state untouched when API fails.
+    }
+  }
+
+  function renderWhatsNewUploadCard() {
+    return (
+      <View style={styles.quickBlock}>
+        <Text style={styles.quickBlockTitle}>{text.dashboard.whatsNewTitle}</Text>
+        <Text style={styles.subtitle}>{text.dashboard.whatsNewSubtitle}</Text>
+
+        <TextInput
+          style={styles.quickSearchInput}
+          value={whatsNewTitle}
+          onChangeText={setWhatsNewTitle}
+          placeholder={text.dashboard.whatsNewTitlePlaceholder}
+          placeholderTextColor="#a98a8d"
+        />
+        <TextInput
+          style={[styles.quickSearchInput, styles.whatsNewMessageInput]}
+          value={whatsNewMessage}
+          onChangeText={setWhatsNewMessage}
+          placeholder={text.dashboard.whatsNewMessagePlaceholder}
+          placeholderTextColor="#a98a8d"
+          multiline
+          textAlignVertical="top"
+        />
+
+        <Text style={styles.quickSectionTitle}>{text.dashboard.whatsNewAudienceLabel}</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chartSupplierTabs}
+        >
+          {([
+            { key: 'ALL', label: text.dashboard.whatsNewAudienceAll },
+            { key: 'MANAGERS', label: text.dashboard.whatsNewAudienceManagers },
+            { key: 'EMPLOYEES', label: text.dashboard.whatsNewAudienceEmployees },
+          ] as const).map((option) => {
+            const isActive = whatsNewAudience === option.key;
+            return (
+              <Pressable
+                key={`whats-new-audience-${option.key}`}
+                style={[styles.chartSupplierChip, isActive && styles.chartSupplierChipActive]}
+                onPress={() => setWhatsNewAudience(option.key)}
+              >
+                <Text
+                  style={[
+                    styles.chartSupplierChipText,
+                    isActive && styles.chartSupplierChipTextActive,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        <Text style={styles.quickSectionTitle}>{text.upload.moduleLabel}</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chartSupplierTabs}
+        >
+          {whatsNewModuleOptions.map((moduleOption) => {
+            const isActive = whatsNewModule === moduleOption.key;
+            return (
+              <Pressable
+                key={`whats-new-module-${moduleOption.key}`}
+                style={[styles.chartSupplierChip, isActive && styles.chartSupplierChipActive]}
+                onPress={() => onSelectWhatsNewModule(moduleOption.key as LibraryModule)}
+              >
+                <Text style={[styles.chartSupplierChipText, isActive && styles.chartSupplierChipTextActive]}>
+                  {moduleOption.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        <Text style={styles.quickSectionTitle}>{text.upload.sectionLabel}</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chartSupplierTabs}
+        >
+          {whatsNewSections.map((sectionOption) => {
+            const isActive = whatsNewSection === sectionOption.key;
+            return (
+              <Pressable
+                key={`whats-new-section-${sectionOption.key}`}
+                style={[styles.chartSupplierChip, isActive && styles.chartSupplierChipActive]}
+                onPress={() => setWhatsNewSection(sectionOption.key as LibrarySection)}
+              >
+                <Text style={[styles.chartSupplierChipText, isActive && styles.chartSupplierChipTextActive]}>
+                  {sectionOption.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        <Pressable
+          style={[styles.secondaryButton, whatsNewUploading && styles.buttonDisabled]}
+          disabled={whatsNewUploading}
+          onPress={() => {
+            void handleWhatsNewUpload();
+          }}
+        >
+          <Text style={styles.secondaryButtonText}>
+            {whatsNewUploading ? text.upload.uploading : text.dashboard.whatsNewAttachCta}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.secondaryButton, whatsNewPublishing && styles.buttonDisabled]}
+          disabled={whatsNewPublishing}
+          onPress={() => {
+            void handlePublishWhatsNew();
+          }}
+        >
+          <Text style={styles.secondaryButtonText}>
+            {whatsNewPublishing ? text.dashboard.whatsNewPublishing : text.dashboard.whatsNewCta}
+          </Text>
+        </Pressable>
+
+        {whatsNewError ? <Text style={styles.errorText}>{whatsNewError}</Text> : null}
+
+        {whatsNewLastUpload ? (
+          <View style={styles.quickRowCard}>
+            <Text style={styles.quickRowTitle}>{text.dashboard.whatsNewAttachmentReady}</Text>
+            <Text style={styles.subtitle}>{whatsNewLastUpload.originalName}</Text>
+            <Text style={styles.subtitle}>
+              {text.upload.resultModule}:{' '}
+              {whatsNewModuleOptions.find((option) => option.key === whatsNewLastUpload.module)
+                ?.label ?? whatsNewLastUpload.module}
+            </Text>
+            <Text style={styles.subtitle}>
+              {text.upload.resultSection}:{' '}
+              {whatsNewSectionsByModule[whatsNewLastUpload.module].find(
+                (option) => option.key === whatsNewLastUpload.section,
+              )?.label ?? whatsNewLastUpload.section}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  }
+
+  function renderNewsFeedCard() {
+    const unreadCount = newsFeed.filter((item) => !item.isRead).length;
+
+    return (
+      <View style={styles.quickBlock}>
+        <View style={styles.quickNewsHeader}>
+          <Text style={styles.quickBlockTitle}>{text.dashboard.newsFeedTitle}</Text>
+          {unreadCount > 0 ? (
+            <Text style={styles.quickUnreadBadge}>{`${unreadCount} ${text.dashboard.newsUnreadLabel}`}</Text>
+          ) : null}
+        </View>
+        <Text style={styles.subtitle}>{text.dashboard.newsFeedSubtitle}</Text>
+
+        {newsFeedLoading ? <Text style={styles.subtitle}>{text.adminTraining.loading}</Text> : null}
+        {newsFeedError ? <Text style={styles.errorText}>{newsFeedError}</Text> : null}
+
+        {!newsFeedLoading && !newsFeedError && newsFeed.length === 0 ? (
+          <Text style={styles.subtitle}>{text.dashboard.newsFeedEmpty}</Text>
+        ) : null}
+
+        {newsFeed.slice(0, 8).map((post) => (
+          <Pressable
+            key={`news-${post.id}`}
+            style={[styles.quickRowCard, !post.isRead && styles.quickNewsUnreadCard]}
+            onPress={() => {
+              void handleOpenNews(post);
+            }}
+          >
+            <Text style={styles.quickRowTitle}>{post.title}</Text>
+            <Text style={styles.subtitle}>{post.message}</Text>
+            <Text style={styles.subtitle}>{new Date(post.createdAt).toLocaleString()}</Text>
+            <Text style={styles.subtitle}>
+              {post.createdBy.name ?? post.createdBy.email}
+            </Text>
+            {post.attachment ? (
+              <Text style={styles.quickNewsLink}>{post.attachment.originalName}</Text>
+            ) : null}
+          </Pressable>
+        ))}
+      </View>
+    );
+  }
+
   function renderManagerQuickBlocks() {
     return (
       <>
-        <View style={styles.quickBlock}>
-          <Text style={styles.quickBlockTitle}>{text.dashboard.quickApproveTitle}</Text>
-          {renderAdminRestaurantFilter('approval')}
-          <TextInput
-            style={styles.quickSearchInput}
-            placeholder={text.dashboard.quickSearchPlaceholder}
-            placeholderTextColor="#a98a8d"
-            value={accountSearch}
-            onChangeText={setAccountSearch}
-          />
-          {usersLoading ? <Text style={styles.subtitle}>{text.adminTraining.loading}</Text> : null}
-          {usersError ? <Text style={styles.errorText}>{usersError}</Text> : null}
-          {!usersLoading && !usersError && accountApprovalUsers.length === 0 ? (
-            <Text style={styles.subtitle}>{text.dashboard.quickNoPendingAccount}</Text>
-          ) : null}
-          {accountApprovalUsers.slice(0, 4).map((entry) => (
-            <View key={`approve-${entry.id}`} style={styles.quickRowCard}>
-              <Text style={styles.quickRowTitle}>{entry.name ?? entry.email}</Text>
-              <Text style={styles.subtitle}>{entry.email}</Text>
-              <Pressable
-                style={[
-                  styles.secondaryButton,
-                    isApprovingUserId === entry.id && styles.buttonDisabled,
-                ]}
-                disabled={isApprovingUserId === entry.id}
-                onPress={() => {
-                  void handleApproveAccount(entry);
-                }}
-              >
-                <Text style={styles.secondaryButtonText}>
-                  {isApprovingUserId === entry.id
-                    ? text.adminTraining.approveAccountSaving
-                    : text.adminTraining.approveAccountButton}
-                  </Text>
-                </Pressable>
-            </View>
-          ))}
-
-          <View style={styles.quickSectionDivider}>
-            <Text style={styles.quickSectionTitle}>{text.dashboard.quickDeleteSectionTitle}</Text>
-          </View>
-
-          {deletionUsers.length === 0 ? (
-            <Text style={styles.subtitle}>{text.dashboard.quickNoEmployee}</Text>
-          ) : (
-            deletionUsers.slice(0, 4).map((entry) => (
-              <View key={`delete-${entry.id}`} style={styles.quickRowCard}>
-                <View style={styles.quickLevelRow}>
-                  <View style={styles.quickLevelInfo}>
-                    <Text style={styles.quickRowTitle}>{entry.name ?? entry.email}</Text>
-                    <Text style={styles.subtitle}>{entry.email}</Text>
-                  </View>
-
+        {!isAdmin ? (
+          <View style={styles.quickBlock}>
+            <Text style={styles.quickBlockTitle}>{text.dashboard.quickApproveTitle}</Text>
+            {renderAdminRestaurantFilter('approval')}
+            <TextInput
+              style={styles.quickSearchInput}
+              placeholder={text.dashboard.quickSearchPlaceholder}
+              placeholderTextColor="#a98a8d"
+              value={accountSearch}
+              onChangeText={setAccountSearch}
+            />
+            {usersLoading ? <Text style={styles.subtitle}>{text.adminTraining.loading}</Text> : null}
+            {usersError ? <Text style={styles.errorText}>{usersError}</Text> : null}
+            {!usersLoading && !usersError && accountApprovalUsers.length === 0 ? (
+              <Text style={styles.subtitle}>{text.dashboard.quickNoPendingAccount}</Text>
+            ) : null}
+            {accountApprovalUsers.slice(0, 4).map((entry) => (
+              <View key={`approve-${entry.id}`} style={styles.quickRowCard}>
+                <Text style={styles.quickRowTitle}>{entry.name ?? entry.email}</Text>
+                <Text style={styles.subtitle}>{entry.email}</Text>
                 <Pressable
                   style={[
-                    styles.iconDeleteButton,
-                    isDeletingUserId === entry.id && styles.buttonDisabled,
+                    styles.secondaryButton,
+                      isApprovingUserId === entry.id && styles.buttonDisabled,
                   ]}
-                  accessibilityLabel={text.dashboard.quickDeleteButton}
-                  disabled={isDeletingUserId === entry.id}
+                  disabled={isApprovingUserId === entry.id}
                   onPress={() => {
-                    void handleDeleteUser(entry);
+                    void handleApproveAccount(entry);
                   }}
                 >
-                  <Ionicons
-                    name={isDeletingUserId === entry.id ? 'hourglass-outline' : 'trash-outline'}
-                    size={20}
-                    color="#ab1e24"
-                  />
-                </Pressable>
-                </View>
+                  <Text style={styles.secondaryButtonText}>
+                    {isApprovingUserId === entry.id
+                      ? text.adminTraining.approveAccountSaving
+                      : text.adminTraining.approveAccountButton}
+                    </Text>
+                  </Pressable>
               </View>
-            ))
-          )}
-        </View>
+            ))}
 
-        <View style={styles.quickBlock}>
-          <Text style={styles.quickBlockTitle}>{text.dashboard.quickLatestOrderTitle}</Text>
-          {orderLoading ? <Text style={styles.subtitle}>{text.adminTraining.loading}</Text> : null}
-          {orderError ? <Text style={styles.errorText}>{orderError}</Text> : null}
-          {!orderLoading && !orderError && !latestOrder ? (
-            <Text style={styles.subtitle}>{text.dashboard.quickNoOrder}</Text>
-          ) : null}
-          {latestOrder ? (
-            <View style={styles.quickRowCard}>
-              <View style={styles.quickMetaInlineRow}>
-                <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
-                  {text.orders.orderNumberLabel}
-                </Text>
-                <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
-                  {text.orders.deliveryDateLabel}
-                </Text>
-                <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
-                  {text.orders.supplierLabel}
-                </Text>
-                <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
-                  {text.orders.summaryItems}
-                </Text>
-                {Platform.OS === 'web' ? <View style={styles.quickEyeSpacer} /> : null}
-              </View>
+            <View style={styles.quickSectionDivider}>
+              <Text style={styles.quickSectionTitle}>{text.dashboard.quickDeleteSectionTitle}</Text>
+            </View>
 
-              <View style={styles.quickMetaInlineRow}>
-                <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
-                  {latestOrder.number}
-                </Text>
-                <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
-                  {latestOrder.deliveryDate}
-                </Text>
-                <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
-                  {latestOrder.supplierName}
-                </Text>
-                <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
-                  {latestOrder.totalItems}
-                </Text>
+            {deletionUsers.length === 0 ? (
+              <Text style={styles.subtitle}>{text.dashboard.quickNoEmployee}</Text>
+            ) : (
+              deletionUsers.slice(0, 4).map((entry) => (
+                <View key={`delete-${entry.id}`} style={styles.quickRowCard}>
+                  <View style={styles.quickLevelRow}>
+                    <View style={styles.quickLevelInfo}>
+                      <Text style={styles.quickRowTitle}>{entry.name ?? entry.email}</Text>
+                      <Text style={styles.subtitle}>{entry.email}</Text>
+                    </View>
 
-                {Platform.OS === 'web' ? (
                   <Pressable
                     style={[
-                      styles.eyePreviewButton,
-                      (!orderPreviewUrl || orderPreviewLoading) && styles.buttonDisabled,
+                      styles.iconDeleteButton,
+                      isDeletingUserId === entry.id && styles.buttonDisabled,
                     ]}
-                    disabled={!orderPreviewUrl || orderPreviewLoading}
-                    onPress={() => setIsOrderPreviewOpen(true)}
+                    accessibilityLabel={text.dashboard.quickDeleteButton}
+                    disabled={isDeletingUserId === entry.id}
+                    onPress={() => {
+                      void handleDeleteUser(entry);
+                    }}
                   >
-                    <Ionicons name="eye-outline" size={20} color="#7f1b21" />
+                    <Ionicons
+                      name={isDeletingUserId === entry.id ? 'hourglass-outline' : 'trash-outline'}
+                      size={20}
+                      color="#ab1e24"
+                    />
                   </Pressable>
-                ) : null}
-              </View>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+        ) : null}
 
-              {Platform.OS === 'web' ? null : (
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={() => {
-                    void Linking.openURL(buildOrderBonUrl(latestOrder.id));
-                  }}
-                >
-                  <Text style={styles.secondaryButtonText}>{text.orders.downloadBonButton}</Text>
-                </Pressable>
-              )}
-            </View>
-          ) : null}
-        </View>
+        {!isAdmin ? (
+          <View style={styles.quickBlock}>
+            <Text style={styles.quickBlockTitle}>{text.dashboard.quickLatestOrderTitle}</Text>
+            {orderLoading ? <Text style={styles.subtitle}>{text.adminTraining.loading}</Text> : null}
+            {orderError ? <Text style={styles.errorText}>{orderError}</Text> : null}
+            {!orderLoading && !orderError && !latestOrder ? (
+              <Text style={styles.subtitle}>{text.dashboard.quickNoOrder}</Text>
+            ) : null}
+            {latestOrder ? (
+              <View style={styles.quickRowCard}>
+                <View style={styles.quickMetaInlineRow}>
+                  <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
+                    {text.orders.orderNumberLabel}
+                  </Text>
+                  <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
+                    {text.orders.deliveryDateLabel}
+                  </Text>
+                  <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
+                    {text.orders.supplierLabel}
+                  </Text>
+                  <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
+                    {text.orders.summaryItems}
+                  </Text>
+                  {Platform.OS === 'web' ? <View style={styles.quickEyeSpacer} /> : null}
+                </View>
+
+                <View style={styles.quickMetaInlineRow}>
+                  <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
+                    {latestOrder.number}
+                  </Text>
+                  <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
+                    {latestOrder.deliveryDate}
+                  </Text>
+                  <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
+                    {latestOrder.supplierName}
+                  </Text>
+                  <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
+                    {latestOrder.totalItems}
+                  </Text>
+
+                  {Platform.OS === 'web' ? (
+                    <Pressable
+                      style={[
+                        styles.eyePreviewButton,
+                        (!orderPreviewUrl || orderPreviewLoading) && styles.buttonDisabled,
+                      ]}
+                      disabled={!orderPreviewUrl || orderPreviewLoading}
+                      onPress={() => setIsOrderPreviewOpen(true)}
+                    >
+                      <Ionicons name="eye-outline" size={20} color="#7f1b21" />
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                {Platform.OS === 'web' ? null : (
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={() => {
+                      void Linking.openURL(buildOrderBonUrl(latestOrder.id));
+                    }}
+                  >
+                    <Text style={styles.secondaryButtonText}>{text.orders.downloadBonButton}</Text>
+                  </Pressable>
+                )}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
       </>
     );
   }
@@ -1052,6 +1430,8 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
             </Pressable>
           </View>
 
+          {renderNewsFeedCard()}
+
           {isAdmin ? renderLevelQuickBlock() : null}
 
           {isAdmin ? (
@@ -1072,6 +1452,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         {isSupervisor ? (
           <View style={styles.quickColumn}>
             {!isAdmin ? renderLevelQuickBlock() : null}
+            {isAdmin ? renderWhatsNewUploadCard() : null}
             {renderManagerQuickBlocks()}
           </View>
         ) : null}

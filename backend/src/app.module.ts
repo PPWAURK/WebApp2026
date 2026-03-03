@@ -10,6 +10,7 @@ import { RestaurantsModule } from './restaurants/restaurants.module';
 import { ProductsModule } from './products/products.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { OrdersModule } from './orders/orders.module';
+import { NewsModule } from './news/news.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { OrdersModule } from './orders/orders.module';
     ProductsModule,
     SuppliersModule,
     OrdersModule,
+    NewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

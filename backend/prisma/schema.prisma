@@ -30,6 +30,8 @@ model User {
   trainingAccess Json?
   levelAccessProfile EmployeeLevelAccessProfile? @relation(fields: [employeeLevel], references: [employeeLevel], onDelete: Restrict, onUpdate: Cascade)
   documents     Document[]
+  newsPostsCreated NewsPost[] @relation("NewsPostCreator")
+  newsPostReads NewsPostRead[]
   passwordResetTokens PasswordResetToken[]
   purchaseOrders PurchaseOrder[] @relation("CreatedByUser")
   createdAt     DateTime      @default(now())
@@ -151,8 +153,44 @@ model Document {
   uploadedAt       DateTime        @default(now())
   uploadedByUserId Int?
   uploadedBy       User?           @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  attachedToNewsPosts NewsPost[]   @relation("NewsPostAttachment")
 
   @@index([module, section, mediaType, uploadedAt])
+}
+
+model NewsPost {
+  id                   Int             @id @default(autoincrement())
+  title                String          @db.VarChar(191)
+  message              String          @db.Text
+  audience             NewsAudience    @default(ALL)
+  module               UploadModule?
+  section              UploadSection?
+  attachmentDocumentId Int?            @map("attachment_document_id")
+  attachmentDocument   Document?       @relation("NewsPostAttachment", fields: [attachmentDocumentId], references: [id], onDelete: SetNull)
+  createdByUserId      Int             @map("created_by_user_id")
+  createdByUser        User            @relation("NewsPostCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  reads                NewsPostRead[]
+  createdAt            DateTime        @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([createdAt])
+  @@index([audience, createdAt])
+  @@index([module, section, createdAt])
+  @@index([attachmentDocumentId])
+  @@index([createdByUserId])
+  @@map("news_posts")
+}
+
+model NewsPostRead {
+  id         Int       @id @default(autoincrement())
+  newsPostId Int       @map("news_post_id")
+  newsPost   NewsPost  @relation(fields: [newsPostId], references: [id], onDelete: Cascade)
+  userId     Int       @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt     DateTime  @default(now()) @map("read_at") @db.Timestamp(0)
+
+  @@unique([newsPostId, userId])
+  @@index([userId, readAt])
+  @@map("news_post_reads")
 }
 
 enum Role {
@@ -210,4 +248,10 @@ enum UploadSection {
   CUISINE_TOOLS
   MEAT_DATE_FORM
   CLEANING_FORM
+}
+
+enum NewsAudience {
+  ALL
+  MANAGERS
+  EMPLOYEES
 }

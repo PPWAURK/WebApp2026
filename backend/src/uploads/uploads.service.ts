@@ -70,6 +70,7 @@ export class UploadsService {
     });
 
     return {
+      documentId: createdDocument.id,
       fileName: createdDocument.fileName,
       category: createdDocument.category,
       originalName: createdDocument.originalName,
