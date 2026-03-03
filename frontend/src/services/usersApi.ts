@@ -15,6 +15,11 @@ export type TrainingAccessUser = {
   restaurant?: Pick<Restaurant, 'id' | 'name'> | null;
 };
 
+export type TrainingAccessByLevelProfile = {
+  employeeLevel: EmployeeLevel;
+  sections: TrainingSection[];
+};
+
 export type UnassignedUser = {
   id: number;
   email: string;
@@ -83,6 +88,63 @@ export async function updateUserTrainingAccess(
   }
 
   return data as TrainingAccessUser;
+}
+
+export async function fetchTrainingAccessByLevel(
+  token: string,
+): Promise<TrainingAccessByLevelProfile[]> {
+  const response = await fetch(`${API_URL}/users/training-access-by-level`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = (await response.json()) as
+    | TrainingAccessByLevelProfile[]
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to load level access profiles';
+    throw new Error(message);
+  }
+
+  return data as TrainingAccessByLevelProfile[];
+}
+
+export async function updateTrainingAccessByLevel(
+  token: string,
+  level: EmployeeLevel,
+  sections: TrainingSection[],
+): Promise<TrainingAccessByLevelProfile> {
+  const response = await fetch(`${API_URL}/users/training-access-by-level/${level}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ sections }),
+  });
+
+  const data = (await response.json()) as
+    | TrainingAccessByLevelProfile
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to update level access profile';
+    throw new Error(message);
+  }
+
+  return data as TrainingAccessByLevelProfile;
 }
 
 export async function fetchUnassignedUsers(token: string): Promise<UnassignedUser[]> {

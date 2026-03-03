@@ -59,6 +59,8 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const roleLabel = text.dashboard.roleValues[user.role];
   const workplaceLabel = text.dashboard.workplaceValues[user.workplaceRole];
   const isManager = user.role === 'MANAGER';
+  const isAdmin = user.role === 'ADMIN';
+  const isSupervisor = isManager || isAdmin;
 
   const [users, setUsers] = useState<TrainingAccessUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
@@ -69,6 +71,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [isUpdatingLevelUserId, setIsUpdatingLevelUserId] = useState<number | null>(null);
   const [isDeletingUserId, setIsDeletingUserId] = useState<number | null>(null);
   const [levelEditorUser, setLevelEditorUser] = useState<TrainingAccessUser | null>(null);
+  const [selectedEmployeeRestaurantFilter, setSelectedEmployeeRestaurantFilter] = useState<
+    number | 'ALL' | 'NONE'
+  >('ALL');
 
   const [latestOrder, setLatestOrder] = useState<OrderSummary | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
@@ -85,12 +90,12 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [isOrderPreviewOpen, setIsOrderPreviewOpen] = useState(false);
 
   useEffect(() => {
-    if (!isManager) {
+    if (!isSupervisor) {
       return;
     }
 
     const managerRestaurantId = user.restaurant?.id;
-    if (!managerRestaurantId) {
+    if (isManager && !managerRestaurantId) {
       setUsers([]);
       setUsersError(text.dashboard.managerRestaurantMissing);
       return;
@@ -100,7 +105,10 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     setUsersLoading(true);
     setUsersError(null);
 
-    void fetchTrainingAccessUsers(accessToken, { restaurantId: managerRestaurantId })
+    void fetchTrainingAccessUsers(
+      accessToken,
+      isManager ? { restaurantId: managerRestaurantId } : undefined,
+    )
       .then((result) => {
         if (!isActive) {
           return;
@@ -128,6 +136,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   }, [
     accessToken,
     isManager,
+    isSupervisor,
     text.dashboard.managerRestaurantMissing,
     text.dashboard.quickLoadUsersError,
     user.id,
@@ -135,7 +144,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   ]);
 
   useEffect(() => {
-    if (!isManager) {
+    if (!isSupervisor) {
       return;
     }
 
@@ -166,10 +175,10 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     return () => {
       isActive = false;
     };
-  }, [accessToken, isManager, text.dashboard.quickLoadOrderError]);
+  }, [accessToken, isSupervisor, text.dashboard.quickLoadOrderError]);
 
   useEffect(() => {
-    if (!isManager) {
+    if (!isSupervisor) {
       return;
     }
 
@@ -202,10 +211,10 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     return () => {
       isActive = false;
     };
-  }, [accessToken, isManager]);
+  }, [accessToken, isSupervisor]);
 
   useEffect(() => {
-    if (!isManager) {
+    if (!isSupervisor) {
       return;
     }
 
@@ -243,10 +252,10 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     return () => {
       isActive = false;
     };
-  }, [accessToken, isManager, selectedChartSupplierId]);
+  }, [accessToken, isSupervisor, selectedChartSupplierId]);
 
   useEffect(() => {
-    if (!isManager) {
+    if (!isSupervisor) {
       return;
     }
 
@@ -297,7 +306,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     };
   }, [
     accessToken,
-    isManager,
+    isSupervisor,
     selectedChartMonth,
     selectedChartSupplierId,
     text.dashboard.topProductsLoadError,
@@ -367,9 +376,48 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     };
   }, [accessToken, latestOrder]);
 
+  const employeeRestaurantOptions = useMemo(() => {
+    const restaurantsMap = new Map<number, string>();
+
+    for (const entry of users) {
+      if (entry.restaurant?.id && entry.restaurant.name) {
+        restaurantsMap.set(entry.restaurant.id, entry.restaurant.name);
+      }
+    }
+
+    return Array.from(restaurantsMap.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }, [users]);
+
+  const usersFilteredByRestaurant = useMemo(() => {
+    if (!isAdmin || selectedEmployeeRestaurantFilter === 'ALL') {
+      return users;
+    }
+
+    if (selectedEmployeeRestaurantFilter === 'NONE') {
+      return users.filter((entry) => !entry.restaurantId);
+    }
+
+    return users.filter((entry) => entry.restaurantId === selectedEmployeeRestaurantFilter);
+  }, [isAdmin, selectedEmployeeRestaurantFilter, users]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+
+    if (
+      typeof selectedEmployeeRestaurantFilter === 'number' &&
+      !employeeRestaurantOptions.some((restaurant) => restaurant.id === selectedEmployeeRestaurantFilter)
+    ) {
+      setSelectedEmployeeRestaurantFilter('ALL');
+    }
+  }, [employeeRestaurantOptions, isAdmin, selectedEmployeeRestaurantFilter]);
+
   const accountApprovalUsers = useMemo(() => {
     const query = accountSearch.trim().toLowerCase();
-    return users
+    return usersFilteredByRestaurant
       .filter((entry) => !entry.isApproved)
       .filter((entry) => {
         if (!query) {
@@ -379,11 +427,11 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         const name = entry.name?.toLowerCase() ?? '';
         return name.includes(query) || entry.email.toLowerCase().includes(query);
       });
-  }, [accountSearch, users]);
+  }, [accountSearch, usersFilteredByRestaurant]);
 
   const deletionUsers = useMemo(() => {
     const query = accountSearch.trim().toLowerCase();
-    return users.filter((entry) => {
+    return usersFilteredByRestaurant.filter((entry) => {
       if (!query) {
         return true;
       }
@@ -391,11 +439,11 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
       const name = entry.name?.toLowerCase() ?? '';
       return name.includes(query) || entry.email.toLowerCase().includes(query);
     });
-  }, [accountSearch, users]);
+  }, [accountSearch, usersFilteredByRestaurant]);
 
   const levelUsers = useMemo(() => {
     const query = levelSearch.trim().toLowerCase();
-    return users.filter((entry) => {
+    return usersFilteredByRestaurant.filter((entry) => {
       if (!query) {
         return true;
       }
@@ -403,7 +451,70 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
       const name = entry.name?.toLowerCase() ?? '';
       return name.includes(query) || entry.email.toLowerCase().includes(query);
     });
-  }, [levelSearch, users]);
+  }, [levelSearch, usersFilteredByRestaurant]);
+
+  function renderAdminRestaurantFilter() {
+    if (!isAdmin) {
+      return null;
+    }
+
+    return (
+      <View style={styles.restaurantFilterBlock}>
+        <Text style={styles.quickSectionTitle}>{text.dashboard.quickRestaurantFilterTitle}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chartSupplierTabs}>
+          <Pressable
+            style={[
+              styles.chartSupplierChip,
+              selectedEmployeeRestaurantFilter === 'ALL' && styles.chartSupplierChipActive,
+            ]}
+            onPress={() => setSelectedEmployeeRestaurantFilter('ALL')}
+          >
+            <Text
+              style={[
+                styles.chartSupplierChipText,
+                selectedEmployeeRestaurantFilter === 'ALL' && styles.chartSupplierChipTextActive,
+              ]}
+            >
+              {text.dashboard.quickRestaurantFilterAll}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[
+              styles.chartSupplierChip,
+              selectedEmployeeRestaurantFilter === 'NONE' && styles.chartSupplierChipActive,
+            ]}
+            onPress={() => setSelectedEmployeeRestaurantFilter('NONE')}
+          >
+            <Text
+              style={[
+                styles.chartSupplierChipText,
+                selectedEmployeeRestaurantFilter === 'NONE' && styles.chartSupplierChipTextActive,
+              ]}
+            >
+              {text.dashboard.quickRestaurantFilterUnassigned}
+            </Text>
+          </Pressable>
+
+          {employeeRestaurantOptions.map((restaurant) => {
+            const isActive = selectedEmployeeRestaurantFilter === restaurant.id;
+
+            return (
+              <Pressable
+                key={`restaurant-filter-${restaurant.id}`}
+                style={[styles.chartSupplierChip, isActive && styles.chartSupplierChipActive]}
+                onPress={() => setSelectedEmployeeRestaurantFilter(restaurant.id)}
+              >
+                <Text style={[styles.chartSupplierChipText, isActive && styles.chartSupplierChipTextActive]}>
+                  {restaurant.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  }
 
   async function confirmAction(title: string, message: string, confirmLabel: string) {
     if (Platform.OS === 'web') {
@@ -506,9 +617,10 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
 
   function renderManagerQuickBlocks() {
     return (
-      <View style={styles.quickColumn}>
+      <>
         <View style={styles.quickBlock}>
           <Text style={styles.quickBlockTitle}>{text.dashboard.quickApproveTitle}</Text>
+          {renderAdminRestaurantFilter()}
           <TextInput
             style={styles.quickSearchInput}
             placeholder={text.dashboard.quickSearchPlaceholder}
@@ -698,7 +810,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
             </View>
           ) : null}
         </View>
-      </View>
+      </>
     );
   }
 
@@ -875,9 +987,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
 
   return (
     <View style={styles.stackCardWrap}>
-      <View style={isManager ? styles.managerDashboardLayout : undefined}>
-        <View style={isManager ? styles.managerLeftColumn : undefined}>
-          <View style={[styles.card, isManager && styles.managerLeftCard]}>
+      <View style={isSupervisor ? styles.managerDashboardLayout : undefined}>
+        <View style={isSupervisor ? styles.managerLeftColumn : undefined}>
+          <View style={[styles.card, isSupervisor && styles.managerLeftCard]}>
             <Text style={styles.title}>
               {text.dashboard.welcome} {user.name ?? text.dashboard.fallbackName}
             </Text>
@@ -902,10 +1014,26 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
             </Pressable>
           </View>
 
-          {isManager ? renderTopProductsChart() : null}
+          {isSupervisor ? renderTopProductsChart() : null}
         </View>
 
-        {isManager ? renderManagerQuickBlocks() : null}
+        {isSupervisor ? (
+          <View style={styles.quickColumn}>
+            {renderManagerQuickBlocks()}
+
+            {isAdmin ? (
+              <>
+                <AdminRestaurantPanel accessToken={accessToken} text={text} />
+                <AdminTrainingAccessPanel
+                  accessToken={accessToken}
+                  currentUser={user}
+                  text={text}
+                />
+                <AdminUploadPanel accessToken={accessToken} text={text} />
+              </>
+            ) : null}
+          </View>
+        ) : null}
       </View>
 
       {Platform.OS === 'web' ? (
@@ -994,17 +1122,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         </View>
       </Modal>
 
-      {user.role === 'ADMIN' ? (
-        <>
-          <AdminRestaurantPanel accessToken={accessToken} text={text} />
-          <AdminTrainingAccessPanel
-            accessToken={accessToken}
-            currentUser={user}
-            text={text}
-          />
-          <AdminUploadPanel accessToken={accessToken} text={text} />
-        </>
-      ) : user.role === 'EMPLOYEE' ? (
+      {user.role === 'EMPLOYEE' ? (
         <View style={styles.card}>
           <Text style={styles.subtitle}>{text.dashboard.uploadPermission}</Text>
         </View>

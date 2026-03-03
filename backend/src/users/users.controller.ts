@@ -107,6 +107,48 @@ export class UsersController {
     });
   }
 
+  @ApiOperation({ summary: 'List global training access by employee level (admin)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('training-access-by-level')
+  listTrainingAccessByLevel(@Req() req: AuthenticatedRequest) {
+    const actor = req.user;
+
+    if (!actor || actor.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.usersService.listTrainingAccessByLevel(actor.role);
+  }
+
+  @ApiOperation({ summary: 'Update global training access profile for one employee level (admin)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('training-access-by-level/:level')
+  updateTrainingAccessByLevel(
+    @Req() req: AuthenticatedRequest,
+    @Param('level') levelRaw: string,
+    @Body('sections') sections: string[] | undefined,
+  ) {
+    const actor = req.user;
+
+    if (!actor || actor.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    if (!Object.values(EmployeeLevel).includes(levelRaw as EmployeeLevel)) {
+      throw new BadRequestException('Invalid employee level');
+    }
+
+    return this.usersService.updateTrainingAccessByLevel(
+      levelRaw as EmployeeLevel,
+      sections,
+      {
+        actorRole: actor.role,
+      },
+    );
+  }
+
   @ApiOperation({ summary: 'List employees not yet assigned to any restaurant' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

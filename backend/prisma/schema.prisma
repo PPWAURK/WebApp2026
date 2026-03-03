@@ -28,11 +28,23 @@ model User {
   preferredLanguage String    @default("fr") @map("preferred_language") @db.VarChar(5)
   workplaceRole WorkplaceRole @default(BOTH)
   trainingAccess Json?
+  levelAccessProfile EmployeeLevelAccessProfile? @relation(fields: [employeeLevel], references: [employeeLevel], onDelete: Restrict, onUpdate: Cascade)
   documents     Document[]
   passwordResetTokens PasswordResetToken[]
   purchaseOrders PurchaseOrder[] @relation("CreatedByUser")
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+}
+
+model EmployeeLevelAccessProfile {
+  id            Int           @id @default(autoincrement())
+  employeeLevel EmployeeLevel @unique @map("employee_level")
+  sections      Json?
+  users         User[]
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  @@map("employee_level_access_profiles")
 }
 
 model PasswordResetToken {

@@ -1,18 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, Text, View } from 'react-native';
 import { getSectionsByModule } from '../../constants/documentTaxonomy';
 import type { AppText } from '../../locales/translations';
 import { fetchRestaurants } from '../../services/restaurantsApi';
 import {
   approveUserAccount,
+  fetchTrainingAccessByLevel,
   fetchTrainingAccessUsers,
   confirmUserProbation,
+  updateTrainingAccessByLevel,
   updateUserManagerRole,
-  updateUserTrainingAccess,
   type TrainingAccessUser,
+  type TrainingAccessByLevelProfile,
 } from '../../services/usersApi';
 import { styles } from './AdminTrainingAccessPanel.styles';
-import type { Restaurant, TrainingSection, User } from '../../types/auth';
+import type {
+  EmployeeLevel,
+  Restaurant,
+  TrainingSection,
+  User,
+} from '../../types/auth';
 
 type AdminTrainingAccessPanelProps = {
   accessToken: string;
@@ -31,9 +38,10 @@ export function AdminTrainingAccessPanel({
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(
     null,
   );
-  const [isRestaurantListOpen, setIsRestaurantListOpen] = useState(false);
   const [users, setUsers] = useState<TrainingAccessUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState<EmployeeLevel | null>(null);
+  const [levelProfiles, setLevelProfiles] = useState<TrainingAccessByLevelProfile[]>([]);
   const [draftSections, setDraftSections] = useState<TrainingSection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -41,7 +49,6 @@ export function AdminTrainingAccessPanel({
     null,
   );
   const [isApprovingUserId, setIsApprovingUserId] = useState<number | null>(null);
-  const [employeeSearch, setEmployeeSearch] = useState('');
   const [isUpdatingRoleUserId, setIsUpdatingRoleUserId] = useState<number | null>(
     null,
   );
@@ -109,6 +116,33 @@ export function AdminTrainingAccessPanel({
   ]);
 
   useEffect(() => {
+    if (currentUser.role !== 'ADMIN') {
+      setLevelProfiles([]);
+      return;
+    }
+
+    let isActive = true;
+
+    void fetchTrainingAccessByLevel(accessToken)
+      .then((profiles) => {
+        if (!isActive) {
+          return;
+        }
+
+        setLevelProfiles(profiles);
+      })
+      .catch(() => {
+        if (isActive) {
+          setError(text.adminTraining.loadLevelProfilesError);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accessToken, currentUser.role, text.adminTraining.loadLevelProfilesError]);
+
+  useEffect(() => {
     if (!selectedRestaurantId) {
       setUsers([]);
       setSelectedUserId(null);
@@ -142,10 +176,8 @@ export function AdminTrainingAccessPanel({
         const firstUser = normalizedUsers[0];
         if (firstUser) {
           setSelectedUserId(firstUser.id);
-          setDraftSections(firstUser.trainingAccess ?? []);
         } else {
           setSelectedUserId(null);
-          setDraftSections([]);
         }
       })
       .catch(() => {
@@ -153,7 +185,6 @@ export function AdminTrainingAccessPanel({
           setError(text.adminTraining.loadUsersError);
           setUsers([]);
           setSelectedUserId(null);
-          setDraftSections([]);
         }
       })
       .finally(() => {
@@ -172,10 +203,41 @@ export function AdminTrainingAccessPanel({
     text.adminTraining.loadUsersError,
   ]);
 
-  const selectedUser = useMemo(
-    () => users.find((user) => user.id === selectedUserId) ?? null,
-    [selectedUserId, users],
-  );
+  const levelOptions = useMemo(() => {
+    const levels = Array.from(new Set(levelProfiles.map((profile) => profile.employeeLevel)));
+    return levels.sort((left, right) => left.localeCompare(right));
+  }, [levelProfiles]);
+
+  const sectionProfileByLevel = useMemo(() => {
+    const profile = new Map<EmployeeLevel, TrainingSection[]>();
+
+    for (const entry of levelProfiles) {
+      profile.set(entry.employeeLevel, entry.sections ?? []);
+    }
+
+    return profile;
+  }, [levelProfiles]);
+
+  useEffect(() => {
+    if (levelOptions.length === 0) {
+      setSelectedLevel(null);
+      setDraftSections([]);
+      return;
+    }
+
+    setSelectedLevel((current) =>
+      current && levelOptions.includes(current) ? current : levelOptions[0],
+    );
+  }, [levelOptions]);
+
+  useEffect(() => {
+    if (!selectedLevel) {
+      setDraftSections([]);
+      return;
+    }
+
+    setDraftSections(sectionProfileByLevel.get(selectedLevel) ?? []);
+  }, [sectionProfileByLevel, selectedLevel]);
 
   const sectionLabelByKey = useMemo(
     () =>
@@ -184,22 +246,6 @@ export function AdminTrainingAccessPanel({
       ) as Record<TrainingSection, string>,
     [allSections],
   );
-
-  const selectedRestaurant =
-    restaurants.find((restaurant) => restaurant.id === selectedRestaurantId) ?? null;
-
-  const visibleUsers = useMemo(() => {
-    const query = employeeSearch.trim().toLowerCase();
-    if (!query) {
-      return users;
-    }
-
-    return users.filter((user) => {
-      const name = user.name?.toLowerCase() ?? '';
-      const email = user.email.toLowerCase();
-      return name.includes(query) || email.includes(query);
-    });
-  }, [employeeSearch, users]);
 
   function toggleSection(section: TrainingSection) {
     setDraftSections((current) =>
@@ -210,20 +256,36 @@ export function AdminTrainingAccessPanel({
   }
 
   async function saveAccess() {
-    if (!selectedUser) {
+    if (!selectedLevel) {
       return;
     }
 
     setIsSaving(true);
     setError(null);
     try {
-      const updated = await updateUserTrainingAccess(
+      const updatedProfile = await updateTrainingAccessByLevel(
         accessToken,
-        selectedUser.id,
+        selectedLevel,
         draftSections,
       );
+
+      setLevelProfiles((current) =>
+        current.some((entry) => entry.employeeLevel === updatedProfile.employeeLevel)
+          ? current.map((entry) =>
+              entry.employeeLevel === updatedProfile.employeeLevel ? updatedProfile : entry,
+            )
+          : [...current, updatedProfile],
+      );
+
       setUsers((current) =>
-        current.map((user) => (user.id === updated.id ? updated : user)),
+        current.map((user) =>
+          user.employeeLevel === selectedLevel
+            ? {
+                ...user,
+                trainingAccess: updatedProfile.sections,
+              }
+            : user,
+        ),
       );
     } catch {
       setError(text.adminTraining.saveError);
@@ -377,84 +439,31 @@ export function AdminTrainingAccessPanel({
       <Text style={styles.uploadTitle}>{text.adminTraining.title}</Text>
       <Text style={styles.uploadSubtitle}>{text.adminTraining.subtitle}</Text>
 
-      <Text style={styles.uploadFieldTitle}>{text.adminTraining.restaurantLabel}</Text>
-      <View style={styles.restaurantSelectWrap}>
-        <Pressable
-          style={styles.restaurantSelectTrigger}
-          onPress={() => {
-            if (canFilterRestaurant) {
-              setIsRestaurantListOpen((currentValue) => !currentValue);
-            }
-          }}
-        >
-          <Text style={styles.restaurantSelectTriggerText}>
-            {selectedRestaurant?.name ?? text.adminTraining.restaurantPlaceholder}
-          </Text>
-          <Text style={styles.restaurantSelectChevron}>
-            {isRestaurantListOpen ? '▲' : '▼'}
-          </Text>
-        </Pressable>
-
-        {isRestaurantListOpen && canFilterRestaurant ? (
-          <View style={styles.restaurantSelectList}>
-            {restaurants.map((restaurant) => (
-              <Pressable
-                key={restaurant.id}
-                style={[
-                  styles.restaurantSelectItem,
-                  selectedRestaurantId === restaurant.id &&
-                    styles.restaurantSelectItemActive,
-                ]}
-                onPress={() => {
-                  setSelectedRestaurantId(restaurant.id);
-                  setIsRestaurantListOpen(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.restaurantSelectItemText,
-                    selectedRestaurantId === restaurant.id &&
-                      styles.restaurantSelectItemTextActive,
-                  ]}
-                >
-                  {restaurant.name}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-      </View>
-
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Text style={styles.uploadFieldTitle}>{text.adminTraining.usersAndLabels}</Text>
-      <TextInput
-        style={styles.input}
-        placeholder={text.adminTraining.searchEmployeePlaceholder}
-        placeholderTextColor="#a98a8d"
-        value={employeeSearch}
-        onChangeText={setEmployeeSearch}
-      />
       <View style={styles.docBlock}>
         {users.length === 0 ? (
           <Text style={styles.docEmpty}>
             {isLoading ? text.adminTraining.loading : text.adminTraining.noEmployee}
           </Text>
-        ) : visibleUsers.length === 0 ? (
-          <Text style={styles.docEmpty}>{text.adminTraining.noEmployeeMatch}</Text>
         ) : (
-          visibleUsers.map((user) => (
+          users.map((user) => (
             <Pressable
               key={user.id}
               style={[
                 styles.docItem,
                 selectedUserId === user.id && styles.trainingTabActive,
               ]}
-              onPress={() => {
-                setSelectedUserId(user.id);
-                setDraftSections(user.trainingAccess ?? []);
-              }}
-            >
+                onPress={() => {
+                  setSelectedUserId(user.id);
+                  setSelectedLevel(user.employeeLevel);
+                  setDraftSections(
+                    sectionProfileByLevel.get(user.employeeLevel) ??
+                      user.trainingAccess ??
+                      [],
+                  );
+                }}
+              >
               <Text
                 style={[
                   styles.docItemTitle,
@@ -576,31 +585,39 @@ export function AdminTrainingAccessPanel({
         )}
       </View>
 
-      <Text style={styles.uploadFieldTitle}>{text.adminTraining.userLabel}</Text>
+      <Text style={styles.uploadFieldTitle}>{text.adminTraining.levelLabel}</Text>
       <View style={styles.uploadChipWrap}>
-        {users.map((user) => (
+        {levelOptions.map((level) => (
           <Pressable
-            key={user.id}
+            key={level}
             style={[
               styles.uploadChip,
-              selectedUserId === user.id && styles.uploadChipActive,
+              selectedLevel === level && styles.uploadChipActive,
             ]}
             onPress={() => {
-              setSelectedUserId(user.id);
-              setDraftSections(user.trainingAccess ?? []);
+              setSelectedLevel(level);
+              setDraftSections(sectionProfileByLevel.get(level) ?? []);
             }}
           >
             <Text
               style={[
                 styles.uploadChipText,
-                selectedUserId === user.id && styles.uploadChipTextActive,
+                selectedLevel === level && styles.uploadChipTextActive,
               ]}
             >
-              {user.name ?? user.email}
+              {text.dashboard.levels[level]}
             </Text>
           </Pressable>
         ))}
       </View>
+
+      {selectedLevel ? (
+        <Text style={styles.docItemMeta}>
+          {text.adminTraining.levelScopePrefix}{' '}
+          {users.filter((user) => user.employeeLevel === selectedLevel).length}{' '}
+          {text.adminTraining.levelScopeSuffix}
+        </Text>
+      ) : null}
 
       <Text style={styles.uploadFieldTitle}>{text.adminTraining.allowedSections}</Text>
       <View style={styles.uploadChipWrap}>
@@ -627,7 +644,7 @@ export function AdminTrainingAccessPanel({
 
       <Pressable
         style={[styles.primaryButton, (isSaving || isLoading) && styles.buttonDisabled]}
-        disabled={isSaving || isLoading || !selectedUser}
+        disabled={isSaving || isLoading || !selectedLevel}
         onPress={() => {
           void saveAccess();
         }}

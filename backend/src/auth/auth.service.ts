@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Prisma } from '@prisma/client';
+import { EmployeeLevel } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
@@ -194,9 +194,9 @@ export class AuthService {
     name: string | null;
     profilePhoto: string | null;
     role: string;
+    employeeLevel: EmployeeLevel;
     isOnProbation: boolean;
     workplaceRole: string;
-    trainingAccess: Prisma.JsonValue | null;
     restaurantId: number | null;
     restaurant: { id: number; name: string; address: string } | null;
   }) {
@@ -206,6 +206,10 @@ export class AuthService {
       role: user.role,
       workplaceRole: user.workplaceRole,
     };
+
+    const trainingAccess = await this.usersService.getTrainingAccessByLevel(
+      user.employeeLevel,
+    );
 
     return {
       accessToken: await this.jwtService.signAsync(payload, {
@@ -220,11 +224,10 @@ export class AuthService {
         name: user.name,
         profilePhoto: user.profilePhoto,
         role: user.role,
+        employeeLevel: user.employeeLevel,
         isOnProbation: user.isOnProbation,
         workplaceRole: user.workplaceRole,
-        trainingAccess: this.usersService.normalizeTrainingAccess(
-          user.trainingAccess,
-        ),
+        trainingAccess,
         restaurant: user.restaurant,
       },
     };
@@ -241,9 +244,13 @@ export class AuthService {
       throw new UnauthorizedException('ACCOUNT_PENDING_APPROVAL');
     }
 
+    const trainingAccess = await this.usersService.getTrainingAccessByLevel(
+      user.employeeLevel,
+    );
+
     return {
       ...user,
-      trainingAccess: this.usersService.normalizeTrainingAccess(user.trainingAccess),
+      trainingAccess,
     };
   }
 

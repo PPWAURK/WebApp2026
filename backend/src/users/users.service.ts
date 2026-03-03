@@ -118,10 +118,76 @@ export class UsersService {
       },
     });
 
+    const levelAccessMap = await this.getTrainingAccessMapByLevel();
+
     return users.map((user) => ({
       ...user,
-      trainingAccess: this.normalizeTrainingAccess(user.trainingAccess),
+      trainingAccess: levelAccessMap.get(user.employeeLevel) ?? [],
     }));
+  }
+
+  async listTrainingAccessByLevel(actorRole: string) {
+    if (actorRole !== Role.ADMIN) {
+      throw new BadRequestException('Only ADMIN can manage level access profiles');
+    }
+
+    const profiles = await this.prisma.employeeLevelAccessProfile.findMany({
+      orderBy: {
+        employeeLevel: 'asc',
+      },
+      select: {
+        employeeLevel: true,
+        sections: true,
+      },
+    });
+
+    return profiles.map((profile) => ({
+      employeeLevel: profile.employeeLevel,
+      sections: this.normalizeTrainingAccess(profile.sections),
+    }));
+  }
+
+  async updateTrainingAccessByLevel(
+    level: EmployeeLevel,
+    sections: string[] | undefined,
+    actor: {
+      actorRole: string;
+    },
+  ) {
+    if (actor.actorRole !== Role.ADMIN) {
+      throw new BadRequestException('Only ADMIN can manage level access profiles');
+    }
+
+    if (!sections) {
+      throw new BadRequestException('sections is required');
+    }
+
+    const uniqueSections = Array.from(new Set(sections));
+    if (!uniqueSections.every((section) => isUploadSection(section))) {
+      throw new BadRequestException('Invalid training section');
+    }
+
+    const updated = await this.prisma.employeeLevelAccessProfile.upsert({
+      where: {
+        employeeLevel: level,
+      },
+      create: {
+        employeeLevel: level,
+        sections: uniqueSections,
+      },
+      update: {
+        sections: uniqueSections,
+      },
+      select: {
+        employeeLevel: true,
+        sections: true,
+      },
+    });
+
+    return {
+      employeeLevel: updated.employeeLevel,
+      sections: this.normalizeTrainingAccess(updated.sections),
+    };
   }
 
   async updateTrainingAccess(
@@ -222,14 +288,14 @@ export class UsersService {
         isOnProbation: true,
         preferredLanguage: params.preferredLanguage ?? 'fr',
         workplaceRole: WorkplaceRole.BOTH,
-        trainingAccess: this.getAllTrainingSections(),
+        trainingAccess: [],
       },
     });
   }
 
   normalizeTrainingAccess(value: Prisma.JsonValue | null): UploadSection[] {
     if (!Array.isArray(value)) {
-      return this.getAllTrainingSections();
+      return [];
     }
 
     const valid = value.filter(
@@ -240,6 +306,35 @@ export class UsersService {
 
   private getAllTrainingSections(): UploadSection[] {
     return Object.values(UPLOAD_SECTION_BY_MODULE).flat();
+  }
+
+  async getTrainingAccessByLevel(level: EmployeeLevel): Promise<UploadSection[]> {
+    const profile = await this.prisma.employeeLevelAccessProfile.findUnique({
+      where: {
+        employeeLevel: level,
+      },
+      select: {
+        sections: true,
+      },
+    });
+
+    return this.normalizeTrainingAccess(profile?.sections ?? null);
+  }
+
+  private async getTrainingAccessMapByLevel() {
+    const profiles = await this.prisma.employeeLevelAccessProfile.findMany({
+      select: {
+        employeeLevel: true,
+        sections: true,
+      },
+    });
+
+    return new Map(
+      profiles.map((profile) => [
+        profile.employeeLevel,
+        this.normalizeTrainingAccess(profile.sections),
+      ]),
+    );
   }
 
   listUnassignedEmployees() {

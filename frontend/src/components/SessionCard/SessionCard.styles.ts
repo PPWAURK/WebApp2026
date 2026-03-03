@@ -93,6 +93,9 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
   },
+  restaurantFilterBlock: {
+    gap: 6,
+  },
   chartSupplierBlock: {
     borderWidth: 1,
     borderColor: '#edd3d5',
