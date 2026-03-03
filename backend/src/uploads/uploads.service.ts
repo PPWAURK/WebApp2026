@@ -141,6 +141,7 @@ export class UploadsService {
 
     return entries
       .map((entry) => ({
+        documentId: entry.id,
         ...entry,
         fileUrl: this.buildFileUrl(req, entry.category, entry.fileName),
       }));
