@@ -71,6 +71,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [isUpdatingLevelUserId, setIsUpdatingLevelUserId] = useState<number | null>(null);
   const [isDeletingUserId, setIsDeletingUserId] = useState<number | null>(null);
   const [levelEditorUser, setLevelEditorUser] = useState<TrainingAccessUser | null>(null);
+  const [openRestaurantFilterFor, setOpenRestaurantFilterFor] = useState<
+    'approval' | 'level' | null
+  >(null);
   const [selectedEmployeeRestaurantFilter, setSelectedEmployeeRestaurantFilter] = useState<
     number | 'ALL' | 'NONE'
   >('ALL');
@@ -453,65 +456,95 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     });
   }, [levelSearch, usersFilteredByRestaurant]);
 
-  function renderAdminRestaurantFilter() {
+  function getSelectedRestaurantFilterLabel() {
+    if (selectedEmployeeRestaurantFilter === 'ALL') {
+      return text.dashboard.quickRestaurantFilterAll;
+    }
+
+    if (selectedEmployeeRestaurantFilter === 'NONE') {
+      return text.dashboard.quickRestaurantFilterUnassigned;
+    }
+
+    return (
+      employeeRestaurantOptions.find(
+        (restaurant) => restaurant.id === selectedEmployeeRestaurantFilter,
+      )?.name ?? text.dashboard.quickRestaurantFilterAll
+    );
+  }
+
+  function renderAdminRestaurantFilter(section: 'approval' | 'level') {
     if (!isAdmin) {
       return null;
     }
 
+    const isOpen = openRestaurantFilterFor === section;
+
+    const options: Array<{
+      key: string;
+      label: string;
+      value: number | 'ALL' | 'NONE';
+    }> = [
+      {
+        key: 'ALL',
+        label: text.dashboard.quickRestaurantFilterAll,
+        value: 'ALL',
+      },
+      {
+        key: 'NONE',
+        label: text.dashboard.quickRestaurantFilterUnassigned,
+        value: 'NONE',
+      },
+      ...employeeRestaurantOptions.map((restaurant) => ({
+        key: `${restaurant.id}`,
+        label: restaurant.name,
+        value: restaurant.id,
+      })),
+    ];
+
     return (
       <View style={styles.restaurantFilterBlock}>
         <Text style={styles.quickSectionTitle}>{text.dashboard.quickRestaurantFilterTitle}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chartSupplierTabs}>
+        <View style={styles.restaurantFilterSelectWrap}>
           <Pressable
-            style={[
-              styles.chartSupplierChip,
-              selectedEmployeeRestaurantFilter === 'ALL' && styles.chartSupplierChipActive,
-            ]}
-            onPress={() => setSelectedEmployeeRestaurantFilter('ALL')}
+            style={styles.restaurantFilterSelectTrigger}
+            onPress={() => setOpenRestaurantFilterFor((current) => (current === section ? null : section))}
           >
-            <Text
-              style={[
-                styles.chartSupplierChipText,
-                selectedEmployeeRestaurantFilter === 'ALL' && styles.chartSupplierChipTextActive,
-              ]}
-            >
-              {text.dashboard.quickRestaurantFilterAll}
-            </Text>
+            <Text style={styles.restaurantFilterSelectText}>{getSelectedRestaurantFilterLabel()}</Text>
+            <Text style={styles.restaurantFilterSelectChevron}>{isOpen ? '▲' : '▼'}</Text>
           </Pressable>
 
-          <Pressable
-            style={[
-              styles.chartSupplierChip,
-              selectedEmployeeRestaurantFilter === 'NONE' && styles.chartSupplierChipActive,
-            ]}
-            onPress={() => setSelectedEmployeeRestaurantFilter('NONE')}
-          >
-            <Text
-              style={[
-                styles.chartSupplierChipText,
-                selectedEmployeeRestaurantFilter === 'NONE' && styles.chartSupplierChipTextActive,
-              ]}
-            >
-              {text.dashboard.quickRestaurantFilterUnassigned}
-            </Text>
-          </Pressable>
+          {isOpen ? (
+            <View style={styles.restaurantFilterSelectList}>
+              {options.map((option, index) => {
+                const isActive = selectedEmployeeRestaurantFilter === option.value;
 
-          {employeeRestaurantOptions.map((restaurant) => {
-            const isActive = selectedEmployeeRestaurantFilter === restaurant.id;
-
-            return (
-              <Pressable
-                key={`restaurant-filter-${restaurant.id}`}
-                style={[styles.chartSupplierChip, isActive && styles.chartSupplierChipActive]}
-                onPress={() => setSelectedEmployeeRestaurantFilter(restaurant.id)}
-              >
-                <Text style={[styles.chartSupplierChipText, isActive && styles.chartSupplierChipTextActive]}>
-                  {restaurant.name}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                return (
+                  <Pressable
+                    key={`restaurant-filter-option-${option.key}`}
+                    style={[
+                      styles.restaurantFilterSelectItem,
+                      isActive && styles.restaurantFilterSelectItemActive,
+                      index === options.length - 1 && styles.restaurantFilterSelectItemLast,
+                    ]}
+                    onPress={() => {
+                      setSelectedEmployeeRestaurantFilter(option.value);
+                      setOpenRestaurantFilterFor(null);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.restaurantFilterSelectItemText,
+                        isActive && styles.restaurantFilterSelectItemTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
+        </View>
       </View>
     );
   }
@@ -620,7 +653,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
       <>
         <View style={styles.quickBlock}>
           <Text style={styles.quickBlockTitle}>{text.dashboard.quickApproveTitle}</Text>
-          {renderAdminRestaurantFilter()}
+          {renderAdminRestaurantFilter('approval')}
           <TextInput
             style={styles.quickSearchInput}
             placeholder={text.dashboard.quickSearchPlaceholder}
@@ -695,56 +728,6 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         </View>
 
         <View style={styles.quickBlock}>
-          <Text style={styles.quickBlockTitle}>{text.dashboard.quickLevelTitle}</Text>
-          <TextInput
-            style={styles.quickSearchInput}
-            placeholder={text.dashboard.quickSearchPlaceholder}
-            placeholderTextColor="#a98a8d"
-            value={levelSearch}
-            onChangeText={setLevelSearch}
-          />
-          {levelUsers.length === 0 ? (
-            <Text style={styles.subtitle}>{text.dashboard.quickNoEmployee}</Text>
-          ) : (
-            levelUsers.slice(0, 6).map((entry) => (
-              <View key={`level-${entry.id}`} style={styles.quickRowCard}>
-                <View style={styles.quickLevelRow}>
-                  <View style={styles.quickLevelInfo}>
-                    <Text style={styles.quickRowTitle}>{entry.name ?? entry.email}</Text>
-                    <Text style={styles.subtitle}>{entry.email}</Text>
-                    <Text style={styles.subtitle}>
-                      {text.dashboard.employeeLevelLabel}: {text.dashboard.levels[entry.employeeLevel]}
-                    </Text>
-                  </View>
-
-                  <Pressable
-                    style={[
-                      styles.iconActionButton,
-                      isUpdatingLevelUserId === entry.id && styles.buttonDisabled,
-                    ]}
-                    accessibilityLabel={text.dashboard.levelModalTitle}
-                    disabled={isUpdatingLevelUserId === entry.id}
-                    onPress={() => {
-                      setLevelEditorUser(entry);
-                    }}
-                  >
-                    <Ionicons
-                      name={
-                        isUpdatingLevelUserId === entry.id
-                          ? 'hourglass-outline'
-                          : 'arrow-up-circle-outline'
-                      }
-                      size={20}
-                      color="#7f1b21"
-                    />
-                  </Pressable>
-                </View>
-              </View>
-            ))
-          )}
-        </View>
-
-        <View style={styles.quickBlock}>
           <Text style={styles.quickBlockTitle}>{text.dashboard.quickLatestOrderTitle}</Text>
           {orderLoading ? <Text style={styles.subtitle}>{text.adminTraining.loading}</Text> : null}
           {orderError ? <Text style={styles.errorText}>{orderError}</Text> : null}
@@ -811,6 +794,61 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           ) : null}
         </View>
       </>
+    );
+  }
+
+  function renderLevelQuickBlock() {
+    return (
+      <View style={styles.quickBlock}>
+        <Text style={styles.quickBlockTitle}>{text.dashboard.quickLevelTitle}</Text>
+        {renderAdminRestaurantFilter('level')}
+        <TextInput
+          style={styles.quickSearchInput}
+          placeholder={text.dashboard.quickSearchPlaceholder}
+          placeholderTextColor="#a98a8d"
+          value={levelSearch}
+          onChangeText={setLevelSearch}
+        />
+        {levelUsers.length === 0 ? (
+          <Text style={styles.subtitle}>{text.dashboard.quickNoEmployee}</Text>
+        ) : (
+          levelUsers.slice(0, 6).map((entry) => (
+            <View key={`level-${entry.id}`} style={styles.quickRowCard}>
+              <View style={styles.quickLevelRow}>
+                <View style={styles.quickLevelInfo}>
+                  <Text style={styles.quickRowTitle}>{entry.name ?? entry.email}</Text>
+                  <Text style={styles.subtitle}>{entry.email}</Text>
+                  <Text style={styles.subtitle}>
+                    {text.dashboard.employeeLevelLabel}: {text.dashboard.levels[entry.employeeLevel]}
+                  </Text>
+                </View>
+
+                <Pressable
+                  style={[
+                    styles.iconActionButton,
+                    isUpdatingLevelUserId === entry.id && styles.buttonDisabled,
+                  ]}
+                  accessibilityLabel={text.dashboard.levelModalTitle}
+                  disabled={isUpdatingLevelUserId === entry.id}
+                  onPress={() => {
+                    setLevelEditorUser(entry);
+                  }}
+                >
+                  <Ionicons
+                    name={
+                      isUpdatingLevelUserId === entry.id
+                        ? 'hourglass-outline'
+                        : 'arrow-up-circle-outline'
+                    }
+                    size={20}
+                    color="#7f1b21"
+                  />
+                </Pressable>
+              </View>
+            </View>
+          ))
+        )}
+      </View>
     );
   }
 
@@ -1014,24 +1052,27 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
             </Pressable>
           </View>
 
-          {isSupervisor ? renderTopProductsChart() : null}
+          {isAdmin ? renderLevelQuickBlock() : null}
+
+          {isAdmin ? (
+            <>
+              <AdminRestaurantPanel accessToken={accessToken} text={text} />
+              <AdminTrainingAccessPanel
+                accessToken={accessToken}
+                currentUser={user}
+                text={text}
+              />
+              <AdminUploadPanel accessToken={accessToken} text={text} />
+            </>
+          ) : null}
+
+          {isManager ? renderTopProductsChart() : null}
         </View>
 
         {isSupervisor ? (
           <View style={styles.quickColumn}>
+            {!isAdmin ? renderLevelQuickBlock() : null}
             {renderManagerQuickBlocks()}
-
-            {isAdmin ? (
-              <>
-                <AdminRestaurantPanel accessToken={accessToken} text={text} />
-                <AdminTrainingAccessPanel
-                  accessToken={accessToken}
-                  currentUser={user}
-                  text={text}
-                />
-                <AdminUploadPanel accessToken={accessToken} text={text} />
-              </>
-            ) : null}
           </View>
         ) : null}
       </View>

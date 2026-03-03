@@ -384,10 +384,6 @@ export class UsersService {
       throw new BadRequestException('Cannot assign restaurant to ADMIN via this endpoint');
     }
 
-    if (user.restaurantId) {
-      throw new BadRequestException('User is already assigned to a restaurant');
-    }
-
     return this.prisma.user.update({
       where: { id: userId },
       data: {

@@ -96,6 +96,59 @@ export const styles = StyleSheet.create({
   restaurantFilterBlock: {
     gap: 6,
   },
+  restaurantFilterSelectWrap: {
+    gap: 6,
+  },
+  restaurantFilterSelectTrigger: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#dfb0b2',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  restaurantFilterSelectText: {
+    color: '#7a181d',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+    flex: 1,
+  },
+  restaurantFilterSelectChevron: {
+    color: '#ab1e24',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  restaurantFilterSelectList: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#dfb0b2',
+    backgroundColor: '#ffffff',
+    overflow: 'hidden',
+  },
+  restaurantFilterSelectItem: {
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: '#efd8d9',
+  },
+  restaurantFilterSelectItemLast: {
+    borderBottomWidth: 0,
+  },
+  restaurantFilterSelectItemActive: {
+    backgroundColor: '#f8e2e4',
+  },
+  restaurantFilterSelectItemText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  restaurantFilterSelectItemTextActive: {
+    color: '#7a181d',
+  },
   chartSupplierBlock: {
     borderWidth: 1,
     borderColor: '#edd3d5',

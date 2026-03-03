@@ -1,25 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Platform, Pressable, Text, View } from 'react-native';
-import { getSectionsByModule } from '../../constants/documentTaxonomy';
-import type { AppText } from '../../locales/translations';
-import { fetchRestaurants } from '../../services/restaurantsApi';
+import { Pressable, Text, View } from 'react-native';
 import {
-  approveUserAccount,
+  getModuleOptions,
+  getSectionsByModule,
+  type LibraryModule,
+} from '../../constants/documentTaxonomy';
+import type { AppText } from '../../locales/translations';
+import {
   fetchTrainingAccessByLevel,
-  fetchTrainingAccessUsers,
-  confirmUserProbation,
   updateTrainingAccessByLevel,
-  updateUserManagerRole,
-  type TrainingAccessUser,
   type TrainingAccessByLevelProfile,
 } from '../../services/usersApi';
 import { styles } from './AdminTrainingAccessPanel.styles';
-import type {
-  EmployeeLevel,
-  Restaurant,
-  TrainingSection,
-  User,
-} from '../../types/auth';
+import type { EmployeeLevel, TrainingSection, User } from '../../types/auth';
 
 type AdminTrainingAccessPanelProps = {
   accessToken: string;
@@ -27,101 +20,50 @@ type AdminTrainingAccessPanelProps = {
   text: AppText;
 };
 
-export function AdminTrainingAccessPanel({
-  accessToken,
-  currentUser,
-  text,
-}: AdminTrainingAccessPanelProps) {
-  const canManageRoles = currentUser.role === 'ADMIN';
-  const canFilterRestaurant = currentUser.role === 'ADMIN';
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(
-    null,
-  );
-  const [users, setUsers] = useState<TrainingAccessUser[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [selectedLevel, setSelectedLevel] = useState<EmployeeLevel | null>(null);
+export function AdminTrainingAccessPanel({ accessToken, text }: AdminTrainingAccessPanelProps) {
   const [levelProfiles, setLevelProfiles] = useState<TrainingAccessByLevelProfile[]>([]);
+  const [selectedLevel, setSelectedLevel] = useState<EmployeeLevel | null>(null);
   const [draftSections, setDraftSections] = useState<TrainingSection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isConfirmingProbationUserId, setIsConfirmingProbationUserId] = useState<number | null>(
-    null,
-  );
-  const [isApprovingUserId, setIsApprovingUserId] = useState<number | null>(null);
-  const [isUpdatingRoleUserId, setIsUpdatingRoleUserId] = useState<number | null>(
-    null,
-  );
   const [error, setError] = useState<string | null>(null);
 
-  const allSections = useMemo(
+  const moduleOptions = useMemo(() => getModuleOptions(text), [text]);
+
+  const moduleSections = useMemo(
     () =>
-      Object.values(getSectionsByModule(text))
-        .flat()
-        .map((option) => ({
-          key: option.key as TrainingSection,
-          label: option.label,
+      Object.entries(getSectionsByModule(text)).map(([module, sections]) => ({
+        module: module as LibraryModule,
+        sections: sections.map((section) => ({
+          key: section.key as TrainingSection,
+          label: section.label,
         })),
+      })),
     [text],
   );
+
+  const allSections = useMemo(
+    () => moduleSections.flatMap((entry) => entry.sections),
+    [moduleSections],
+  );
+
+  const sectionProfileByLevel = useMemo(() => {
+    const map = new Map<EmployeeLevel, TrainingSection[]>();
+    for (const profile of levelProfiles) {
+      map.set(profile.employeeLevel, profile.sections ?? []);
+    }
+    return map;
+  }, [levelProfiles]);
+
+  const levelOptions = useMemo(() => {
+    const levels = Array.from(new Set(levelProfiles.map((profile) => profile.employeeLevel)));
+    return levels.sort((left, right) => left.localeCompare(right));
+  }, [levelProfiles]);
 
   useEffect(() => {
     let isActive = true;
     setIsLoading(true);
     setError(null);
-
-    if (canFilterRestaurant) {
-      void fetchRestaurants()
-        .then((result) => {
-          if (!isActive) {
-            return;
-          }
-
-          setRestaurants(result);
-          const firstRestaurant = result[0];
-          if (firstRestaurant) {
-            setSelectedRestaurantId(firstRestaurant.id);
-          }
-        })
-        .catch(() => {
-          if (isActive) {
-            setError(text.adminTraining.loadRestaurantsError);
-          }
-        })
-        .finally(() => {
-          if (isActive) {
-            setIsLoading(false);
-          }
-        });
-    } else {
-      const managerRestaurant = currentUser.restaurant;
-      if (!managerRestaurant) {
-        setError(text.adminTraining.managerRestaurantRequired);
-        setIsLoading(false);
-      } else {
-        setRestaurants([managerRestaurant]);
-        setSelectedRestaurantId(managerRestaurant.id);
-        setIsLoading(false);
-      }
-    }
-
-    return () => {
-      isActive = false;
-    };
-  }, [
-    canFilterRestaurant,
-    currentUser.restaurant,
-    text.adminTraining.loadRestaurantsError,
-    text.adminTraining.managerRestaurantRequired,
-  ]);
-
-  useEffect(() => {
-    if (currentUser.role !== 'ADMIN') {
-      setLevelProfiles([]);
-      return;
-    }
-
-    let isActive = true;
 
     void fetchTrainingAccessByLevel(accessToken)
       .then((profiles) => {
@@ -135,57 +77,6 @@ export function AdminTrainingAccessPanel({
         if (isActive) {
           setError(text.adminTraining.loadLevelProfilesError);
         }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [accessToken, currentUser.role, text.adminTraining.loadLevelProfilesError]);
-
-  useEffect(() => {
-    if (!selectedRestaurantId) {
-      setUsers([]);
-      setSelectedUserId(null);
-      setDraftSections([]);
-      return;
-    }
-
-    let isActive = true;
-    setIsLoading(true);
-    setError(null);
-
-    void fetchTrainingAccessUsers(accessToken, {
-      restaurantId: selectedRestaurantId,
-    })
-      .then((result) => {
-        if (!isActive) {
-          return;
-        }
-
-        const filteredResult =
-          currentUser.role === 'MANAGER'
-            ? result.filter((user) => user.role !== 'MANAGER')
-            : result;
-
-        const normalizedUsers = filteredResult.map((user) => ({
-          ...user,
-          trainingAccess: user.trainingAccess ?? [],
-        }));
-
-        setUsers(normalizedUsers);
-        const firstUser = normalizedUsers[0];
-        if (firstUser) {
-          setSelectedUserId(firstUser.id);
-        } else {
-          setSelectedUserId(null);
-        }
-      })
-      .catch(() => {
-        if (isActive) {
-          setError(text.adminTraining.loadUsersError);
-          setUsers([]);
-          setSelectedUserId(null);
-        }
       })
       .finally(() => {
         if (isActive) {
@@ -196,27 +87,7 @@ export function AdminTrainingAccessPanel({
     return () => {
       isActive = false;
     };
-  }, [
-    accessToken,
-    currentUser.role,
-    selectedRestaurantId,
-    text.adminTraining.loadUsersError,
-  ]);
-
-  const levelOptions = useMemo(() => {
-    const levels = Array.from(new Set(levelProfiles.map((profile) => profile.employeeLevel)));
-    return levels.sort((left, right) => left.localeCompare(right));
-  }, [levelProfiles]);
-
-  const sectionProfileByLevel = useMemo(() => {
-    const profile = new Map<EmployeeLevel, TrainingSection[]>();
-
-    for (const entry of levelProfiles) {
-      profile.set(entry.employeeLevel, entry.sections ?? []);
-    }
-
-    return profile;
-  }, [levelProfiles]);
+  }, [accessToken, text.adminTraining.loadLevelProfilesError]);
 
   useEffect(() => {
     if (levelOptions.length === 0) {
@@ -239,13 +110,18 @@ export function AdminTrainingAccessPanel({
     setDraftSections(sectionProfileByLevel.get(selectedLevel) ?? []);
   }, [sectionProfileByLevel, selectedLevel]);
 
-  const sectionLabelByKey = useMemo(
-    () =>
-      Object.fromEntries(
-        allSections.map((section) => [section.key, section.label]),
-      ) as Record<TrainingSection, string>,
-    [allSections],
+  const baseSectionsForLevel = useMemo(
+    () => (selectedLevel ? sectionProfileByLevel.get(selectedLevel) ?? [] : []),
+    [sectionProfileByLevel, selectedLevel],
   );
+
+  const isDirty = useMemo(() => {
+    const normalize = (sections: TrainingSection[]) => [...sections].sort().join(',');
+    return normalize(draftSections) !== normalize(baseSectionsForLevel);
+  }, [baseSectionsForLevel, draftSections]);
+
+  const selectedCount = draftSections.length;
+  const totalCount = allSections.length;
 
   function toggleSection(section: TrainingSection) {
     setDraftSections((current) =>
@@ -253,6 +129,29 @@ export function AdminTrainingAccessPanel({
         ? current.filter((item) => item !== section)
         : [...current, section],
     );
+  }
+
+  function selectAllSections() {
+    setDraftSections(allSections.map((section) => section.key));
+  }
+
+  function clearAllSections() {
+    setDraftSections([]);
+  }
+
+  function resetLevelProfile() {
+    setDraftSections(baseSectionsForLevel);
+  }
+
+  function toggleModuleSections(sectionKeys: TrainingSection[]) {
+    setDraftSections((current) => {
+      const allSelected = sectionKeys.every((key) => current.includes(key));
+      if (allSelected) {
+        return current.filter((key) => !sectionKeys.includes(key));
+      }
+
+      return Array.from(new Set([...current, ...sectionKeys]));
+    });
   }
 
   async function saveAccess() {
@@ -276,161 +175,10 @@ export function AdminTrainingAccessPanel({
             )
           : [...current, updatedProfile],
       );
-
-      setUsers((current) =>
-        current.map((user) =>
-          user.employeeLevel === selectedLevel
-            ? {
-                ...user,
-                trainingAccess: updatedProfile.sections,
-              }
-            : user,
-        ),
-      );
     } catch {
       setError(text.adminTraining.saveError);
     } finally {
       setIsSaving(false);
-    }
-  }
-
-  async function toggleManagerRole(user: TrainingAccessUser) {
-    if (!canManageRoles) {
-      return;
-    }
-
-    setIsUpdatingRoleUserId(user.id);
-    setError(null);
-    try {
-      const updated = await updateUserManagerRole(accessToken, user.id, {
-        isManager: user.role !== 'MANAGER',
-        restaurantId: selectedRestaurantId ?? undefined,
-      });
-
-      const normalizedUpdated = {
-        ...updated,
-        trainingAccess: updated.trainingAccess ?? [],
-      };
-
-      setUsers((current) =>
-        current.map((item) =>
-          item.id === normalizedUpdated.id ? normalizedUpdated : item,
-        ),
-      );
-    } catch {
-      setError(text.adminTraining.updateManagerError);
-    } finally {
-      setIsUpdatingRoleUserId(null);
-    }
-  }
-
-  async function handleConfirmProbation(user: TrainingAccessUser) {
-    if (!user.isOnProbation) {
-      return;
-    }
-
-    const confirmationMessage = text.adminTraining.confirmProbationMessage;
-    const confirmed =
-      Platform.OS === 'web'
-        ? typeof window !== 'undefined' && window.confirm(confirmationMessage)
-        : await new Promise<boolean>((resolve) => {
-            Alert.alert(
-              text.adminTraining.confirmProbationButton,
-              confirmationMessage,
-              [
-                {
-                  text: text.adminTraining.confirmProbationCancel,
-                  style: 'cancel',
-                  onPress: () => resolve(false),
-                },
-                {
-                  text: text.adminTraining.confirmProbationConfirm,
-                  style: 'destructive',
-                  onPress: () => resolve(true),
-                },
-              ],
-              { cancelable: true, onDismiss: () => resolve(false) },
-            );
-          });
-
-    if (!confirmed) {
-      return;
-    }
-
-    setIsConfirmingProbationUserId(user.id);
-    setError(null);
-
-    try {
-      const updated = await confirmUserProbation(accessToken, user.id);
-      setUsers((current) =>
-        current.map((entry) =>
-          entry.id === updated.id
-            ? {
-                ...entry,
-                isOnProbation: updated.isOnProbation,
-              }
-            : entry,
-        ),
-      );
-    } catch {
-      setError(text.adminTraining.confirmProbationError);
-    } finally {
-      setIsConfirmingProbationUserId(null);
-    }
-  }
-
-  async function handleApproveAccount(user: TrainingAccessUser) {
-    if (user.isApproved) {
-      return;
-    }
-
-    const confirmationMessage = text.adminTraining.approveAccountMessage;
-    const confirmed =
-      Platform.OS === 'web'
-        ? typeof window !== 'undefined' && window.confirm(confirmationMessage)
-        : await new Promise<boolean>((resolve) => {
-            Alert.alert(
-              text.adminTraining.approveAccountButton,
-              confirmationMessage,
-              [
-                {
-                  text: text.adminTraining.approveAccountCancel,
-                  style: 'cancel',
-                  onPress: () => resolve(false),
-                },
-                {
-                  text: text.adminTraining.approveAccountConfirm,
-                  style: 'destructive',
-                  onPress: () => resolve(true),
-                },
-              ],
-              { cancelable: true, onDismiss: () => resolve(false) },
-            );
-          });
-
-    if (!confirmed) {
-      return;
-    }
-
-    setIsApprovingUserId(user.id);
-    setError(null);
-
-    try {
-      const updated = await approveUserAccount(accessToken, user.id);
-      setUsers((current) =>
-        current.map((entry) =>
-          entry.id === updated.id
-            ? {
-                ...entry,
-                isApproved: updated.isApproved,
-              }
-            : entry,
-        ),
-      );
-    } catch {
-      setError(text.adminTraining.approveAccountError);
-    } finally {
-      setIsApprovingUserId(null);
     }
   }
 
@@ -440,206 +188,110 @@ export function AdminTrainingAccessPanel({
       <Text style={styles.uploadSubtitle}>{text.adminTraining.subtitle}</Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {isLoading ? <Text style={styles.docItemMeta}>{text.adminTraining.loading}</Text> : null}
 
-      <View style={styles.docBlock}>
-        {users.length === 0 ? (
-          <Text style={styles.docEmpty}>
-            {isLoading ? text.adminTraining.loading : text.adminTraining.noEmployee}
-          </Text>
-        ) : (
-          users.map((user) => (
+      <View style={styles.sectionCard}>
+        <Text style={styles.uploadFieldTitle}>{text.adminTraining.levelLabel}</Text>
+        <View style={styles.uploadChipWrap}>
+          {levelOptions.map((level) => (
             <Pressable
-              key={user.id}
+              key={level}
               style={[
-                styles.docItem,
-                selectedUserId === user.id && styles.trainingTabActive,
+                styles.uploadChip,
+                selectedLevel === level && styles.uploadChipActive,
               ]}
-                onPress={() => {
-                  setSelectedUserId(user.id);
-                  setSelectedLevel(user.employeeLevel);
-                  setDraftSections(
-                    sectionProfileByLevel.get(user.employeeLevel) ??
-                      user.trainingAccess ??
-                      [],
-                  );
-                }}
-              >
+              onPress={() => {
+                setSelectedLevel(level);
+                setDraftSections(sectionProfileByLevel.get(level) ?? []);
+              }}
+            >
               <Text
                 style={[
-                  styles.docItemTitle,
-                  selectedUserId === user.id && styles.trainingTabTextActive,
+                  styles.uploadChipText,
+                  selectedLevel === level && styles.uploadChipTextActive,
                 ]}
               >
-                {user.name ?? user.email} ({text.adminTraining.roleValues[user.role]})
+                {text.dashboard.levels[level]}
               </Text>
-              <Text
-                style={[
-                  styles.docItemMeta,
-                  selectedUserId === user.id && styles.trainingTabTextActive,
-                ]}
-              >
-                {text.adminTraining.accountStatusLabel}:{' '}
-                {user.isApproved
-                  ? text.adminTraining.accountStatusValues.approved
-                  : text.adminTraining.accountStatusValues.pending}
-              </Text>
-              <Text
-                style={[
-                  styles.docItemMeta,
-                  selectedUserId === user.id && styles.trainingTabTextActive,
-                ]}
-              >
-                {text.adminTraining.probationStatusLabel}:{' '}
-                {user.isOnProbation
-                  ? text.adminTraining.probationValues.probation
-                  : text.adminTraining.probationValues.official}
-              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
 
-              {user.role === 'EMPLOYEE' ? (
+      <View style={styles.sectionCard}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.uploadFieldTitle}>{text.adminTraining.allowedSections}</Text>
+          <Text style={styles.sectionCounter}>
+            {selectedCount}/{totalCount}
+          </Text>
+        </View>
+
+        <View style={styles.quickActionsRow}>
+          <Pressable style={styles.quickActionButton} onPress={selectAllSections}>
+            <Text style={styles.quickActionButtonText}>Tout selectionner</Text>
+          </Pressable>
+          <Pressable style={styles.quickActionButton} onPress={clearAllSections}>
+            <Text style={styles.quickActionButtonText}>Tout retirer</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.quickActionButton, !isDirty && styles.buttonDisabled]}
+            disabled={!isDirty}
+            onPress={resetLevelProfile}
+          >
+            <Text style={styles.quickActionButtonText}>Reinitialiser</Text>
+          </Pressable>
+        </View>
+
+        {moduleSections.map((moduleEntry) => {
+          const moduleLabel =
+            moduleOptions.find((option) => option.key === moduleEntry.module)?.label ??
+            moduleEntry.module;
+          const moduleKeys = moduleEntry.sections.map((section) => section.key);
+          const moduleSelected = moduleKeys.filter((key) => draftSections.includes(key)).length;
+
+          return (
+            <View key={moduleEntry.module} style={styles.moduleCard}>
+              <View style={styles.moduleHeader}>
+                <View>
+                  <Text style={styles.moduleTitle}>{moduleLabel}</Text>
+                  <Text style={styles.moduleMeta}>
+                    {moduleSelected}/{moduleKeys.length}
+                  </Text>
+                </View>
                 <Pressable
-                  style={[
-                    styles.secondaryButton,
-                    (user.isApproved || isApprovingUserId === user.id) && styles.buttonDisabled,
-                  ]}
-                  disabled={user.isApproved || isApprovingUserId === user.id}
-                  onPress={() => {
-                    void handleApproveAccount(user);
-                  }}
+                  style={styles.moduleToggleButton}
+                  onPress={() => toggleModuleSections(moduleKeys)}
                 >
-                  <Text style={styles.secondaryButtonText}>
-                    {isApprovingUserId === user.id
-                      ? text.adminTraining.approveAccountSaving
-                      : user.isApproved
-                        ? text.adminTraining.approveAccountDone
-                        : text.adminTraining.approveAccountButton}
+                  <Text style={styles.moduleToggleButtonText}>
+                    {moduleSelected === moduleKeys.length ? 'Retirer module' : 'Ajouter module'}
                   </Text>
                 </Pressable>
-              ) : null}
-              <View style={styles.uploadChipWrap}>
-                {(user.trainingAccess ?? []).length === 0 ? (
-                  <Text
-                    style={[
-                      styles.docEmpty,
-                      selectedUserId === user.id && styles.trainingTabTextActive,
-                    ]}
-                  >
-                    {text.adminTraining.noAccess}
-                  </Text>
-                ) : (
-                  (user.trainingAccess ?? []).map((section) => (
-                    <Text
-                      key={`${user.id}-${section}`}
-                      style={[
-                        styles.pill,
-                        selectedUserId === user.id && styles.trainingTabTextActive,
-                      ]}
-                    >
-                      {sectionLabelByKey[section]}
-                    </Text>
-                  ))
-                )}
               </View>
 
-              {user.role === 'EMPLOYEE' ? (
-                <Pressable
-                  style={[
-                    styles.secondaryButton,
-                    (!user.isOnProbation || isConfirmingProbationUserId === user.id) &&
-                      styles.buttonDisabled,
-                  ]}
-                  disabled={!user.isOnProbation || isConfirmingProbationUserId === user.id}
-                  onPress={() => {
-                    void handleConfirmProbation(user);
-                  }}
-                >
-                  <Text style={styles.secondaryButtonText}>
-                    {isConfirmingProbationUserId === user.id
-                      ? text.adminTraining.confirmProbationSaving
-                      : user.isOnProbation
-                        ? text.adminTraining.confirmProbationButton
-                        : text.adminTraining.confirmProbationDone}
-                  </Text>
-                </Pressable>
-              ) : null}
-
-              {canManageRoles ? (
-                <Pressable
-                  style={[
-                    styles.secondaryButton,
-                    isUpdatingRoleUserId === user.id && styles.buttonDisabled,
-                  ]}
-                  disabled={isUpdatingRoleUserId === user.id}
-                  onPress={() => {
-                    void toggleManagerRole(user);
-                  }}
-                >
-                  <Text style={styles.secondaryButtonText}>
-                    {user.role === 'MANAGER'
-                      ? text.adminTraining.removeManager
-                      : text.adminTraining.defineManager}
-                  </Text>
-                </Pressable>
-              ) : null}
-            </Pressable>
-          ))
-        )}
-      </View>
-
-      <Text style={styles.uploadFieldTitle}>{text.adminTraining.levelLabel}</Text>
-      <View style={styles.uploadChipWrap}>
-        {levelOptions.map((level) => (
-          <Pressable
-            key={level}
-            style={[
-              styles.uploadChip,
-              selectedLevel === level && styles.uploadChipActive,
-            ]}
-            onPress={() => {
-              setSelectedLevel(level);
-              setDraftSections(sectionProfileByLevel.get(level) ?? []);
-            }}
-          >
-            <Text
-              style={[
-                styles.uploadChipText,
-                selectedLevel === level && styles.uploadChipTextActive,
-              ]}
-            >
-              {text.dashboard.levels[level]}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {selectedLevel ? (
-        <Text style={styles.docItemMeta}>
-          {text.adminTraining.levelScopePrefix}{' '}
-          {users.filter((user) => user.employeeLevel === selectedLevel).length}{' '}
-          {text.adminTraining.levelScopeSuffix}
-        </Text>
-      ) : null}
-
-      <Text style={styles.uploadFieldTitle}>{text.adminTraining.allowedSections}</Text>
-      <View style={styles.uploadChipWrap}>
-        {allSections.map((section) => (
-          <Pressable
-            key={section.key}
-            style={[
-              styles.uploadChip,
-              draftSections.includes(section.key) && styles.uploadChipActive,
-            ]}
-            onPress={() => toggleSection(section.key)}
-          >
-            <Text
-              style={[
-                styles.uploadChipText,
-                draftSections.includes(section.key) && styles.uploadChipTextActive,
-              ]}
-            >
-              {section.label}
-            </Text>
-          </Pressable>
-        ))}
+              <View style={styles.uploadChipWrap}>
+                {moduleEntry.sections.map((section) => (
+                  <Pressable
+                    key={section.key}
+                    style={[
+                      styles.uploadChip,
+                      draftSections.includes(section.key) && styles.uploadChipActive,
+                    ]}
+                    onPress={() => toggleSection(section.key)}
+                  >
+                    <Text
+                      style={[
+                        styles.uploadChipText,
+                        draftSections.includes(section.key) && styles.uploadChipTextActive,
+                      ]}
+                    >
+                      {section.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          );
+        })}
       </View>
 
       <Pressable

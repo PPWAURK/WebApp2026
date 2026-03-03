@@ -6,8 +6,8 @@ import {
 } from '../../services/restaurantsApi';
 import {
   assignUserRestaurant,
-  fetchUnassignedUsers,
-  type UnassignedUser,
+  fetchTrainingAccessUsers,
+  type TrainingAccessUser,
 } from '../../services/usersApi';
 import type { AppText } from '../../locales/translations';
 import { styles } from './AdminRestaurantPanel.styles';
@@ -20,9 +20,10 @@ type AdminRestaurantPanelProps = {
 
 export function AdminRestaurantPanel({ accessToken, text }: AdminRestaurantPanelProps) {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [unassignedUsers, setUnassignedUsers] = useState<UnassignedUser[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(null);
+  const [employeeUsers, setEmployeeUsers] = useState<TrainingAccessUser[]>([]);
+  const [selectedTransferUserId, setSelectedTransferUserId] = useState<number | null>(null);
+  const [transferSearch, setTransferSearch] = useState('');
   const [restaurantName, setRestaurantName] = useState('');
   const [restaurantAddress, setRestaurantAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -34,20 +35,22 @@ export function AdminRestaurantPanel({ accessToken, text }: AdminRestaurantPanel
     setIsLoading(true);
     setError(null);
     try {
-      const [restaurantData, unassigned] = await Promise.all([
+      const [restaurantData, trainingUsers] = await Promise.all([
         fetchRestaurants(),
-        fetchUnassignedUsers(accessToken),
+        fetchTrainingAccessUsers(accessToken),
       ]);
 
+      const allUsers = trainingUsers.filter((entry) => entry.role !== 'ADMIN');
+
       setRestaurants(restaurantData);
-      setUnassignedUsers(unassigned);
+      setEmployeeUsers(allUsers);
 
       if (restaurantData.length > 0) {
         setSelectedRestaurantId((current) => current ?? restaurantData[0].id);
       }
 
-      if (unassigned.length > 0) {
-        setSelectedUserId((current) => current ?? unassigned[0].id);
+      if (allUsers.length > 0) {
+        setSelectedTransferUserId((current) => current ?? allUsers[0].id);
       }
     } catch {
       setError(text.adminRestaurant.loadError);
@@ -60,9 +63,22 @@ export function AdminRestaurantPanel({ accessToken, text }: AdminRestaurantPanel
     void loadData();
   }, [accessToken]);
 
-  const selectedUser = useMemo(
-    () => unassignedUsers.find((user) => user.id === selectedUserId) ?? null,
-    [selectedUserId, unassignedUsers],
+  const visibleTransferUsers = useMemo(() => {
+    const query = transferSearch.trim().toLowerCase();
+
+    if (!query) {
+      return employeeUsers;
+    }
+
+    return employeeUsers.filter((entry) => {
+      const name = entry.name?.toLowerCase() ?? '';
+      return name.includes(query) || entry.email.toLowerCase().includes(query);
+    });
+  }, [employeeUsers, transferSearch]);
+
+  const selectedTransferUser = useMemo(
+    () => employeeUsers.find((entry) => entry.id === selectedTransferUserId) ?? null,
+    [employeeUsers, selectedTransferUserId],
   );
 
   async function onCreateRestaurant() {
@@ -85,20 +101,31 @@ export function AdminRestaurantPanel({ accessToken, text }: AdminRestaurantPanel
     }
   }
 
-  async function onAssignUser() {
-    if (!selectedUser || !selectedRestaurantId) {
+  async function onTransferUser() {
+    if (!selectedTransferUser || !selectedRestaurantId) {
       return;
     }
 
     setIsAssigning(true);
     setError(null);
     try {
-      await assignUserRestaurant(accessToken, selectedUser.id, selectedRestaurantId);
-      const nextUsers = unassignedUsers.filter((user) => user.id !== selectedUser.id);
-      setUnassignedUsers(nextUsers);
-      setSelectedUserId(nextUsers[0]?.id ?? null);
+      await assignUserRestaurant(accessToken, selectedTransferUser.id, selectedRestaurantId);
+
+      setEmployeeUsers((current) =>
+        current.map((entry) =>
+          entry.id === selectedTransferUser.id
+            ? {
+                ...entry,
+                restaurantId: selectedRestaurantId,
+                restaurant:
+                  restaurants.find((restaurant) => restaurant.id === selectedRestaurantId) ??
+                  entry.restaurant,
+              }
+            : entry,
+        ),
+      );
     } catch {
-      setError(text.adminRestaurant.assignError);
+      setError(text.adminRestaurant.transferError);
     } finally {
       setIsAssigning(false);
     }
@@ -142,29 +169,6 @@ export function AdminRestaurantPanel({ accessToken, text }: AdminRestaurantPanel
         </Text>
       </Pressable>
 
-      <Text style={styles.uploadFieldTitle}>{text.adminRestaurant.unassignedEmployees}</Text>
-      <View style={styles.uploadChipWrap}>
-        {unassignedUsers.map((user) => (
-          <Pressable
-            key={user.id}
-            style={[
-              styles.uploadChip,
-              selectedUserId === user.id && styles.uploadChipActive,
-            ]}
-            onPress={() => setSelectedUserId(user.id)}
-          >
-            <Text
-              style={[
-                styles.uploadChipText,
-                selectedUserId === user.id && styles.uploadChipTextActive,
-              ]}
-            >
-              {user.name ?? user.email}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
       <Text style={styles.uploadFieldTitle}>{text.adminRestaurant.assignToRestaurant}</Text>
       <View style={styles.uploadChipWrap}>
         {restaurants.map((restaurant) => (
@@ -188,23 +192,56 @@ export function AdminRestaurantPanel({ accessToken, text }: AdminRestaurantPanel
         ))}
       </View>
 
-      {unassignedUsers.length === 0 ? (
+      <Text style={styles.uploadFieldTitle}>{text.adminRestaurant.transferEmployees}</Text>
+      <TextInput
+        style={styles.input}
+        placeholder={text.adminRestaurant.transferSearchPlaceholder}
+        placeholderTextColor="#a98a8d"
+        value={transferSearch}
+        onChangeText={setTransferSearch}
+      />
+
+      <View style={styles.uploadChipWrap}>
+        {visibleTransferUsers.map((entry) => (
+          <Pressable
+            key={entry.id}
+            style={[
+              styles.uploadChip,
+              selectedTransferUserId === entry.id && styles.uploadChipActive,
+            ]}
+            onPress={() => setSelectedTransferUserId(entry.id)}
+          >
+            <Text
+              style={[
+                styles.uploadChipText,
+                selectedTransferUserId === entry.id && styles.uploadChipTextActive,
+              ]}
+            >
+              {entry.name ?? entry.email}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {selectedTransferUser ? (
         <Text style={styles.docEmpty}>
-          {isLoading ? text.adminRestaurant.loading : text.adminRestaurant.allAssigned}
+          {text.adminRestaurant.currentRestaurantLabel}:{' '}
+          {selectedTransferUser.restaurant?.name ?? text.adminRestaurant.unassignedLabel}
         </Text>
       ) : null}
 
       <Pressable
-        style={[styles.secondaryButton, (isAssigning || !selectedUser || !selectedRestaurantId) && styles.buttonDisabled]}
-        disabled={isAssigning || !selectedUser || !selectedRestaurantId}
+        style={[
+          styles.secondaryButton,
+          (isAssigning || !selectedTransferUser || !selectedRestaurantId) && styles.buttonDisabled,
+        ]}
+        disabled={isAssigning || !selectedTransferUser || !selectedRestaurantId}
         onPress={() => {
-          void onAssignUser();
+          void onTransferUser();
         }}
       >
         <Text style={styles.secondaryButtonText}>
-          {isAssigning
-            ? text.adminRestaurant.assigning
-            : text.adminRestaurant.assignButton}
+          {isAssigning ? text.adminRestaurant.transferring : text.adminRestaurant.transferButton}
         </Text>
       </Pressable>
     </View>
