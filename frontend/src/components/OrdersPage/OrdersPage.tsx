@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import type { AppText } from '../../locales/translations';
 import { fetchProducts, type ProductItem } from '../../services/productsApi';
 import { fetchSuppliers, type SupplierItem } from '../../services/suppliersApi';
@@ -24,6 +24,9 @@ export function OrdersPage({
   onQuantitiesChange,
   onSubmitOrder,
 }: OrdersPageProps) {
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 400;
+
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | 'ALL'>('ALL');
@@ -270,11 +273,14 @@ export function OrdersPage({
           const qty = quantities[product.id] ?? 0;
           const productName =
             language === 'zh' ? product.nameZh : product.nameFr ?? product.nameZh;
+          const infoRowStyle = isSmallScreen
+            ? { flexDirection: 'column' as const, alignItems: 'flex-start' as const }
+            : styles.productInfoRow;
           return (
             <View key={product.id} style={[styles.docItem, styles.productGridItem]}>
-              <View style={styles.productInfoRow}>
+              <View style={infoRowStyle}>
                 {product.image ? (
-                  <View style={styles.productImageFrame}>
+                  <View style={[styles.productImageFrame, isSmallScreen && styles.productImageFrameSmall]}>
                     <Image
                       source={{ uri: product.image }}
                       style={styles.productImageThumb}

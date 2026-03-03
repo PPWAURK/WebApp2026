@@ -69,6 +69,7 @@ export const styles = StyleSheet.create({
   },
   trainingTabRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     paddingVertical: 4,
   },
@@ -77,8 +78,8 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#dfb0b2',
     backgroundColor: '#f9ebec',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   trainingTabActive: {
     backgroundColor: '#ab1e24',
@@ -153,6 +154,10 @@ export const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
     backgroundColor: '#f3dcdd',
+  },
+  productImageFrameSmall: {
+    width: '100%',
+    height: 100,
   },
   productImageThumb: {
     width: '100%',
