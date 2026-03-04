@@ -154,6 +154,7 @@ export default function LoginScreen() {
               selectedRestaurantId={auth.selectedRestaurantId}
               rememberMe={auth.rememberMe}
               isSubmitting={auth.isSubmitting}
+              forgotPasswordCooldownSeconds={auth.forgotPasswordCooldownSeconds}
               error={auth.error}
               notice={auth.notice}
               onEmailChange={auth.setEmail}

@@ -30,6 +30,7 @@ type AuthContextValue = {
   rememberMe: boolean;
   error: string | null;
   notice: string | null;
+  forgotPasswordCooldownSeconds: number;
   session: AuthResponse | null;
   restaurants: Restaurant[];
   selectedRestaurantId: number | null;
@@ -93,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [forgotPasswordCooldownSeconds, setForgotPasswordCooldownSeconds] = useState(0);
   const [session, setSession] = useState<AuthResponse | null>(null);
   const [postLoginAnimationPending, setPostLoginAnimationPending] = useState(false);
 
@@ -111,6 +113,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     void initSession();
   }, []);
+
+  useEffect(() => {
+    if (forgotPasswordCooldownSeconds <= 0) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setForgotPasswordCooldownSeconds((currentValue) =>
+        currentValue > 1 ? currentValue - 1 : 0,
+      );
+    }, 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [forgotPasswordCooldownSeconds]);
 
   useEffect(() => {
     let isActive = true;
@@ -184,6 +202,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function forgotPassword(text: AppText, language: Language) {
+    if (forgotPasswordCooldownSeconds > 0) {
+      return;
+    }
+
     const normalizedEmail = email.trim();
 
     if (!normalizedEmail) {
@@ -198,6 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await requestForgotPassword(normalizedEmail, language);
       setNotice(text.auth.resetEmailSent);
+      setForgotPasswordCooldownSeconds(30);
     } catch (requestError) {
       if (requestError instanceof Error && requestError.message.includes('INVALID_EMAIL')) {
         setError(text.auth.invalidEmail);
@@ -218,6 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setMode('login');
     setError(null);
     setNotice(null);
+    setForgotPasswordCooldownSeconds(0);
     setPostLoginAnimationPending(false);
   }
 
@@ -259,6 +283,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         rememberMe,
         error,
         notice,
+        forgotPasswordCooldownSeconds,
         session,
         restaurants,
         selectedRestaurantId,

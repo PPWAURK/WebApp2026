@@ -18,6 +18,7 @@ type AuthFormProps = {
   selectedRestaurantId: number | null;
   rememberMe: boolean;
   isSubmitting: boolean;
+  forgotPasswordCooldownSeconds: number;
   error: string | null;
   notice?: string | null;
   onEmailChange: (value: string) => void;
@@ -54,6 +55,11 @@ export function AuthForm(props: AuthFormProps) {
       : hasName && hasEmail && hasPassword && hasRestaurant;
 
   const isSubmitDisabled = props.isSubmitting || !isFormValid;
+  const isForgotPasswordDisabled = props.isSubmitting || props.forgotPasswordCooldownSeconds > 0;
+  const forgotPasswordLabel =
+    props.forgotPasswordCooldownSeconds > 0
+      ? `${props.text.auth.forgotPassword} (${props.forgotPasswordCooldownSeconds}s)`
+      : props.text.auth.forgotPassword;
 
   return (
     <View style={styles.card}>
@@ -217,8 +223,10 @@ export function AuthForm(props: AuthFormProps) {
             <Text style={styles.rememberLabel}>{props.text.auth.rememberMe}</Text>
           </Pressable>
 
-          <Pressable onPress={props.onForgotPassword}>
-            <Text style={styles.forgotText}>{props.text.auth.forgotPassword}</Text>
+          <Pressable disabled={isForgotPasswordDisabled} onPress={props.onForgotPassword}>
+            <Text style={[styles.forgotText, isForgotPasswordDisabled && styles.forgotTextDisabled]}>
+              {forgotPasswordLabel}
+            </Text>
           </Pressable>
         </View>
       ) : null}

@@ -182,6 +182,9 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 11,
   },
+  forgotTextDisabled: {
+    color: LIGHT_RED,
+  },
   passwordWrapper: {
     width: '100%',
     flexDirection: 'row',
