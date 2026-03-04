@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react';
+import {
+  createContext,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { requestAuth, requestForgotPassword } from '../services/authApi';
 import { fetchRestaurants } from '../services/restaurantsApi';
-import {
-  clearSession,
-  loadStoredSession,
-  persistSession,
-} from '../services/sessionStorage';
+import { clearSession, loadStoredSession, persistSession } from '../services/sessionStorage';
 import type { AppText } from '../locales/translations';
 import type {
   AuthMode,
@@ -16,7 +20,68 @@ import type {
 } from '../types/auth';
 import type { Language } from '../types/language';
 
-export function useAuth() {
+type AuthContextValue = {
+  isLoadingSession: boolean;
+  isSubmitting: boolean;
+  mode: AuthMode;
+  email: string;
+  password: string;
+  name: string;
+  rememberMe: boolean;
+  error: string | null;
+  notice: string | null;
+  session: AuthResponse | null;
+  restaurants: Restaurant[];
+  selectedRestaurantId: number | null;
+  setEmail: (value: string) => void;
+  setPassword: (value: string) => void;
+  setName: (value: string) => void;
+  setSelectedRestaurantId: (restaurantId: number | null) => void;
+  setRememberMe: Dispatch<SetStateAction<boolean>>;
+  submitAuth: (currentMode: AuthMode, text: AppText, language: Language) => Promise<void>;
+  forgotPassword: (text: AppText, language: Language) => Promise<void>;
+  logout: () => Promise<void>;
+  toggleMode: () => void;
+  updateSessionUser: (user: User) => Promise<void>;
+  postLoginAnimationPending: boolean;
+  consumePostLoginAnimation: () => void;
+};
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+function mapAuthErrorMessage(rawMessage: string, currentMode: AuthMode, text: AppText) {
+  if (rawMessage === text.auth.restaurantMissing || rawMessage.includes('RESTAURANT_REQUIRED')) {
+    return text.auth.restaurantMissing;
+  }
+
+  if (rawMessage.includes('ACCOUNT_PENDING_APPROVAL')) {
+    return text.auth.pendingApprovalRequired;
+  }
+
+  if (rawMessage.includes('INVALID_EMAIL')) {
+    return text.auth.invalidEmail;
+  }
+
+  if (rawMessage.includes('USER_NOT_FOUND')) {
+    return text.auth.userNotFound;
+  }
+
+  if (rawMessage.includes('INCORRECT_PASSWORD')) {
+    return text.auth.incorrectPassword;
+  }
+
+  if (rawMessage.includes('EMAIL_ALREADY_REGISTERED')) {
+    return text.auth.emailAlreadyRegistered;
+  }
+
+  if (rawMessage.includes('PASSWORD_TOO_SHORT')) {
+    return text.auth.passwordTooShort;
+  }
+
+  return currentMode === 'login' ? text.auth.loginFailed : text.auth.registerFailed;
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mode, setMode] = useState<AuthMode>('login');
@@ -29,6 +94,7 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [session, setSession] = useState<AuthResponse | null>(null);
+  const [postLoginAnimationPending, setPostLoginAnimationPending] = useState(false);
 
   useEffect(() => {
     async function initSession() {
@@ -45,38 +111,6 @@ export function useAuth() {
 
     void initSession();
   }, []);
-
-  function mapAuthErrorMessage(rawMessage: string, currentMode: AuthMode, text: AppText) {
-    if (rawMessage === text.auth.restaurantMissing || rawMessage.includes('RESTAURANT_REQUIRED')) {
-      return text.auth.restaurantMissing;
-    }
-
-    if (rawMessage.includes('ACCOUNT_PENDING_APPROVAL')) {
-      return text.auth.pendingApprovalRequired;
-    }
-
-    if (rawMessage.includes('INVALID_EMAIL')) {
-      return text.auth.invalidEmail;
-    }
-
-    if (rawMessage.includes('USER_NOT_FOUND')) {
-      return text.auth.userNotFound;
-    }
-
-    if (rawMessage.includes('INCORRECT_PASSWORD')) {
-      return text.auth.incorrectPassword;
-    }
-
-    if (rawMessage.includes('EMAIL_ALREADY_REGISTERED')) {
-      return text.auth.emailAlreadyRegistered;
-    }
-
-    if (rawMessage.includes('PASSWORD_TOO_SHORT')) {
-      return text.auth.passwordTooShort;
-    }
-
-    return currentMode === 'login' ? text.auth.loginFailed : text.auth.registerFailed;
-  }
 
   useEffect(() => {
     let isActive = true;
@@ -119,9 +153,7 @@ export function useAuth() {
         password,
         name: currentMode === 'register' ? name.trim() : undefined,
         restaurantId:
-          currentMode === 'register' && selectedRestaurantId
-            ? selectedRestaurantId
-            : undefined,
+          currentMode === 'register' && selectedRestaurantId ? selectedRestaurantId : undefined,
         language,
       });
 
@@ -137,6 +169,7 @@ export function useAuth() {
 
       const loginData = authData as AuthResponse;
       setSession(loginData);
+      setPostLoginAnimationPending(true);
       await persistSession(loginData, rememberMe);
       setPassword('');
     } catch (requestError) {
@@ -177,12 +210,15 @@ export function useAuth() {
   }
 
   async function logout() {
+    await clearSession();
     setSession(null);
     setEmail('');
     setPassword('');
     setName('');
     setMode('login');
-    await clearSession();
+    setError(null);
+    setNotice(null);
+    setPostLoginAnimationPending(false);
   }
 
   function toggleMode() {
@@ -207,28 +243,49 @@ export function useAuth() {
     });
   }
 
-  return {
-    isLoadingSession,
-    isSubmitting,
-    mode,
-    email,
-    password,
-    name,
-    rememberMe,
-    error,
-    notice,
-    session,
-    restaurants,
-    selectedRestaurantId,
-    setEmail,
-    setPassword,
-    setName,
-    setSelectedRestaurantId,
-    setRememberMe,
-    submitAuth,
-    forgotPassword,
-    logout,
-    toggleMode,
-    updateSessionUser,
-  };
+  function consumePostLoginAnimation() {
+    setPostLoginAnimationPending(false);
+  }
+
+  return (
+    <AuthContext.Provider
+      value={{
+        isLoadingSession,
+        isSubmitting,
+        mode,
+        email,
+        password,
+        name,
+        rememberMe,
+        error,
+        notice,
+        session,
+        restaurants,
+        selectedRestaurantId,
+        setEmail,
+        setPassword,
+        setName,
+        setSelectedRestaurantId,
+        setRememberMe,
+        submitAuth,
+        forgotPassword,
+        logout,
+        toggleMode,
+        updateSessionUser,
+        postLoginAnimationPending,
+        consumePostLoginAnimation,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+
+  return context;
 }

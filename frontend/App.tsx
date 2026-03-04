@@ -173,6 +173,7 @@ export default function App() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useLocalSearchParams<{ token?: string | string[] }>();
+  const normalizedPathname = normalizePathname(pathname);
   const preAuthRoute = pathToPreAuthRoute(pathname);
   const preAuthResetToken = normalizeTokenParam(params.token);
   const activePage = pathToMenuPage(pathname) ?? 'dashboard';
@@ -199,12 +200,18 @@ export default function App() {
   const loginLoaderOpacity = useRef(new Animated.Value(0)).current;
   const loginLoaderScale = useRef(new Animated.Value(0.86)).current;
   const loginLoaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const postLoginAnimationTokenRef = useRef<string | null>(null);
+  const isPostLoginAnimatingRef = useRef(false);
   const [resetPassword, setResetPassword] = useState('');
   const [isSubmittingResetPassword, setIsSubmittingResetPassword] = useState(false);
   const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
   const [resetPasswordNotice, setResetPasswordNotice] = useState<string | null>(null);
 
   function goToPreAuthLanding(replace = false) {
+    if (normalizedPathname === '/') {
+      return;
+    }
+
     if (replace) {
       router.replace('/');
       return;
@@ -214,16 +221,24 @@ export default function App() {
   }
 
   function goToPreAuthAuth(replace = false) {
-    if (replace) {
-      router.replace('/auth');
+    if (normalizedPathname === '/login' || normalizedPathname === '/auth') {
       return;
     }
 
-    router.push('/auth');
+    if (replace) {
+      router.replace('/login');
+      return;
+    }
+
+    router.push('/login');
   }
 
   function goToMenuPage(page: MenuPage, replace = false) {
     const targetPath = menuPageToPath(page);
+    if (normalizedPathname === targetPath) {
+      return;
+    }
+
     if (replace) {
       router.replace(targetPath);
       return;
@@ -372,6 +387,10 @@ export default function App() {
       return;
     }
 
+    if (normalizePathname(pathname) !== '/') {
+      return;
+    }
+
     const hash = window.location.hash;
     if (!hash.startsWith('#/')) {
       return;
@@ -385,7 +404,8 @@ export default function App() {
       normalizedHashPath === '/login' ||
       normalizedHashPath === '/signin'
     ) {
-      router.replace('/auth');
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+      router.replace('/login');
       return;
     }
 
@@ -396,6 +416,7 @@ export default function App() {
     ) {
       const hashToken = new URLSearchParams(rawQuery || '').get('token') ?? undefined;
       const normalizedHashToken = normalizeTokenParam(hashToken);
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
       if (normalizedHashToken) {
         router.replace(`/reset-password?token=${encodeURIComponent(normalizedHashToken)}`);
         return;
@@ -403,7 +424,7 @@ export default function App() {
 
       router.replace('/reset-password');
     }
-  }, []);
+  }, [pathname, router]);
 
   useEffect(() => {
     if (preAuthRoute !== 'resetPassword') {
@@ -415,10 +436,23 @@ export default function App() {
   }, [preAuthRoute]);
 
   useEffect(() => {
+    if (auth.isLoadingSession) {
+      return;
+    }
+
     if (!auth.session) {
+      if (loginLoaderTimeoutRef.current) {
+        clearTimeout(loginLoaderTimeoutRef.current);
+        loginLoaderTimeoutRef.current = null;
+      }
+
+      loginLoaderOpacity.stopAnimation();
+      loginLoaderScale.stopAnimation();
+      postLoginAnimationTokenRef.current = null;
+      isPostLoginAnimatingRef.current = false;
       setIsDrawerOpen(false);
       if (pathToMenuPage(pathname) !== null) {
-        goToPreAuthLanding(true);
+        goToPreAuthAuth(true);
       }
       setDisplayPage('dashboard');
       setIsLoginTransitionLoading(false);
@@ -454,22 +488,44 @@ export default function App() {
     if (activePage === 'supplierManagement' && auth.session.user.role !== 'ADMIN') {
       goToMenuPage('dashboard', true);
     }
-  }, [activePage, auth.session, pathname]);
+  }, [
+    activePage,
+    auth.isLoadingSession,
+    auth.session,
+    loginLoaderOpacity,
+    loginLoaderScale,
+    pathname,
+  ]);
+
+  useEffect(() => {
+    if (auth.isLoadingSession || !auth.session) {
+      return;
+    }
+
+    if (pathToMenuPage(pathname) === null && preAuthRoute === 'landing') {
+      goToMenuPage('dashboard', true);
+    }
+  }, [auth.isLoadingSession, auth.session, pathname, preAuthRoute]);
 
   useEffect(() => {
     if (!auth.session) {
       return;
     }
 
-    if (pathToMenuPage(pathname) === null) {
-      goToMenuPage('dashboard', true);
-    }
-  }, [auth.session, pathname]);
-
-  useEffect(() => {
-    if (!auth.session || preAuthRoute !== 'auth') {
+    if (pathToMenuPage(pathname) !== null) {
       return;
     }
+
+    if (isPostLoginAnimatingRef.current) {
+      return;
+    }
+
+    if (postLoginAnimationTokenRef.current === auth.session.accessToken) {
+      return;
+    }
+
+    postLoginAnimationTokenRef.current = auth.session.accessToken;
+    isPostLoginAnimatingRef.current = true;
 
     if (loginLoaderTimeoutRef.current) {
       clearTimeout(loginLoaderTimeoutRef.current);
@@ -518,13 +574,24 @@ export default function App() {
           goToMenuPage('dashboard', true);
           setIsLoginTransitionLoading(false);
         }
+        isPostLoginAnimatingRef.current = false;
       });
     }, 2000);
+
+    return () => {
+      if (loginLoaderTimeoutRef.current) {
+        clearTimeout(loginLoaderTimeoutRef.current);
+        loginLoaderTimeoutRef.current = null;
+      }
+      loginLoaderOpacity.stopAnimation();
+      loginLoaderScale.stopAnimation();
+      isPostLoginAnimatingRef.current = false;
+    };
   }, [
     auth.session,
     loginLoaderOpacity,
     loginLoaderScale,
-    preAuthRoute,
+    pathname,
   ]);
 
   useEffect(() => {
@@ -754,6 +821,8 @@ export default function App() {
     Manrope_400Regular,
     Manrope_700Bold,
   });
+
+  const shouldShowPostLoginLoader = isLoginTransitionLoading && !DISABLE_POST_LOGIN_REDIRECT;
 
   function handleProceedToOrderRecap(recap: OrderRecapData) {
     setOrderRecap(recap);
@@ -1047,8 +1116,8 @@ export default function App() {
 
           {!auth.session ? (
             renderPublicContent()
-          ) : isLoginTransitionLoading ? (
-            <Animated.View style={[styles.loginLoaderFullscreen, { opacity: loginLoaderOpacity }]}>
+          ) : isLoginTransitionLoading || shouldShowPostLoginLoader ? (
+            <Animated.View style={[styles.loginLoaderFullscreen, { opacity: loginLoaderOpacity }]}> 
               <Animated.View
                 style={[
                   styles.loginLoaderCard,
