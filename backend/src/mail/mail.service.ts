@@ -148,7 +148,7 @@ export class MailService {
     }
 
     const resetUrl = `${config.appWebUrl ?? ''}`.replace(/\/$/, '');
-    const fullResetUrl = `${resetUrl}#/reset-password?token=${encodeURIComponent(input.resetToken)}`;
+    const fullResetUrl = `${resetUrl}/reset-password?token=${encodeURIComponent(input.resetToken)}`;
     const greeting = input.recipientName?.trim() || input.email;
     const language = this.normalizeLanguage(input.language);
     const intro =

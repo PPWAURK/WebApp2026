@@ -21,7 +21,9 @@ type HeaderDrawerProps = {
 export function HeaderDrawer(props: HeaderDrawerProps) {
   const translateX = useRef(new Animated.Value(-280)).current;
   const [isOrdersGroupOpen, setIsOrdersGroupOpen] = useState(
-    props.activePage === 'orders' || props.activePage === 'orderHistory',
+    props.activePage === 'orders' ||
+      props.activePage === 'orderHistory' ||
+      props.activePage === 'orderRecap',
   );
   const menuItems: Array<{ key: MenuPage; label: string }> = [
     { key: 'dashboard', label: props.text.drawer.dashboard },
@@ -47,7 +49,11 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
   }, [props.isOpen, translateX]);
 
   useEffect(() => {
-    if (props.activePage === 'orders' || props.activePage === 'orderHistory') {
+    if (
+      props.activePage === 'orders' ||
+      props.activePage === 'orderHistory' ||
+      props.activePage === 'orderRecap'
+    ) {
       setIsOrdersGroupOpen(true);
     }
   }, [props.activePage]);
@@ -103,18 +109,22 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
         {props.currentUser.role === 'ADMIN' || props.currentUser.role === 'MANAGER' ? (
           <View style={styles.drawerGroupWrap}>
             <Pressable
-              style={[
-                styles.drawerItem,
-                (props.activePage === 'orders' || props.activePage === 'orderHistory') &&
-                  styles.drawerItemActive,
-              ]}
+                style={[
+                  styles.drawerItem,
+                  (props.activePage === 'orders' ||
+                    props.activePage === 'orderHistory' ||
+                    props.activePage === 'orderRecap') &&
+                    styles.drawerItemActive,
+                ]}
               onPress={() => setIsOrdersGroupOpen((isOpen) => !isOpen)}
             >
               <View style={styles.drawerGroupHeaderRow}>
                 <Text
                   style={[
                     styles.drawerItemText,
-                    (props.activePage === 'orders' || props.activePage === 'orderHistory') &&
+                    (props.activePage === 'orders' ||
+                      props.activePage === 'orderHistory' ||
+                      props.activePage === 'orderRecap') &&
                       styles.drawerItemTextActive,
                   ]}
                 >
@@ -123,7 +133,9 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
                 <Text
                   style={[
                     styles.drawerGroupChevron,
-                    (props.activePage === 'orders' || props.activePage === 'orderHistory') &&
+                    (props.activePage === 'orders' ||
+                      props.activePage === 'orderHistory' ||
+                      props.activePage === 'orderRecap') &&
                       styles.drawerGroupChevronActive,
                   ]}
                 >

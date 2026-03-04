@@ -1,4 +1,7 @@
 import { Manrope_400Regular, Manrope_700Bold, useFonts } from '@expo-google-fonts/manrope';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -28,7 +31,6 @@ import { SupplierManagementPage } from './src/components/SupplierManagementPage'
 import { TrainingPage } from './src/components/TrainingPage';
 import { useAuth } from './src/hooks/useAuth';
 import { useLanguage } from './src/hooks/useLanguage';
-import { usePreAuthRouter } from './src/hooks/usePreAuthRouter';
 import {
   buildOrderBonUrl,
   createOrder,
@@ -50,19 +52,132 @@ function getTodayDateString() {
   return `${year}-${month}-${day}`;
 }
 
+type PreAuthRoute = 'landing' | 'auth' | 'resetPassword';
+
+function normalizePathname(pathname: string): string {
+  const lower = pathname.toLowerCase();
+  const withLeadingSlash = lower.startsWith('/') ? lower : `/${lower}`;
+  if (withLeadingSlash.length <= 1) {
+    return '/';
+  }
+
+  return withLeadingSlash.replace(/\/+$/, '');
+}
+
+function pathToPreAuthRoute(pathname: string): PreAuthRoute {
+  const normalized = normalizePathname(pathname);
+
+  if (normalized === '/auth' || normalized === '/login' || normalized === '/signin') {
+    return 'auth';
+  }
+
+  if (
+    normalized === '/reset-password' ||
+    normalized === '/resetpassword' ||
+    normalized === '/password-reset'
+  ) {
+    return 'resetPassword';
+  }
+
+  return 'landing';
+}
+
+function pathToMenuPage(pathname: string): MenuPage | null {
+  const normalized = normalizePathname(pathname);
+
+  if (normalized === '/profile') {
+    return 'profile';
+  }
+
+  if (normalized === '/training') {
+    return 'training';
+  }
+
+  if (normalized === '/restaurant-forms') {
+    return 'restaurantForms';
+  }
+
+  if (normalized === '/orders') {
+    return 'orders';
+  }
+
+  if (normalized === '/order-recap') {
+    return 'orderRecap';
+  }
+
+  if (normalized === '/order-history') {
+    return 'orderHistory';
+  }
+
+  if (normalized === '/supplier-management') {
+    return 'supplierManagement';
+  }
+
+  if (normalized === '/dashboard') {
+    return 'dashboard';
+  }
+
+  return null;
+}
+
+function menuPageToPath(page: MenuPage): string {
+  if (page === 'profile') {
+    return '/profile';
+  }
+
+  if (page === 'training') {
+    return '/training';
+  }
+
+  if (page === 'restaurantForms') {
+    return '/restaurant-forms';
+  }
+
+  if (page === 'orders') {
+    return '/orders';
+  }
+
+  if (page === 'orderRecap') {
+    return '/order-recap';
+  }
+
+  if (page === 'orderHistory') {
+    return '/order-history';
+  }
+
+  if (page === 'supplierManagement') {
+    return '/supplier-management';
+  }
+
+  return '/dashboard';
+}
+
+function normalizeTokenParam(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) {
+    return value[0]?.trim() || null;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  return null;
+}
+
 const DISABLE_POST_LOGIN_REDIRECT = false;
 
 export default function App() {
   const auth = useAuth();
   const language = useLanguage();
-  const preAuthRouter = usePreAuthRouter();
-  const preAuthRoute = preAuthRouter.route;
-  const goToPreAuthLanding = preAuthRouter.goToLanding;
-  const goToPreAuthAuth = preAuthRouter.goToAuth;
-  const preAuthResetToken = preAuthRouter.resetToken;
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useLocalSearchParams<{ token?: string | string[] }>();
+  const preAuthRoute = pathToPreAuthRoute(pathname);
+  const preAuthResetToken = normalizeTokenParam(params.token);
+  const activePage = pathToMenuPage(pathname) ?? 'dashboard';
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [activePage, setActivePage] = useState<MenuPage>('dashboard');
-  const [displayPage, setDisplayPage] = useState<MenuPage>('dashboard');
+  const [displayPage, setDisplayPage] = useState<MenuPage>(activePage);
   const [isLoginTransitionLoading, setIsLoginTransitionLoading] = useState(false);
   const [orderRecap, setOrderRecap] = useState<OrderRecapData | null>(null);
   const [orderQuantities, setOrderQuantities] = useState<Record<number, number>>({});
@@ -88,6 +203,34 @@ export default function App() {
   const [isSubmittingResetPassword, setIsSubmittingResetPassword] = useState(false);
   const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
   const [resetPasswordNotice, setResetPasswordNotice] = useState<string | null>(null);
+
+  function goToPreAuthLanding(replace = false) {
+    if (replace) {
+      router.replace('/');
+      return;
+    }
+
+    router.push('/');
+  }
+
+  function goToPreAuthAuth(replace = false) {
+    if (replace) {
+      router.replace('/auth');
+      return;
+    }
+
+    router.push('/auth');
+  }
+
+  function goToMenuPage(page: MenuPage, replace = false) {
+    const targetPath = menuPageToPath(page);
+    if (replace) {
+      router.replace(targetPath);
+      return;
+    }
+
+    router.push(targetPath);
+  }
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') {
@@ -225,6 +368,44 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') {
+      return;
+    }
+
+    const hash = window.location.hash;
+    if (!hash.startsWith('#/')) {
+      return;
+    }
+
+    const [rawPath, rawQuery] = hash.slice(1).split('?');
+    const normalizedHashPath = normalizePathname(rawPath || '/');
+
+    if (
+      normalizedHashPath === '/auth' ||
+      normalizedHashPath === '/login' ||
+      normalizedHashPath === '/signin'
+    ) {
+      router.replace('/auth');
+      return;
+    }
+
+    if (
+      normalizedHashPath === '/reset-password' ||
+      normalizedHashPath === '/resetpassword' ||
+      normalizedHashPath === '/password-reset'
+    ) {
+      const hashToken = new URLSearchParams(rawQuery || '').get('token') ?? undefined;
+      const normalizedHashToken = normalizeTokenParam(hashToken);
+      if (normalizedHashToken) {
+        router.replace(`/reset-password?token=${encodeURIComponent(normalizedHashToken)}`);
+        return;
+      }
+
+      router.replace('/reset-password');
+    }
+  }, []);
+
+  useEffect(() => {
     if (preAuthRoute !== 'resetPassword') {
       setResetPassword('');
       setResetPasswordError(null);
@@ -236,8 +417,9 @@ export default function App() {
   useEffect(() => {
     if (!auth.session) {
       setIsDrawerOpen(false);
-      goToPreAuthLanding(true);
-      setActivePage('dashboard');
+      if (pathToMenuPage(pathname) !== null) {
+        goToPreAuthLanding(true);
+      }
       setDisplayPage('dashboard');
       setIsLoginTransitionLoading(false);
       loginLoaderOpacity.setValue(0);
@@ -265,14 +447,24 @@ export default function App() {
       auth.session.user.role !== 'ADMIN' &&
       auth.session.user.role !== 'MANAGER'
     ) {
-      setActivePage('dashboard');
+      goToMenuPage('dashboard', true);
       setOrderRecap(null);
     }
 
     if (activePage === 'supplierManagement' && auth.session.user.role !== 'ADMIN') {
-      setActivePage('dashboard');
+      goToMenuPage('dashboard', true);
     }
-  }, [activePage, auth.session, goToPreAuthLanding]);
+  }, [activePage, auth.session, pathname]);
+
+  useEffect(() => {
+    if (!auth.session) {
+      return;
+    }
+
+    if (pathToMenuPage(pathname) === null) {
+      goToMenuPage('dashboard', true);
+    }
+  }, [auth.session, pathname]);
 
   useEffect(() => {
     if (!auth.session || preAuthRoute !== 'auth') {
@@ -323,6 +515,7 @@ export default function App() {
         }),
       ]).start(({ finished }) => {
         if (finished) {
+          goToMenuPage('dashboard', true);
           setIsLoginTransitionLoading(false);
         }
       });
@@ -432,17 +625,25 @@ export default function App() {
   }
 
   async function handleDownloadOrderBon(order: { id: number; bonUrl: string; number?: string }) {
-    const url = order.bonUrl || buildOrderBonUrl(order.id);
+    const url = buildOrderBonUrl(order.id);
+    const token = auth.session?.accessToken;
+    const fileName = `${order.number ?? `order-${order.id}`}.pdf`;
+
+    if (!token) {
+      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(language.text.orders.downloadBonError);
+      } else {
+        Alert.alert(language.text.orders.downloadBonButton, language.text.orders.downloadBonError);
+      }
+      return;
+    }
 
     if (Platform.OS === 'web') {
       try {
-        const token = auth.session?.accessToken;
         const response = await fetch(url, {
-          headers: token
-            ? {
-                Authorization: `Bearer ${token}`,
-              }
-            : undefined,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         if (!response.ok) {
@@ -452,7 +653,6 @@ export default function App() {
 
         const blob = await response.blob();
         const objectUrl = window.URL.createObjectURL(blob);
-        const fileName = `${order.number ?? `order-${order.id}`}.pdf`;
         const anchor = window.document.createElement('a');
         anchor.href = objectUrl;
         anchor.download = fileName;
@@ -461,15 +661,41 @@ export default function App() {
         anchor.remove();
         window.URL.revokeObjectURL(objectUrl);
       } catch {
-        if (typeof window !== 'undefined') {
-          window.open(url, '_blank');
+        if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+          window.alert(language.text.orders.downloadBonError);
         }
       }
 
       return;
     }
 
-    void Linking.openURL(url);
+    try {
+      const cacheDir = FileSystem.cacheDirectory;
+      if (!cacheDir) {
+        throw new Error('CACHE_DIRECTORY_UNAVAILABLE');
+      }
+
+      const targetPath = `${cacheDir}${fileName}`;
+      const downloadResult = await FileSystem.downloadAsync(url, targetPath, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(downloadResult.uri, {
+          dialogTitle: fileName,
+          mimeType: 'application/pdf',
+          UTI: 'com.adobe.pdf',
+        });
+        return;
+      }
+
+      await Linking.openURL(downloadResult.uri);
+    } catch {
+      Alert.alert(language.text.orders.downloadBonButton, language.text.orders.downloadBonError);
+    }
   }
 
   async function handleDeleteOrder(order: OrderSummary) {
@@ -532,7 +758,7 @@ export default function App() {
   function handleProceedToOrderRecap(recap: OrderRecapData) {
     setOrderRecap(recap);
     setLatestCreatedOrder(null);
-    setActivePage('orderRecap');
+    goToMenuPage('orderRecap');
   }
 
   function renderOrderBuilder() {
@@ -592,7 +818,7 @@ export default function App() {
                     setResetPassword('');
                     setResetPasswordNotice(language.text.auth.resetPasswordSuccess);
                     setTimeout(() => {
-                      goToPreAuthAuth();
+                      goToPreAuthAuth(true);
                     }, 900);
                   })
                   .catch((error: unknown) => {
@@ -615,7 +841,7 @@ export default function App() {
                     setIsSubmittingResetPassword(false);
                   });
               }}
-              onBackToLogin={() => goToPreAuthAuth()}
+              onBackToLogin={() => goToPreAuthAuth(true)}
             />
           </ScrollView>
         </KeyboardAvoidingView>
@@ -745,7 +971,7 @@ export default function App() {
           onDownloadOrderBon={(order) => {
             void handleDownloadOrderBon(order);
           }}
-          onBack={() => setActivePage('orders')}
+          onBack={() => goToMenuPage('orders', true)}
         />
       );
     }
@@ -812,7 +1038,7 @@ export default function App() {
               activePage={activePage}
               onToggle={() => setIsDrawerOpen((isOpen) => !isOpen)}
               onClose={() => setIsDrawerOpen(false)}
-              onSelectPage={setActivePage}
+              onSelectPage={(page) => goToMenuPage(page)}
               onSelectLanguage={(nextLanguage) => {
                 void language.setLanguage(nextLanguage);
               }}
