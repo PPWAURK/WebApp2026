@@ -1,2 +1,1 @@
-export const API_URL ="https://api.zhaoplatforme.com/backend2"
-;
+export const API_URL = 'https://api.zhaoplatforme.com/backend2';
