@@ -200,8 +200,9 @@ export class UploadsService {
 
     if (this.publicApiBaseUrl) {
       const normalizedBaseUrl = this.publicApiBaseUrl.replace(/\/$/, '');
+      const normalizedPrefixEscaped = normalizedPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const hasPrefixAlready =
-        normalizedPrefix.length > 0 && new RegExp(`/${normalizedPrefix}$`).test(normalizedBaseUrl);
+        normalizedPrefix.length > 0 && new RegExp(`/${normalizedPrefixEscaped}$`).test(normalizedBaseUrl);
 
       const baseUrlWithPrefix =
         normalizedPrefix.length > 0 && !hasPrefixAlready
