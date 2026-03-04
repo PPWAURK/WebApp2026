@@ -38,9 +38,11 @@ import { uploadSingleFile, type UploadedFileResponse } from '../../services/uplo
 import {
   createNewsPost,
   deleteNewsPost,
+  fetchNewsReadTracking,
   fetchNewsFeed,
   markNewsAsRead,
   type NewsAudience,
+  type NewsReadTrackingResponse,
   type NewsPostItem,
 } from '../../services/newsApi';
 
@@ -130,6 +132,12 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [newsFeedMonths, setNewsFeedMonths] = useState<string[]>([]);
   const [selectedNewsMonth, setSelectedNewsMonth] = useState<string>('ALL');
   const [deletingNewsId, setDeletingNewsId] = useState<number | null>(null);
+  const [markingNewsReadId, setMarkingNewsReadId] = useState<number | null>(null);
+  const [expandedNewsTrackingId, setExpandedNewsTrackingId] = useState<number | null>(null);
+  const [loadingNewsTrackingId, setLoadingNewsTrackingId] = useState<number | null>(null);
+  const [newsTrackingByPostId, setNewsTrackingByPostId] = useState<
+    Record<number, NewsReadTrackingResponse>
+  >({});
   const [confirmDialog, setConfirmDialog] = useState<{
     visible: boolean;
     title: string;
@@ -829,10 +837,14 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     if (post.attachment?.fileUrl) {
       void Linking.openURL(post.attachment.fileUrl);
     }
+  }
 
-    if (post.isRead) {
+  async function handleConfirmNewsRead(post: NewsPostItem) {
+    if (post.isRead || markingNewsReadId === post.id) {
       return;
     }
+
+    setMarkingNewsReadId(post.id);
 
     try {
       await markNewsAsRead(accessToken, post.id);
@@ -840,7 +852,40 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         current.map((item) => (item.id === post.id ? { ...item, isRead: true } : item)),
       );
     } catch {
-      // Keep read state untouched when API fails.
+      setNewsFeedError(text.dashboard.newsReadConfirmError);
+    } finally {
+      setMarkingNewsReadId(null);
+    }
+  }
+
+  async function handleToggleReadTracking(post: NewsPostItem) {
+    if (!isAdmin) {
+      return;
+    }
+
+    if (expandedNewsTrackingId === post.id) {
+      setExpandedNewsTrackingId(null);
+      return;
+    }
+
+    setExpandedNewsTrackingId(post.id);
+    setNewsFeedError(null);
+
+    if (newsTrackingByPostId[post.id]) {
+      return;
+    }
+
+    setLoadingNewsTrackingId(post.id);
+    try {
+      const tracking = await fetchNewsReadTracking(accessToken, post.id);
+      setNewsTrackingByPostId((current) => ({
+        ...current,
+        [post.id]: tracking,
+      }));
+    } catch {
+      setNewsFeedError(text.dashboard.newsReadTrackingError);
+    } finally {
+      setLoadingNewsTrackingId(null);
     }
   }
 
@@ -1047,14 +1092,110 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
               void handleOpenNews(post);
             }}
           >
-            <Text style={styles.quickRowTitle}>{post.title}</Text>
+            <View style={styles.quickNewsRowHeader}>
+              <Text style={styles.quickRowTitle}>{post.title}</Text>
+
+              {!isAdmin ? (
+                <Pressable
+                  style={[
+                    styles.iconActionButton,
+                    post.isRead && styles.newsReadConfirmButtonDone,
+                    markingNewsReadId === post.id && styles.buttonDisabled,
+                  ]}
+                  accessibilityLabel={text.dashboard.newsConfirmReadButton}
+                  disabled={post.isRead || markingNewsReadId === post.id}
+                  onPress={(event) => {
+                    event.stopPropagation?.();
+                    void handleConfirmNewsRead(post);
+                  }}
+                >
+                  <Ionicons
+                    name={
+                      post.isRead
+                        ? 'checkmark-done-outline'
+                        : markingNewsReadId === post.id
+                          ? 'hourglass-outline'
+                          : 'checkmark-outline'
+                    }
+                    size={18}
+                    color={post.isRead ? '#2f7d32' : '#7f1b21'}
+                  />
+                </Pressable>
+              ) : (
+                <Pressable
+                  style={[
+                    styles.iconActionButton,
+                    expandedNewsTrackingId === post.id && styles.newsTrackingActiveButton,
+                    loadingNewsTrackingId === post.id && styles.buttonDisabled,
+                  ]}
+                  accessibilityLabel={text.dashboard.newsReadTrackingButton}
+                  disabled={loadingNewsTrackingId === post.id}
+                  onPress={(event) => {
+                    event.stopPropagation?.();
+                    void handleToggleReadTracking(post);
+                  }}
+                >
+                  <Ionicons
+                    name={loadingNewsTrackingId === post.id ? 'hourglass-outline' : 'people-outline'}
+                    size={18}
+                    color="#7f1b21"
+                  />
+                </Pressable>
+              )}
+            </View>
             <Text style={styles.subtitle}>{post.message}</Text>
             <Text style={styles.subtitle}>{new Date(post.createdAt).toLocaleString()}</Text>
             <Text style={styles.subtitle}>
               {post.createdBy.name ?? post.createdBy.email}
             </Text>
+            {!isAdmin ? (
+              <Text style={styles.subtitle}>
+                {post.isRead
+                  ? text.dashboard.newsReadConfirmed
+                  : text.dashboard.newsReadPendingConfirm}
+              </Text>
+            ) : null}
             {post.attachment ? (
               <Text style={styles.quickNewsLink}>{post.attachment.originalName}</Text>
+            ) : null}
+
+            {isAdmin && expandedNewsTrackingId === post.id ? (
+              <View style={styles.newsTrackingCard}>
+                {newsTrackingByPostId[post.id] ? (
+                  <>
+                    <Text style={styles.quickSectionTitle}>{text.dashboard.newsReadTrackingTitle}</Text>
+                    <Text style={styles.subtitle}>
+                      {`${text.dashboard.newsReadTrackingGlobal}: ${newsTrackingByPostId[post.id].readCount}/${newsTrackingByPostId[post.id].totalUsers}`}
+                    </Text>
+
+                    {newsTrackingByPostId[post.id].byRestaurant.map((group) => (
+                      <View
+                        key={`news-tracking-restaurant-${post.id}-${group.restaurant?.id ?? 'none'}`}
+                        style={styles.newsTrackingRestaurantGroup}
+                      >
+                        <Text style={styles.quickRowTitle}>
+                          {group.restaurant?.name ?? text.dashboard.newsReadTrackingNoRestaurant}
+                        </Text>
+                        <Text style={styles.subtitle}>
+                          {`${text.dashboard.newsReadTrackingUnread}: ${group.unreadCount} | ${text.dashboard.newsReadTrackingRead}: ${group.readCount}`}
+                        </Text>
+
+                        {group.unreadUsers.length === 0 ? (
+                          <Text style={styles.subtitle}>{text.dashboard.newsReadTrackingAllRead}</Text>
+                        ) : (
+                          group.unreadUsers.map((unreadUser) => (
+                            <Text key={`news-tracking-user-${post.id}-${unreadUser.id}`} style={styles.subtitle}>
+                              {`- ${unreadUser.name ?? unreadUser.email} (${unreadUser.role})`}
+                            </Text>
+                          ))
+                        )}
+                      </View>
+                    ))}
+                  </>
+                ) : (
+                  <Text style={styles.subtitle}>{text.adminTraining.loading}</Text>
+                )}
+              </View>
             ) : null}
 
             {isAdmin ? (
@@ -1062,7 +1203,8 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                 style={[styles.iconDeleteButton, deletingNewsId === post.id && styles.buttonDisabled]}
                 accessibilityLabel={text.dashboard.newsDeleteButton}
                 disabled={deletingNewsId === post.id}
-                onPress={() => {
+                onPress={(event) => {
+                  event.stopPropagation?.();
                   void handleDeleteNews(post);
                 }}
               >

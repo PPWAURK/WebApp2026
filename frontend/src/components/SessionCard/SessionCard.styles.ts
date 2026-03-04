@@ -211,6 +211,36 @@ export const styles = StyleSheet.create({
     borderColor: '#a7c592',
     backgroundColor: '#f3fde9',
   },
+  quickNewsRowHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  newsReadConfirmButtonDone: {
+    borderColor: '#9fc9a1',
+    backgroundColor: '#eff9f0',
+  },
+  newsTrackingActiveButton: {
+    borderColor: '#8db271',
+    backgroundColor: '#eef9e7',
+  },
+  newsTrackingCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#c7dfb8',
+    backgroundColor: '#eef9e7',
+    padding: 10,
+    gap: 8,
+  },
+  newsTrackingRestaurantGroup: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d5e8c9',
+    backgroundColor: '#f7fff2',
+    padding: 8,
+    gap: 4,
+  },
   quickNewsLink: {
     color: '#7f1b21',
     fontFamily: 'Manrope_700Bold',

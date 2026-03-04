@@ -112,10 +112,33 @@ export class NewsController {
     @Param('id', ParseIntPipe) newsId: number,
   ) {
     const actor = req.user;
-    if (!actor?.id) {
+    if (!actor?.id || !actor.role) {
       throw new ForbiddenException('Unauthenticated request');
     }
 
-    return this.newsService.markNewsAsRead(newsId, actor.id);
+    if (actor.role !== 'ADMIN' && actor.role !== 'MANAGER' && actor.role !== 'EMPLOYEE') {
+      throw new ForbiddenException('Unsupported role');
+    }
+
+    return this.newsService.markNewsAsRead(newsId, actor.id, {
+      role: actor.role,
+      trainingAccess: actor.trainingAccess,
+    });
+  }
+
+  @ApiOperation({ summary: 'Get read tracking by restaurant for one news post (admin only)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/read-tracking')
+  getNewsReadTracking(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) newsId: number,
+  ) {
+    const actor = req.user;
+    if (!actor?.id || actor.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.newsService.getNewsReadTracking(newsId);
   }
 }

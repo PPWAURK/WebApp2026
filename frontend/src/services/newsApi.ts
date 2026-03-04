@@ -32,6 +32,38 @@ export type NewsFeedResponse = {
   availableMonths: string[];
 };
 
+export type NewsReadTrackingUser = {
+  id: number;
+  name: string | null;
+  email: string;
+  role: 'MANAGER' | 'EMPLOYEE';
+};
+
+export type NewsReadTrackingReadUser = NewsReadTrackingUser & {
+  readAt: string;
+};
+
+export type NewsReadTrackingRestaurantGroup = {
+  restaurant: {
+    id: number;
+    name: string;
+    address: string;
+  } | null;
+  totalUsers: number;
+  readCount: number;
+  unreadCount: number;
+  unreadUsers: NewsReadTrackingUser[];
+  readUsers: NewsReadTrackingReadUser[];
+};
+
+export type NewsReadTrackingResponse = {
+  newsPostId: number;
+  totalUsers: number;
+  readCount: number;
+  unreadCount: number;
+  byRestaurant: NewsReadTrackingRestaurantGroup[];
+};
+
 export async function fetchNewsFeed(
   token: string,
   options?: {
@@ -144,4 +176,29 @@ export async function deleteNewsPost(token: string, newsId: number): Promise<voi
       : data.message ?? 'Failed to delete news post';
     throw new Error(message);
   }
+}
+
+export async function fetchNewsReadTracking(
+  token: string,
+  newsId: number,
+): Promise<NewsReadTrackingResponse> {
+  const response = await fetch(`${API_URL}/news/${newsId}/read-tracking`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = (await response.json()) as NewsReadTrackingResponse | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to fetch news read tracking';
+    throw new Error(message);
+  }
+
+  return data as NewsReadTrackingResponse;
 }
