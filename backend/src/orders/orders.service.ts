@@ -1101,8 +1101,13 @@ export class OrdersService {
       return `${normalizedBaseUrl}/orders/${orderId}/commande`;
     }
 
+    const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(/^\/+|\/+$/g, '');
+    const prefixedOrdersPath = normalizedPrefix
+      ? `/${normalizedPrefix}/orders/${orderId}/commande`
+      : `/orders/${orderId}/commande`;
+
     const host = req.get('host');
-    return `${req.protocol}://${host}/orders/${orderId}/commande`;
+    return `${req.protocol}://${host}${prefixedOrdersPath}`;
   }
 
   private async generateCommandePdf(input: CommandePdfInput) {
