@@ -30,6 +30,7 @@ export class AuthService {
   ) {}
 
   private readonly resetTokenLifetimeMinutes = 30;
+  private readonly resetEmailCooldownMs = 30_000;
 
   async login(loginDto: LoginDto) {
     const user = await this.usersService.findByEmail(loginDto.email);
@@ -102,6 +103,28 @@ export class AuthService {
         success: true,
         message: 'PASSWORD_RESET_EMAIL_SENT_IF_EXISTS',
       };
+    }
+
+    const lastResetRequest = await this.prisma.passwordResetToken.findFirst({
+      where: {
+        userId: user.id,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    if (lastResetRequest) {
+      const elapsedSinceLastRequestMs = Date.now() - lastResetRequest.createdAt.getTime();
+      if (elapsedSinceLastRequestMs < this.resetEmailCooldownMs) {
+        return {
+          success: true,
+          message: 'PASSWORD_RESET_EMAIL_SENT_IF_EXISTS',
+        };
+      }
     }
 
     const plainToken = randomBytes(32).toString('hex');
