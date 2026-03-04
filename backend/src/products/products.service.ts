@@ -196,12 +196,26 @@ export class ProductsService {
     req: { protocol: string; get: (name: string) => string | undefined },
     fileName: string,
   ) {
+    const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(/^\/+|\/+$/g, '');
+
     if (this.publicApiBaseUrl) {
       const normalizedBaseUrl = this.publicApiBaseUrl.replace(/\/$/, '');
-      return `${normalizedBaseUrl}/uploads/images/${fileName}`;
+      const hasPrefixAlready =
+        normalizedPrefix.length > 0 && new RegExp(`/${normalizedPrefix}$`).test(normalizedBaseUrl);
+
+      const baseUrlWithPrefix =
+        normalizedPrefix.length > 0 && !hasPrefixAlready
+          ? `${normalizedBaseUrl}/${normalizedPrefix}`
+          : normalizedBaseUrl;
+
+      return `${baseUrlWithPrefix}/uploads/images/${fileName}`;
     }
 
     const host = req.get('host');
-    return `${req.protocol}://${host}/uploads/images/${fileName}`;
+    const prefixedUploadsPath = normalizedPrefix
+      ? `/${normalizedPrefix}/uploads/images/${fileName}`
+      : `/uploads/images/${fileName}`;
+
+    return `${req.protocol}://${host}${prefixedUploadsPath}`;
   }
 }

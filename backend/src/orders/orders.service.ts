@@ -1096,12 +1096,21 @@ export class OrdersService {
     req: { protocol: string; get: (name: string) => string | undefined },
     orderId: number,
   ) {
+    const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(/^\/+|\/+$/g, '');
+
     if (this.publicApiBaseUrl) {
       const normalizedBaseUrl = this.publicApiBaseUrl.replace(/\/$/, '');
-      return `${normalizedBaseUrl}/orders/${orderId}/commande`;
+      const hasPrefixAlready =
+        normalizedPrefix.length > 0 && new RegExp(`/${normalizedPrefix}$`).test(normalizedBaseUrl);
+
+      const baseUrlWithPrefix =
+        normalizedPrefix.length > 0 && !hasPrefixAlready
+          ? `${normalizedBaseUrl}/${normalizedPrefix}`
+          : normalizedBaseUrl;
+
+      return `${baseUrlWithPrefix}/orders/${orderId}/commande`;
     }
 
-    const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(/^\/+|\/+$/g, '');
     const prefixedOrdersPath = normalizedPrefix
       ? `/${normalizedPrefix}/orders/${orderId}/commande`
       : `/orders/${orderId}/commande`;

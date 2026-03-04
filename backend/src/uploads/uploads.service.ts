@@ -196,13 +196,27 @@ export class UploadsService {
     category: UploadCategory,
     fileName: string,
   ) {
+    const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(/^\/+|\/+$/g, '');
+
     if (this.publicApiBaseUrl) {
       const normalizedBaseUrl = this.publicApiBaseUrl.replace(/\/$/, '');
-      return `${normalizedBaseUrl}/uploads/${category}/${fileName}`;
+      const hasPrefixAlready =
+        normalizedPrefix.length > 0 && new RegExp(`/${normalizedPrefix}$`).test(normalizedBaseUrl);
+
+      const baseUrlWithPrefix =
+        normalizedPrefix.length > 0 && !hasPrefixAlready
+          ? `${normalizedBaseUrl}/${normalizedPrefix}`
+          : normalizedBaseUrl;
+
+      return `${baseUrlWithPrefix}/uploads/${category}/${fileName}`;
     }
 
     const host = req.get('host');
-    return `${req.protocol}://${host}/uploads/${category}/${fileName}`;
+    const prefixedUploadsPath = normalizedPrefix
+      ? `/${normalizedPrefix}/uploads/${category}/${fileName}`
+      : `/uploads/${category}/${fileName}`;
+
+    return `${req.protocol}://${host}${prefixedUploadsPath}`;
   }
 
   private parseCategory(category: string): UploadCategory {
