@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 const RED = '#ab1e24';
+const LIGHT_RED = '#d86e73';
 const BORDER = '#d9a7aa';
 const PALE_RED = '#e5b0b3';
 const CARD_BG = '#f2f2f2';
