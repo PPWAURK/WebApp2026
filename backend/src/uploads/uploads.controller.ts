@@ -32,7 +32,7 @@ import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UploadsService } from './uploads.service';
 
-const UPLOAD_MAX_FILE_SIZE = 50 * 1024 * 1024;
+const UPLOAD_MAX_FILE_SIZE = 800 * 1024 * 1024;
 const UPLOAD_MAX_FILES = 10;
 const STORAGE_ROOT_PATH =
   process.env.STORAGE_ROOT_PATH ?? join(process.cwd(), 'uploads');

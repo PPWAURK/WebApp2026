@@ -67,7 +67,7 @@ Public file access:
 Rules:
 
 - Accepted MIME types: `image/*`, `video/*` and common documents (pdf, doc, docx, xls, xlsx, txt)
-- Max file size: `50MB` per file
+- Max file size: `800MB` per file
 - `STORAGE_ROOT_PATH` controls where files are physically stored
 - `PUBLIC_API_BASE_URL` controls generated public URLs (useful behind reverse proxy path like `/backend2`)
 - With `STORAGE_ROOT_PATH="/data/storage"`, uploads are saved in:
