@@ -27,6 +27,40 @@ type PickedFile = {
   file?: File;
 };
 
+const EXTENSION_TO_MIME: Record<string, string> = {
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  m4v: 'video/x-m4v',
+  webm: 'video/webm',
+  avi: 'video/x-msvideo',
+  mkv: 'video/x-matroska',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  txt: 'text/plain',
+};
+
+function resolveMimeType(file: PickedFile): string {
+  const currentMimeType = file.mimeType?.trim().toLowerCase();
+  if (
+    currentMimeType &&
+    currentMimeType !== 'application/octet-stream' &&
+    currentMimeType !== '*/*'
+  ) {
+    return currentMimeType;
+  }
+
+  const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+  return EXTENSION_TO_MIME[extension] ?? currentMimeType ?? 'application/octet-stream';
+}
+
 export async function uploadSingleFile(
   token: string,
   file: PickedFile,
@@ -38,14 +72,21 @@ export async function uploadSingleFile(
   const formData = new FormData();
   formData.append('module', classification.module);
   formData.append('section', classification.section);
+  const resolvedMimeType = resolveMimeType(file);
 
   if (file.file) {
-    formData.append('file', file.file);
+    const normalizedWebFile =
+      file.file.type && file.file.type === resolvedMimeType
+        ? file.file
+        : new File([file.file], file.file.name || file.name, {
+            type: resolvedMimeType,
+          });
+    formData.append('file', normalizedWebFile);
   } else {
     formData.append('file', {
       uri: file.uri,
       name: file.name,
-      type: file.mimeType ?? 'application/octet-stream',
+      type: resolvedMimeType,
     } as never);
   }
 

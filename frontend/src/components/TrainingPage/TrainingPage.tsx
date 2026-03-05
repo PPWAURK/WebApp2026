@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { ResizeMode, Video } from 'expo-av';
+import { Linking, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import {
   getSectionsByModule,
   type LibraryModule,
   type LibrarySection,
 } from '../../constants/documentTaxonomy';
 import type { AppText } from '../../locales/translations';
-import { fetchLibraryFiles, type LibraryFileItem } from '../../services/uploadsApi';
+import {
+  fetchLibraryFiles,
+  type LibraryFileItem,
+} from '../../services/uploadsApi';
 import { styles } from './TrainingPage.styles';
 import type { User } from '../../types/auth';
 
@@ -28,24 +32,31 @@ export function TrainingPage({
   const [libraryItems, setLibraryItems] = useState<LibraryFileItem[]>([]);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
   const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<LibraryFileItem | null>(
+    null,
+  );
+
   const tabs: Array<{ key: TrainingTab; label: string }> = [
     { key: 'dishTraining', label: text.training.tabs.dishTraining },
     { key: 'companyPolicy', label: text.training.tabs.companyPolicy },
     { key: 'managementTools', label: text.training.tabs.managementTools },
   ];
+
   const activeModule: LibraryModule =
     activeTab === 'dishTraining'
       ? 'TRAINING'
       : activeTab === 'companyPolicy'
         ? 'POLICY'
         : 'MANAGEMENT';
+
   const userTrainingAccess = currentUser.trainingAccess ?? [];
   const sectionsByModule = useMemo(() => getSectionsByModule(text), [text]);
 
   const sectionOptions = useMemo(
     () => sectionsByModule[activeModule],
-    [activeModule],
+    [activeModule, sectionsByModule],
   );
+
   const allowedTabs = useMemo(
     () =>
       tabs.filter((tab) => {
@@ -59,7 +70,7 @@ export function TrainingPage({
           userTrainingAccess.includes(section.key as LibrarySection),
         );
       }),
-    [tabs, userTrainingAccess],
+    [sectionsByModule, tabs, userTrainingAccess],
   );
 
   useEffect(() => {
@@ -79,6 +90,10 @@ export function TrainingPage({
       setActiveSection(firstSection.key as LibrarySection);
     }
   }, [sectionOptions, userTrainingAccess]);
+
+  useEffect(() => {
+    setSelectedVideo(null);
+  }, [activeModule, activeSection]);
 
   useEffect(() => {
     let isActive = true;
@@ -106,19 +121,26 @@ export function TrainingPage({
     return () => {
       isActive = false;
     };
-  }, [accessToken, activeModule]);
+  }, [accessToken, activeModule, text.training.loadError]);
 
   const visibleSectionOptions = sectionOptions.filter((sectionOption) =>
     userTrainingAccess.includes(sectionOption.key as LibrarySection),
   );
+
   const selectedSection =
-    visibleSectionOptions.find((sectionOption) => sectionOption.key === activeSection) ??
-    visibleSectionOptions[0];
+    visibleSectionOptions.find(
+      (sectionOption) => sectionOption.key === activeSection,
+    ) ?? visibleSectionOptions[0];
+
+  const sectionKeyForItems = selectedSection?.key ?? activeSection;
+
   const docs = libraryItems.filter(
-    (item) => item.section === activeSection && item.mediaType === 'document',
+    (item) =>
+      item.section === sectionKeyForItems && item.mediaType === 'document',
   );
+
   const videos = libraryItems.filter(
-    (item) => item.section === activeSection && item.mediaType === 'video',
+    (item) => item.section === sectionKeyForItems && item.mediaType === 'video',
   );
 
   return (
@@ -164,12 +186,15 @@ export function TrainingPage({
               styles.trainingTab,
               activeSection === sectionOption.key && styles.trainingTabActive,
             ]}
-            onPress={() => setActiveSection(sectionOption.key as LibrarySection)}
+            onPress={() =>
+              setActiveSection(sectionOption.key as LibrarySection)
+            }
           >
             <Text
               style={[
                 styles.trainingTabText,
-                activeSection === sectionOption.key && styles.trainingTabTextActive,
+                activeSection === sectionOption.key &&
+                  styles.trainingTabTextActive,
               ]}
             >
               {sectionOption.label}
@@ -191,7 +216,9 @@ export function TrainingPage({
           <Text style={styles.docItemMeta}>{text.training.documentsTitle}</Text>
           {docs.length === 0 ? (
             <Text style={styles.docEmpty}>
-              {isLoadingLibrary ? text.training.loadingLibrary : text.training.noDocuments}
+              {isLoadingLibrary
+                ? text.training.loadingLibrary
+                : text.training.noDocuments}
             </Text>
           ) : (
             docs.map((item) => (
@@ -210,25 +237,66 @@ export function TrainingPage({
           <Text style={styles.docItemMeta}>{text.training.videosTitle}</Text>
           {videos.length === 0 ? (
             <Text style={styles.docEmpty}>
-              {isLoadingLibrary ? text.training.loadingLibrary : text.training.noVideos}
+              {isLoadingLibrary
+                ? text.training.loadingLibrary
+                : text.training.noVideos}
             </Text>
           ) : (
-            videos.map((item) => (
-              <Pressable
-                key={`${item.fileName}-video`}
-                style={styles.docItem}
-                onPress={() => {
-                  void Linking.openURL(item.fileUrl);
-                }}
-              >
-                <Text style={styles.docItemTitle}>{item.originalName}</Text>
-                <Text style={styles.docItemMeta}>{new Date(item.uploadedAt).toLocaleString()}</Text>
-                <Text style={styles.docItemLink}>{item.fileUrl}</Text>
-              </Pressable>
-            ))
+            <View style={styles.videoSelectorGrid}>
+              {videos.map((item) => (
+                <Pressable
+                  key={`${item.fileName}-video`}
+                  style={styles.videoSelectorCard}
+                  onPress={() => setSelectedVideo(item)}
+                >
+                  <Text style={styles.videoSelectorCardTitle} numberOfLines={2}>
+                    {item.originalName}
+                  </Text>
+                  <Text style={styles.videoSelectorCardMeta}>
+                    {new Date(item.uploadedAt).toLocaleDateString()}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           )}
         </View>
       ) : null}
+
+      <Modal
+        visible={Boolean(selectedVideo)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedVideo(null)}
+      >
+        <View style={styles.videoModalBackdrop}>
+          <View style={styles.videoModalCard}>
+            <View style={styles.videoModalHeader}>
+              <Text style={styles.videoModalTitle} numberOfLines={2}>
+                {selectedVideo?.originalName ?? text.training.videosTitle}
+              </Text>
+              <Pressable
+                style={styles.videoModalCloseButton}
+                onPress={() => setSelectedVideo(null)}
+                accessibilityRole="button"
+                accessibilityLabel={text.dashboard.levelModalClose}
+              >
+                <Text style={styles.videoModalCloseText}>X</Text>
+              </Pressable>
+            </View>
+
+            {selectedVideo ? (
+              <Video
+                key={selectedVideo.fileUrl}
+                style={styles.videoPlayer}
+                source={{ uri: selectedVideo.fileUrl }}
+                useNativeControls
+                resizeMode={ResizeMode.CONTAIN}
+                shouldPlay
+              />
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

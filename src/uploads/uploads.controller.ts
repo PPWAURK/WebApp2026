@@ -36,6 +36,51 @@ const UPLOAD_MAX_FILE_SIZE = 800 * 1024 * 1024;
 const UPLOAD_MAX_FILES = 10;
 const STORAGE_ROOT_PATH =
   process.env.STORAGE_ROOT_PATH ?? join(process.cwd(), 'uploads');
+const FALLBACK_MIME_TYPES_BY_EXTENSION: Record<string, string> = {
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  m4v: 'video/x-m4v',
+  webm: 'video/webm',
+  avi: 'video/x-msvideo',
+  mkv: 'video/x-matroska',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  txt: 'text/plain',
+};
+const ALLOWED_DOCUMENT_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+];
+
+function resolveUploadMimeType(mimeType: string | undefined, originalName: string) {
+  const normalizedMimeType = mimeType?.trim().toLowerCase();
+  if (
+    normalizedMimeType &&
+    normalizedMimeType !== 'application/octet-stream' &&
+    normalizedMimeType !== '*/*'
+  ) {
+    return normalizedMimeType;
+  }
+
+  const extension = extname(originalName || '').replace('.', '').toLowerCase();
+  return (
+    FALLBACK_MIME_TYPES_BY_EXTENSION[extension] ??
+    normalizedMimeType ??
+    'application/octet-stream'
+  );
+}
 
 function getStorageDirectoryByMimeType(mimeType: string) {
   if (mimeType.startsWith('image/')) {
@@ -65,16 +110,7 @@ function isAllowedMimeType(mimeType: string) {
     return true;
   }
 
-  const allowedDocumentMimeTypes = [
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/plain',
-  ];
-
-  return allowedDocumentMimeTypes.includes(mimeType);
+  return ALLOWED_DOCUMENT_MIME_TYPES.includes(mimeType);
 }
 
 @ApiTags('uploads')
@@ -121,7 +157,11 @@ export class UploadsController {
     FileInterceptor('file', {
       storage: diskStorage({
         destination: (_req, file, callback) => {
-          const destination = getStorageDirectoryByMimeType(file.mimetype);
+          const resolvedMimeType = resolveUploadMimeType(
+            file.mimetype,
+            file.originalname,
+          );
+          const destination = getStorageDirectoryByMimeType(resolvedMimeType);
           ensureDirectoryExists(destination);
           callback(null, destination);
         },
@@ -133,7 +173,11 @@ export class UploadsController {
         fileSize: UPLOAD_MAX_FILE_SIZE,
       },
       fileFilter: (_req, file, callback) => {
-        if (!isAllowedMimeType(file.mimetype)) {
+        const resolvedMimeType = resolveUploadMimeType(
+          file.mimetype,
+          file.originalname,
+        );
+        if (!isAllowedMimeType(resolvedMimeType)) {
           callback(
             new BadRequestException(
               'Only image, video and document files are allowed',
@@ -143,6 +187,7 @@ export class UploadsController {
           return;
         }
 
+        file.mimetype = resolvedMimeType;
         callback(null, true);
       },
     }),
@@ -206,7 +251,11 @@ export class UploadsController {
     FilesInterceptor('files', UPLOAD_MAX_FILES, {
       storage: diskStorage({
         destination: (_req, file, callback) => {
-          const destination = getStorageDirectoryByMimeType(file.mimetype);
+          const resolvedMimeType = resolveUploadMimeType(
+            file.mimetype,
+            file.originalname,
+          );
+          const destination = getStorageDirectoryByMimeType(resolvedMimeType);
           ensureDirectoryExists(destination);
           callback(null, destination);
         },
@@ -218,7 +267,11 @@ export class UploadsController {
         fileSize: UPLOAD_MAX_FILE_SIZE,
       },
       fileFilter: (_req, file, callback) => {
-        if (!isAllowedMimeType(file.mimetype)) {
+        const resolvedMimeType = resolveUploadMimeType(
+          file.mimetype,
+          file.originalname,
+        );
+        if (!isAllowedMimeType(resolvedMimeType)) {
           callback(
             new BadRequestException(
               'Only image, video and document files are allowed',
@@ -228,6 +281,7 @@ export class UploadsController {
           return;
         }
 
+        file.mimetype = resolvedMimeType;
         callback(null, true);
       },
     }),

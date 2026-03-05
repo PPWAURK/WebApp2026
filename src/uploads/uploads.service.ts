@@ -11,7 +11,7 @@ import {
   type Prisma,
 } from '@prisma/client';
 import { existsSync, mkdirSync, unlinkSync } from 'fs';
-import { basename, isAbsolute, join, resolve } from 'path';
+import { basename, extname, isAbsolute, join, resolve } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   isSectionInModule,
@@ -21,6 +21,25 @@ import {
 
 @Injectable()
 export class UploadsService {
+  private readonly fallbackMimeTypesByExtension: Record<string, string> = {
+    mp4: 'video/mp4',
+    mov: 'video/quicktime',
+    m4v: 'video/x-m4v',
+    webm: 'video/webm',
+    avi: 'video/x-msvideo',
+    mkv: 'video/x-matroska',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    pdf: 'application/pdf',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    txt: 'text/plain',
+  };
   private readonly storageRoot = this.resolveStorageRoot(
     process.env.STORAGE_ROOT_PATH,
   );
@@ -51,8 +70,9 @@ export class UploadsService {
       throw new BadRequestException('Section does not belong to selected module');
     }
 
-    const category = this.getCategoryFromMimeType(file.mimetype);
-    const mediaType = this.getMediaType(file.mimetype);
+    const resolvedMimeType = this.resolveMimeType(file.mimetype, file.originalname);
+    const category = this.getCategoryFromMimeType(resolvedMimeType);
+    const mediaType = this.getMediaType(resolvedMimeType);
     const normalizedOriginalName = this.normalizeOriginalName(file.originalname);
 
     const createdDocument = await this.prisma.document.create({
@@ -60,7 +80,7 @@ export class UploadsService {
       fileName: file.filename,
       category,
       originalName: normalizedOriginalName,
-      mimeType: file.mimetype,
+      mimeType: resolvedMimeType,
       size: file.size,
       mediaType,
       module,
@@ -299,5 +319,19 @@ export class UploadsService {
     }
 
     return originalName;
+  }
+
+  private resolveMimeType(mimeType: string, originalName: string) {
+    const normalizedMimeType = mimeType.trim().toLowerCase();
+    if (
+      normalizedMimeType &&
+      normalizedMimeType !== 'application/octet-stream' &&
+      normalizedMimeType !== '*/*'
+    ) {
+      return normalizedMimeType;
+    }
+
+    const extension = extname(originalName || '').replace('.', '').toLowerCase();
+    return this.fallbackMimeTypesByExtension[extension] ?? normalizedMimeType;
   }
 }
