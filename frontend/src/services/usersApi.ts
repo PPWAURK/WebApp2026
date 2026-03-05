@@ -293,6 +293,36 @@ export async function uploadMyProfilePhoto(
   return data as User;
 }
 
+export async function updateMyProfile(
+  token: string,
+  payload: { name: string },
+): Promise<User> {
+  const response = await fetch(`${API_URL}/users/me/profile`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await response.json()) as
+    | User
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : (errorData.message ?? 'Failed to update profile');
+    throw new Error(message);
+  }
+
+  return data as User;
+}
+
 export async function confirmUserProbation(
   token: string,
   userId: number,

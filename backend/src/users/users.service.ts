@@ -874,6 +874,48 @@ export class UsersService {
     };
   }
 
+  async updateOwnProfile(userId: number, payload: { name: string }) {
+    const existing = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('User not found');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: payload.name,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        profilePhoto: true,
+        role: true,
+        employeeLevel: true,
+        isApproved: true,
+        isOnProbation: true,
+        workplaceRole: true,
+        trainingAccess: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+          },
+        },
+      },
+    });
+
+    return {
+      ...updated,
+      trainingAccess: this.normalizeTrainingAccess(updated.trainingAccess),
+    };
+  }
+
   private buildProfilePhotoUrl(
     req: { protocol: string; get: (name: string) => string | undefined },
     fileName: string,

@@ -361,6 +361,34 @@ export class UsersController {
     );
   }
 
+  @ApiOperation({ summary: 'Update profile for current user' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/profile')
+  updateOwnProfile(
+    @Req() req: AuthenticatedRequest,
+    @Body('name') nameRaw: string | undefined,
+  ) {
+    if (!req.user) {
+      throw new ForbiddenException('Unauthenticated request');
+    }
+
+    if (typeof nameRaw !== 'string') {
+      throw new BadRequestException('name must be a string');
+    }
+
+    const name = nameRaw.trim();
+    if (!name || name.length > 120) {
+      throw new BadRequestException(
+        'name must be between 1 and 120 characters',
+      );
+    }
+
+    return this.usersService.updateOwnProfile(req.user.id, {
+      name,
+    });
+  }
+
   @ApiOperation({ summary: 'Upload profile photo for current user' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
