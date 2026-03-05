@@ -17,11 +17,12 @@ import { AdminUploadPanel } from '../AdminUploadPanel';
 import { ConfirmDialog } from '../ConfirmDialog';
 import type { AppText } from '../../locales/translations';
 import { styles } from './SessionCard.styles';
-import type { EmployeeLevel, User } from '../../types/auth';
+import type { EmployeeLevel, User, WorkplaceRole } from '../../types/auth';
 import {
   approveUserAccount,
   deleteUserAccount,
   fetchTrainingAccessUsers,
+  updateUserWorkplaceRole,
   updateUserLevel,
   type TrainingAccessUser,
 } from '../../services/usersApi';
@@ -34,7 +35,10 @@ import {
   type TopOrderedProduct,
 } from '../../services/ordersApi';
 import { fetchSuppliers, type SupplierItem } from '../../services/suppliersApi';
-import { uploadSingleFile, type UploadedFileResponse } from '../../services/uploadsApi';
+import {
+  uploadSingleFile,
+  type UploadedFileResponse,
+} from '../../services/uploadsApi';
 import {
   createNewsPost,
   deleteNewsPost,
@@ -67,6 +71,8 @@ const EMPLOYEE_LEVELS: EmployeeLevel[] = [
   'L7_D',
 ];
 
+const WORKPLACE_ROLES: WorkplaceRole[] = ['SALLE', 'CUISINE', 'BOTH'];
+
 const PICKER_TYPES = [
   'image/*',
   'video/*',
@@ -81,7 +87,12 @@ const PICKER_TYPES = [
 const NEWS_ATTACHMENT_MODULE = 'TRAINING';
 const NEWS_ATTACHMENT_SECTION = 'RECIPE_TRAINING';
 
-export function SessionCard({ user, accessToken, text, onLogout }: SessionCardProps) {
+export function SessionCard({
+  user,
+  accessToken,
+  text,
+  onLogout,
+}: SessionCardProps) {
   const roleLabel = text.dashboard.roleValues[user.role];
   const workplaceLabel = text.dashboard.workplaceValues[user.workplaceRole];
   const isManager = user.role === 'MANAGER';
@@ -91,18 +102,28 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [users, setUsers] = useState<TrainingAccessUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
+  const [levelBlockError, setLevelBlockError] = useState<string | null>(null);
   const [accountSearch, setAccountSearch] = useState('');
   const [levelSearch, setLevelSearch] = useState('');
-  const [isApprovingUserId, setIsApprovingUserId] = useState<number | null>(null);
-  const [isUpdatingLevelUserId, setIsUpdatingLevelUserId] = useState<number | null>(null);
+  const [isApprovingUserId, setIsApprovingUserId] = useState<number | null>(
+    null,
+  );
+  const [isUpdatingLevelUserId, setIsUpdatingLevelUserId] = useState<
+    number | null
+  >(null);
+  const [isUpdatingWorkplaceUserId, setIsUpdatingWorkplaceUserId] = useState<
+    number | null
+  >(null);
   const [isDeletingUserId, setIsDeletingUserId] = useState<number | null>(null);
-  const [levelEditorUser, setLevelEditorUser] = useState<TrainingAccessUser | null>(null);
+  const [levelEditorUser, setLevelEditorUser] =
+    useState<TrainingAccessUser | null>(null);
   const [openRestaurantFilterFor, setOpenRestaurantFilterFor] = useState<
     'approval' | 'level' | null
   >(null);
-  const [selectedEmployeeRestaurantFilter, setSelectedEmployeeRestaurantFilter] = useState<
-    number | 'ALL' | 'NONE'
-  >('ALL');
+  const [
+    selectedEmployeeRestaurantFilter,
+    setSelectedEmployeeRestaurantFilter,
+  ] = useState<number | 'ALL' | 'NONE'>('ALL');
 
   const [latestOrder, setLatestOrder] = useState<OrderSummary | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
@@ -111,17 +132,20 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [topProductsLoading, setTopProductsLoading] = useState(false);
   const [topProductsError, setTopProductsError] = useState<string | null>(null);
   const [chartSuppliers, setChartSuppliers] = useState<SupplierItem[]>([]);
-  const [selectedChartSupplierId, setSelectedChartSupplierId] = useState<number | null>(null);
+  const [selectedChartSupplierId, setSelectedChartSupplierId] = useState<
+    number | null
+  >(null);
   const [chartMonths, setChartMonths] = useState<string[]>([]);
-  const [selectedChartMonth, setSelectedChartMonth] = useState<string | null>(null);
+  const [selectedChartMonth, setSelectedChartMonth] = useState<string | null>(
+    null,
+  );
   const [orderPreviewUrl, setOrderPreviewUrl] = useState<string | null>(null);
   const [orderPreviewLoading, setOrderPreviewLoading] = useState(false);
   const [isOrderPreviewOpen, setIsOrderPreviewOpen] = useState(false);
   const [whatsNewUploading, setWhatsNewUploading] = useState(false);
   const [whatsNewError, setWhatsNewError] = useState<string | null>(null);
-  const [whatsNewLastUpload, setWhatsNewLastUpload] = useState<UploadedFileResponse | null>(
-    null,
-  );
+  const [whatsNewLastUpload, setWhatsNewLastUpload] =
+    useState<UploadedFileResponse | null>(null);
   const [whatsNewTitle, setWhatsNewTitle] = useState('');
   const [whatsNewMessage, setWhatsNewMessage] = useState('');
   const [whatsNewAudience, setWhatsNewAudience] = useState<NewsAudience>('ALL');
@@ -132,9 +156,15 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   const [newsFeedMonths, setNewsFeedMonths] = useState<string[]>([]);
   const [selectedNewsMonth, setSelectedNewsMonth] = useState<string>('ALL');
   const [deletingNewsId, setDeletingNewsId] = useState<number | null>(null);
-  const [markingNewsReadId, setMarkingNewsReadId] = useState<number | null>(null);
-  const [expandedNewsTrackingId, setExpandedNewsTrackingId] = useState<number | null>(null);
-  const [loadingNewsTrackingId, setLoadingNewsTrackingId] = useState<number | null>(null);
+  const [markingNewsReadId, setMarkingNewsReadId] = useState<number | null>(
+    null,
+  );
+  const [expandedNewsTrackingId, setExpandedNewsTrackingId] = useState<
+    number | null
+  >(null);
+  const [loadingNewsTrackingId, setLoadingNewsTrackingId] = useState<
+    number | null
+  >(null);
   const [newsTrackingByPostId, setNewsTrackingByPostId] = useState<
     Record<number, NewsReadTrackingResponse>
   >({});
@@ -181,7 +211,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         }
 
         setUsers(
-          result.filter((entry) => entry.role !== 'ADMIN' && entry.id !== user.id),
+          result.filter(
+            (entry) => entry.role !== 'ADMIN' && entry.id !== user.id,
+          ),
         );
       })
       .catch(() => {
@@ -505,7 +537,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
       return users.filter((entry) => !entry.restaurantId);
     }
 
-    return users.filter((entry) => entry.restaurantId === selectedEmployeeRestaurantFilter);
+    return users.filter(
+      (entry) => entry.restaurantId === selectedEmployeeRestaurantFilter,
+    );
   }, [isAdmin, selectedEmployeeRestaurantFilter, users]);
 
   useEffect(() => {
@@ -515,7 +549,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
 
     if (
       typeof selectedEmployeeRestaurantFilter === 'number' &&
-      !employeeRestaurantOptions.some((restaurant) => restaurant.id === selectedEmployeeRestaurantFilter)
+      !employeeRestaurantOptions.some(
+        (restaurant) => restaurant.id === selectedEmployeeRestaurantFilter,
+      )
     ) {
       setSelectedEmployeeRestaurantFilter('ALL');
     }
@@ -531,7 +567,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         }
 
         const name = entry.name?.toLowerCase() ?? '';
-        return name.includes(query) || entry.email.toLowerCase().includes(query);
+        return (
+          name.includes(query) || entry.email.toLowerCase().includes(query)
+        );
       });
   }, [accountSearch, usersFilteredByRestaurant]);
 
@@ -606,20 +644,31 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
 
     return (
       <View style={styles.restaurantFilterBlock}>
-        <Text style={styles.quickSectionTitle}>{text.dashboard.quickRestaurantFilterTitle}</Text>
+        <Text style={styles.quickSectionTitle}>
+          {text.dashboard.quickRestaurantFilterTitle}
+        </Text>
         <View style={styles.restaurantFilterSelectWrap}>
           <Pressable
             style={styles.restaurantFilterSelectTrigger}
-            onPress={() => setOpenRestaurantFilterFor((current) => (current === section ? null : section))}
+            onPress={() =>
+              setOpenRestaurantFilterFor((current) =>
+                current === section ? null : section,
+              )
+            }
           >
-            <Text style={styles.restaurantFilterSelectText}>{getSelectedRestaurantFilterLabel()}</Text>
-            <Text style={styles.restaurantFilterSelectChevron}>{isOpen ? '▲' : '▼'}</Text>
+            <Text style={styles.restaurantFilterSelectText}>
+              {getSelectedRestaurantFilterLabel()}
+            </Text>
+            <Text style={styles.restaurantFilterSelectChevron}>
+              {isOpen ? '▲' : '▼'}
+            </Text>
           </Pressable>
 
           {isOpen ? (
             <View style={styles.restaurantFilterSelectList}>
               {options.map((option, index) => {
-                const isActive = selectedEmployeeRestaurantFilter === option.value;
+                const isActive =
+                  selectedEmployeeRestaurantFilter === option.value;
 
                 return (
                   <Pressable
@@ -627,7 +676,8 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                     style={[
                       styles.restaurantFilterSelectItem,
                       isActive && styles.restaurantFilterSelectItemActive,
-                      index === options.length - 1 && styles.restaurantFilterSelectItemLast,
+                      index === options.length - 1 &&
+                        styles.restaurantFilterSelectItemLast,
                     ]}
                     onPress={() => {
                       setSelectedEmployeeRestaurantFilter(option.value);
@@ -652,7 +702,11 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     );
   }
 
-  async function confirmAction(title: string, message: string, confirmLabel: string) {
+  async function confirmAction(
+    title: string,
+    message: string,
+    confirmLabel: string,
+  ) {
     return new Promise<boolean>((resolve) => {
       confirmResolverRef.current = resolve;
       setConfirmDialog({
@@ -699,7 +753,10 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     }
   }
 
-  async function handleUpdateEmployeeLevel(entry: TrainingAccessUser, level: EmployeeLevel) {
+  async function handleUpdateEmployeeLevel(
+    entry: TrainingAccessUser,
+    level: EmployeeLevel,
+  ) {
     const levelLabel = text.dashboard.levels[level];
     const confirmed = await confirmAction(
       text.dashboard.levelModalTitle,
@@ -712,7 +769,7 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     }
 
     setIsUpdatingLevelUserId(entry.id);
-    setUsersError(null);
+    setLevelBlockError(null);
 
     try {
       const updated = await updateUserLevel(accessToken, entry.id, level);
@@ -728,11 +785,58 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
             : userEntry,
         ),
       );
-      setLevelEditorUser((current) => (current?.id === entry.id ? null : current));
+      setLevelEditorUser((current) =>
+        current?.id === entry.id ? null : current,
+      );
     } catch {
-      setUsersError(text.dashboard.levelUpdateError);
+      setLevelBlockError(text.dashboard.levelUpdateError);
     } finally {
       setIsUpdatingLevelUserId(null);
+    }
+  }
+
+  async function handleUpdateEmployeeWorkplaceRole(
+    entry: TrainingAccessUser,
+    workplaceRole: WorkplaceRole,
+  ) {
+    if (entry.workplaceRole === workplaceRole) {
+      return;
+    }
+
+    const workplaceLabel = text.dashboard.workplaceValues[workplaceRole];
+    const confirmed = await confirmAction(
+      text.dashboard.workplace,
+      `${text.dashboard.workplace}: ${workplaceLabel} ?`,
+      text.adminTraining.confirmProbationConfirm,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsUpdatingWorkplaceUserId(entry.id);
+    setLevelBlockError(null);
+
+    try {
+      const updated = await updateUserWorkplaceRole(
+        accessToken,
+        entry.id,
+        workplaceRole,
+      );
+      setUsers((current) =>
+        current.map((userEntry) =>
+          userEntry.id === updated.id
+            ? {
+                ...userEntry,
+                workplaceRole: updated.workplaceRole,
+              }
+            : userEntry,
+        ),
+      );
+    } catch {
+      setLevelBlockError(text.dashboard.workplaceUpdateError);
+    } finally {
+      setIsUpdatingWorkplaceUserId(null);
     }
   }
 
@@ -749,7 +853,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     setIsDeletingUserId(entry.id);
     try {
       await deleteUserAccount(accessToken, entry.id);
-      setUsers((current) => current.filter((userEntry) => userEntry.id !== entry.id));
+      setUsers((current) =>
+        current.filter((userEntry) => userEntry.id !== entry.id),
+      );
     } finally {
       setIsDeletingUserId(null);
     }
@@ -849,7 +955,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
     try {
       await markNewsAsRead(accessToken, post.id);
       setNewsFeed((current) =>
-        current.map((item) => (item.id === post.id ? { ...item, isRead: true } : item)),
+        current.map((item) =>
+          item.id === post.id ? { ...item, isRead: true } : item,
+        ),
       );
     } catch {
       setNewsFeedError(text.dashboard.newsReadConfirmError);
@@ -924,7 +1032,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
               <Ionicons name="megaphone-outline" size={18} color="#ffffff" />
             </View>
             <View style={styles.whatsNewHeaderTitleWrap}>
-              <Text style={styles.quickBlockTitle}>{text.dashboard.whatsNewTitle}</Text>
+              <Text style={styles.quickBlockTitle}>
+                {text.dashboard.whatsNewTitle}
+              </Text>
             </View>
           </View>
         </View>
@@ -948,22 +1058,35 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           textAlignVertical="top"
         />
 
-        <Text style={styles.quickSectionTitle}>{text.dashboard.whatsNewAudienceLabel}</Text>
+        <Text style={styles.quickSectionTitle}>
+          {text.dashboard.whatsNewAudienceLabel}
+        </Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chartSupplierTabs}
         >
-          {([
-            { key: 'ALL', label: text.dashboard.whatsNewAudienceAll },
-            { key: 'MANAGERS', label: text.dashboard.whatsNewAudienceManagers },
-            { key: 'EMPLOYEES', label: text.dashboard.whatsNewAudienceEmployees },
-          ] as const).map((option) => {
+          {(
+            [
+              { key: 'ALL', label: text.dashboard.whatsNewAudienceAll },
+              {
+                key: 'MANAGERS',
+                label: text.dashboard.whatsNewAudienceManagers,
+              },
+              {
+                key: 'EMPLOYEES',
+                label: text.dashboard.whatsNewAudienceEmployees,
+              },
+            ] as const
+          ).map((option) => {
             const isActive = whatsNewAudience === option.key;
             return (
               <Pressable
                 key={`whats-new-audience-${option.key}`}
-                style={[styles.chartSupplierChip, isActive && styles.chartSupplierChipActive]}
+                style={[
+                  styles.chartSupplierChip,
+                  isActive && styles.chartSupplierChipActive,
+                ]}
                 onPress={() => setWhatsNewAudience(option.key)}
               >
                 <Text
@@ -980,35 +1103,51 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         </ScrollView>
 
         <Pressable
-          style={[styles.whatsNewPublishButton, whatsNewPublishing && styles.buttonDisabled]}
+          style={[
+            styles.whatsNewPublishButton,
+            whatsNewPublishing && styles.buttonDisabled,
+          ]}
           disabled={whatsNewPublishing}
           onPress={() => {
             void handlePublishWhatsNew();
           }}
         >
           <Text style={styles.whatsNewPublishButtonText}>
-            {whatsNewPublishing ? text.dashboard.whatsNewPublishing : text.dashboard.whatsNewCta}
+            {whatsNewPublishing
+              ? text.dashboard.whatsNewPublishing
+              : text.dashboard.whatsNewCta}
           </Text>
         </Pressable>
 
         <Pressable
-          style={[styles.secondaryButton, whatsNewUploading && styles.buttonDisabled]}
+          style={[
+            styles.secondaryButton,
+            whatsNewUploading && styles.buttonDisabled,
+          ]}
           disabled={whatsNewUploading}
           onPress={() => {
             void handleWhatsNewUpload();
           }}
         >
           <Text style={styles.secondaryButtonText}>
-            {whatsNewUploading ? text.upload.uploading : text.dashboard.whatsNewAttachCta}
+            {whatsNewUploading
+              ? text.upload.uploading
+              : text.dashboard.whatsNewAttachCta}
           </Text>
         </Pressable>
 
-        {whatsNewError ? <Text style={styles.errorText}>{whatsNewError}</Text> : null}
+        {whatsNewError ? (
+          <Text style={styles.errorText}>{whatsNewError}</Text>
+        ) : null}
 
         {whatsNewLastUpload ? (
           <View style={styles.whatsNewAttachmentCard}>
-            <Text style={styles.quickRowTitle}>{text.dashboard.whatsNewAttachmentReady}</Text>
-            <Text style={styles.subtitle}>{whatsNewLastUpload.originalName}</Text>
+            <Text style={styles.quickRowTitle}>
+              {text.dashboard.whatsNewAttachmentReady}
+            </Text>
+            <Text style={styles.subtitle}>
+              {whatsNewLastUpload.originalName}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -1026,19 +1165,25 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
               <Ionicons name="sparkles-outline" size={16} color="#ffffff" />
             </View>
             <View>
-              <Text style={styles.quickBlockTitle}>{text.dashboard.newsFeedTitle}</Text>
+              <Text style={styles.quickBlockTitle}>
+                {text.dashboard.newsFeedTitle}
+              </Text>
               <Text style={styles.newsFeedKicker}>FIL D'INFORMATION</Text>
             </View>
           </View>
           {unreadCount > 0 ? (
-            <Text style={styles.quickUnreadBadge}>{`${unreadCount} ${text.dashboard.newsUnreadLabel}`}</Text>
+            <Text
+              style={styles.quickUnreadBadge}
+            >{`${unreadCount} ${text.dashboard.newsUnreadLabel}`}</Text>
           ) : null}
         </View>
         <View style={styles.newsFeedIntroStrip}>
           <Text style={styles.subtitle}>{text.dashboard.newsFeedSubtitle}</Text>
         </View>
 
-        <Text style={styles.quickSectionTitle}>{text.dashboard.newsMonthFilterLabel}</Text>
+        <Text style={styles.quickSectionTitle}>
+          {text.dashboard.newsMonthFilterLabel}
+        </Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -1054,7 +1199,8 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
             <Text
               style={[
                 styles.chartSupplierChipText,
-                selectedNewsMonth === 'ALL' && styles.chartSupplierChipTextActive,
+                selectedNewsMonth === 'ALL' &&
+                  styles.chartSupplierChipTextActive,
               ]}
             >
               {text.dashboard.newsMonthFilterAll}
@@ -1066,10 +1212,18 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
             return (
               <Pressable
                 key={`news-month-${month}`}
-                style={[styles.chartSupplierChip, isActive && styles.chartSupplierChipActive]}
+                style={[
+                  styles.chartSupplierChip,
+                  isActive && styles.chartSupplierChipActive,
+                ]}
                 onPress={() => setSelectedNewsMonth(month)}
               >
-                <Text style={[styles.chartSupplierChipText, isActive && styles.chartSupplierChipTextActive]}>
+                <Text
+                  style={[
+                    styles.chartSupplierChipText,
+                    isActive && styles.chartSupplierChipTextActive,
+                  ]}
+                >
                   {month}
                 </Text>
               </Pressable>
@@ -1077,8 +1231,12 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           })}
         </ScrollView>
 
-        {newsFeedLoading ? <Text style={styles.subtitle}>{text.adminTraining.loading}</Text> : null}
-        {newsFeedError ? <Text style={styles.errorText}>{newsFeedError}</Text> : null}
+        {newsFeedLoading ? (
+          <Text style={styles.subtitle}>{text.adminTraining.loading}</Text>
+        ) : null}
+        {newsFeedError ? (
+          <Text style={styles.errorText}>{newsFeedError}</Text>
+        ) : null}
 
         {!newsFeedLoading && !newsFeedError && newsFeed.length === 0 ? (
           <Text style={styles.subtitle}>{text.dashboard.newsFeedEmpty}</Text>
@@ -1087,7 +1245,10 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         {newsFeed.slice(0, 8).map((post) => (
           <Pressable
             key={`news-${post.id}`}
-            style={[styles.quickRowCard, !post.isRead && styles.quickNewsUnreadCard]}
+            style={[
+              styles.quickRowCard,
+              !post.isRead && styles.quickNewsUnreadCard,
+            ]}
             onPress={() => {
               void handleOpenNews(post);
             }}
@@ -1125,7 +1286,8 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                 <Pressable
                   style={[
                     styles.iconActionButton,
-                    expandedNewsTrackingId === post.id && styles.newsTrackingActiveButton,
+                    expandedNewsTrackingId === post.id &&
+                      styles.newsTrackingActiveButton,
                     loadingNewsTrackingId === post.id && styles.buttonDisabled,
                   ]}
                   accessibilityLabel={text.dashboard.newsReadTrackingButton}
@@ -1136,7 +1298,11 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                   }}
                 >
                   <Ionicons
-                    name={loadingNewsTrackingId === post.id ? 'hourglass-outline' : 'people-outline'}
+                    name={
+                      loadingNewsTrackingId === post.id
+                        ? 'hourglass-outline'
+                        : 'people-outline'
+                    }
                     size={18}
                     color="#7f1b21"
                   />
@@ -1144,7 +1310,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
               )}
             </View>
             <Text style={styles.subtitle}>{post.message}</Text>
-            <Text style={styles.subtitle}>{new Date(post.createdAt).toLocaleString()}</Text>
+            <Text style={styles.subtitle}>
+              {new Date(post.createdAt).toLocaleString()}
+            </Text>
             <Text style={styles.subtitle}>
               {post.createdBy.name ?? post.createdBy.email}
             </Text>
@@ -1156,14 +1324,18 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
               </Text>
             ) : null}
             {post.attachment ? (
-              <Text style={styles.quickNewsLink}>{post.attachment.originalName}</Text>
+              <Text style={styles.quickNewsLink}>
+                {post.attachment.originalName}
+              </Text>
             ) : null}
 
             {isAdmin && expandedNewsTrackingId === post.id ? (
               <View style={styles.newsTrackingCard}>
                 {newsTrackingByPostId[post.id] ? (
                   <>
-                    <Text style={styles.quickSectionTitle}>{text.dashboard.newsReadTrackingTitle}</Text>
+                    <Text style={styles.quickSectionTitle}>
+                      {text.dashboard.newsReadTrackingTitle}
+                    </Text>
                     <Text style={styles.subtitle}>
                       {`${text.dashboard.newsReadTrackingGlobal}: ${newsTrackingByPostId[post.id].readCount}/${newsTrackingByPostId[post.id].totalUsers}`}
                     </Text>
@@ -1174,17 +1346,23 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                         style={styles.newsTrackingRestaurantGroup}
                       >
                         <Text style={styles.quickRowTitle}>
-                          {group.restaurant?.name ?? text.dashboard.newsReadTrackingNoRestaurant}
+                          {group.restaurant?.name ??
+                            text.dashboard.newsReadTrackingNoRestaurant}
                         </Text>
                         <Text style={styles.subtitle}>
                           {`${text.dashboard.newsReadTrackingUnread}: ${group.unreadCount} | ${text.dashboard.newsReadTrackingRead}: ${group.readCount}`}
                         </Text>
 
                         {group.unreadUsers.length === 0 ? (
-                          <Text style={styles.subtitle}>{text.dashboard.newsReadTrackingAllRead}</Text>
+                          <Text style={styles.subtitle}>
+                            {text.dashboard.newsReadTrackingAllRead}
+                          </Text>
                         ) : (
                           group.unreadUsers.map((unreadUser) => (
-                            <Text key={`news-tracking-user-${post.id}-${unreadUser.id}`} style={styles.subtitle}>
+                            <Text
+                              key={`news-tracking-user-${post.id}-${unreadUser.id}`}
+                              style={styles.subtitle}
+                            >
                               {`- ${unreadUser.name ?? unreadUser.email} (${unreadUser.role})`}
                             </Text>
                           ))
@@ -1193,14 +1371,19 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                     ))}
                   </>
                 ) : (
-                  <Text style={styles.subtitle}>{text.adminTraining.loading}</Text>
+                  <Text style={styles.subtitle}>
+                    {text.adminTraining.loading}
+                  </Text>
                 )}
               </View>
             ) : null}
 
             {isAdmin ? (
               <Pressable
-                style={[styles.iconDeleteButton, deletingNewsId === post.id && styles.buttonDisabled]}
+                style={[
+                  styles.iconDeleteButton,
+                  deletingNewsId === post.id && styles.buttonDisabled,
+                ]}
                 accessibilityLabel={text.dashboard.newsDeleteButton}
                 disabled={deletingNewsId === post.id}
                 onPress={(event) => {
@@ -1209,7 +1392,11 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                 }}
               >
                 <Ionicons
-                  name={deletingNewsId === post.id ? 'hourglass-outline' : 'trash-outline'}
+                  name={
+                    deletingNewsId === post.id
+                      ? 'hourglass-outline'
+                      : 'trash-outline'
+                  }
                   size={18}
                   color="#ab1e24"
                 />
@@ -1226,7 +1413,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
       <>
         {!isAdmin ? (
           <View style={styles.quickBlock}>
-            <Text style={styles.quickBlockTitle}>{text.dashboard.quickApproveTitle}</Text>
+            <Text style={styles.quickBlockTitle}>
+              {text.dashboard.quickApproveTitle}
+            </Text>
             {renderAdminRestaurantFilter('approval')}
             <TextInput
               style={styles.quickSearchInput}
@@ -1235,19 +1424,29 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
               value={accountSearch}
               onChangeText={setAccountSearch}
             />
-            {usersLoading ? <Text style={styles.subtitle}>{text.adminTraining.loading}</Text> : null}
-            {usersError ? <Text style={styles.errorText}>{usersError}</Text> : null}
-            {!usersLoading && !usersError && accountApprovalUsers.length === 0 ? (
-              <Text style={styles.subtitle}>{text.dashboard.quickNoPendingAccount}</Text>
+            {usersLoading ? (
+              <Text style={styles.subtitle}>{text.adminTraining.loading}</Text>
+            ) : null}
+            {usersError ? (
+              <Text style={styles.errorText}>{usersError}</Text>
+            ) : null}
+            {!usersLoading &&
+            !usersError &&
+            accountApprovalUsers.length === 0 ? (
+              <Text style={styles.subtitle}>
+                {text.dashboard.quickNoPendingAccount}
+              </Text>
             ) : null}
             {accountApprovalUsers.slice(0, 4).map((entry) => (
               <View key={`approve-${entry.id}`} style={styles.quickRowCard}>
-                <Text style={styles.quickRowTitle}>{entry.name ?? entry.email}</Text>
+                <Text style={styles.quickRowTitle}>
+                  {entry.name ?? entry.email}
+                </Text>
                 <Text style={styles.subtitle}>{entry.email}</Text>
                 <Pressable
                   style={[
                     styles.secondaryButton,
-                      isApprovingUserId === entry.id && styles.buttonDisabled,
+                    isApprovingUserId === entry.id && styles.buttonDisabled,
                   ]}
                   disabled={isApprovingUserId === entry.id}
                   onPress={() => {
@@ -1258,43 +1457,53 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                     {isApprovingUserId === entry.id
                       ? text.adminTraining.approveAccountSaving
                       : text.adminTraining.approveAccountButton}
-                    </Text>
-                  </Pressable>
+                  </Text>
+                </Pressable>
               </View>
             ))}
 
             <View style={styles.quickSectionDivider}>
-              <Text style={styles.quickSectionTitle}>{text.dashboard.quickDeleteSectionTitle}</Text>
+              <Text style={styles.quickSectionTitle}>
+                {text.dashboard.quickDeleteSectionTitle}
+              </Text>
             </View>
 
             {deletionUsers.length === 0 ? (
-              <Text style={styles.subtitle}>{text.dashboard.quickNoEmployee}</Text>
+              <Text style={styles.subtitle}>
+                {text.dashboard.quickNoEmployee}
+              </Text>
             ) : (
               deletionUsers.slice(0, 4).map((entry) => (
                 <View key={`delete-${entry.id}`} style={styles.quickRowCard}>
                   <View style={styles.quickLevelRow}>
                     <View style={styles.quickLevelInfo}>
-                      <Text style={styles.quickRowTitle}>{entry.name ?? entry.email}</Text>
+                      <Text style={styles.quickRowTitle}>
+                        {entry.name ?? entry.email}
+                      </Text>
                       <Text style={styles.subtitle}>{entry.email}</Text>
                     </View>
 
-                  <Pressable
-                    style={[
-                      styles.iconDeleteButton,
-                      isDeletingUserId === entry.id && styles.buttonDisabled,
-                    ]}
-                    accessibilityLabel={text.dashboard.quickDeleteButton}
-                    disabled={isDeletingUserId === entry.id}
-                    onPress={() => {
-                      void handleDeleteUser(entry);
-                    }}
-                  >
-                    <Ionicons
-                      name={isDeletingUserId === entry.id ? 'hourglass-outline' : 'trash-outline'}
-                      size={20}
-                      color="#ab1e24"
-                    />
-                  </Pressable>
+                    <Pressable
+                      style={[
+                        styles.iconDeleteButton,
+                        isDeletingUserId === entry.id && styles.buttonDisabled,
+                      ]}
+                      accessibilityLabel={text.dashboard.quickDeleteButton}
+                      disabled={isDeletingUserId === entry.id}
+                      onPress={() => {
+                        void handleDeleteUser(entry);
+                      }}
+                    >
+                      <Ionicons
+                        name={
+                          isDeletingUserId === entry.id
+                            ? 'hourglass-outline'
+                            : 'trash-outline'
+                        }
+                        size={20}
+                        color="#ab1e24"
+                      />
+                    </Pressable>
                   </View>
                 </View>
               ))
@@ -1304,41 +1513,65 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
 
         {!isAdmin ? (
           <View style={styles.quickBlock}>
-            <Text style={styles.quickBlockTitle}>{text.dashboard.quickLatestOrderTitle}</Text>
-            {orderLoading ? <Text style={styles.subtitle}>{text.adminTraining.loading}</Text> : null}
-            {orderError ? <Text style={styles.errorText}>{orderError}</Text> : null}
+            <Text style={styles.quickBlockTitle}>
+              {text.dashboard.quickLatestOrderTitle}
+            </Text>
+            {orderLoading ? (
+              <Text style={styles.subtitle}>{text.adminTraining.loading}</Text>
+            ) : null}
+            {orderError ? (
+              <Text style={styles.errorText}>{orderError}</Text>
+            ) : null}
             {!orderLoading && !orderError && !latestOrder ? (
               <Text style={styles.subtitle}>{text.dashboard.quickNoOrder}</Text>
             ) : null}
             {latestOrder ? (
               <View style={styles.quickRowCard}>
                 <View style={styles.quickMetaInlineRow}>
-                  <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
+                  <Text
+                    style={[styles.quickMetaHeaderText, styles.quickInlineCell]}
+                  >
                     {text.orders.orderNumberLabel}
                   </Text>
-                  <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
+                  <Text
+                    style={[styles.quickMetaHeaderText, styles.quickInlineCell]}
+                  >
                     {text.orders.deliveryDateLabel}
                   </Text>
-                  <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
+                  <Text
+                    style={[styles.quickMetaHeaderText, styles.quickInlineCell]}
+                  >
                     {text.orders.supplierLabel}
                   </Text>
-                  <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
+                  <Text
+                    style={[styles.quickMetaHeaderText, styles.quickInlineCell]}
+                  >
                     {text.orders.summaryItems}
                   </Text>
-                  {Platform.OS === 'web' ? <View style={styles.quickEyeSpacer} /> : null}
+                  {Platform.OS === 'web' ? (
+                    <View style={styles.quickEyeSpacer} />
+                  ) : null}
                 </View>
 
                 <View style={styles.quickMetaInlineRow}>
-                  <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
+                  <Text
+                    style={[styles.quickMetaValueText, styles.quickInlineCell]}
+                  >
                     {latestOrder.number}
                   </Text>
-                  <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
+                  <Text
+                    style={[styles.quickMetaValueText, styles.quickInlineCell]}
+                  >
                     {latestOrder.deliveryDate}
                   </Text>
-                  <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
+                  <Text
+                    style={[styles.quickMetaValueText, styles.quickInlineCell]}
+                  >
                     {latestOrder.supplierName}
                   </Text>
-                  <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
+                  <Text
+                    style={[styles.quickMetaValueText, styles.quickInlineCell]}
+                  >
                     {latestOrder.totalItems}
                   </Text>
 
@@ -1346,7 +1579,8 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                     <Pressable
                       style={[
                         styles.eyePreviewButton,
-                        (!orderPreviewUrl || orderPreviewLoading) && styles.buttonDisabled,
+                        (!orderPreviewUrl || orderPreviewLoading) &&
+                          styles.buttonDisabled,
                       ]}
                       disabled={!orderPreviewUrl || orderPreviewLoading}
                       onPress={() => setIsOrderPreviewOpen(true)}
@@ -1363,7 +1597,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                       void Linking.openURL(buildOrderBonUrl(latestOrder.id));
                     }}
                   >
-                    <Text style={styles.secondaryButtonText}>{text.orders.downloadBonButton}</Text>
+                    <Text style={styles.secondaryButtonText}>
+                      {text.orders.downloadBonButton}
+                    </Text>
                   </Pressable>
                 )}
               </View>
@@ -1377,7 +1613,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   function renderLevelQuickBlock() {
     return (
       <View style={styles.quickBlock}>
-        <Text style={styles.quickBlockTitle}>{text.dashboard.quickLevelTitle}</Text>
+        <Text style={styles.quickBlockTitle}>
+          {text.dashboard.quickLevelTitle}
+        </Text>
         {renderAdminRestaurantFilter('level')}
         <TextInput
           style={styles.quickSearchInput}
@@ -1386,6 +1624,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           value={levelSearch}
           onChangeText={setLevelSearch}
         />
+        {levelBlockError ? (
+          <Text style={styles.errorText}>{levelBlockError}</Text>
+        ) : null}
         {levelUsers.length === 0 ? (
           <Text style={styles.subtitle}>{text.dashboard.quickNoEmployee}</Text>
         ) : (
@@ -1393,10 +1634,17 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
             <View key={`level-${entry.id}`} style={styles.quickRowCard}>
               <View style={styles.quickLevelRow}>
                 <View style={styles.quickLevelInfo}>
-                  <Text style={styles.quickRowTitle}>{entry.name ?? entry.email}</Text>
+                  <Text style={styles.quickRowTitle}>
+                    {entry.name ?? entry.email}
+                  </Text>
                   <Text style={styles.subtitle}>{entry.email}</Text>
                   <Text style={styles.subtitle}>
-                    {text.dashboard.employeeLevelLabel}: {text.dashboard.levels[entry.employeeLevel]}
+                    {text.dashboard.employeeLevelLabel}:{' '}
+                    {text.dashboard.levels[entry.employeeLevel]}
+                  </Text>
+                  <Text style={styles.subtitle}>
+                    {text.dashboard.workplace}:{' '}
+                    {text.dashboard.workplaceValues[entry.workplaceRole]}
                   </Text>
                 </View>
 
@@ -1422,6 +1670,40 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                   />
                 </Pressable>
               </View>
+
+              <View style={styles.quickWorkplaceRow}>
+                {WORKPLACE_ROLES.map((workplaceRole) => {
+                  const isActive = entry.workplaceRole === workplaceRole;
+                  const isUpdating = isUpdatingWorkplaceUserId === entry.id;
+
+                  return (
+                    <Pressable
+                      key={`workplace-${entry.id}-${workplaceRole}`}
+                      style={[
+                        styles.quickWorkplaceChip,
+                        isActive && styles.quickWorkplaceChipActive,
+                        isUpdating && styles.buttonDisabled,
+                      ]}
+                      disabled={isUpdating}
+                      onPress={() => {
+                        void handleUpdateEmployeeWorkplaceRole(
+                          entry,
+                          workplaceRole,
+                        );
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.quickWorkplaceChipText,
+                          isActive && styles.quickWorkplaceChipTextActive,
+                        ]}
+                      >
+                        {text.dashboard.workplaceValues[workplaceRole]}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
           ))
         )}
@@ -1432,8 +1714,12 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
   function renderTopProductsChart() {
     return (
       <View style={styles.quickBlock}>
-        <Text style={styles.quickBlockTitle}>{text.dashboard.topProductsTitle}</Text>
-        <Text style={styles.subtitle}>{text.dashboard.topProductsSubtitle}</Text>
+        <Text style={styles.quickBlockTitle}>
+          {text.dashboard.topProductsTitle}
+        </Text>
+        <Text style={styles.subtitle}>
+          {text.dashboard.topProductsSubtitle}
+        </Text>
 
         {chartSuppliers.length > 0 ? (
           <ScrollView
@@ -1446,7 +1732,10 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
               return (
                 <Pressable
                   key={`chart-supplier-${supplier.id}`}
-                  style={[styles.chartSupplierChip, isActive && styles.chartSupplierChipActive]}
+                  style={[
+                    styles.chartSupplierChip,
+                    isActive && styles.chartSupplierChipActive,
+                  ]}
                   onPress={() => setSelectedChartSupplierId(supplier.id)}
                 >
                   <Text
@@ -1476,7 +1765,10 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
               return (
                 <Pressable
                   key={`chart-month-${month}`}
-                  style={[styles.chartSupplierChip, isActive && styles.chartSupplierChipActive]}
+                  style={[
+                    styles.chartSupplierChip,
+                    isActive && styles.chartSupplierChipActive,
+                  ]}
                   onPress={() => setSelectedChartMonth(month)}
                 >
                   <Text
@@ -1497,9 +1789,14 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           <Text style={styles.subtitle}>{text.adminTraining.loading}</Text>
         ) : null}
 
-        {topProductsError ? <Text style={styles.errorText}>{topProductsError}</Text> : null}
+        {topProductsError ? (
+          <Text style={styles.errorText}>{topProductsError}</Text>
+        ) : null}
 
-        {!topProductsLoading && !topProductsError && chartSuppliers.length > 0 && topProducts.length === 0 ? (
+        {!topProductsLoading &&
+        !topProductsError &&
+        chartSuppliers.length > 0 &&
+        topProducts.length === 0 ? (
           <Text style={styles.subtitle}>{text.dashboard.topProductsEmpty}</Text>
         ) : null}
 
@@ -1524,7 +1821,10 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
               const axisRight = axisLeft + (topProducts.length - 1) * pointGap;
 
               const points = topProducts.map((product, index) => {
-                const ratio = Math.max(0, Math.min(1, product.totalQuantity / maxQuantity));
+                const ratio = Math.max(
+                  0,
+                  Math.min(1, product.totalQuantity / maxQuantity),
+                );
                 return {
                   product,
                   x: axisLeft + index * pointGap,
@@ -1533,21 +1833,40 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
               });
 
               return (
-                <View style={[styles.lineChartCanvas, { width: axisRight + 24 }]}>
+                <View
+                  style={[styles.lineChartCanvas, { width: axisRight + 24 }]}
+                >
                   {yTicks.map((tick) => {
                     const y = axisTop + (1 - tick) * plotHeight;
                     const tickLabel = Math.round(maxQuantity * tick);
 
                     return (
-                      <View key={`tick-${tick}`} style={[styles.lineChartGridRow, { top: y }]}> 
+                      <View
+                        key={`tick-${tick}`}
+                        style={[styles.lineChartGridRow, { top: y }]}
+                      >
                         <Text style={styles.lineChartYLabel}>{tickLabel}</Text>
                         <View style={styles.lineChartGridLine} />
                       </View>
                     );
                   })}
 
-                  <View style={[styles.lineChartAxisY, { left: axisLeft, top: axisTop, height: plotHeight }]} />
-                  <View style={[styles.lineChartAxisX, { left: axisLeft, top: axisBottom, width: axisRight - axisLeft }]} />
+                  <View
+                    style={[
+                      styles.lineChartAxisY,
+                      { left: axisLeft, top: axisTop, height: plotHeight },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.lineChartAxisX,
+                      {
+                        left: axisLeft,
+                        top: axisBottom,
+                        width: axisRight - axisLeft,
+                      },
+                    ]}
+                  />
 
                   {points.slice(0, -1).map((point, index) => {
                     const nextPoint = points[index + 1];
@@ -1574,16 +1893,33 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
 
                   {points.map(({ product, x, y }) => {
                     const label =
-                      product.nameFr?.trim() || product.nameZh?.trim() || `${product.productId}`;
+                      product.nameFr?.trim() ||
+                      product.nameZh?.trim() ||
+                      `${product.productId}`;
 
                     return (
-                      <View key={`point-${product.month}-${product.supplierId}-${product.productId}`}>
-                        <View style={[styles.lineChartPoint, { left: x - 4, top: y - 4 }]} />
-                        <Text style={[styles.lineChartValue, { left: x - 18, top: y - 24 }]}>
+                      <View
+                        key={`point-${product.month}-${product.supplierId}-${product.productId}`}
+                      >
+                        <View
+                          style={[
+                            styles.lineChartPoint,
+                            { left: x - 4, top: y - 4 },
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            styles.lineChartValue,
+                            { left: x - 18, top: y - 24 },
+                          ]}
+                        >
                           {product.totalQuantity}
                         </Text>
                         <Text
-                          style={[styles.lineChartProductLabel, { left: x - 40, top: axisBottom + 10 }]}
+                          style={[
+                            styles.lineChartProductLabel,
+                            { left: x - 40, top: axisBottom + 10 },
+                          ]}
                           numberOfLines={2}
                         >
                           {label}
@@ -1606,7 +1942,8 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         <View style={isSupervisor ? styles.managerLeftColumn : undefined}>
           <View style={[styles.card, isSupervisor && styles.managerLeftCard]}>
             <Text style={styles.title}>
-              {text.dashboard.welcome} {user.name ?? text.dashboard.fallbackName}
+              {text.dashboard.welcome}{' '}
+              {user.name ?? text.dashboard.fallbackName}
             </Text>
             <Text style={styles.subtitle}>{user.email}</Text>
             {user.restaurant ? (
@@ -1616,21 +1953,30 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
             ) : null}
 
             <View style={styles.pillRow}>
-              <Text style={styles.pill}>{text.dashboard.role}: {roleLabel}</Text>
-              <Text style={styles.pill}>{text.dashboard.workplace}: {workplaceLabel}</Text>
+              <Text style={styles.pill}>
+                {text.dashboard.role}: {roleLabel}
+              </Text>
+              <Text style={styles.pill}>
+                {text.dashboard.workplace}: {workplaceLabel}
+              </Text>
             </View>
 
             <Text style={styles.meta}>
-              {text.dashboard.probation}: {user.isOnProbation ? text.dashboard.yes : text.dashboard.no}
+              {text.dashboard.probation}:{' '}
+              {user.isOnProbation ? text.dashboard.yes : text.dashboard.no}
             </Text>
 
             <Pressable style={styles.secondaryButton} onPress={onLogout}>
-              <Text style={styles.secondaryButtonText}>{text.dashboard.logout}</Text>
+              <Text style={styles.secondaryButtonText}>
+                {text.dashboard.logout}
+              </Text>
             </Pressable>
           </View>
 
           {!isAdmin ? (
-            <View style={!isSupervisor ? styles.employeeNewsSpacing : undefined}>
+            <View
+              style={!isSupervisor ? styles.employeeNewsSpacing : undefined}
+            >
               {renderNewsFeedCard()}
             </View>
           ) : null}
@@ -1656,7 +2002,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
             {!isAdmin ? renderLevelQuickBlock() : null}
             {isAdmin ? renderNewsFeedCard() : null}
             {isAdmin ? renderWhatsNewUploadCard() : null}
-            {isAdmin ? <AdminUploadPanel accessToken={accessToken} text={text} /> : null}
+            {isAdmin ? (
+              <AdminUploadPanel accessToken={accessToken} text={text} />
+            ) : null}
             {renderManagerQuickBlocks()}
           </View>
         ) : null}
@@ -1672,7 +2020,9 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
           <View style={styles.previewModalBackdrop}>
             <View style={styles.previewModalCard}>
               <View style={styles.previewModalHeader}>
-                <Text style={styles.quickBlockTitle}>{text.dashboard.quickLatestOrderTitle}</Text>
+                <Text style={styles.quickBlockTitle}>
+                  {text.dashboard.quickLatestOrderTitle}
+                </Text>
                 <Pressable
                   style={styles.secondaryButton}
                   onPress={() => setIsOrderPreviewOpen(false)}
@@ -1687,10 +2037,16 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                 <iframe
                   src={orderPreviewUrl}
                   style={styles.orderPreviewFrame as never}
-                  title={latestOrder ? `order-preview-${latestOrder.id}` : 'order-preview'}
+                  title={
+                    latestOrder
+                      ? `order-preview-${latestOrder.id}`
+                      : 'order-preview'
+                  }
                 />
               ) : (
-                <Text style={styles.subtitle}>{text.dashboard.quickPreviewUnavailable}</Text>
+                <Text style={styles.subtitle}>
+                  {text.dashboard.quickPreviewUnavailable}
+                </Text>
               )}
             </View>
           </View>
@@ -1706,23 +2062,32 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         <View style={styles.previewModalBackdrop}>
           <View style={styles.levelModalCard}>
             <View style={styles.previewModalHeader}>
-              <Text style={styles.quickBlockTitle}>{text.dashboard.levelModalTitle}</Text>
+              <Text style={styles.quickBlockTitle}>
+                {text.dashboard.levelModalTitle}
+              </Text>
               <Pressable
                 style={styles.secondaryButton}
                 onPress={() => setLevelEditorUser(null)}
               >
-                <Text style={styles.secondaryButtonText}>{text.dashboard.levelModalClose}</Text>
+                <Text style={styles.secondaryButtonText}>
+                  {text.dashboard.levelModalClose}
+                </Text>
               </Pressable>
             </View>
 
-            <ScrollView style={styles.levelListWrap} contentContainerStyle={styles.levelListContent}>
+            <ScrollView
+              style={styles.levelListWrap}
+              contentContainerStyle={styles.levelListContent}
+            >
               {EMPLOYEE_LEVELS.map((level) => (
                 <Pressable
                   key={level}
                   style={[
                     styles.levelListItem,
-                    levelEditorUser?.employeeLevel === level && styles.levelListItemActive,
-                    isUpdatingLevelUserId === levelEditorUser?.id && styles.buttonDisabled,
+                    levelEditorUser?.employeeLevel === level &&
+                      styles.levelListItemActive,
+                    isUpdatingLevelUserId === levelEditorUser?.id &&
+                      styles.buttonDisabled,
                   ]}
                   disabled={isUpdatingLevelUserId === levelEditorUser?.id}
                   onPress={() => {
@@ -1736,7 +2101,8 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
                   <Text
                     style={[
                       styles.levelListItemText,
-                      levelEditorUser?.employeeLevel === level && styles.levelListItemTextActive,
+                      levelEditorUser?.employeeLevel === level &&
+                        styles.levelListItemTextActive,
                     ]}
                   >
                     {text.dashboard.levels[level]}
@@ -1758,7 +2124,6 @@ export function SessionCard({ user, accessToken, text, onLogout }: SessionCardPr
         onCancel={() => closeConfirmDialog(false)}
         onConfirm={() => closeConfirmDialog(true)}
       />
-
     </View>
   );
 }

@@ -27,7 +27,6 @@ export function ResetPasswordForm({
   onSubmit,
   onBackToLogin,
 }: ResetPasswordFormProps) {
-  const [passwordFocused, setPasswordFocused] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   const canSubmit = hasToken && password.trim().length >= 8 && !isSubmitting;
@@ -37,20 +36,25 @@ export function ResetPasswordForm({
       <Text style={styles.title}>{text.auth.resetPasswordTitle}</Text>
       <Text style={styles.subtitle}>{text.auth.resetPasswordSubtitle}</Text>
 
-      {!hasToken ? <Text style={styles.error}>{text.auth.resetTokenMissing}</Text> : null}
+      {!hasToken ? (
+        <Text style={styles.error}>{text.auth.resetTokenMissing}</Text>
+      ) : null}
 
       <Text style={styles.label}>{text.auth.newPasswordLabel}</Text>
-      <View style={[styles.inputWrap, passwordFocused && styles.inputFocused]}>
+      <View style={styles.inputWrap}>
         <TextInput
           autoCapitalize="none"
+          autoComplete="off"
+          autoCorrect={false}
+          spellCheck={false}
+          importantForAutofill="no"
           secureTextEntry={!passwordVisible}
+          selectionColor="#ab1e24"
           placeholder={text.auth.newPasswordPlaceholder}
           placeholderTextColor="#7f8a8a"
           style={styles.input}
           value={password}
           onChangeText={onPasswordChange}
-          onFocus={() => setPasswordFocused(true)}
-          onBlur={() => setPasswordFocused(false)}
         />
         <Pressable
           style={styles.eyeButton}
@@ -69,7 +73,10 @@ export function ResetPasswordForm({
 
       <Pressable
         disabled={!canSubmit}
-        style={[styles.primaryButton, !canSubmit && styles.primaryButtonDisabled]}
+        style={[
+          styles.primaryButton,
+          !canSubmit && styles.primaryButtonDisabled,
+        ]}
         onPress={onSubmit}
       >
         <Text style={styles.primaryButtonText}>

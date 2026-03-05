@@ -132,6 +132,31 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
+  quickWorkplaceRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  quickWorkplaceChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#dfb0b2',
+    backgroundColor: '#fff1f2',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  quickWorkplaceChipActive: {
+    borderColor: '#ab1e24',
+    backgroundColor: '#ab1e24',
+  },
+  quickWorkplaceChipText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  quickWorkplaceChipTextActive: {
+    color: '#ffffff',
+  },
   quickLevelInfo: {
     flex: 1,
     gap: 4,

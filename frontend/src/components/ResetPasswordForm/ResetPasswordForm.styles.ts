@@ -1,12 +1,14 @@
 import { StyleSheet } from 'react-native';
 
 const RED = '#ab1e24';
+const BORDER = '#d9a7aa';
+const CARD_BG = '#f2f2f2';
 
 export const styles = StyleSheet.create({
   card: {
     width: '86%',
     maxWidth: 460,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: CARD_BG,
     borderRadius: 20,
     padding: 24,
     borderWidth: 1,
@@ -37,22 +39,21 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#d9a7aa',
-    borderRadius: 6,
+    borderColor: BORDER,
+    borderRadius: 10,
     backgroundColor: '#ffffff',
-    paddingHorizontal: 10,
-    height: 40,
-  },
-  inputFocused: {
-    borderColor: RED,
+    overflow: 'hidden',
+    paddingHorizontal: 12,
+    height: 42,
   },
   input: {
     flex: 1,
-    height: 40,
+    height: '100%',
     color: RED,
     fontFamily: 'Manrope_400Regular',
     fontSize: 14,
-    paddingVertical: 8,
+    paddingVertical: 0,
+    borderWidth: 0,
   },
   eyeButton: {
     width: 24,
@@ -72,7 +73,7 @@ export const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: RED,
-    borderRadius: 6,
+    borderRadius: 10,
     paddingVertical: 13,
     alignItems: 'center',
     marginTop: 8,
@@ -87,7 +88,7 @@ export const styles = StyleSheet.create({
   },
   linkButton: {
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   linkText: {
     color: RED,

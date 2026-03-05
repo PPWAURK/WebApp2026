@@ -1,5 +1,11 @@
 import { API_URL } from '../constants/config';
-import type { EmployeeLevel, Restaurant, TrainingSection, User } from '../types/auth';
+import type {
+  EmployeeLevel,
+  Restaurant,
+  TrainingSection,
+  User,
+  WorkplaceRole,
+} from '../types/auth';
 import { throwIfUnauthorized } from './authSession';
 
 export type TrainingAccessUser = {
@@ -7,6 +13,7 @@ export type TrainingAccessUser = {
   email: string;
   name: string | null;
   role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+  workplaceRole: WorkplaceRole;
   employeeLevel: EmployeeLevel;
   isApproved: boolean;
   isOnProbation: boolean;
@@ -52,7 +59,7 @@ export async function fetchTrainingAccessUsers(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to load users';
+      : (errorData.message ?? 'Failed to load users');
     throw new Error(message);
   }
 
@@ -83,7 +90,7 @@ export async function updateUserTrainingAccess(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to update training access';
+      : (errorData.message ?? 'Failed to update training access');
     throw new Error(message);
   }
 
@@ -109,7 +116,7 @@ export async function fetchTrainingAccessByLevel(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to load level access profiles';
+      : (errorData.message ?? 'Failed to load level access profiles');
     throw new Error(message);
   }
 
@@ -121,14 +128,17 @@ export async function updateTrainingAccessByLevel(
   level: EmployeeLevel,
   sections: TrainingSection[],
 ): Promise<TrainingAccessByLevelProfile> {
-  const response = await fetch(`${API_URL}/users/training-access-by-level/${level}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+  const response = await fetch(
+    `${API_URL}/users/training-access-by-level/${level}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ sections }),
     },
-    body: JSON.stringify({ sections }),
-  });
+  );
 
   const data = (await response.json()) as
     | TrainingAccessByLevelProfile
@@ -140,14 +150,16 @@ export async function updateTrainingAccessByLevel(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to update level access profile';
+      : (errorData.message ?? 'Failed to update level access profile');
     throw new Error(message);
   }
 
   return data as TrainingAccessByLevelProfile;
 }
 
-export async function fetchUnassignedUsers(token: string): Promise<UnassignedUser[]> {
+export async function fetchUnassignedUsers(
+  token: string,
+): Promise<UnassignedUser[]> {
   const response = await fetch(`${API_URL}/users/unassigned`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -164,7 +176,7 @@ export async function fetchUnassignedUsers(token: string): Promise<UnassignedUse
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to load unassigned users';
+      : (errorData.message ?? 'Failed to load unassigned users');
     throw new Error(message);
   }
 
@@ -195,7 +207,7 @@ export async function assignUserRestaurant(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to assign user restaurant';
+      : (errorData.message ?? 'Failed to assign user restaurant');
     throw new Error(message);
   }
 
@@ -226,7 +238,7 @@ export async function updateUserManagerRole(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to update manager role';
+      : (errorData.message ?? 'Failed to update manager role');
     throw new Error(message);
   }
 
@@ -264,7 +276,9 @@ export async function uploadMyProfilePhoto(
     body: formData,
   });
 
-  const data = (await response.json()) as User | { message?: string | string[] };
+  const data = (await response.json()) as
+    | User
+    | { message?: string | string[] };
 
   throwIfUnauthorized(response);
 
@@ -272,7 +286,7 @@ export async function uploadMyProfilePhoto(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to upload profile photo';
+      : (errorData.message ?? 'Failed to upload profile photo');
     throw new Error(message);
   }
 
@@ -300,7 +314,7 @@ export async function confirmUserProbation(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to confirm probation status';
+      : (errorData.message ?? 'Failed to confirm probation status');
     throw new Error(message);
   }
 
@@ -337,7 +351,7 @@ export async function approveUserAccount(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to approve account';
+      : (errorData.message ?? 'Failed to approve account');
     throw new Error(message);
   }
 
@@ -353,7 +367,10 @@ export async function approveUserAccount(
   };
 }
 
-export async function deleteUserAccount(token: string, userId: number): Promise<void> {
+export async function deleteUserAccount(
+  token: string,
+  userId: number,
+): Promise<void> {
   const response = await fetch(`${API_URL}/users/${userId}`, {
     method: 'DELETE',
     headers: {
@@ -370,7 +387,7 @@ export async function deleteUserAccount(token: string, userId: number): Promise<
   const data = (await response.json()) as { message?: string | string[] };
   const message = Array.isArray(data.message)
     ? data.message.join(', ')
-    : data.message ?? 'Failed to delete account';
+    : (data.message ?? 'Failed to delete account');
   throw new Error(message);
 }
 
@@ -378,7 +395,12 @@ export async function updateUserLevel(
   token: string,
   userId: number,
   level: EmployeeLevel,
-): Promise<{ id: number; employeeLevel: EmployeeLevel; role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE'; isOnProbation: boolean }> {
+): Promise<{
+  id: number;
+  employeeLevel: EmployeeLevel;
+  role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+  isOnProbation: boolean;
+}> {
   const response = await fetch(`${API_URL}/users/${userId}/level`, {
     method: 'PATCH',
     headers: {
@@ -404,15 +426,19 @@ export async function updateUserLevel(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to update employee level';
+      : (errorData.message ?? 'Failed to update employee level');
     throw new Error(message);
   }
 
   return {
-    id: typeof (data as { id?: unknown }).id === 'number' ? (data as { id: number }).id : userId,
+    id:
+      typeof (data as { id?: unknown }).id === 'number'
+        ? (data as { id: number }).id
+        : userId,
     employeeLevel:
       typeof (data as { employeeLevel?: unknown }).employeeLevel === 'string'
-        ? ((data as { employeeLevel: EmployeeLevel }).employeeLevel as EmployeeLevel)
+        ? ((data as { employeeLevel: EmployeeLevel })
+            .employeeLevel as EmployeeLevel)
         : level,
     role:
       typeof (data as { role?: unknown }).role === 'string'
@@ -425,5 +451,50 @@ export async function updateUserLevel(
       typeof (data as { isOnProbation?: unknown }).isOnProbation === 'boolean'
         ? (data as { isOnProbation: boolean }).isOnProbation
         : level === 'L0_PROBATION',
+  };
+}
+
+export async function updateUserWorkplaceRole(
+  token: string,
+  userId: number,
+  workplaceRole: WorkplaceRole,
+): Promise<{ id: number; workplaceRole: WorkplaceRole }> {
+  const response = await fetch(`${API_URL}/users/${userId}/workplace-role`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ workplaceRole }),
+  });
+
+  const data = (await response.json()) as
+    | {
+        id?: unknown;
+        workplaceRole?: unknown;
+        message?: string | string[];
+      }
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : (errorData.message ?? 'Failed to update workplace role');
+    throw new Error(message);
+  }
+
+  return {
+    id:
+      typeof (data as { id?: unknown }).id === 'number'
+        ? (data as { id: number }).id
+        : userId,
+    workplaceRole:
+      typeof (data as { workplaceRole?: unknown }).workplaceRole === 'string'
+        ? ((data as { workplaceRole: WorkplaceRole })
+            .workplaceRole as WorkplaceRole)
+        : workplaceRole,
   };
 }

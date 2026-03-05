@@ -2,7 +2,6 @@ import { StyleSheet } from 'react-native';
 
 const RED = '#ab1e24';
 const BORDER = '#d9a7aa';
-const LIGHT_RED = '#d86e73';
 const PALE_RED = '#e5b0b3';
 const CARD_BG = '#f2f2f2';
 const INPUT_HEIGHT = 40;
@@ -16,15 +15,14 @@ export const styles = StyleSheet.create({
     padding: 24,
     borderWidth: 1,
     borderColor: '#e8c3c4',
-    gap: 10,
+    gap: 12,
     alignSelf: 'center',
-    height:'68%',
   },
   logo: {
     width: '100%',
-    height: '15%',
+    height: 72,
     alignSelf: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   uploadFieldTitle: {
     color: RED,
@@ -36,32 +34,20 @@ export const styles = StyleSheet.create({
   title: {
     color: RED,
     fontFamily: 'Manrope_700Bold',
-    fontSize: 21,
-    lineHeight: 27,
+    fontSize: 20,
+    lineHeight: 26,
     textAlign: 'center',
-    marginBottom: 8,
-  },
-  input: {
-    width: '100%',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: '#ffffff',
-    color: RED,
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    height: INPUT_HEIGHT,
+    marginBottom: 2,
   },
   authLanguageRow: {
     flexDirection: 'row',
     gap: 8,
+    marginBottom: 4,
   },
   authLanguageChip: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 11,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: BORDER,
     backgroundColor: '#fbeeee',
@@ -81,12 +67,12 @@ export const styles = StyleSheet.create({
     zIndex: 20,
   },
   restaurantSelectTrigger: {
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: BORDER,
     backgroundColor: '#fff7f7',
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 11,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -103,7 +89,7 @@ export const styles = StyleSheet.create({
   },
   restaurantSelectList: {
     position: 'absolute',
-    top: 50,
+    top: 46,
     left: 0,
     right: 0,
     borderRadius: 12,
@@ -150,12 +136,12 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 2,
+    marginTop: 4,
   },
   rememberBox: {
-    width: 12,
-    height: 12,
-    borderRadius: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 3,
     borderWidth: 1,
     borderColor: BORDER,
     backgroundColor: '#ffffff',
@@ -169,8 +155,8 @@ export const styles = StyleSheet.create({
   rememberCheck: {
     color: '#ffffff',
     fontFamily: 'Manrope_700Bold',
-    fontSize: 9,
-    lineHeight: 9,
+    fontSize: 10,
+    lineHeight: 10,
   },
   rememberLabel: {
     color: '#7e4a4e',
@@ -180,7 +166,7 @@ export const styles = StyleSheet.create({
   forgotText: {
     color: RED,
     fontFamily: 'Manrope_700Bold',
-    fontSize: 11,
+    fontSize: 12,
   },
   forgotTextDisabled: {
     color: LIGHT_RED,
@@ -191,27 +177,34 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: BORDER,
-    borderRadius: 6,
+    borderRadius: 10,
     backgroundColor: '#ffffff',
-    paddingHorizontal: 10,
-    height: INPUT_HEIGHT,
+    overflow: 'hidden',
+    paddingHorizontal: 12,
+    height: 42,
   },
   passwordInput: {
     flex: 1,
-    height: INPUT_HEIGHT,
+    height: '100%',
     color: RED,
     fontFamily: 'Manrope_400Regular',
     fontSize: 14,
-    paddingVertical: 8,
+    paddingVertical: 0,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+    outlineColor: 'transparent',
+    outlineWidth: 0,
   },
   eyeButton: {
     width: 24,
     height: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 6,
   },
   primaryButton: {
-    borderRadius: 6,
+    borderRadius: 10,
     paddingVertical: 13,
     alignItems: 'center',
     marginTop: 8,
@@ -232,7 +225,7 @@ export const styles = StyleSheet.create({
   },
   linkButton: {
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   linkText: {
     color: '#ab1e24',
@@ -240,7 +233,12 @@ export const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  inputFocused: {
-    borderColor: RED,
+  decorLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
+  },
+  decorImage: {
+    position: 'absolute',
+    resizeMode: 'contain',
   },
 });

@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Pressable, Text, TextInput, View } from 'react-native';
+import {
+  Image,
+  Pressable,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { styles } from './AuthForm.styles';
 import type { AuthMode, Restaurant } from '../../types/auth';
 import type { AppText } from '../../locales/translations';
@@ -33,10 +40,40 @@ type AuthFormProps = {
   onBackToLanding?: () => void;
 };
 
+type DecorLayout = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  opacity: number;
+};
+
+type DecorItem = {
+  key: string;
+  source: number;
+  small: DecorLayout;
+  tablet: DecorLayout;
+  desktop: DecorLayout;
+};
+
+const DECOR_ITEMS: DecorItem[] = [
+  {
+    key: 'pattern-1',
+    source: require('../../../assets/四大天王/IMG_9278.png'),
+    small: { x: 13, y: 6, width: 80, height: 80, opacity: 0.5 },
+    tablet: { x: 11, y: 10, width: 180, height: 100, opacity: 0.75 },
+    desktop: { x: 5, y: 5, width: 250, height: 120, opacity: 0.75 },
+  },
+  {
+    key: 'pattern-3',
+    source: require('../../../assets/四大天王/IMG_9276.png'),
+    small: { x: 50, y: 95, width: 75, height: 70, opacity: 0.5 },
+    tablet: { x: 50, y: 92, width: 100, height: 120, opacity: 0.65 },
+    desktop: { x: 98, y: 95, width: 150, height: 120, opacity: 0.75 },
+  },
+];
+
 export function AuthForm(props: AuthFormProps) {
-  const [nameFocused, setNameFocused] = useState(false);
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
   const [isRestaurantListOpen, setIsRestaurantListOpen] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const selectedRestaurant =
@@ -55,20 +92,52 @@ export function AuthForm(props: AuthFormProps) {
       : hasName && hasEmail && hasPassword && hasRestaurant;
 
   const isSubmitDisabled = props.isSubmitting || !isFormValid;
-  const isForgotPasswordDisabled = props.isSubmitting || props.forgotPasswordCooldownSeconds > 0;
+  const isForgotPasswordDisabled =
+    props.isSubmitting || props.forgotPasswordCooldownSeconds > 0;
   const forgotPasswordLabel =
     props.forgotPasswordCooldownSeconds > 0
       ? `${props.text.auth.forgotPassword} (${props.forgotPasswordCooldownSeconds}s)`
       : props.text.auth.forgotPassword;
 
+  const { width } = useWindowDimensions();
+  const isSmall = width < 520;
+  const isTablet = width >= 520 && width < 960;
+  const decorPreset = isSmall ? 'small' : isTablet ? 'tablet' : 'desktop';
+
   return (
     <View style={styles.card}>
+      <View style={styles.decorLayer} pointerEvents="none">
+        {DECOR_ITEMS.map((item) => {
+          const layout = item[decorPreset];
+
+          return (
+            <Image
+              key={item.key}
+              source={item.source}
+              resizeMode="contain"
+              style={[
+                styles.decorImage,
+                {
+                  left: `${layout.x}%`,
+                  top: `${layout.y}%`,
+                  width: layout.width,
+                  height: layout.height,
+                  marginLeft: -layout.width / 2,
+                  marginTop: -layout.height / 2,
+                  opacity: layout.opacity,
+                },
+              ]}
+            />
+          );
+        })}
+      </View>
       <Image
         source={require('../../../assets/ZHAO-元素element/logo/1.png')}
         style={styles.logo}
         resizeMode="contain"
       />
 
+      <Text style={styles.title}>{props.title}</Text>
 
       <View style={styles.authLanguageRow}>
         <Pressable
@@ -78,7 +147,9 @@ export function AuthForm(props: AuthFormProps) {
           ]}
           onPress={() => props.onSelectLanguage('fr')}
         >
-          <Text style={styles.authLanguageChipText}>{props.text.drawer.fr}</Text>
+          <Text style={styles.authLanguageChipText}>
+            {props.text.drawer.fr}
+          </Text>
         </Pressable>
         <Pressable
           style={[
@@ -87,38 +158,46 @@ export function AuthForm(props: AuthFormProps) {
           ]}
           onPress={() => props.onSelectLanguage('zh')}
         >
-          <Text style={styles.authLanguageChipText}>{props.text.drawer.zh}</Text>
+          <Text style={styles.authLanguageChipText}>
+            {props.text.drawer.zh}
+          </Text>
         </Pressable>
       </View>
 
       {props.mode === 'register' ? (
         <>
-          <View
-            style={[
-              styles.passwordWrapper,
-              nameFocused && styles.inputFocused,
-            ]}
-          >
+          <Text style={styles.uploadFieldTitle}>
+            {props.text.auth.namePlaceholder}
+          </Text>
+          <View style={styles.passwordWrapper}>
             <TextInput
               autoCapitalize="words"
+              autoComplete="off"
+              autoCorrect={false}
+              spellCheck={false}
+              importantForAutofill="no"
+              selectionColor="#ab1e24"
               placeholder={props.text.auth.namePlaceholder}
               placeholderTextColor="#7f8a8a"
               style={styles.passwordInput}
               value={props.name}
               onChangeText={props.onNameChange}
-              onFocus={() => setNameFocused(true)}
-              onBlur={() => setNameFocused(false)}
             />
           </View>
 
-          <Text style={styles.uploadFieldTitle}>{props.text.auth.restaurantLabel}</Text>
+          <Text style={styles.uploadFieldTitle}>
+            {props.text.auth.restaurantLabel}
+          </Text>
           <View style={styles.restaurantSelectWrap}>
             <Pressable
               style={styles.restaurantSelectTrigger}
-              onPress={() => setIsRestaurantListOpen((currentValue) => !currentValue)}
+              onPress={() =>
+                setIsRestaurantListOpen((currentValue) => !currentValue)
+              }
             >
               <Text style={styles.restaurantSelectTriggerText}>
-                {selectedRestaurant?.name ?? props.text.auth.restaurantPlaceholder}
+                {selectedRestaurant?.name ??
+                  props.text.auth.restaurantPlaceholder}
               </Text>
               <Text style={styles.restaurantSelectChevron}>
                 {isRestaurantListOpen ? '▲' : '▼'}
@@ -156,49 +235,48 @@ export function AuthForm(props: AuthFormProps) {
           </View>
 
           {props.restaurants.length === 0 ? (
-            <Text style={styles.error}>{props.text.auth.restaurantRequired}</Text>
+            <Text style={styles.error}>
+              {props.text.auth.restaurantRequired}
+            </Text>
           ) : null}
         </>
       ) : null}
 
       <Text style={styles.uploadFieldTitle}>Email</Text>
-      <View
-        style={[
-          styles.passwordWrapper,
-          emailFocused && styles.inputFocused,
-        ]}
-      >
+      <View style={styles.passwordWrapper}>
         <TextInput
           autoCapitalize="none"
-          autoComplete="email"
+          autoComplete="off"
+          autoCorrect={false}
+          spellCheck={false}
+          importantForAutofill="no"
           keyboardType="email-address"
+          selectionColor="#ab1e24"
           placeholder={props.text.auth.emailPlaceholder}
           placeholderTextColor="#7f8a8a"
           style={styles.passwordInput}
           value={props.email}
           onChangeText={props.onEmailChange}
-          onFocus={() => setEmailFocused(true)}
-          onBlur={() => setEmailFocused(false)}
         />
       </View>
 
-      <Text style={styles.uploadFieldTitle}>{props.text.auth.passwordPlaceholder}</Text>
-      <View
-        style={[
-          styles.passwordWrapper,
-          passwordFocused && styles.inputFocused
-        ]}
-      >
+      <Text style={styles.uploadFieldTitle}>
+        {props.text.auth.passwordPlaceholder}
+      </Text>
+      <View style={styles.passwordWrapper}>
         <TextInput
           autoCapitalize="none"
+          autoComplete="off"
+          autoCorrect={false}
+          spellCheck={false}
+          importantForAutofill="no"
           secureTextEntry={!passwordVisible}
+          selectionColor="#ab1e24"
           placeholder={props.text.auth.passwordPlaceholder}
           placeholderTextColor="#7f8a8a"
           style={styles.passwordInput}
           value={props.password}
           onChangeText={props.onPasswordChange}
-          onFocus={() => setPasswordFocused(true)}
-          onBlur={() => setPasswordFocused(false)}
         />
         <Pressable
           style={styles.eyeButton}
@@ -214,17 +292,35 @@ export function AuthForm(props: AuthFormProps) {
 
       {props.mode === 'login' ? (
         <View style={styles.optionsRow}>
-          <Pressable style={styles.rememberRow} onPress={props.onRememberToggle}>
+          <Pressable
+            style={styles.rememberRow}
+            onPress={props.onRememberToggle}
+          >
             <View
-              style={[styles.rememberBox, props.rememberMe && styles.rememberBoxActive]}
+              style={[
+                styles.rememberBox,
+                props.rememberMe && styles.rememberBoxActive,
+              ]}
             >
-              {props.rememberMe ? <Text style={styles.rememberCheck}>✓</Text> : null}
+              {props.rememberMe ? (
+                <Text style={styles.rememberCheck}>✓</Text>
+              ) : null}
             </View>
-            <Text style={styles.rememberLabel}>{props.text.auth.rememberMe}</Text>
+            <Text style={styles.rememberLabel}>
+              {props.text.auth.rememberMe}
+            </Text>
           </Pressable>
 
-          <Pressable disabled={isForgotPasswordDisabled} onPress={props.onForgotPassword}>
-            <Text style={[styles.forgotText, isForgotPasswordDisabled && styles.forgotTextDisabled]}>
+          <Pressable
+            disabled={isForgotPasswordDisabled}
+            onPress={props.onForgotPassword}
+          >
+            <Text
+              style={[
+                styles.forgotText,
+                isForgotPasswordDisabled && styles.forgotTextDisabled,
+              ]}
+            >
               {forgotPasswordLabel}
             </Text>
           </Pressable>
@@ -238,7 +334,9 @@ export function AuthForm(props: AuthFormProps) {
         disabled={isSubmitDisabled}
         style={[
           styles.primaryButton,
-          isSubmitDisabled ? styles.primaryButtonDisabled : styles.primaryButtonActive,
+          isSubmitDisabled
+            ? styles.primaryButtonDisabled
+            : styles.primaryButtonActive,
           props.isSubmitting && styles.buttonDisabled,
         ]}
         onPress={props.onSubmit}
@@ -265,7 +363,11 @@ export function AuthForm(props: AuthFormProps) {
       </Pressable>
 
       {props.onBackToLanding ? (
-        <Pressable disabled={props.isSubmitting} style={styles.linkButton} onPress={props.onBackToLanding}>
+        <Pressable
+          disabled={props.isSubmitting}
+          style={styles.linkButton}
+          onPress={props.onBackToLanding}
+        >
           <Text style={styles.linkText}>{props.text.landing.backButton}</Text>
         </Pressable>
       ) : null}

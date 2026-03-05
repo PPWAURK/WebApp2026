@@ -15,7 +15,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { EmployeeLevel } from '@prisma/client';
+import { EmployeeLevel, WorkplaceRole } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { existsSync, mkdirSync } from 'fs';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -66,7 +66,9 @@ export class UsersController {
     const actor = req.user;
 
     if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException('Only ADMIN and MANAGER can access this resource');
+      throw new ForbiddenException(
+        'Only ADMIN and MANAGER can access this resource',
+      );
     }
 
     const restaurantId = restaurantIdRaw ? Number(restaurantIdRaw) : undefined;
@@ -97,7 +99,9 @@ export class UsersController {
     const actor = req.user;
 
     if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException('Only ADMIN and MANAGER can access this resource');
+      throw new ForbiddenException(
+        'Only ADMIN and MANAGER can access this resource',
+      );
     }
 
     return this.usersService.updateTrainingAccess(userId, sections, {
@@ -107,7 +111,9 @@ export class UsersController {
     });
   }
 
-  @ApiOperation({ summary: 'List global training access by employee level (admin)' })
+  @ApiOperation({
+    summary: 'List global training access by employee level (admin)',
+  })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('training-access-by-level')
@@ -121,7 +127,10 @@ export class UsersController {
     return this.usersService.listTrainingAccessByLevel(actor.role);
   }
 
-  @ApiOperation({ summary: 'Update global training access profile for one employee level (admin)' })
+  @ApiOperation({
+    summary:
+      'Update global training access profile for one employee level (admin)',
+  })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Patch('training-access-by-level/:level')
@@ -149,7 +158,9 @@ export class UsersController {
     );
   }
 
-  @ApiOperation({ summary: 'List employees not yet assigned to any restaurant' })
+  @ApiOperation({
+    summary: 'List employees not yet assigned to any restaurant',
+  })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('unassigned')
@@ -177,7 +188,9 @@ export class UsersController {
     return this.usersService.assignUserRestaurant(userId, restaurantId);
   }
 
-  @ApiOperation({ summary: 'Set or unset manager role for one user (admin only)' })
+  @ApiOperation({
+    summary: 'Set or unset manager role for one user (admin only)',
+  })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Patch(':id/manager-role')
@@ -195,7 +208,10 @@ export class UsersController {
       throw new BadRequestException('isManager must be a boolean');
     }
 
-    if (restaurantIdRaw !== undefined && (!Number.isInteger(restaurantIdRaw) || restaurantIdRaw <= 0)) {
+    if (
+      restaurantIdRaw !== undefined &&
+      (!Number.isInteger(restaurantIdRaw) || restaurantIdRaw <= 0)
+    ) {
       throw new BadRequestException('restaurantId must be a positive integer');
     }
 
@@ -206,7 +222,9 @@ export class UsersController {
     });
   }
 
-  @ApiOperation({ summary: 'Confirm employee probation status (admin/manager)' })
+  @ApiOperation({
+    summary: 'Confirm employee probation status (admin/manager)',
+  })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Patch(':id/confirm-probation')
@@ -217,7 +235,9 @@ export class UsersController {
     const actor = req.user;
 
     if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException('Only ADMIN and MANAGER can access this resource');
+      throw new ForbiddenException(
+        'Only ADMIN and MANAGER can access this resource',
+      );
     }
 
     return this.usersService.confirmEmployeeProbation(userId, {
@@ -238,7 +258,9 @@ export class UsersController {
     const actor = req.user;
 
     if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException('Only ADMIN and MANAGER can access this resource');
+      throw new ForbiddenException(
+        'Only ADMIN and MANAGER can access this resource',
+      );
     }
 
     return this.usersService.approveEmployeeAccount(userId, {
@@ -258,7 +280,9 @@ export class UsersController {
     const actor = req.user;
 
     if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException('Only ADMIN and MANAGER can access this resource');
+      throw new ForbiddenException(
+        'Only ADMIN and MANAGER can access this resource',
+      );
     }
 
     return this.usersService.deleteEmployeeAccount(userId, {
@@ -279,16 +303,56 @@ export class UsersController {
     const actor = req.user;
 
     if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException('Only ADMIN and MANAGER can access this resource');
+      throw new ForbiddenException(
+        'Only ADMIN and MANAGER can access this resource',
+      );
     }
 
-    if (!levelRaw || !Object.values(EmployeeLevel).includes(levelRaw as EmployeeLevel)) {
+    if (
+      !levelRaw ||
+      !Object.values(EmployeeLevel).includes(levelRaw as EmployeeLevel)
+    ) {
       throw new BadRequestException('Invalid employee level');
     }
 
     return this.usersService.updateEmployeeLevel(
       userId,
       levelRaw as EmployeeLevel,
+      {
+        actorId: actor.id,
+        actorRole: actor.role,
+        actorRestaurantId: actor.restaurantId,
+      },
+    );
+  }
+
+  @ApiOperation({ summary: 'Update employee workplace role (admin/manager)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/workplace-role')
+  updateEmployeeWorkplaceRole(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) userId: number,
+    @Body('workplaceRole') workplaceRoleRaw: string | undefined,
+  ) {
+    const actor = req.user;
+
+    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
+      throw new ForbiddenException(
+        'Only ADMIN and MANAGER can access this resource',
+      );
+    }
+
+    if (
+      !workplaceRoleRaw ||
+      !Object.values(WorkplaceRole).includes(workplaceRoleRaw as WorkplaceRole)
+    ) {
+      throw new BadRequestException('Invalid workplace role');
+    }
+
+    return this.usersService.updateEmployeeWorkplaceRole(
+      userId,
+      workplaceRoleRaw as WorkplaceRole,
       {
         actorId: actor.id,
         actorRole: actor.role,
@@ -314,7 +378,10 @@ export class UsersController {
       }),
       fileFilter: (_req, file, callback) => {
         if (!file.mimetype.startsWith('image/')) {
-          callback(new BadRequestException('Only image files are allowed'), false);
+          callback(
+            new BadRequestException('Only image files are allowed'),
+            false,
+          );
           return;
         }
 

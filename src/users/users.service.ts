@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EmployeeLevel, Prisma, Role, WorkplaceRole } from '@prisma/client';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -94,7 +98,9 @@ export class UsersService {
                 not: Role.ADMIN,
               },
             }),
-        ...(effectiveRestaurantId ? { restaurantId: effectiveRestaurantId } : {}),
+        ...(effectiveRestaurantId
+          ? { restaurantId: effectiveRestaurantId }
+          : {}),
       },
       orderBy: {
         createdAt: 'asc',
@@ -111,6 +117,7 @@ export class UsersService {
           },
         },
         role: true,
+        workplaceRole: true,
         employeeLevel: true,
         isApproved: true,
         isOnProbation: true,
@@ -128,7 +135,9 @@ export class UsersService {
 
   async listTrainingAccessByLevel(actorRole: string) {
     if (actorRole !== Role.ADMIN) {
-      throw new BadRequestException('Only ADMIN can manage level access profiles');
+      throw new BadRequestException(
+        'Only ADMIN can manage level access profiles',
+      );
     }
 
     const profiles = await this.prisma.employeeLevelAccessProfile.findMany({
@@ -155,7 +164,9 @@ export class UsersService {
     },
   ) {
     if (actor.actorRole !== Role.ADMIN) {
-      throw new BadRequestException('Only ADMIN can manage level access profiles');
+      throw new BadRequestException(
+        'Only ADMIN can manage level access profiles',
+      );
     }
 
     if (!sections) {
@@ -219,14 +230,18 @@ export class UsersService {
     }
 
     if (actor.actorRole === Role.MANAGER && user.role !== Role.EMPLOYEE) {
-      throw new BadRequestException('Manager can only update EMPLOYEE training access');
+      throw new BadRequestException(
+        'Manager can only update EMPLOYEE training access',
+      );
     }
 
     if (
       actor.actorRole === Role.MANAGER &&
       user.restaurantId !== actor.actorRestaurantId
     ) {
-      throw new BadRequestException('Manager can only update users in own restaurant');
+      throw new BadRequestException(
+        'Manager can only update users in own restaurant',
+      );
     }
 
     if (!sections) {
@@ -299,7 +314,8 @@ export class UsersService {
     }
 
     const valid = value.filter(
-      (entry): entry is string => typeof entry === 'string' && isUploadSection(entry),
+      (entry): entry is string =>
+        typeof entry === 'string' && isUploadSection(entry),
     );
     return valid as UploadSection[];
   }
@@ -388,7 +404,9 @@ export class UsersService {
     }
 
     if (user.role === Role.ADMIN) {
-      throw new BadRequestException('Cannot assign restaurant to ADMIN via this endpoint');
+      throw new BadRequestException(
+        'Cannot assign restaurant to ADMIN via this endpoint',
+      );
     }
 
     return this.prisma.user.update({
@@ -439,7 +457,9 @@ export class UsersService {
     }
 
     if (params.actorId === userId) {
-      throw new BadRequestException('Admin cannot edit own role in this endpoint');
+      throw new BadRequestException(
+        'Admin cannot edit own role in this endpoint',
+      );
     }
 
     const nextRestaurantId = params.restaurantId ?? user.restaurantId;
@@ -523,7 +543,9 @@ export class UsersService {
       actor.actorRole === Role.MANAGER &&
       user.restaurantId !== actor.actorRestaurantId
     ) {
-      throw new BadRequestException('Manager can only update users in own restaurant');
+      throw new BadRequestException(
+        'Manager can only update users in own restaurant',
+      );
     }
 
     if (!user.isOnProbation) {
@@ -584,7 +606,9 @@ export class UsersService {
       actor.actorRole === Role.MANAGER &&
       user.restaurantId !== actor.actorRestaurantId
     ) {
-      throw new BadRequestException('Manager can only approve users in own restaurant');
+      throw new BadRequestException(
+        'Manager can only approve users in own restaurant',
+      );
     }
 
     if (user.isApproved) {
@@ -657,7 +681,9 @@ export class UsersService {
       actor.actorRole === Role.MANAGER &&
       user.restaurantId !== actor.actorRestaurantId
     ) {
-      throw new BadRequestException('Manager can only update users in own restaurant');
+      throw new BadRequestException(
+        'Manager can only update users in own restaurant',
+      );
     }
 
     const nextRole = this.deriveRoleFromLevel(level);
@@ -674,6 +700,57 @@ export class UsersService {
         role: true,
         employeeLevel: true,
         isOnProbation: true,
+      },
+    });
+  }
+
+  async updateEmployeeWorkplaceRole(
+    userId: number,
+    workplaceRole: WorkplaceRole,
+    actor: {
+      actorId: number;
+      actorRole: string;
+      actorRestaurantId: number | null;
+    },
+  ) {
+    this.ensureRoleScope(actor);
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        restaurantId: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role !== Role.EMPLOYEE) {
+      throw new BadRequestException(
+        'Only EMPLOYEE workplace role can be updated',
+      );
+    }
+
+    if (
+      actor.actorRole === Role.MANAGER &&
+      user.restaurantId !== actor.actorRestaurantId
+    ) {
+      throw new BadRequestException(
+        'Manager can only update users in own restaurant',
+      );
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        workplaceRole,
+      },
+      select: {
+        id: true,
+        workplaceRole: true,
       },
     });
   }
@@ -720,7 +797,9 @@ export class UsersService {
       actor.actorRole === Role.MANAGER &&
       user.restaurantId !== actor.actorRestaurantId
     ) {
-      throw new BadRequestException('Manager can only delete users in own restaurant');
+      throw new BadRequestException(
+        'Manager can only delete users in own restaurant',
+      );
     }
 
     try {

@@ -1,4 +1,8 @@
-import { Manrope_400Regular, Manrope_700Bold, useFonts } from '@expo-google-fonts/manrope';
+import {
+  Manrope_400Regular,
+  Manrope_700Bold,
+  useFonts,
+} from '@expo-google-fonts/manrope';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
@@ -38,7 +42,10 @@ import {
   fetchOrders,
   type OrderSummary,
 } from './src/services/ordersApi';
-import { onUnauthorized, throwIfUnauthorized } from './src/services/authSession';
+import {
+  onUnauthorized,
+  throwIfUnauthorized,
+} from './src/services/authSession';
 import { requestResetPassword } from './src/services/authApi';
 import { styles } from './src/styles/App.styles';
 import type { MenuPage } from './src/types/menu';
@@ -67,7 +74,11 @@ function normalizePathname(pathname: string): string {
 function pathToPreAuthRoute(pathname: string): PreAuthRoute {
   const normalized = normalizePathname(pathname);
 
-  if (normalized === '/auth' || normalized === '/login' || normalized === '/signin') {
+  if (
+    normalized === '/auth' ||
+    normalized === '/login' ||
+    normalized === '/signin'
+  ) {
     return 'auth';
   }
 
@@ -152,7 +163,9 @@ function menuPageToPath(page: MenuPage): string {
   return '/dashboard';
 }
 
-function normalizeTokenParam(value: string | string[] | undefined): string | null {
+function normalizeTokenParam(
+  value: string | string[] | undefined,
+): string | null {
   if (Array.isArray(value)) {
     return value[0]?.trim() || null;
   }
@@ -179,9 +192,12 @@ export default function App() {
   const activePage = pathToMenuPage(pathname) ?? 'dashboard';
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [displayPage, setDisplayPage] = useState<MenuPage>(activePage);
-  const [isLoginTransitionLoading, setIsLoginTransitionLoading] = useState(false);
+  const [isLoginTransitionLoading, setIsLoginTransitionLoading] =
+    useState(false);
   const [orderRecap, setOrderRecap] = useState<OrderRecapData | null>(null);
-  const [orderQuantities, setOrderQuantities] = useState<Record<number, number>>({});
+  const [orderQuantities, setOrderQuantities] = useState<
+    Record<number, number>
+  >({});
   const [deliveryDate, setDeliveryDate] = useState(getTodayDateString());
   const [orderHistory, setOrderHistory] = useState<OrderSummary[]>([]);
   const [isLoadingOrderHistory, setIsLoadingOrderHistory] = useState(false);
@@ -199,13 +215,20 @@ export default function App() {
   const pageTransition = useRef(new Animated.Value(1)).current;
   const loginLoaderOpacity = useRef(new Animated.Value(0)).current;
   const loginLoaderScale = useRef(new Animated.Value(0.86)).current;
-  const loginLoaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loginLoaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const postLoginAnimationTokenRef = useRef<string | null>(null);
   const isPostLoginAnimatingRef = useRef(false);
   const [resetPassword, setResetPassword] = useState('');
-  const [isSubmittingResetPassword, setIsSubmittingResetPassword] = useState(false);
-  const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
-  const [resetPasswordNotice, setResetPasswordNotice] = useState<string | null>(null);
+  const [isSubmittingResetPassword, setIsSubmittingResetPassword] =
+    useState(false);
+  const [resetPasswordError, setResetPasswordError] = useState<string | null>(
+    null,
+  );
+  const [resetPasswordNotice, setResetPasswordNotice] = useState<string | null>(
+    null,
+  );
 
   function goToPreAuthLanding(replace = false) {
     if (normalizedPathname === '/') {
@@ -252,7 +275,7 @@ export default function App() {
       return;
     }
 
-    const styleId = 'webapp-auth-input-overrides';
+    const styleId = 'webapp-input-browser-overrides';
     if (document.getElementById(styleId)) {
       return;
     }
@@ -260,35 +283,155 @@ export default function App() {
     const styleElement = document.createElement('style');
     styleElement.id = styleId;
     styleElement.textContent = `
-      input,
-      textarea {
+      html[data-auth-route="true"] *:focus,
+      html[data-auth-route="true"] *:focus-visible {
         outline: none !important;
         box-shadow: none !important;
       }
 
-      input {
-        box-sizing: border-box !important;
-        height: 100% !important;
-        line-height: normal !important;
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
+      html[data-auth-route="true"] input:focus-visible,
+      html[data-auth-route="true"] textarea:focus-visible,
+      html[data-auth-route="true"] select:focus-visible {
+        outline: 2px solid #ab1e24 !important;
+        outline-offset: 0 !important;
+        box-shadow: none !important;
+      }
+
+      html[data-auth-route="true"] input,
+      html[data-auth-route="true"] textarea,
+      html[data-auth-route="true"] select {
+        -webkit-tap-highlight-color: transparent !important;
+        border-radius: 10px !important;
+        background-clip: padding-box !important;
       }
 
       input:focus,
-      textarea:focus {
+      input:focus-visible,
+      input:active,
+      textarea:focus,
+      textarea:focus-visible,
+      select:focus,
+      select:focus-visible {
         outline: none !important;
+        border-color: transparent !important;
+        box-shadow: none !important;
+      }
+
+      input:focus:not(:focus-visible),
+      textarea:focus:not(:focus-visible),
+      select:focus:not(:focus-visible) {
+        outline: none !important;
+        box-shadow: none !important;
+      }
+
+      input[data-focus-visible-added],
+      textarea[data-focus-visible-added],
+      select[data-focus-visible-added] {
+        outline: none !important;
+        box-shadow: none !important;
+      }
+
+      input[type="email"],
+      input[type="password"],
+      input[type="text"],
+      input[type="search"],
+      input[type="tel"],
+      input[type="url"],
+      input[type="number"] {
+        outline: none !important;
+        box-shadow: none !important;
+      }
+
+      input[type="email"]:focus,
+      input[type="password"]:focus,
+      input[type="text"]:focus,
+      input[type="search"]:focus,
+      input[type="tel"]:focus,
+      input[type="url"]:focus,
+      input[type="number"]:focus,
+      input[type="email"]:focus-visible,
+      input[type="password"]:focus-visible,
+      input[type="text"]:focus-visible,
+      input[type="search"]:focus-visible,
+      input[type="tel"]:focus-visible,
+      input[type="url"]:focus-visible,
+      input[type="number"]:focus-visible {
+        outline: none !important;
+        border-color: transparent !important;
+        box-shadow: none !important;
+      }
+
+      input[class*="css-textinput"],
+      textarea[class*="css-textinput"],
+      input[class*="r-outline"],
+      textarea[class*="r-outline"],
+      input[class*="r-border"],
+      textarea[class*="r-border"] {
+        outline: none !important;
+        border: none !important;
+        border-color: transparent !important;
+        box-shadow: none !important;
+      }
+
+      input[class*="css-textinput"]:focus,
+      input[class*="css-textinput"]:focus-visible,
+      input[class*="r-outline"]:focus,
+      input[class*="r-outline"]:focus-visible,
+      input[class*="r-border"]:focus,
+      input[class*="r-border"]:focus-visible {
+        outline: none !important;
+        border: none !important;
+        border-color: transparent !important;
+        box-shadow: none !important;
+      }
+
+      input[class*="css-textinput"][data-focus-visible-added],
+      input[class*="r-outline"][data-focus-visible-added],
+      input[class*="r-border"][data-focus-visible-added] {
+        outline: none !important;
+        border: none !important;
         box-shadow: none !important;
       }
 
       input:-webkit-autofill,
       input:-webkit-autofill:hover,
-      input:-webkit-autofill:focus {
+      input:-webkit-autofill:focus,
+      input:-webkit-autofill:active,
+      textarea:-webkit-autofill,
+      textarea:-webkit-autofill:hover,
+      textarea:-webkit-autofill:focus,
+      textarea:-webkit-autofill:active,
+      select:-webkit-autofill,
+      select:-webkit-autofill:hover,
+      select:-webkit-autofill:focus,
+      select:-webkit-autofill:active {
+        background-color: #ffffff !important;
         -webkit-text-fill-color: #ab1e24 !important;
         caret-color: #ab1e24 !important;
-        -webkit-box-shadow: 0 0 0px 1000px white inset !important;
-        box-shadow: 0 0 0px 1000px white inset !important;
-        padding-right: 10px !important;
+        -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+        box-shadow: 0 0 0 1000px #ffffff inset !important;
         transition: background-color 9999s ease-in-out 0s;
+      }
+
+      html[data-auth-route="true"] input:-webkit-autofill,
+      html[data-auth-route="true"] input:-webkit-autofill:hover,
+      html[data-auth-route="true"] input:-webkit-autofill:focus,
+      html[data-auth-route="true"] input:-webkit-autofill:active,
+      html[data-auth-route="true"] textarea:-webkit-autofill,
+      html[data-auth-route="true"] textarea:-webkit-autofill:hover,
+      html[data-auth-route="true"] textarea:-webkit-autofill:focus,
+      html[data-auth-route="true"] textarea:-webkit-autofill:active,
+      html[data-auth-route="true"] select:-webkit-autofill,
+      html[data-auth-route="true"] select:-webkit-autofill:hover,
+      html[data-auth-route="true"] select:-webkit-autofill:focus,
+      html[data-auth-route="true"] select:-webkit-autofill:active {
+        border-radius: 10px !important;
+        background-color: #ffffff !important;
+        -webkit-text-fill-color: #ab1e24 !important;
+        caret-color: #ab1e24 !important;
+        -webkit-background-clip: padding-box !important;
+        -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+        box-shadow: 0 0 0 1000px #ffffff inset !important;
       }
     `;
 
@@ -298,6 +441,26 @@ export default function App() {
       styleElement.remove();
     };
   }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') {
+      return;
+    }
+
+    const root = document.documentElement;
+    const isAuthRoute =
+      preAuthRoute === 'auth' || preAuthRoute === 'resetPassword';
+
+    if (isAuthRoute) {
+      root.setAttribute('data-auth-route', 'true');
+    } else {
+      root.removeAttribute('data-auth-route');
+    }
+
+    return () => {
+      root.removeAttribute('data-auth-route');
+    };
+  }, [preAuthRoute]);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') {
@@ -333,7 +496,10 @@ export default function App() {
       const now = Date.now();
       const previousClick = lastClickAt.get(clickableTarget);
 
-      if (typeof previousClick === 'number' && now - previousClick < lockDurationMs) {
+      if (
+        typeof previousClick === 'number' &&
+        now - previousClick < lockDurationMs
+      ) {
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -404,7 +570,11 @@ export default function App() {
       normalizedHashPath === '/login' ||
       normalizedHashPath === '/signin'
     ) {
-      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}${window.location.search}`,
+      );
       router.replace('/login');
       return;
     }
@@ -414,11 +584,18 @@ export default function App() {
       normalizedHashPath === '/resetpassword' ||
       normalizedHashPath === '/password-reset'
     ) {
-      const hashToken = new URLSearchParams(rawQuery || '').get('token') ?? undefined;
+      const hashToken =
+        new URLSearchParams(rawQuery || '').get('token') ?? undefined;
       const normalizedHashToken = normalizeTokenParam(hashToken);
-      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}${window.location.search}`,
+      );
       if (normalizedHashToken) {
-        router.replace(`/reset-password?token=${encodeURIComponent(normalizedHashToken)}`);
+        router.replace(
+          `/reset-password?token=${encodeURIComponent(normalizedHashToken)}`,
+        );
         return;
       }
 
@@ -473,11 +650,9 @@ export default function App() {
     }
 
     if (
-      (
-        activePage === 'orders' ||
+      (activePage === 'orders' ||
         activePage === 'orderRecap' ||
-        activePage === 'orderHistory'
-      ) &&
+        activePage === 'orderHistory') &&
       auth.session.user.role !== 'ADMIN' &&
       auth.session.user.role !== 'MANAGER'
     ) {
@@ -485,7 +660,10 @@ export default function App() {
       setOrderRecap(null);
     }
 
-    if (activePage === 'supplierManagement' && auth.session.user.role !== 'ADMIN') {
+    if (
+      activePage === 'supplierManagement' &&
+      auth.session.user.role !== 'ADMIN'
+    ) {
       goToMenuPage('dashboard', true);
     }
   }, [
@@ -587,12 +765,7 @@ export default function App() {
       loginLoaderScale.stopAnimation();
       isPostLoginAnimatingRef.current = false;
     };
-  }, [
-    auth.session,
-    loginLoaderOpacity,
-    loginLoaderScale,
-    pathname,
-  ]);
+  }, [auth.session, loginLoaderOpacity, loginLoaderScale, pathname]);
 
   useEffect(() => {
     if (!auth.session) {
@@ -632,7 +805,10 @@ export default function App() {
       return;
     }
 
-    if (auth.session.user.role !== 'ADMIN' && auth.session.user.role !== 'MANAGER') {
+    if (
+      auth.session.user.role !== 'ADMIN' &&
+      auth.session.user.role !== 'MANAGER'
+    ) {
       return;
     }
 
@@ -691,7 +867,11 @@ export default function App() {
     }
   }
 
-  async function handleDownloadOrderBon(order: { id: number; bonUrl: string; number?: string }) {
+  async function handleDownloadOrderBon(order: {
+    id: number;
+    bonUrl: string;
+    number?: string;
+  }) {
     const url = buildOrderBonUrl(order.id);
     const token = auth.session?.accessToken;
     const fileName = `${order.number ?? `order-${order.id}`}.pdf`;
@@ -700,7 +880,10 @@ export default function App() {
       if (typeof window !== 'undefined' && typeof window.alert === 'function') {
         window.alert(language.text.orders.downloadBonError);
       } else {
-        Alert.alert(language.text.orders.downloadBonButton, language.text.orders.downloadBonError);
+        Alert.alert(
+          language.text.orders.downloadBonButton,
+          language.text.orders.downloadBonError,
+        );
       }
       return;
     }
@@ -728,7 +911,10 @@ export default function App() {
         anchor.remove();
         window.URL.revokeObjectURL(objectUrl);
       } catch {
-        if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        if (
+          typeof window !== 'undefined' &&
+          typeof window.alert === 'function'
+        ) {
           window.alert(language.text.orders.downloadBonError);
         }
       }
@@ -761,7 +947,10 @@ export default function App() {
 
       await Linking.openURL(downloadResult.uri);
     } catch {
-      Alert.alert(language.text.orders.downloadBonButton, language.text.orders.downloadBonError);
+      Alert.alert(
+        language.text.orders.downloadBonButton,
+        language.text.orders.downloadBonError,
+      );
     }
   }
 
@@ -822,7 +1011,8 @@ export default function App() {
     Manrope_700Bold,
   });
 
-  const shouldShowPostLoginLoader = isLoginTransitionLoading && !DISABLE_POST_LOGIN_REDIRECT;
+  const shouldShowPostLoginLoader =
+    isLoginTransitionLoading && !DISABLE_POST_LOGIN_REDIRECT;
 
   function handleProceedToOrderRecap(recap: OrderRecapData) {
     setOrderRecap(recap);
@@ -849,7 +1039,9 @@ export default function App() {
 
   function renderPublicContent() {
     if (preAuthRoute === 'landing') {
-      return <PreLoginHome text={language.text} onStart={() => goToPreAuthAuth()} />;
+      return (
+        <PreLoginHome text={language.text} onStart={() => goToPreAuthAuth()} />
+      );
     }
 
     if (preAuthRoute === 'resetPassword') {
@@ -858,7 +1050,10 @@ export default function App() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardAreaContent}
         >
-          <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content}>
+          <ScrollView
+            ref={scrollViewRef}
+            contentContainerStyle={styles.content}
+          >
             <ResetPasswordForm
               text={language.text}
               password={resetPassword}
@@ -885,7 +1080,9 @@ export default function App() {
                 void requestResetPassword(preAuthResetToken, resetPassword)
                   .then(() => {
                     setResetPassword('');
-                    setResetPasswordNotice(language.text.auth.resetPasswordSuccess);
+                    setResetPasswordNotice(
+                      language.text.auth.resetPasswordSuccess,
+                    );
                     setTimeout(() => {
                       goToPreAuthAuth(true);
                     }, 900);
@@ -895,16 +1092,25 @@ export default function App() {
                       error instanceof Error &&
                       error.message.includes('INVALID_OR_EXPIRED_RESET_TOKEN')
                     ) {
-                      setResetPasswordError(language.text.auth.resetTokenInvalidOrExpired);
+                      setResetPasswordError(
+                        language.text.auth.resetTokenInvalidOrExpired,
+                      );
                       return;
                     }
 
-                    if (error instanceof Error && error.message.includes('PASSWORD_TOO_SHORT')) {
-                      setResetPasswordError(language.text.auth.passwordTooShort);
+                    if (
+                      error instanceof Error &&
+                      error.message.includes('PASSWORD_TOO_SHORT')
+                    ) {
+                      setResetPasswordError(
+                        language.text.auth.passwordTooShort,
+                      );
                       return;
                     }
 
-                    setResetPasswordError(language.text.auth.resetPasswordFailed);
+                    setResetPasswordError(
+                      language.text.auth.resetPasswordFailed,
+                    );
                   })
                   .finally(() => {
                     setIsSubmittingResetPassword(false);
@@ -952,8 +1158,12 @@ export default function App() {
             onSelectLanguage={(nextLanguage) => {
               void language.setLanguage(nextLanguage);
             }}
-            onSubmit={() => void auth.submitAuth(auth.mode, language.text, language.language)}
-            onForgotPassword={() => void auth.forgotPassword(language.text, language.language)}
+            onSubmit={() =>
+              void auth.submitAuth(auth.mode, language.text, language.language)
+            }
+            onForgotPassword={() =>
+              void auth.forgotPassword(language.text, language.language)
+            }
             onToggleMode={auth.toggleMode}
             onBackToLanding={() => goToPreAuthLanding()}
           />
@@ -976,7 +1186,8 @@ export default function App() {
     }
 
     const canAccessOrders =
-      auth.session.user.role === 'ADMIN' || auth.session.user.role === 'MANAGER';
+      auth.session.user.role === 'ADMIN' ||
+      auth.session.user.role === 'MANAGER';
 
     if (page === 'training') {
       return (
@@ -1118,7 +1329,12 @@ export default function App() {
           {!auth.session ? (
             renderPublicContent()
           ) : isLoginTransitionLoading || shouldShowPostLoginLoader ? (
-            <Animated.View style={[styles.loginLoaderFullscreen, { opacity: loginLoaderOpacity }]}> 
+            <Animated.View
+              style={[
+                styles.loginLoaderFullscreen,
+                { opacity: loginLoaderOpacity },
+              ]}
+            >
               <Animated.View
                 style={[
                   styles.loginLoaderCard,

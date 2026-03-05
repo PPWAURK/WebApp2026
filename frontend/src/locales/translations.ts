@@ -12,7 +12,8 @@ export const translations = {
       highlights: {
         shift: 'Brief equipe et suivi de poste en quelques secondes',
         orders: 'Commandes produits centralisees avec recap avant validation',
-        training: 'Bibliotheque formation et documents de restaurant toujours a jour',
+        training:
+          'Bibliotheque formation et documents de restaurant toujours a jour',
       },
       metrics: {
         restaurants: 'Restaurants equipes',
@@ -49,7 +50,8 @@ export const translations = {
         'Si ce compte existe, un email de reinitialisation a ete envoye.',
       resetEmailFailed: 'Impossible d envoyer l email de reinitialisation',
       resetPasswordTitle: 'Reinitialiser le mot de passe',
-      resetPasswordSubtitle: 'Saisir un nouveau mot de passe pour votre compte.',
+      resetPasswordSubtitle:
+        'Saisir un nouveau mot de passe pour votre compte.',
       newPasswordLabel: 'Nouveau mot de passe',
       newPasswordPlaceholder: 'Entrez votre nouveau mot de passe',
       resetPasswordButton: 'Valider le nouveau mot de passe',
@@ -109,7 +111,8 @@ export const translations = {
       quickLoadUsersError: 'Impossible de charger la liste des employes.',
       quickLoadOrderError: 'Impossible de charger la derniere commande.',
       whatsNewTitle: 'Quoi de neuf ?',
-      whatsNewSubtitle: 'Publier une actualite pour informer managers et employes.',
+      whatsNewSubtitle:
+        'Publier une actualite pour informer managers et employes.',
       whatsNewTitlePlaceholder: 'Titre de l actualite',
       whatsNewMessagePlaceholder: 'Message a diffuser',
       whatsNewAudienceLabel: 'Audience',
@@ -171,10 +174,13 @@ export const translations = {
       levelModalTitle: 'Changer le niveau employe',
       levelModalClose: 'Fermer',
       levelUpdateError: 'Impossible de mettre a jour le niveau employe',
+      workplaceUpdateError: 'Impossible de mettre a jour le poste employe',
       topProductsTitle: 'Produits les plus commandes',
-      topProductsSubtitle: 'Choisir le mois pour voir les produits les plus commandes',
+      topProductsSubtitle:
+        'Choisir le mois pour voir les produits les plus commandes',
       topProductsLoadError: 'Impossible de charger le graphique des produits',
-      topProductsEmpty: 'Aucune commande disponible pour construire le graphique.',
+      topProductsEmpty:
+        'Aucune commande disponible pour construire le graphique.',
       levels: {
         L0_PROBATION: 'Partenaire en periode d essai',
         L1_PARTNER: 'Partenaire niveau 1',
@@ -276,10 +282,12 @@ export const translations = {
     },
     orders: {
       title: 'Commande produits',
-      subtitle: 'Selectionner les produits puis definir les quantites a commander.',
+      subtitle:
+        'Selectionner les produits puis definir les quantites a commander.',
       supplierLabel: 'Fournisseur',
       filterLabel: 'Type de produits',
-      searchProductsPlaceholder: 'Rechercher un produit (nom, reference, specification)',
+      searchProductsPlaceholder:
+        'Rechercher un produit (nom, reference, specification)',
       scrollToTopButton: 'Haut',
       scrollToBottomButton: 'Bas',
       allTypes: 'Tous les types',
@@ -309,13 +317,16 @@ export const translations = {
       orderSuccessTitle: 'Commande enregistree',
       orderNumberLabel: 'Numero commande',
       downloadBonButton: 'Telecharger la commande',
-      downloadBonError: 'Impossible de telecharger la commande. Reconnectez-vous puis reessayez.',
+      downloadBonError:
+        'Impossible de telecharger la commande. Reconnectez-vous puis reessayez.',
       historyTitle: 'Historique commandes',
-      historySubtitle: 'Retrouver les commandes passees et retelecharger les commandes.',
+      historySubtitle:
+        'Retrouver les commandes passees et retelecharger les commandes.',
       refreshHistoryButton: 'Rafraichir',
       deleteHistoryButton: 'Supprimer la commande',
       deletingHistoryButton: 'Suppression...',
-      deleteHistoryConfirm: 'Supprimer cette commande de l historique ? Cette action est irreversible.',
+      deleteHistoryConfirm:
+        'Supprimer cette commande de l historique ? Cette action est irreversible.',
       deleteHistoryCancel: 'Annuler',
       deleteHistoryConfirmButton: 'Supprimer',
       deleteHistoryError: 'Impossible de supprimer la commande',
@@ -338,7 +349,8 @@ export const translations = {
       kpiTotalItems: 'Total produits',
       kpiTotalAmount: 'Montant total',
       kpiDeltaVsPrevious: 'Variation vs precedent',
-      monthCompareTitle: 'Comparaison produits commandes (ce mois vs mois dernier)',
+      monthCompareTitle:
+        'Comparaison produits commandes (ce mois vs mois dernier)',
       thisMonthLabel: 'Ce mois-ci',
       lastMonthLabel: 'Mois dernier',
       deltaLabel: 'Evolution',
@@ -352,7 +364,8 @@ export const translations = {
     },
     supplierManagement: {
       title: 'Gestion fournisseurs',
-      subtitle: 'Ajouter des fournisseurs et modifier les fiches produits existantes.',
+      subtitle:
+        'Ajouter des fournisseurs et modifier les fiches produits existantes.',
       loading: 'Chargement...',
       loadError: 'Impossible de charger les donnees fournisseurs',
       suppliersLabel: 'Fournisseurs',
@@ -362,7 +375,8 @@ export const translations = {
       creatingSupplier: 'Creation...',
       createSupplierError: 'Impossible de creer le fournisseur',
       productsLabel: 'Produits du fournisseur',
-      filterProductsPlaceholder: 'Filtrer les produits (nom, ref, spec, unite...)',
+      filterProductsPlaceholder:
+        'Filtrer les produits (nom, ref, spec, unite...)',
       noProduct: 'Aucun produit pour ce fournisseur',
       noFilteredProduct: 'Aucun produit ne correspond au filtre',
       tapToEdit: 'Appuyer pour modifier',
@@ -468,7 +482,8 @@ export const translations = {
       saving: 'Enregistrement...',
       defineManager: 'Definir manager',
       removeManager: 'Retirer manager',
-      managerRestaurantRequired: 'Le manager doit etre rattache a un etablissement',
+      managerRestaurantRequired:
+        'Le manager doit etre rattache a un etablissement',
       loadRestaurantsError: 'Impossible de charger les etablissements',
       loadUsersError: 'Impossible de charger les utilisateurs',
       loadLevelProfilesError: 'Impossible de charger les droits par niveau',
@@ -656,6 +671,7 @@ export const translations = {
       levelModalTitle: '调整员工等级',
       levelModalClose: '关闭',
       levelUpdateError: '更新员工等级失败',
+      workplaceUpdateError: '更新员工岗位失败',
       topProductsTitle: '高频下单商品',
       topProductsSubtitle: '先选择月份，再查看下单最多的商品',
       topProductsLoadError: '商品图表加载失败',
