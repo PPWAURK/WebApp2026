@@ -4,6 +4,7 @@ stages:
 
 variables:
   IMAGE: registry.gitlab.com/eric-group2600910/zhao_plateforme2026-project/backend
+  BACKEND_SERVICE: backend
 
 build:
   stage: build
@@ -31,12 +32,18 @@ deploy:
         set -e
         cd /opt/ZHAO_Plateforme2026-project
         docker compose pull
-        docker compose run --rm backend npm run prisma:migrate:deploy
+        if ! docker compose config --services | grep -qx '${BACKEND_SERVICE}'; then
+          echo 'Compose service not found: ${BACKEND_SERVICE}'
+          echo 'Available services:'
+          docker compose config --services
+          exit 1
+        fi
+        docker compose run --rm ${BACKEND_SERVICE} npm run prisma:migrate:deploy
         docker compose run --rm \
           -e ADMIN_EMAILS='${ADMIN_EMAILS}' \
           -e ADMIN_DEFAULT_PASSWORD='${ADMIN_DEFAULT_PASSWORD}' \
           -e SEED_DEMO_USERS='${SEED_DEMO_USERS:-false}' \
-          backend npm run prisma:seed
+          ${BACKEND_SERVICE} npm run prisma:seed
         docker compose up -d
       "
   only:
