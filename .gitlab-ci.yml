@@ -24,8 +24,8 @@ deploy:
     - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
     - chmod 600 ~/.ssh/id_ed25519
   script:
-    - test -n "$ADMIN_EMAILS" || (echo "Missing CI variable: ADMIN_EMAILS" && exit 1)
-    - test -n "$ADMIN_DEFAULT_PASSWORD" || (echo "Missing CI variable: ADMIN_DEFAULT_PASSWORD" && exit 1)
+    - 'test -n "$ADMIN_EMAILS" || (echo "Missing CI variable: ADMIN_EMAILS" && exit 1)'
+    - 'test -n "$ADMIN_DEFAULT_PASSWORD" || (echo "Missing CI variable: ADMIN_DEFAULT_PASSWORD" && exit 1)'
     - |
       ssh -o StrictHostKeyChecking=no ubuntu@$SERVER_IP "
         set -e
