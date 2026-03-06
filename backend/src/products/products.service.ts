@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -15,18 +19,59 @@ export class ProductsService {
       },
     });
 
-    return products.map((product) => ({
-      id: Number(product.id),
-      supplierId: product.supplierId,
-      reference: product.reference,
-      category: product.categorie,
-      nameZh: product.nomCn,
-      nameFr: product.designationFr,
-      specification: product.specification,
-      unit: product.unite,
-      priceHt: product.prixUHt === null ? null : Number(product.prixUHt),
-      image: product.image,
-    }));
+    return products.map((product) => this.serializeProduct(product));
+  }
+
+  async createProduct(payload: {
+    supplierId: number;
+    reference?: string | null;
+    category: string;
+    nameZh: string;
+    nameFr?: string | null;
+    specification?: string | null;
+    unit?: string | null;
+    priceHt?: number | null;
+    image?: string | null;
+  }) {
+    if (!Number.isInteger(payload.supplierId) || payload.supplierId <= 0) {
+      throw new BadRequestException('supplierId must be a positive integer');
+    }
+
+    await this.ensureSupplierExists(payload.supplierId);
+
+    const normalizedCategory = payload.category.trim();
+    if (!normalizedCategory) {
+      throw new BadRequestException('category cannot be empty');
+    }
+
+    const normalizedNameZh = payload.nameZh.trim();
+    if (!normalizedNameZh) {
+      throw new BadRequestException('nameZh cannot be empty');
+    }
+
+    if (
+      payload.priceHt !== undefined &&
+      payload.priceHt !== null &&
+      !Number.isFinite(payload.priceHt)
+    ) {
+      throw new BadRequestException('priceHt must be a finite number or null');
+    }
+
+    const created = await this.prisma.produit.create({
+      data: {
+        supplierId: payload.supplierId,
+        reference: this.normalizeOptionalText(payload.reference),
+        categorie: normalizedCategory,
+        nomCn: normalizedNameZh,
+        designationFr: this.normalizeOptionalText(payload.nameFr),
+        specification: this.normalizeOptionalText(payload.specification),
+        unite: this.normalizeOptionalText(payload.unit),
+        prixUHt: payload.priceHt ?? null,
+        image: this.normalizeOptionalText(payload.image),
+      },
+    });
+
+    return this.serializeProduct(created);
   }
 
   async updateProduct(
@@ -69,11 +114,12 @@ export class ProductsService {
         throw new BadRequestException('supplierId must be a positive integer');
       }
 
+      await this.ensureSupplierExists(payload.supplierId);
       data.supplierId = payload.supplierId;
     }
 
     if (payload.reference !== undefined) {
-      data.reference = payload.reference;
+      data.reference = this.normalizeOptionalText(payload.reference);
     }
 
     if (payload.category !== undefined) {
@@ -93,23 +139,29 @@ export class ProductsService {
     }
 
     if (payload.nameFr !== undefined) {
-      data.designationFr = payload.nameFr;
+      data.designationFr = this.normalizeOptionalText(payload.nameFr);
     }
 
     if (payload.specification !== undefined) {
-      data.specification = payload.specification;
+      data.specification = this.normalizeOptionalText(payload.specification);
     }
 
     if (payload.unit !== undefined) {
-      data.unite = payload.unit;
+      data.unite = this.normalizeOptionalText(payload.unit);
     }
 
     if (payload.priceHt !== undefined) {
+      if (payload.priceHt !== null && !Number.isFinite(payload.priceHt)) {
+        throw new BadRequestException(
+          'priceHt must be a finite number or null',
+        );
+      }
+
       data.prixUHt = payload.priceHt;
     }
 
     if (payload.image !== undefined) {
-      data.image = payload.image;
+      data.image = this.normalizeOptionalText(payload.image);
     }
 
     const updated = await this.prisma.produit.update({
@@ -117,18 +169,7 @@ export class ProductsService {
       data,
     });
 
-    return {
-      id: Number(updated.id),
-      supplierId: updated.supplierId,
-      reference: updated.reference,
-      category: updated.categorie,
-      nameZh: updated.nomCn,
-      nameFr: updated.designationFr,
-      specification: updated.specification,
-      unit: updated.unite,
-      priceHt: updated.prixUHt === null ? null : Number(updated.prixUHt),
-      image: updated.image,
-    };
+    return this.serializeProduct(updated);
   }
 
   async updateProductImage(
@@ -196,13 +237,20 @@ export class ProductsService {
     req: { protocol: string; get: (name: string) => string | undefined },
     fileName: string,
   ) {
-    const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(/^\/+|\/+$/g, '');
+    const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(
+      /^\/+|\/+$/g,
+      '',
+    );
 
     if (this.publicApiBaseUrl) {
       const normalizedBaseUrl = this.publicApiBaseUrl.replace(/\/$/, '');
-      const normalizedPrefixEscaped = normalizedPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const normalizedPrefixEscaped = normalizedPrefix.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        '\\$&',
+      );
       const hasPrefixAlready =
-        normalizedPrefix.length > 0 && new RegExp(`/${normalizedPrefixEscaped}$`).test(normalizedBaseUrl);
+        normalizedPrefix.length > 0 &&
+        new RegExp(`/${normalizedPrefixEscaped}$`).test(normalizedBaseUrl);
 
       const baseUrlWithPrefix =
         normalizedPrefix.length > 0 && !hasPrefixAlready
@@ -218,5 +266,51 @@ export class ProductsService {
       : `/uploads/images/${fileName}`;
 
     return `${req.protocol}://${host}${prefixedUploadsPath}`;
+  }
+
+  private normalizeOptionalText(value: string | null | undefined) {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
+
+  private async ensureSupplierExists(supplierId: number) {
+    const supplier = await this.prisma.fournisseur.findUnique({
+      where: { id: supplierId },
+      select: { id: true },
+    });
+
+    if (!supplier) {
+      throw new BadRequestException('Supplier not found');
+    }
+  }
+
+  private serializeProduct(product: {
+    id: bigint;
+    supplierId: number;
+    reference: string | null;
+    categorie: string;
+    nomCn: string;
+    designationFr: string | null;
+    specification: string | null;
+    unite: string | null;
+    prixUHt: Prisma.Decimal | null;
+    image: string | null;
+  }) {
+    return {
+      id: Number(product.id),
+      supplierId: product.supplierId,
+      reference: product.reference,
+      category: product.categorie,
+      nameZh: product.nomCn,
+      nameFr: product.designationFr,
+      specification: product.specification,
+      unit: product.unite,
+      priceHt: product.prixUHt === null ? null : Number(product.prixUHt),
+      image: product.image,
+    };
   }
 }

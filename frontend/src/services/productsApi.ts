@@ -124,6 +124,43 @@ export async function updateProduct(
   return normalizeProduct(data, 0);
 }
 
+export async function createProduct(
+  token: string,
+  payload: {
+    supplierId: number;
+    reference?: string | null;
+    category: string;
+    nameZh: string;
+    nameFr?: string | null;
+    specification?: string | null;
+    unit?: string | null;
+    priceHt?: number | null;
+    image?: string | null;
+  },
+): Promise<ProductItem> {
+  const response = await fetch(`${API_URL}/products`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const data = (await response.json()) as { message?: string | string[] };
+    const message = Array.isArray(data.message)
+      ? data.message.join(', ')
+      : data.message ?? 'PRODUCTS_CREATE_FAILED';
+    throw new Error(message);
+  }
+
+  const data = (await response.json()) as RawProduct;
+  return normalizeProduct(data, 0);
+}
+
 export async function deleteProduct(token: string, productId: number): Promise<void> {
   const response = await fetch(`${API_URL}/products/${productId}`, {
     method: 'DELETE',

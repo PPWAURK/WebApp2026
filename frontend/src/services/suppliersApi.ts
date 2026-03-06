@@ -64,3 +64,24 @@ export async function createSupplier(
 
   return { id, name };
 }
+
+export async function deleteSupplier(token: string, supplierId: number): Promise<void> {
+  const response = await fetch(`${API_URL}/suppliers/${supplierId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  throwIfUnauthorized(response);
+
+  if (response.ok) {
+    return;
+  }
+
+  const data = (await response.json()) as { message?: string | string[] };
+  const message = Array.isArray(data.message)
+    ? data.message.join(', ')
+    : data.message ?? 'SUPPLIERS_DELETE_FAILED';
+  throw new Error(message);
+}

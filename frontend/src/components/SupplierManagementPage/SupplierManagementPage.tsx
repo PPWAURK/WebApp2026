@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import type { AppText } from '../../locales/translations';
 import {
+  createProduct,
   deleteProduct,
   fetchProducts,
   uploadProductImage,
@@ -19,6 +20,7 @@ import {
 } from '../../services/productsApi';
 import {
   createSupplier,
+  deleteSupplier,
   fetchSuppliers,
   type SupplierItem,
 } from '../../services/suppliersApi';
@@ -46,13 +48,26 @@ export function SupplierManagementPage({
   const [isLoading, setIsLoading] = useState(false);
   const [isCreatingSupplier, setIsCreatingSupplier] = useState(false);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
+  const [deletingSupplierId, setDeletingSupplierId] = useState<number | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
   const confirmDeleteResolverRef = useRef<((value: boolean) => void) | null>(null);
+  const [confirmSupplierDialogVisible, setConfirmSupplierDialogVisible] = useState(false);
+  const confirmDeleteSupplierResolverRef = useRef<((value: boolean) => void) | null>(
+    null,
+  );
 
+  const [newProductReference, setNewProductReference] = useState('');
+  const [newProductCategory, setNewProductCategory] = useState('');
+  const [newProductNameZh, setNewProductNameZh] = useState('');
+  const [newProductNameFr, setNewProductNameFr] = useState('');
+  const [newProductSpecification, setNewProductSpecification] = useState('');
+  const [newProductUnit, setNewProductUnit] = useState('');
+  const [newProductPriceHt, setNewProductPriceHt] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editNameZh, setEditNameZh] = useState('');
   const [editNameFr, setEditNameFr] = useState('');
@@ -135,6 +150,10 @@ export function SupplierManagementPage({
     () => supplierProducts.find((product) => product.id === selectedProductId) ?? null,
     [selectedProductId, supplierProducts],
   );
+  const selectedSupplier = useMemo(
+    () => suppliers.find((supplier) => supplier.id === selectedSupplierId) ?? null,
+    [selectedSupplierId, suppliers],
+  );
 
   useEffect(() => {
     if (!supplierProducts.some((product) => product.id === selectedProductId)) {
@@ -188,6 +207,62 @@ export function SupplierManagementPage({
       setError(text.supplierManagement.createSupplierError);
     } finally {
       setIsCreatingSupplier(false);
+    }
+  }
+
+  async function onCreateProduct() {
+    if (!selectedSupplierId) {
+      setError(text.supplierManagement.selectSupplierFirst);
+      return;
+    }
+
+    if (!newProductCategory.trim() || !newProductNameZh.trim()) {
+      setError(text.supplierManagement.createProductValidationError);
+      return;
+    }
+
+    const parsedPrice = newProductPriceHt.trim() ? Number(newProductPriceHt) : null;
+    if (newProductPriceHt.trim() && !Number.isFinite(parsedPrice)) {
+      setError(text.supplierManagement.invalidPrice);
+      return;
+    }
+
+    setIsCreatingProduct(true);
+    setError(null);
+
+    try {
+      const created = await createProduct(accessToken, {
+        supplierId: selectedSupplierId,
+        reference: newProductReference.trim() ? newProductReference.trim() : null,
+        category: newProductCategory.trim(),
+        nameZh: newProductNameZh.trim(),
+        nameFr: newProductNameFr.trim() ? newProductNameFr.trim() : null,
+        specification: newProductSpecification.trim()
+          ? newProductSpecification.trim()
+          : null,
+        unit: newProductUnit.trim() ? newProductUnit.trim() : null,
+        priceHt: parsedPrice,
+      });
+
+      setProducts((current) => [...current, created]);
+      setSelectedProductId(created.id);
+      setIsEditorOpen(true);
+      setProductFilter('');
+      setNewProductReference('');
+      setNewProductCategory('');
+      setNewProductNameZh('');
+      setNewProductNameFr('');
+      setNewProductSpecification('');
+      setNewProductUnit('');
+      setNewProductPriceHt('');
+    } catch (createError) {
+      if (createError instanceof Error && createError.message.trim()) {
+        setError(createError.message);
+      } else {
+        setError(text.supplierManagement.createProductError);
+      }
+    } finally {
+      setIsCreatingProduct(false);
     }
   }
 
@@ -300,12 +375,58 @@ export function SupplierManagementPage({
     }
   }
 
+  async function onDeleteSupplier(supplier: SupplierItem) {
+    const confirmed = await new Promise<boolean>((resolve) => {
+      confirmDeleteSupplierResolverRef.current = resolve;
+      setConfirmSupplierDialogVisible(true);
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingSupplierId(supplier.id);
+    setError(null);
+
+    try {
+      await deleteSupplier(accessToken, supplier.id);
+      setProducts((current) =>
+        current.filter((product) => product.supplierId !== supplier.id),
+      );
+      setSuppliers((current) => {
+        const remaining = current.filter((entry) => entry.id !== supplier.id);
+        if (selectedSupplierId === supplier.id) {
+          setSelectedSupplierId(remaining[0]?.id ?? null);
+          setSelectedProductId(null);
+          setIsEditorOpen(false);
+        }
+        return remaining;
+      });
+    } catch (deleteError) {
+      if (deleteError instanceof Error && deleteError.message.trim()) {
+        setError(deleteError.message);
+      } else {
+        setError(text.supplierManagement.deleteSupplierError);
+      }
+    } finally {
+      setDeletingSupplierId(null);
+    }
+  }
+
   function closeDeleteProductDialog(value: boolean) {
     if (confirmDeleteResolverRef.current) {
       confirmDeleteResolverRef.current(value);
       confirmDeleteResolverRef.current = null;
     }
     setConfirmDialogVisible(false);
+  }
+
+  function closeDeleteSupplierDialog(value: boolean) {
+    if (confirmDeleteSupplierResolverRef.current) {
+      confirmDeleteSupplierResolverRef.current(value);
+      confirmDeleteSupplierResolverRef.current = null;
+    }
+    setConfirmSupplierDialogVisible(false);
   }
 
   return (
@@ -360,6 +481,95 @@ export function SupplierManagementPage({
           </Pressable>
         ))}
       </View>
+      <Pressable
+        style={[
+          styles.dangerButton,
+          (!selectedSupplier || deletingSupplierId !== null) && styles.buttonDisabled,
+        ]}
+        disabled={!selectedSupplier || deletingSupplierId !== null}
+        onPress={() => {
+          if (selectedSupplier) {
+            void onDeleteSupplier(selectedSupplier);
+          }
+        }}
+      >
+        <Text style={styles.dangerButtonText}>
+          {deletingSupplierId !== null
+            ? text.supplierManagement.deletingSupplier
+            : text.supplierManagement.deleteSupplierButton}
+        </Text>
+      </Pressable>
+
+      <Text style={styles.uploadFieldTitle}>{text.supplierManagement.newProductLabel}</Text>
+      {!selectedSupplierId ? (
+        <Text style={styles.docEmpty}>{text.supplierManagement.selectSupplierFirst}</Text>
+      ) : null}
+      <TextInput
+        style={styles.input}
+        placeholder={text.supplierManagement.fields.reference}
+        placeholderTextColor="#a98a8d"
+        value={newProductReference}
+        onChangeText={setNewProductReference}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder={text.supplierManagement.fields.category}
+        placeholderTextColor="#a98a8d"
+        value={newProductCategory}
+        onChangeText={setNewProductCategory}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder={text.supplierManagement.fields.nameZh}
+        placeholderTextColor="#a98a8d"
+        value={newProductNameZh}
+        onChangeText={setNewProductNameZh}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder={text.supplierManagement.fields.nameFr}
+        placeholderTextColor="#a98a8d"
+        value={newProductNameFr}
+        onChangeText={setNewProductNameFr}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder={text.supplierManagement.fields.specification}
+        placeholderTextColor="#a98a8d"
+        value={newProductSpecification}
+        onChangeText={setNewProductSpecification}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder={text.supplierManagement.fields.unit}
+        placeholderTextColor="#a98a8d"
+        value={newProductUnit}
+        onChangeText={setNewProductUnit}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder={text.supplierManagement.fields.priceHt}
+        placeholderTextColor="#a98a8d"
+        keyboardType="decimal-pad"
+        value={newProductPriceHt}
+        onChangeText={setNewProductPriceHt}
+      />
+      <Pressable
+        style={[
+          styles.primaryButton,
+          (!selectedSupplierId || isCreatingProduct) && styles.buttonDisabled,
+        ]}
+        disabled={!selectedSupplierId || isCreatingProduct}
+        onPress={() => {
+          void onCreateProduct();
+        }}
+      >
+        <Text style={styles.primaryButtonText}>
+          {isCreatingProduct
+            ? text.supplierManagement.creatingProduct
+            : text.supplierManagement.createProductButton}
+        </Text>
+      </Pressable>
 
       <Text style={styles.uploadFieldTitle}>{text.supplierManagement.productsLabel}</Text>
       <TextInput
@@ -619,6 +829,16 @@ export function SupplierManagementPage({
         destructive
         onCancel={() => closeDeleteProductDialog(false)}
         onConfirm={() => closeDeleteProductDialog(true)}
+      />
+      <ConfirmDialog
+        visible={confirmSupplierDialogVisible}
+        title={text.supplierManagement.deleteSupplierButton}
+        message={text.supplierManagement.deleteSupplierConfirm}
+        cancelLabel={text.supplierManagement.deleteSupplierCancel}
+        confirmLabel={text.supplierManagement.deleteSupplierConfirmButton}
+        destructive
+        onCancel={() => closeDeleteSupplierDialog(false)}
+        onConfirm={() => closeDeleteSupplierDialog(true)}
       />
     </View>
   );
