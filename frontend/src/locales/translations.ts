@@ -272,6 +272,9 @@ export const translations = {
       workflowTitle: 'Parcours rapide',
       workflowHint:
         '1. Ouvrir le PDF. 2. Cliquer sur le lien pour repondre au quiz.',
+      quizLanguageLabel: 'Langue du quiz',
+      quizLanguageFr: 'FR',
+      quizLanguageBn: 'BN',
       workflowStepRead: 'Lire le PDF',
       workflowStepQuiz: 'Repondre au quiz',
       tabs: {
@@ -800,6 +803,9 @@ export const translations = {
       intro: '用于员工服务标准、后厨流程和卫生规范的内部培训中心。',
       workflowTitle: '学习流程',
       workflowHint: '1. 先阅读 PDF。2. 点击链接开始答题。',
+      quizLanguageLabel: '答题语言',
+      quizLanguageFr: '法语',
+      quizLanguageBn: '孟加拉语',
       workflowStepRead: '阅读 PDF',
       workflowStepQuiz: '开始答题',
       tabs: {

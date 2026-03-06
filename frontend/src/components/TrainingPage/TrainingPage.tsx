@@ -82,6 +82,9 @@ export function TrainingPage({
   const [quizLinksByKey, setQuizLinksByKey] = useState<Record<string, string>>(
     {},
   );
+  const [quizLanguage, setQuizLanguage] = useState<TrainingQuizLinkLanguage>(
+    language === 'fr' ? 'fr' : 'bn',
+  );
   const [shouldAutoFullscreen, setShouldAutoFullscreen] = useState(false);
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -222,8 +225,6 @@ export function TrainingPage({
       (sectionOption) => sectionOption.key === activeSection,
     ) ?? visibleSectionOptions[0];
   const selectedSectionKey = selectedSection?.key;
-  const quizLanguage: TrainingQuizLinkLanguage =
-    language === 'fr' ? 'fr' : 'bn';
   const dbQuizBaseUrl = selectedSectionKey
     ? quizLinksByKey[getQuizLinkKey(selectedSectionKey, quizLanguage)] ?? ''
     : '';
@@ -412,6 +413,39 @@ export function TrainingPage({
           <View style={styles.workflowCard}>
             <Text style={styles.workflowTitle}>{text.training.workflowTitle}</Text>
             <Text style={styles.workflowHint}>{text.training.workflowHint}</Text>
+
+            <View style={styles.quizLanguageRow}>
+              <Text style={styles.quizLanguageLabel}>
+                {text.training.quizLanguageLabel}
+              </Text>
+              <View style={styles.quizLanguageChipRow}>
+                {(['fr', 'bn'] as TrainingQuizLinkLanguage[]).map(
+                  (languageValue) => (
+                    <Pressable
+                      key={`quiz-language-${languageValue}`}
+                      style={[
+                        styles.quizLanguageChip,
+                        quizLanguage === languageValue &&
+                          styles.quizLanguageChipActive,
+                      ]}
+                      onPress={() => setQuizLanguage(languageValue)}
+                    >
+                      <Text
+                        style={[
+                          styles.quizLanguageChipText,
+                          quizLanguage === languageValue &&
+                            styles.quizLanguageChipTextActive,
+                        ]}
+                      >
+                        {languageValue === 'fr'
+                          ? text.training.quizLanguageFr
+                          : text.training.quizLanguageBn}
+                      </Text>
+                    </Pressable>
+                  ),
+                )}
+              </View>
+            </View>
 
             <View style={styles.workflowStepRow}>
               <View

@@ -79,6 +79,38 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
   },
+  quizLanguageRow: {
+    gap: 6,
+  },
+  quizLanguageLabel: {
+    color: '#8f5559',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  quizLanguageChipRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  quizLanguageChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#d8a1a5',
+    backgroundColor: '#fff8f8',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  quizLanguageChipActive: {
+    borderColor: '#ab1e24',
+    backgroundColor: '#ab1e24',
+  },
+  quizLanguageChipText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  quizLanguageChipTextActive: {
+    color: '#ffffff',
+  },
   workflowStepRow: {
     flexDirection: 'row',
     alignItems: 'center',
