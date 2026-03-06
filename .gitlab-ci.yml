@@ -7,6 +7,7 @@ variables:
   BACKEND_SERVICE: backend
   DEPLOY_PATH: /opt/ZHAO_Plateforme2026-project
   DEPLOY_COMPOSE_FILE: docker-compose.prod.yml
+  LEGACY_BACKEND_CONTAINER: webapp2026-api
 
 build:
   stage: build
@@ -75,6 +76,20 @@ deploy:
         fi
 
         export IMAGE IMAGE_TAG ADMIN_EMAILS ADMIN_DEFAULT_PASSWORD SEED_DEMO_USERS
+        if docker ps -a --format '{{.Names}}' | grep -qx "$LEGACY_BACKEND_CONTAINER"; then
+          echo "Removing legacy backend container: $LEGACY_BACKEND_CONTAINER"
+          docker rm -f "$LEGACY_BACKEND_CONTAINER"
+        fi
+
+        host_backend_port="${BACKEND_PORT:-3000}"
+        port_holders="$(docker ps --format '{{.Names}} {{.Ports}}' | awk -v port="$host_backend_port" '
+          index($0, "0.0.0.0:" port "->") || index($0, ":::" port "->") { print $1 }
+        ')"
+        if [ -n "$port_holders" ]; then
+          echo "Host port $host_backend_port currently used by:"
+          printf '%s\n' "$port_holders"
+        fi
+
         docker compose -f "$DEPLOY_COMPOSE_FILE" pull "$BACKEND_SERVICE"
         docker compose -f "$DEPLOY_COMPOSE_FILE" run --rm "$BACKEND_SERVICE" npm run prisma:migrate:deploy
         docker compose -f "$DEPLOY_COMPOSE_FILE" run --rm "$BACKEND_SERVICE" npm run prisma:seed
