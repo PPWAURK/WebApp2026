@@ -5,6 +5,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  Patch,
   Param,
   ParseIntPipe,
   Post,
@@ -146,6 +147,10 @@ export class UploadsController {
             'CLEANING_FORM',
           ],
         },
+        customCategory: {
+          type: 'string',
+          maxLength: 80,
+        },
       },
       required: ['file', 'module', 'section'],
     },
@@ -197,6 +202,7 @@ export class UploadsController {
     @Req() req: Request,
     @Body('module') module: string | undefined,
     @Body('section') section: string | undefined,
+    @Body('customCategory') customCategory: string | undefined,
   ) {
     const authenticatedRequest = req as Request & {
       user?: { id?: number };
@@ -205,6 +211,7 @@ export class UploadsController {
     return this.uploadsService.handleSingleUpload(file, req, {
       module,
       section,
+      customCategory,
       uploadedByUserId: authenticatedRequest.user?.id,
     });
   }
@@ -239,6 +246,10 @@ export class UploadsController {
             'MEAT_DATE_FORM',
             'CLEANING_FORM',
           ],
+        },
+        customCategory: {
+          type: 'string',
+          maxLength: 80,
         },
       },
       required: ['files', 'module', 'section'],
@@ -291,6 +302,7 @@ export class UploadsController {
     @Req() req: Request,
     @Body('module') module: string | undefined,
     @Body('section') section: string | undefined,
+    @Body('customCategory') customCategory: string | undefined,
   ) {
     const authenticatedRequest = req as Request & {
       user?: { id?: number };
@@ -299,6 +311,7 @@ export class UploadsController {
     return this.uploadsService.handleMultipleUpload(files, req, {
       module,
       section,
+      customCategory,
       uploadedByUserId: authenticatedRequest.user?.id,
     });
   }
@@ -312,6 +325,7 @@ export class UploadsController {
     @Query('module') module: string | undefined,
     @Query('section') section: string | undefined,
     @Query('mediaType') mediaType: string | undefined,
+    @Query('customCategory') customCategory: string | undefined,
   ) {
     const authenticatedRequest = req as Request & {
       user?: { role?: string; trainingAccess?: string[] };
@@ -319,12 +333,105 @@ export class UploadsController {
 
     return this.uploadsService.listLibrary(
       req,
-      { module, section, mediaType },
+      { module, section, mediaType, customCategory },
       {
         role: authenticatedRequest.user?.role,
         trainingAccess: authenticatedRequest.user?.trainingAccess,
       },
     );
+  }
+
+  @ApiOperation({ summary: 'List module categories (admin only)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('module-categories')
+  listModuleCategories(
+    @Req() req: Request,
+    @Query('module') module: string | undefined,
+  ) {
+    const authenticatedRequest = req as Request & {
+      user?: { role?: string };
+    };
+
+    if (authenticatedRequest.user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.uploadsService.listModuleCategories(module);
+  }
+
+  @ApiOperation({ summary: 'Create module category (admin only)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('module-categories')
+  createModuleCategory(
+    @Req() req: Request,
+    @Body('module') module: string | undefined,
+    @Body('name') name: string | undefined,
+    @Body('section') section: string | undefined,
+  ) {
+    const authenticatedRequest = req as Request & {
+      user?: { role?: string };
+    };
+
+    if (authenticatedRequest.user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.uploadsService.createModuleCategory({
+      module,
+      name,
+      section,
+    });
+  }
+
+  @ApiOperation({
+    summary: 'Delete one module category and clear category tags in library (admin only)',
+  })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete('module-categories/:categoryId')
+  deleteModuleCategory(
+    @Req() req: Request,
+    @Param('categoryId', ParseIntPipe) categoryId: number,
+  ) {
+    const authenticatedRequest = req as Request & {
+      user?: { role?: string };
+    };
+
+    if (authenticatedRequest.user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.uploadsService.deleteModuleCategory(categoryId);
+  }
+
+  @ApiOperation({
+    summary:
+      'Clear one custom category in selected module and section (admin only)',
+  })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('library/custom-category/clear')
+  clearCustomCategory(
+    @Req() req: Request,
+    @Body('module') module: string | undefined,
+    @Body('section') section: string | undefined,
+    @Body('customCategory') customCategory: string | undefined,
+  ) {
+    const authenticatedRequest = req as Request & {
+      user?: { role?: string };
+    };
+
+    if (authenticatedRequest.user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.uploadsService.clearCustomCategory({
+      module,
+      section,
+      customCategory,
+    });
   }
 
   @ApiOperation({ summary: 'Get uploaded file by category and file name' })

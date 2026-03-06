@@ -17,6 +17,7 @@ import {
   isSectionInModule,
   isUploadModule,
   isUploadSection,
+  UPLOAD_SECTION_BY_MODULE,
 } from './upload-taxonomy';
 
 @Injectable()
@@ -57,34 +58,67 @@ export class UploadsService {
   async handleSingleUpload(
     file: Express.Multer.File,
     req: { protocol: string; get: (name: string) => string | undefined },
-    metadataInput: { module?: string; section?: string; uploadedByUserId?: number },
+    metadataInput: {
+      module?: string;
+      section?: string;
+      customCategory?: string;
+      uploadedByUserId?: number;
+    },
   ) {
     if (!file) {
       throw new BadRequestException('A file is required');
     }
 
     const module = this.parseUploadModule(metadataInput.module);
-    const section = this.parseUploadSection(metadataInput.section);
-
-    if (!isSectionInModule(module, section)) {
-      throw new BadRequestException('Section does not belong to selected module');
-    }
-
     const resolvedMimeType = this.resolveMimeType(file.mimetype, file.originalname);
     const category = this.getCategoryFromMimeType(resolvedMimeType);
     const mediaType = this.getMediaType(resolvedMimeType);
     const normalizedOriginalName = this.normalizeOriginalName(file.originalname);
+    const normalizedCustomCategory = this.normalizeCustomCategory(
+      metadataInput.customCategory,
+    );
+
+    let section: UploadSection | undefined;
+
+    if (normalizedCustomCategory) {
+      const mappedCategory = await this.prisma.moduleCategory.findUnique({
+        where: {
+          module_name: {
+            module,
+            name: normalizedCustomCategory,
+          },
+        },
+        select: {
+          section: true,
+        },
+      });
+
+      if (!mappedCategory) {
+        throw new BadRequestException('Category not found in selected module');
+      }
+
+      section = mappedCategory.section;
+    } else if (metadataInput.section) {
+      section = this.parseUploadSection(metadataInput.section);
+    } else {
+      section = UPLOAD_SECTION_BY_MODULE[module][0];
+    }
+
+    if (!section || !isSectionInModule(module, section)) {
+      throw new BadRequestException('Section does not belong to selected module');
+    }
 
     const createdDocument = await this.prisma.document.create({
       data: {
-      fileName: file.filename,
-      category,
-      originalName: normalizedOriginalName,
-      mimeType: resolvedMimeType,
-      size: file.size,
-      mediaType,
-      module,
-      section,
+        fileName: file.filename,
+        category,
+        originalName: normalizedOriginalName,
+        customCategory: normalizedCustomCategory ?? null,
+        mimeType: resolvedMimeType,
+        size: file.size,
+        mediaType,
+        module,
+        section,
         uploadedByUserId: metadataInput.uploadedByUserId ?? null,
       },
     });
@@ -94,6 +128,7 @@ export class UploadsService {
       fileName: createdDocument.fileName,
       category: createdDocument.category,
       originalName: createdDocument.originalName,
+      customCategory: createdDocument.customCategory,
       mimeType: createdDocument.mimeType,
       size: createdDocument.size,
       fileUrl: this.buildFileUrl(req, createdDocument.category, createdDocument.fileName),
@@ -106,7 +141,12 @@ export class UploadsService {
   async handleMultipleUpload(
     files: Express.Multer.File[],
     req: { protocol: string; get: (name: string) => string | undefined },
-    metadataInput: { module?: string; section?: string; uploadedByUserId?: number },
+    metadataInput: {
+      module?: string;
+      section?: string;
+      customCategory?: string;
+      uploadedByUserId?: number;
+    },
   ) {
     if (!files?.length) {
       throw new BadRequestException('At least one file is required');
@@ -119,7 +159,12 @@ export class UploadsService {
 
   async listLibrary(
     req: { protocol: string; get: (name: string) => string | undefined },
-    filters: { module?: string; section?: string; mediaType?: string },
+    filters: {
+      module?: string;
+      section?: string;
+      mediaType?: string;
+      customCategory?: string;
+    },
     authContext: { role?: string; trainingAccess?: string[] | undefined },
   ) {
     const moduleFilter = filters.module
@@ -131,11 +176,15 @@ export class UploadsService {
     const mediaTypeFilter = filters.mediaType
       ? this.parseMediaType(filters.mediaType)
       : undefined;
+    const customCategoryFilter = this.normalizeCustomCategory(
+      filters.customCategory,
+    );
 
     const where: Prisma.DocumentWhereInput = {
       ...(moduleFilter ? { module: moduleFilter } : {}),
       ...(sectionFilter ? { section: sectionFilter } : {}),
       ...(mediaTypeFilter ? { mediaType: mediaTypeFilter } : {}),
+      ...(customCategoryFilter ? { customCategory: customCategoryFilter } : {}),
     };
 
     if (authContext.role !== 'ADMIN') {
@@ -159,12 +208,142 @@ export class UploadsService {
       },
     });
 
-    return entries
-      .map((entry) => ({
-        documentId: entry.id,
-        ...entry,
-        fileUrl: this.buildFileUrl(req, entry.category, entry.fileName),
-      }));
+    return entries.map((entry) => ({
+      documentId: entry.id,
+      ...entry,
+      fileUrl: this.buildFileUrl(req, entry.category, entry.fileName),
+    }));
+  }
+
+  async listModuleCategories(moduleRaw: string | undefined) {
+    const module = moduleRaw ? this.parseUploadModule(moduleRaw) : undefined;
+
+    return this.prisma.moduleCategory.findMany({
+      where: module ? { module } : undefined,
+      orderBy: [
+        {
+          module: 'asc',
+        },
+        {
+          name: 'asc',
+        },
+      ],
+    });
+  }
+
+  async createModuleCategory(input: {
+    module?: string;
+    name?: string;
+    section?: string;
+  }) {
+    const module = this.parseUploadModule(input.module);
+    const section = this.parseUploadSection(input.section);
+
+    if (!isSectionInModule(module, section)) {
+      throw new BadRequestException('Section does not belong to selected module');
+    }
+
+    const name = this.normalizeCustomCategory(input.name);
+    if (!name) {
+      throw new BadRequestException('name is required');
+    }
+
+    const existing = await this.prisma.moduleCategory.findUnique({
+      where: {
+        module_name: {
+          module,
+          name,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existing) {
+      throw new BadRequestException('Category already exists in selected module');
+    }
+
+    return this.prisma.moduleCategory.create({
+      data: {
+        module,
+        name,
+        section,
+      },
+    });
+  }
+
+  async deleteModuleCategory(categoryId: number) {
+    const existing = await this.prisma.moduleCategory.findUnique({
+      where: {
+        id: categoryId,
+      },
+      select: {
+        id: true,
+        module: true,
+        name: true,
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Category not found');
+    }
+
+    const [, clearResult] = await this.prisma.$transaction([
+      this.prisma.moduleCategory.delete({
+        where: {
+          id: categoryId,
+        },
+      }),
+      this.prisma.document.updateMany({
+        where: {
+          module: existing.module,
+          customCategory: existing.name,
+        },
+        data: {
+          customCategory: null,
+        },
+      }),
+    ]);
+
+    return {
+      success: true,
+      clearedCount: clearResult.count,
+    };
+  }
+
+  async clearCustomCategory(input: {
+    module?: string;
+    section?: string;
+    customCategory?: string;
+  }) {
+    const module = this.parseUploadModule(input.module);
+    const section = this.parseUploadSection(input.section);
+
+    if (!isSectionInModule(module, section)) {
+      throw new BadRequestException('Section does not belong to selected module');
+    }
+
+    const customCategory = this.normalizeCustomCategory(input.customCategory);
+    if (!customCategory) {
+      throw new BadRequestException('customCategory is required');
+    }
+
+    const result = await this.prisma.document.updateMany({
+      where: {
+        module,
+        section,
+        customCategory,
+      },
+      data: {
+        customCategory: null,
+      },
+    });
+
+    return {
+      success: true,
+      clearedCount: result.count,
+    };
   }
 
   resolveFilePath(category: string, fileName: string) {
@@ -348,5 +527,22 @@ export class UploadsService {
 
     const extension = extname(originalName || '').replace('.', '').toLowerCase();
     return this.fallbackMimeTypesByExtension[extension] ?? normalizedMimeType;
+  }
+
+  private normalizeCustomCategory(value: string | undefined) {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+
+    if (trimmed.length > 80) {
+      throw new BadRequestException('customCategory must be 80 characters or less');
+    }
+
+    return trimmed;
   }
 }
