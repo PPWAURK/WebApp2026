@@ -204,6 +204,19 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 15,
   },
+  dangerButton: {
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d06a70',
+    borderRadius: 14,
+    paddingVertical: 12,
+    backgroundColor: '#fff0f1',
+  },
+  dangerButtonText: {
+    color: '#8f141b',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 14,
+  },
   secondaryButton: {
     alignItems: 'center',
     borderWidth: 1,

@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -33,6 +38,60 @@ export class SuppliersService {
     return {
       id: created.id,
       name: created.nom,
+    };
+  }
+
+  async deleteSupplier(supplierId: number) {
+    const existing = await this.prisma.fournisseur.findUnique({
+      where: { id: supplierId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Supplier not found');
+    }
+
+    const [linkedProductsCount, linkedOrdersCount] = await Promise.all([
+      this.prisma.produit.count({
+        where: { supplierId },
+      }),
+      this.prisma.purchaseOrder.count({
+        where: { supplierId },
+      }),
+    ]);
+
+    if (linkedProductsCount > 0) {
+      throw new BadRequestException(
+        'Supplier cannot be deleted because it still has products',
+      );
+    }
+
+    if (linkedOrdersCount > 0) {
+      throw new BadRequestException(
+        'Supplier cannot be deleted because it is linked to existing orders',
+      );
+    }
+
+    try {
+      await this.prisma.fournisseur.delete({
+        where: { id: supplierId },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'Supplier cannot be deleted because it is linked to existing orders',
+        );
+      }
+
+      throw error;
+    }
+
+    return {
+      success: true,
+      id: supplierId,
     };
   }
 }

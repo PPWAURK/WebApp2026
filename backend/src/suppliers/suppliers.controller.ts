@@ -1,8 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
+  Param,
+  ParseIntPipe,
   Post,
   Req,
   UseGuards,
@@ -30,7 +33,9 @@ export class SuppliersController {
   listSuppliers(@Req() req: AuthenticatedRequest) {
     const role = req.user?.role;
     if (role !== 'ADMIN' && role !== 'MANAGER') {
-      throw new ForbiddenException('Only ADMIN and MANAGER can access suppliers');
+      throw new ForbiddenException(
+        'Only ADMIN and MANAGER can access suppliers',
+      );
     }
 
     return this.suppliersService.listSuppliers();
@@ -50,5 +55,21 @@ export class SuppliersController {
     }
 
     return this.suppliersService.createSupplier(name ?? '');
+  }
+
+  @ApiOperation({ summary: 'Delete one supplier' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  deleteSupplier(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) supplierId: number,
+  ) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') {
+      throw new ForbiddenException('Only ADMIN can delete suppliers');
+    }
+
+    return this.suppliersService.deleteSupplier(supplierId);
   }
 }

@@ -8,6 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Patch,
+  Post,
   Req,
   UploadedFile,
   UseGuards,
@@ -58,10 +59,39 @@ export class ProductsController {
   listProducts(@Req() req: AuthenticatedRequest) {
     const role = req.user?.role;
     if (role !== 'ADMIN' && role !== 'MANAGER') {
-      throw new ForbiddenException('Only ADMIN and MANAGER can access products');
+      throw new ForbiddenException(
+        'Only ADMIN and MANAGER can access products',
+      );
     }
 
     return this.productsService.listProducts();
+  }
+
+  @ApiOperation({ summary: 'Create one product' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post()
+  createProduct(
+    @Req() req: AuthenticatedRequest,
+    @Body()
+    body: {
+      supplierId: number;
+      reference?: string | null;
+      category: string;
+      nameZh: string;
+      nameFr?: string | null;
+      specification?: string | null;
+      unit?: string | null;
+      priceHt?: number | null;
+      image?: string | null;
+    },
+  ) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') {
+      throw new ForbiddenException('Only ADMIN can create products');
+    }
+
+    return this.productsService.createProduct(body);
   }
 
   @ApiOperation({ summary: 'Update one product details' })
@@ -109,7 +139,10 @@ export class ProductsController {
       }),
       fileFilter: (_req, file, callback) => {
         if (!file.mimetype.startsWith('image/')) {
-          callback(new BadRequestException('Only image files are allowed'), false);
+          callback(
+            new BadRequestException('Only image files are allowed'),
+            false,
+          );
           return;
         }
 
