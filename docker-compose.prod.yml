@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ${IMAGE:?IMAGE is required}:${IMAGE_TAG:-latest}
+    image: ${IMAGE:-registry.gitlab.com/eric-group2600910/zhao_plateforme2026-project/backend}:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file:
       - .env.production
