@@ -5,46 +5,74 @@ stages:
 variables:
   IMAGE: registry.gitlab.com/eric-group2600910/zhao_plateforme2026-project/backend
   BACKEND_SERVICE: backend
+  DEPLOY_PATH: /opt/ZHAO_Plateforme2026-project
+  DEPLOY_COMPOSE_FILE: docker-compose.prod.yml
 
 build:
   stage: build
   image: docker:24
   services:
     - docker:24-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
   script:
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    - docker build -t "$IMAGE:latest" .
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - docker build --pull -t "$IMAGE:$CI_COMMIT_SHA" -t "$IMAGE:latest" .
+    - docker push "$IMAGE:$CI_COMMIT_SHA"
     - docker push "$IMAGE:latest"
 
 deploy:
   stage: deploy
-  image: alpine:latest
+  image: alpine:3.20
   before_script:
     - apk add --no-cache openssh-client
     - mkdir -p ~/.ssh
     - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
     - chmod 600 ~/.ssh/id_ed25519
   script:
+    - 'test -n "$SERVER_IP" || (echo "Missing CI variable: SERVER_IP" && exit 1)'
+    - 'test -n "$SSH_PRIVATE_KEY" || (echo "Missing CI variable: SSH_PRIVATE_KEY" && exit 1)'
     - 'test -n "$ADMIN_EMAILS" || (echo "Missing CI variable: ADMIN_EMAILS" && exit 1)'
     - 'test -n "$ADMIN_DEFAULT_PASSWORD" || (echo "Missing CI variable: ADMIN_DEFAULT_PASSWORD" && exit 1)'
     - |
-      ssh -o StrictHostKeyChecking=no ubuntu@$SERVER_IP "
-        set -e
-        cd /opt/ZHAO_Plateforme2026-project
-        docker compose pull
-        if ! docker compose config --services | grep -qx '${BACKEND_SERVICE}'; then
-          echo 'Compose service not found: ${BACKEND_SERVICE}'
-          echo 'Available services:'
-          docker compose config --services
+      ssh -o StrictHostKeyChecking=no ubuntu@"$SERVER_IP" \
+        "DEPLOY_PATH='$DEPLOY_PATH' \
+         DEPLOY_COMPOSE_FILE='$DEPLOY_COMPOSE_FILE' \
+         BACKEND_SERVICE='$BACKEND_SERVICE' \
+         IMAGE='$IMAGE' \
+         IMAGE_TAG='$CI_COMMIT_SHA' \
+         ADMIN_EMAILS='$ADMIN_EMAILS' \
+         ADMIN_DEFAULT_PASSWORD='$ADMIN_DEFAULT_PASSWORD' \
+         SEED_DEMO_USERS='${SEED_DEMO_USERS:-false}' \
+         sh -s" <<'EOSSH'
+        set -euo pipefail
+        cd "$DEPLOY_PATH"
+
+        if [ ! -f "$DEPLOY_COMPOSE_FILE" ]; then
+          echo "Compose file not found: $DEPLOY_COMPOSE_FILE"
+          pwd
+          ls -la
           exit 1
         fi
-        docker compose run --rm ${BACKEND_SERVICE} npm run prisma:migrate:deploy
-        docker compose run --rm \
-          -e ADMIN_EMAILS='${ADMIN_EMAILS}' \
-          -e ADMIN_DEFAULT_PASSWORD='${ADMIN_DEFAULT_PASSWORD}' \
-          -e SEED_DEMO_USERS='${SEED_DEMO_USERS:-false}' \
-          ${BACKEND_SERVICE} npm run prisma:seed
-        docker compose up -d
-      "
+
+        if [ ! -f ".env.production" ]; then
+          echo "Missing deployment env file: .env.production"
+          exit 1
+        fi
+
+        if ! docker compose -f "$DEPLOY_COMPOSE_FILE" config --services | grep -qx "$BACKEND_SERVICE"; then
+          echo "Compose service not found: $BACKEND_SERVICE"
+          echo "Available services:"
+          docker compose -f "$DEPLOY_COMPOSE_FILE" config --services
+          exit 1
+        fi
+
+        export IMAGE IMAGE_TAG ADMIN_EMAILS ADMIN_DEFAULT_PASSWORD SEED_DEMO_USERS
+        docker compose -f "$DEPLOY_COMPOSE_FILE" pull "$BACKEND_SERVICE"
+        docker compose -f "$DEPLOY_COMPOSE_FILE" run --rm "$BACKEND_SERVICE" npm run prisma:migrate:deploy
+        docker compose -f "$DEPLOY_COMPOSE_FILE" run --rm "$BACKEND_SERVICE" npm run prisma:seed
+        docker compose -f "$DEPLOY_COMPOSE_FILE" up -d "$BACKEND_SERVICE"
+      EOSSH
   only:
     - main
