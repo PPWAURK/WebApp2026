@@ -160,6 +160,19 @@ model Document {
   @@index([module, section, customCategory, uploadedAt])
 }
 
+model ModuleCategory {
+  id        Int          @id @default(autoincrement())
+  module    UploadModule
+  name      String       @db.VarChar(80)
+  section   UploadSection
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  @@unique([module, name])
+  @@index([module, section])
+  @@map("module_categories")
+}
+
 model NewsPost {
   id                   Int             @id @default(autoincrement())
   title                String          @db.VarChar(191)

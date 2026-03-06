@@ -13,6 +13,18 @@ export type LibrarySection =
   | 'MEAT_DATE_FORM'
   | 'CLEANING_FORM';
 
+const LIBRARY_SECTION_KEYS: LibrarySection[] = [
+  'RECIPE_TRAINING',
+  'RECIPE',
+  'MISE_EN_PLACE_SOP',
+  'RED_RULES',
+  'BLACK_RULES',
+  'SALLE_TOOLS',
+  'CUISINE_TOOLS',
+  'MEAT_DATE_FORM',
+  'CLEANING_FORM',
+];
+
 export type TaxonomyOption = {
   key: LibraryModule | LibrarySection;
   label: string;
@@ -49,4 +61,8 @@ export function getSectionsByModule(
       { key: 'CLEANING_FORM', label: text.taxonomy.sections.CLEANING_FORM },
     ],
   };
+}
+
+export function isLibrarySection(value: string): value is LibrarySection {
+  return LIBRARY_SECTION_KEYS.includes(value as LibrarySection);
 }

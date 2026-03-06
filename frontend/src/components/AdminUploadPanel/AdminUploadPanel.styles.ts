@@ -52,10 +52,12 @@ export const styles = StyleSheet.create({
   categoryInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
   },
   categoryInput: {
-    flex: 1,
+    flexGrow: 1,
+    minWidth: 180,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#dfb0b2',
@@ -74,6 +76,15 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#d39a9d',
     backgroundColor: '#fffafa',
+  },
+  categoryDeleteButton: {
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d88084',
+    backgroundColor: '#fff1f2',
   },
   uploadResultBox: {
     borderRadius: 12,

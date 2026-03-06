@@ -5,6 +5,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  Patch,
   Param,
   ParseIntPipe,
   Post,
@@ -340,6 +341,68 @@ export class UploadsController {
     );
   }
 
+  @ApiOperation({ summary: 'List module categories (admin only)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('module-categories')
+  listModuleCategories(@Req() req: Request, @Query('module') module: string | undefined) {
+    const authenticatedRequest = req as Request & {
+      user?: { role?: string };
+    };
+
+    if (authenticatedRequest.user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.uploadsService.listModuleCategories(module);
+  }
+
+  @ApiOperation({ summary: 'Create module category (admin only)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('module-categories')
+  createModuleCategory(
+    @Req() req: Request,
+    @Body('module') module: string | undefined,
+    @Body('name') name: string | undefined,
+    @Body('section') section: string | undefined,
+  ) {
+    const authenticatedRequest = req as Request & {
+      user?: { role?: string };
+    };
+
+    if (authenticatedRequest.user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.uploadsService.createModuleCategory({
+      module,
+      name,
+      section,
+    });
+  }
+
+  @ApiOperation({
+    summary: 'Delete one module category and clear category tags in library (admin only)',
+  })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete('module-categories/:categoryId')
+  deleteModuleCategory(
+    @Req() req: Request,
+    @Param('categoryId', ParseIntPipe) categoryId: number,
+  ) {
+    const authenticatedRequest = req as Request & {
+      user?: { role?: string };
+    };
+
+    if (authenticatedRequest.user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.uploadsService.deleteModuleCategory(categoryId);
+  }
+
   @ApiOperation({ summary: 'Get uploaded file by category and file name' })
   @Get(':category/:fileName')
   getUploadedFile(
@@ -368,5 +431,33 @@ export class UploadsController {
     }
 
     return this.uploadsService.deleteLibraryEntry(documentId);
+  }
+
+  @ApiOperation({
+    summary:
+      'Clear one custom category in selected module and section (admin only)',
+  })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('library/custom-category/clear')
+  clearCustomCategory(
+    @Req() req: Request,
+    @Body('module') module: string | undefined,
+    @Body('section') section: string | undefined,
+    @Body('customCategory') customCategory: string | undefined,
+  ) {
+    const authenticatedRequest = req as Request & {
+      user?: { role?: string };
+    };
+
+    if (authenticatedRequest.user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.uploadsService.clearCustomCategory({
+      module,
+      section,
+      customCategory,
+    });
   }
 }

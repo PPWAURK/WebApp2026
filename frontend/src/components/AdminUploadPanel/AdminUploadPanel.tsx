@@ -4,14 +4,19 @@ import { Linking, Pressable, Text, TextInput, View } from 'react-native';
 import {
   getModuleOptions,
   getSectionsByModule,
+  isLibrarySection,
   type LibraryModule,
   type LibrarySection,
 } from '../../constants/documentTaxonomy';
 import type { AppText } from '../../locales/translations';
 import {
+  createModuleCategory,
   deleteLibraryFile,
+  deleteModuleCategory,
   fetchLibraryFiles,
+  fetchModuleCategories,
   type LibraryFileItem,
+  type ModuleCategoryItem,
   uploadSingleFile,
   type UploadedFileResponse,
 } from '../../services/uploadsApi';
@@ -34,16 +39,17 @@ const PICKER_TYPES = [
   'text/plain',
 ];
 
-function getScopeKey(module: LibraryModule, section: LibrarySection) {
-  return `${module}:${section}`;
+function sortCategories(items: ModuleCategoryItem[]) {
+  return [...items].sort((left, right) => left.name.localeCompare(right.name));
 }
 
 export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
-  const moduleOptions = getModuleOptions(text);
-  const sectionsByModule = getSectionsByModule(text);
+  const moduleOptions = useMemo(() => getModuleOptions(text), [text]);
+  const sectionsByModule = useMemo(() => getSectionsByModule(text), [text]);
   const [selectedModule, setSelectedModule] = useState<LibraryModule>('TRAINING');
-  const [selectedSection, setSelectedSection] =
-    useState<LibrarySection>('RECIPE_TRAINING');
+  const [selectedCategorySection, setSelectedCategorySection] = useState<LibrarySection>(
+    'RECIPE_TRAINING',
+  );
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpload, setLastUpload] = useState<UploadedFileResponse | null>(null);
@@ -52,17 +58,88 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
   const [libraryError, setLibraryError] = useState<string | null>(null);
   const [isDeletingId, setIsDeletingId] = useState<number | null>(null);
   const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
+  const [deleteCategoryDialogVisible, setDeleteCategoryDialogVisible] =
+    useState(false);
   const [categoryInput, setCategoryInput] = useState('');
-  const [selectedCustomCategory, setSelectedCustomCategory] = useState<string | null>(
-    null,
-  );
-  const [customCategoriesByScope, setCustomCategoriesByScope] = useState<
-    Record<string, string[]>
-  >({});
+  const [moduleCategories, setModuleCategories] = useState<ModuleCategoryItem[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [categoryLoadError, setCategoryLoadError] = useState<string | null>(null);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
+
   const confirmDeleteResolverRef = useRef<((value: boolean) => void) | null>(null);
 
   const availableSections = sectionsByModule[selectedModule];
-  const scopeKey = getScopeKey(selectedModule, selectedSection);
+
+  const selectedCategory = useMemo(
+    () => moduleCategories.find((item) => item.id === selectedCategoryId) ?? null,
+    [moduleCategories, selectedCategoryId],
+  );
+
+  function getCategoryLabel(item: ModuleCategoryItem) {
+    if (isLibrarySection(item.name)) {
+      const translated = availableSections.find((entry) => entry.key === item.name);
+      if (translated) {
+        return translated.label;
+      }
+    }
+
+    return item.name;
+  }
+
+  useEffect(() => {
+    const defaultSection = sectionsByModule[selectedModule][0]?.key as
+      | LibrarySection
+      | undefined;
+    if (defaultSection) {
+      setSelectedCategorySection(defaultSection);
+    }
+    setSelectedCategoryId(null);
+    setCategoryInput('');
+    setError(null);
+  }, [sectionsByModule, selectedModule]);
+
+  useEffect(() => {
+    let isActive = true;
+    setIsLoadingCategories(true);
+    setCategoryLoadError(null);
+
+    void fetchModuleCategories(accessToken, selectedModule)
+      .then((items) => {
+        if (!isActive) {
+          return;
+        }
+
+        setModuleCategories(sortCategories(items));
+      })
+      .catch(() => {
+        if (!isActive) {
+          return;
+        }
+
+        setModuleCategories([]);
+        setCategoryLoadError(text.upload.loadCategoriesError);
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingCategories(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accessToken, selectedModule, text.upload.loadCategoriesError]);
+
+  useEffect(() => {
+    if (
+      selectedCategoryId !== null &&
+      !moduleCategories.some((item) => item.id === selectedCategoryId)
+    ) {
+      setSelectedCategoryId(null);
+    }
+  }, [moduleCategories, selectedCategoryId]);
 
   useEffect(() => {
     let isActive = true;
@@ -71,30 +148,11 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
 
     void fetchLibraryFiles(accessToken, {
       module: selectedModule,
-      section: selectedSection,
-      customCategory: selectedCustomCategory ?? undefined,
+      customCategory: selectedCategory?.name ?? undefined,
     })
       .then((items) => {
         if (isActive) {
           setLibraryItems(items);
-
-          const categoriesFromServer = Array.from(
-            new Set(
-              items
-                .map((item) => item.customCategory?.trim() ?? '')
-                .filter((value) => value.length > 0),
-            ),
-          ).sort((left, right) => left.localeCompare(right));
-
-          setCustomCategoriesByScope((current) => {
-            const existing = current[scopeKey] ?? [];
-            return {
-              ...current,
-              [scopeKey]: Array.from(
-                new Set([...existing, ...categoriesFromServer]),
-              ).sort((left, right) => left.localeCompare(right)),
-            };
-          });
         }
       })
       .catch(() => {
@@ -114,44 +172,16 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
     };
   }, [
     accessToken,
-    scopeKey,
-    selectedCustomCategory,
+    selectedCategory?.name,
     selectedModule,
-    selectedSection,
     text.upload.loadExistingError,
   ]);
 
-  const customCategoryOptions = useMemo(
-    () => customCategoriesByScope[scopeKey] ?? [],
-    [customCategoriesByScope, scopeKey],
-  );
-
-  useEffect(() => {
-    if (
-      selectedCustomCategory &&
-      !customCategoryOptions.includes(selectedCustomCategory)
-    ) {
-      setSelectedCustomCategory(null);
-    }
-  }, [customCategoryOptions, selectedCustomCategory]);
-
   function onSelectModule(nextModule: LibraryModule) {
     setSelectedModule(nextModule);
-    const firstSection = sectionsByModule[nextModule][0];
-    if (firstSection) {
-      setSelectedSection(firstSection.key as LibrarySection);
-    }
-    setSelectedCustomCategory(null);
-    setCategoryInput('');
   }
 
-  function onSelectSection(nextSection: LibrarySection) {
-    setSelectedSection(nextSection);
-    setSelectedCustomCategory(null);
-    setCategoryInput('');
-  }
-
-  function addCustomCategory() {
+  async function addCustomCategory() {
     const normalized = categoryInput.trim();
     if (!normalized) {
       return;
@@ -162,29 +192,43 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
       return;
     }
 
-    if (customCategoryOptions.includes(normalized)) {
+    const alreadyExists = moduleCategories.some(
+      (item) => item.name.toLowerCase() === normalized.toLowerCase(),
+    );
+
+    if (alreadyExists) {
       setError(text.upload.categoryExists);
       return;
     }
 
-    setCustomCategoriesByScope((current) => {
-      const existing = current[scopeKey] ?? [];
-      return {
-        ...current,
-        [scopeKey]: [...existing, normalized].sort((left, right) =>
-          left.localeCompare(right),
-        ),
-      };
-    });
-
-    setSelectedCustomCategory(normalized);
-    setCategoryInput('');
     setError(null);
+    setIsCreatingCategory(true);
+
+    try {
+      const created = await createModuleCategory(accessToken, {
+        module: selectedModule,
+        name: normalized,
+        section: selectedCategorySection,
+      });
+
+      setModuleCategories((current) => sortCategories([...current, created]));
+      setSelectedCategoryId(created.id);
+      setCategoryInput('');
+    } catch {
+      setError(text.upload.createCategoryError);
+    } finally {
+      setIsCreatingCategory(false);
+    }
   }
 
   async function handlePickAndUpload() {
     setError(null);
     setLastUpload(null);
+
+    if (!selectedCategory) {
+      setError(text.upload.selectCategoryRequired);
+      return;
+    }
 
     const result = await DocumentPicker.getDocumentAsync({
       multiple: false,
@@ -213,8 +257,8 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
         },
         {
           module: selectedModule,
-          section: selectedSection,
-          customCategory: selectedCustomCategory,
+          section: selectedCategory.section,
+          customCategory: selectedCategory.name,
         },
       );
 
@@ -227,22 +271,6 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
         },
         ...current,
       ]);
-
-      if (uploadResponse.customCategory) {
-        setCustomCategoriesByScope((current) => {
-          const existing = current[scopeKey] ?? [];
-          if (existing.includes(uploadResponse.customCategory ?? '')) {
-            return current;
-          }
-
-          return {
-            ...current,
-            [scopeKey]: [...existing, uploadResponse.customCategory ?? ''].sort(
-              (left, right) => left.localeCompare(right),
-            ),
-          };
-        });
-      }
     } catch {
       setError(text.upload.error);
     } finally {
@@ -287,6 +315,30 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
     }
   }
 
+  async function handleDeleteCustomCategory() {
+    if (!selectedCategory) {
+      return;
+    }
+
+    setDeleteCategoryDialogVisible(false);
+    setIsDeletingCategory(true);
+    setLibraryError(null);
+    setError(null);
+
+    try {
+      await deleteModuleCategory(accessToken, selectedCategory.id);
+
+      setModuleCategories((current) =>
+        current.filter((item) => item.id !== selectedCategory.id),
+      );
+      setSelectedCategoryId(null);
+    } catch {
+      setLibraryError(text.upload.deleteCategoryError);
+    } finally {
+      setIsDeletingCategory(false);
+    }
+  }
+
   return (
     <View style={styles.uploadCard}>
       <Text style={styles.uploadTitle}>{text.upload.title}</Text>
@@ -317,62 +369,71 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
 
       <Text style={styles.uploadFieldTitle}>{text.upload.sectionLabel}</Text>
       <View style={styles.uploadChipWrap}>
-        {availableSections.map((sectionOption) => (
-          <Pressable
-            key={sectionOption.key}
-            style={[
-              styles.uploadChip,
-              selectedSection === sectionOption.key && styles.uploadChipActive,
-            ]}
-            onPress={() => onSelectSection(sectionOption.key as LibrarySection)}
-          >
-            <Text
-              style={[
-                styles.uploadChipText,
-                selectedSection === sectionOption.key && styles.uploadChipTextActive,
-              ]}
-            >
-              {sectionOption.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <Text style={styles.uploadFieldTitle}>{text.upload.customCategoryLabel}</Text>
-      <View style={styles.uploadChipWrap}>
         <Pressable
           style={[
             styles.uploadChip,
-            selectedCustomCategory === null && styles.uploadChipActive,
+            selectedCategoryId === null && styles.uploadChipActive,
           ]}
-          onPress={() => setSelectedCustomCategory(null)}
+          onPress={() => setSelectedCategoryId(null)}
         >
           <Text
             style={[
               styles.uploadChipText,
-              selectedCustomCategory === null && styles.uploadChipTextActive,
+              selectedCategoryId === null && styles.uploadChipTextActive,
             ]}
           >
             {text.upload.allCategories}
           </Text>
         </Pressable>
 
-        {customCategoryOptions.map((categoryName) => (
+        {moduleCategories.map((categoryItem) => (
           <Pressable
-            key={`category-${scopeKey}-${categoryName}`}
+            key={`category-${selectedModule}-${categoryItem.id}`}
             style={[
               styles.uploadChip,
-              selectedCustomCategory === categoryName && styles.uploadChipActive,
+              selectedCategoryId === categoryItem.id && styles.uploadChipActive,
             ]}
-            onPress={() => setSelectedCustomCategory(categoryName)}
+            onPress={() => setSelectedCategoryId(categoryItem.id)}
           >
             <Text
               style={[
                 styles.uploadChipText,
-                selectedCustomCategory === categoryName && styles.uploadChipTextActive,
+                selectedCategoryId === categoryItem.id && styles.uploadChipTextActive,
               ]}
             >
-              {categoryName}
+              {getCategoryLabel(categoryItem)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {isLoadingCategories ? (
+        <Text style={styles.uploadResultMeta}>{text.upload.loadingCategories}</Text>
+      ) : null}
+      {categoryLoadError ? <Text style={styles.error}>{categoryLoadError}</Text> : null}
+      {!isLoadingCategories && !categoryLoadError && moduleCategories.length === 0 ? (
+        <Text style={styles.uploadResultMeta}>{text.upload.emptyCategories}</Text>
+      ) : null}
+
+      <Text style={styles.uploadFieldTitle}>{text.upload.categorySectionLabel}</Text>
+      <View style={styles.uploadChipWrap}>
+        {availableSections.map((sectionOption) => (
+          <Pressable
+            key={`category-section-${sectionOption.key}`}
+            style={[
+              styles.uploadChip,
+              selectedCategorySection === sectionOption.key && styles.uploadChipActive,
+            ]}
+            onPress={() => setSelectedCategorySection(sectionOption.key as LibrarySection)}
+          >
+            <Text
+              style={[
+                styles.uploadChipText,
+                selectedCategorySection === sectionOption.key &&
+                  styles.uploadChipTextActive,
+              ]}
+            >
+              {sectionOption.label}
             </Text>
           </Pressable>
         ))}
@@ -389,8 +450,32 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
           autoCapitalize="none"
           maxLength={80}
         />
-        <Pressable style={styles.categoryAddButton} onPress={addCustomCategory}>
-          <Text style={styles.secondaryButtonText}>{text.upload.addCategoryButton}</Text>
+        <Pressable
+          style={[styles.categoryAddButton, isCreatingCategory && styles.buttonDisabled]}
+          disabled={isCreatingCategory}
+          onPress={() => {
+            void addCustomCategory();
+          }}
+        >
+          <Text style={styles.secondaryButtonText}>
+            {isCreatingCategory
+              ? text.upload.creatingCategory
+              : text.upload.addCategoryButton}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.categoryDeleteButton,
+            (!selectedCategory || isDeletingCategory) && styles.buttonDisabled,
+          ]}
+          disabled={!selectedCategory || isDeletingCategory}
+          onPress={() => setDeleteCategoryDialogVisible(true)}
+        >
+          <Text style={styles.deleteButtonText}>
+            {isDeletingCategory
+              ? text.upload.deletingCategory
+              : text.upload.deleteCategoryButton}
+          </Text>
         </Pressable>
       </View>
 
@@ -497,6 +582,23 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
         destructive
         onCancel={() => closeConfirmDelete(false)}
         onConfirm={() => closeConfirmDelete(true)}
+      />
+
+      <ConfirmDialog
+        visible={deleteCategoryDialogVisible}
+        title={text.upload.deleteCategoryConfirmTitle}
+        message={
+          selectedCategory
+            ? `${text.upload.deleteCategoryConfirmMessage} ${getCategoryLabel(selectedCategory)}`
+            : text.upload.deleteCategoryConfirmMessage
+        }
+        cancelLabel={text.adminTraining.confirmProbationCancel}
+        confirmLabel={text.upload.deleteCategoryConfirmAction}
+        destructive
+        onCancel={() => setDeleteCategoryDialogVisible(false)}
+        onConfirm={() => {
+          void handleDeleteCustomCategory();
+        }}
       />
     </View>
   );

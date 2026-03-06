@@ -21,6 +21,15 @@ export type LibraryFileItem = UploadedFileResponse & {
   uploadedByUserId: number | null;
 };
 
+export type ModuleCategoryItem = {
+  id: number;
+  module: LibraryModule;
+  name: string;
+  section: LibrarySection;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type PickedFile = {
   uri: string;
   name: string;
@@ -199,4 +208,136 @@ export async function deleteLibraryFile(
       : data.message ?? 'Failed to delete media file';
     throw new Error(message);
   }
+}
+
+export async function clearLibraryCustomCategory(
+  token: string,
+  payload: {
+    module: LibraryModule;
+    section: LibrarySection;
+    customCategory: string;
+  },
+): Promise<{ success: boolean; clearedCount: number }> {
+  const response = await fetch(`${API_URL}/uploads/library/custom-category/clear`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      module: payload.module,
+      section: payload.section,
+      customCategory: payload.customCategory.trim(),
+    }),
+  });
+
+  const data = (await response.json()) as
+    | { success: boolean; clearedCount: number }
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to clear custom category';
+    throw new Error(message);
+  }
+
+  return data as { success: boolean; clearedCount: number };
+}
+
+export async function fetchModuleCategories(
+  token: string,
+  module: LibraryModule,
+): Promise<ModuleCategoryItem[]> {
+  const params = new URLSearchParams({ module });
+  const response = await fetch(`${API_URL}/uploads/module-categories?${params.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = (await response.json()) as
+    | ModuleCategoryItem[]
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to load categories';
+    throw new Error(message);
+  }
+
+  return data as ModuleCategoryItem[];
+}
+
+export async function createModuleCategory(
+  token: string,
+  payload: {
+    module: LibraryModule;
+    name: string;
+    section: LibrarySection;
+  },
+): Promise<ModuleCategoryItem> {
+  const response = await fetch(`${API_URL}/uploads/module-categories`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      module: payload.module,
+      name: payload.name.trim(),
+      section: payload.section,
+    }),
+  });
+
+  const data = (await response.json()) as
+    | ModuleCategoryItem
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to create category';
+    throw new Error(message);
+  }
+
+  return data as ModuleCategoryItem;
+}
+
+export async function deleteModuleCategory(
+  token: string,
+  categoryId: number,
+): Promise<{ success: boolean; clearedCount: number }> {
+  const response = await fetch(`${API_URL}/uploads/module-categories/${categoryId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = (await response.json()) as
+    | { success: boolean; clearedCount: number }
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to delete category';
+    throw new Error(message);
+  }
+
+  return data as { success: boolean; clearedCount: number };
 }
