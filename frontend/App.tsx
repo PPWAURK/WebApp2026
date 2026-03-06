@@ -32,9 +32,10 @@ import { ResetPasswordForm } from './src/components/ResetPasswordForm';
 import { RestaurantFormsPage } from './src/components/RestaurantFormsPage';
 import { SessionCard } from './src/components/SessionCard';
 import { SupplierManagementPage } from './src/components/SupplierManagementPage';
-import { TrainingPage } from './src/components/TrainingPage';
+import { TrainingPage, TrainingPageLegacy } from './src/components/TrainingPage';
 import { useAuth } from './src/hooks/useAuth';
 import { useLanguage } from './src/hooks/useLanguage';
+import { TRAINING_FEATURE_FLAGS } from './src/constants/featureFlags';
 import {
   buildOrderBonUrl,
   createOrder,
@@ -1190,8 +1191,12 @@ export default function App() {
       auth.session.user.role === 'MANAGER';
 
     if (page === 'training') {
+      const TrainingPageComponent = TRAINING_FEATURE_FLAGS.ENABLE_TRAINING_V2
+        ? TrainingPage
+        : TrainingPageLegacy;
+
       return (
-        <TrainingPage
+        <TrainingPageComponent
           text={language.text}
           language={language.language}
           accessToken={auth.session.accessToken}
@@ -1224,7 +1229,13 @@ export default function App() {
     }
 
     if (page === 'restaurantForms') {
-      return <RestaurantFormsPage text={language.text} />;
+      return (
+        <RestaurantFormsPage
+          text={language.text}
+          accessToken={auth.session.accessToken}
+          currentUser={auth.session.user}
+        />
+      );
     }
 
     if (page === 'orders') {

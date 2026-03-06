@@ -145,6 +145,7 @@ model Document {
   fileName         String          @unique
   category         UploadCategory
   originalName     String
+  customCategory   String?         @map("custom_category") @db.VarChar(80)
   mimeType         String
   size             Int
   mediaType        UploadMediaType
@@ -156,6 +157,7 @@ model Document {
   attachedToNewsPosts NewsPost[]   @relation("NewsPostAttachment")
 
   @@index([module, section, mediaType, uploadedAt])
+  @@index([module, section, customCategory, uploadedAt])
 }
 
 model NewsPost {

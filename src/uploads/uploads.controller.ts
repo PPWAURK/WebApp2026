@@ -146,6 +146,10 @@ export class UploadsController {
             'CLEANING_FORM',
           ],
         },
+        customCategory: {
+          type: 'string',
+          maxLength: 80,
+        },
       },
       required: ['file', 'module', 'section'],
     },
@@ -197,6 +201,7 @@ export class UploadsController {
     @Req() req: Request,
     @Body('module') module: string | undefined,
     @Body('section') section: string | undefined,
+    @Body('customCategory') customCategory: string | undefined,
   ) {
     const authenticatedRequest = req as Request & {
       user?: { id?: number };
@@ -205,6 +210,7 @@ export class UploadsController {
     return this.uploadsService.handleSingleUpload(file, req, {
       module,
       section,
+      customCategory,
       uploadedByUserId: authenticatedRequest.user?.id,
     });
   }
@@ -239,6 +245,10 @@ export class UploadsController {
             'MEAT_DATE_FORM',
             'CLEANING_FORM',
           ],
+        },
+        customCategory: {
+          type: 'string',
+          maxLength: 80,
         },
       },
       required: ['files', 'module', 'section'],
@@ -291,6 +301,7 @@ export class UploadsController {
     @Req() req: Request,
     @Body('module') module: string | undefined,
     @Body('section') section: string | undefined,
+    @Body('customCategory') customCategory: string | undefined,
   ) {
     const authenticatedRequest = req as Request & {
       user?: { id?: number };
@@ -299,6 +310,7 @@ export class UploadsController {
     return this.uploadsService.handleMultipleUpload(files, req, {
       module,
       section,
+      customCategory,
       uploadedByUserId: authenticatedRequest.user?.id,
     });
   }
@@ -312,6 +324,7 @@ export class UploadsController {
     @Query('module') module: string | undefined,
     @Query('section') section: string | undefined,
     @Query('mediaType') mediaType: string | undefined,
+    @Query('customCategory') customCategory: string | undefined,
   ) {
     const authenticatedRequest = req as Request & {
       user?: { role?: string; trainingAccess?: string[] };
@@ -319,7 +332,7 @@ export class UploadsController {
 
     return this.uploadsService.listLibrary(
       req,
-      { module, section, mediaType },
+      { module, section, mediaType, customCategory },
       {
         role: authenticatedRequest.user?.role,
         trainingAccess: authenticatedRequest.user?.trainingAccess,

@@ -18,6 +18,7 @@ export const styles = StyleSheet.create({
     color: '#8d5458',
     fontFamily: 'Manrope_400Regular',
     fontSize: 13,
+    lineHeight: 18,
   },
   uploadFieldTitle: {
     color: '#7f1b21',
@@ -66,7 +67,12 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 12,
   },
-  moduleCard: {
+  matrixTitle: {
+    color: '#7a2328',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  scenarioCard: {
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#efd8d9',
@@ -74,23 +80,22 @@ export const styles = StyleSheet.create({
     padding: 10,
     gap: 8,
   },
-  moduleHeader: {
+  scenarioHeaderRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     gap: 8,
   },
-  moduleTitle: {
+  scenarioTitle: {
     color: '#7a2328',
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
   },
-  moduleMeta: {
-    color: '#996165',
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 12,
+  scenarioActionsRow: {
+    flexDirection: 'row',
+    gap: 6,
   },
-  moduleToggleButton: {
+  scenarioActionButton: {
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#d39a9d',
@@ -98,10 +103,40 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
-  moduleToggleButtonText: {
+  scenarioActionButtonText: {
     color: '#7f1b21',
     fontFamily: 'Manrope_700Bold',
     fontSize: 11,
+  },
+  moduleMeta: {
+    color: '#996165',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+  },
+  uploadChipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  uploadChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#dfb0b2',
+    backgroundColor: '#fffafa',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  uploadChipActive: {
+    borderColor: '#b75d62',
+    backgroundColor: '#f8e2e4',
+  },
+  uploadChipText: {
+    color: '#8d5458',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  uploadChipTextActive: {
+    color: '#7a181d',
   },
   quizLinkSectionCard: {
     borderRadius: 10,
@@ -154,86 +189,6 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 12,
   },
-  kpiRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  kpiCard: {
-    minWidth: 110,
-    flexGrow: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#efd8d9',
-    backgroundColor: '#fff9f9',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 4,
-  },
-  kpiValue: {
-    color: '#7a181d',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 20,
-  },
-  kpiLabel: {
-    color: '#996165',
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 12,
-  },
-  uploadChipWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  uploadChip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#dfb0b2',
-    backgroundColor: '#fffafa',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  uploadChipActive: {
-    borderColor: '#b75d62',
-    backgroundColor: '#f8e2e4',
-  },
-  uploadChipText: {
-    color: '#8d5458',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 11,
-  },
-  uploadChipTextActive: {
-    color: '#7a181d',
-  },
-  trainingTabActive: {
-    backgroundColor: '#f8e2e4',
-    borderColor: '#b75d62',
-  },
-  trainingTabTextActive: {
-    color: '#7a181d',
-  },
-  docBlock: {
-    marginTop: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#edd3d5',
-    backgroundColor: '#fffdfd',
-    padding: 10,
-    gap: 8,
-  },
-  docEmpty: {
-    color: '#a06a6f',
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 13,
-  },
-  docItem: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#efd8d9',
-    backgroundColor: '#fff9f9',
-    padding: 10,
-    gap: 6,
-  },
   docItemTitle: {
     color: '#7a2328',
     fontFamily: 'Manrope_700Bold',
@@ -243,65 +198,6 @@ export const styles = StyleSheet.create({
     color: '#996165',
     fontFamily: 'Manrope_400Regular',
     fontSize: 12,
-  },
-  input: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#dfb0b2',
-    backgroundColor: '#ffffff',
-    color: '#7a181d',
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 13,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-  },
-  restaurantSelectWrap: {
-    gap: 8,
-  },
-  restaurantSelectTrigger: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#dfb0b2',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  restaurantSelectTriggerText: {
-    color: '#7f1b21',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 13,
-  },
-  restaurantSelectChevron: {
-    color: '#ab1e24',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 12,
-  },
-  restaurantSelectList: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#dfb0b2',
-    backgroundColor: '#ffffff',
-    overflow: 'hidden',
-  },
-  restaurantSelectItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#efd8d9',
-  },
-  restaurantSelectItemActive: {
-    backgroundColor: '#f8e2e4',
-  },
-  restaurantSelectItemText: {
-    color: '#7f1b21',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 13,
-  },
-  restaurantSelectItemTextActive: {
-    color: '#7a181d',
   },
   error: {
     color: '#b42318',
@@ -320,28 +216,6 @@ export const styles = StyleSheet.create({
     opacity: 0.65,
   },
   primaryButtonText: {
-    color: '#7f1b21',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 14,
-  },
-  pill: {
-    backgroundColor: '#fff1f2',
-    color: '#8d5458',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 12,
-  },
-  secondaryButton: {
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#d39a9d',
-    borderRadius: 14,
-    paddingVertical: 12,
-    backgroundColor: '#fffafa',
-  },
-  secondaryButtonText: {
     color: '#7f1b21',
     fontFamily: 'Manrope_700Bold',
     fontSize: 14,

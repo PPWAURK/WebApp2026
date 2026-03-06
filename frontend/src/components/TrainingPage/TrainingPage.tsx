@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { createElement, useEffect, useMemo, useRef, useState } from 'react';
 import { ResizeMode, Video, VideoFullscreenUpdate } from 'expo-av';
 import {
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -15,10 +17,15 @@ import {
 } from '../../constants/config';
 import {
   getSectionsByModule,
-  type LibraryModule,
   type LibrarySection,
 } from '../../constants/documentTaxonomy';
+import { getTrainingScenarios } from '../../constants/trainingScenario';
 import type { AppText } from '../../locales/translations';
+import {
+  loadTrainingCompletionMap,
+  setTrainingItemCompletion,
+  type TrainingCompletionMap,
+} from '../../services/trainingProgressStorage';
 import { fetchTrainingQuizLinks } from '../../services/usersApi';
 import {
   fetchLibraryFiles,
@@ -35,26 +42,16 @@ type TrainingPageProps = {
   language: Language;
 };
 
-type TrainingTab = 'dishTraining' | 'companyPolicy' | 'managementTools';
-
 type OpenedDocumentState = {
   fileName: string;
   originalName: string;
   section: LibrarySection;
 };
 
-function appendQuizContextToUrl(
-  baseUrl: string,
-  context: OpenedDocumentState,
-): string {
-  const params = new URLSearchParams({
-    section: context.section,
-    document: context.originalName,
-  });
-
-  const joinWith = baseUrl.includes('?') ? '&' : '?';
-  return `${baseUrl}${joinWith}${params.toString()}`;
-}
+type WebPdfFrameProps = {
+  src: string;
+  title: string;
+};
 
 function getQuizLinkKey(
   section: LibrarySection,
@@ -63,93 +60,152 @@ function getQuizLinkKey(
   return `${section}:${language}`;
 }
 
+function buildQuizUrl(
+  baseUrl: string,
+  section: LibrarySection,
+  context: OpenedDocumentState | null,
+): string {
+  const params = new URLSearchParams({
+    section,
+  });
+
+  if (context && context.section === section) {
+    params.set('document', context.originalName);
+  }
+
+  const joinWith = baseUrl.includes('?') ? '&' : '?';
+  return `${baseUrl}${joinWith}${params.toString()}`;
+}
+
+function WebPdfFrame({ src, title }: WebPdfFrameProps) {
+  if (Platform.OS !== 'web') {
+    return null;
+  }
+
+  return createElement('iframe', {
+    src,
+    title,
+    style: {
+      border: '0',
+      width: '100%',
+      height: '100%',
+      backgroundColor: '#ffffff',
+      borderRadius: '12px',
+    },
+  });
+}
+
+function buildWebPreviewUrl(src: string): string {
+  if (src.includes('#')) {
+    return src;
+  }
+
+  return `${src}#page=1&zoom=page-height&toolbar=1&navpanes=0&scrollbar=1`;
+}
+
+function formatDateLabel(value: string) {
+  return new Date(value).toLocaleDateString();
+}
+
 export function TrainingPage({
   text,
   accessToken,
   currentUser,
   language,
 }: TrainingPageProps) {
-  const [activeTab, setActiveTab] = useState<TrainingTab>('dishTraining');
-  const [activeSection, setActiveSection] = useState<LibrarySection>('RECIPE');
+  const [activeScenarioKey, setActiveScenarioKey] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<LibrarySection | null>(null);
   const [libraryItems, setLibraryItems] = useState<LibraryFileItem[]>([]);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
   const [libraryError, setLibraryError] = useState<string | null>(null);
-  const [selectedVideo, setSelectedVideo] = useState<LibraryFileItem | null>(
-    null,
-  );
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [selectedVideo, setSelectedVideo] = useState<LibraryFileItem | null>(null);
   const [openedDocument, setOpenedDocument] =
     useState<OpenedDocumentState | null>(null);
-  const [quizLinksByKey, setQuizLinksByKey] = useState<Record<string, string>>(
-    {},
-  );
+  const [webPreviewDocument, setWebPreviewDocument] =
+    useState<LibraryFileItem | null>(null);
+  const [isWebPreviewFullscreen, setIsWebPreviewFullscreen] = useState(false);
+  const [quizLinksByKey, setQuizLinksByKey] = useState<Record<string, string>>({});
   const [quizLanguage, setQuizLanguage] = useState<TrainingQuizLinkLanguage>(
     language === 'fr' ? 'fr' : 'bn',
   );
+  const [completionByFile, setCompletionByFile] = useState<TrainingCompletionMap>({});
   const [shouldAutoFullscreen, setShouldAutoFullscreen] = useState(false);
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9);
+
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const videoRef = useRef<Video | null>(null);
 
-  const tabs: Array<{ key: TrainingTab; label: string }> = [
-    { key: 'dishTraining', label: text.training.tabs.dishTraining },
-    { key: 'companyPolicy', label: text.training.tabs.companyPolicy },
-    { key: 'managementTools', label: text.training.tabs.managementTools },
-  ];
-
-  const activeModule: LibraryModule =
-    activeTab === 'dishTraining'
-      ? 'TRAINING'
-      : activeTab === 'companyPolicy'
-        ? 'POLICY'
-        : 'MANAGEMENT';
-
+  const scenarios = useMemo(() => getTrainingScenarios(text), [text]);
   const userTrainingAccess = currentUser.trainingAccess ?? [];
-  const sectionsByModule = useMemo(() => getSectionsByModule(text), [text]);
 
-  const sectionOptions = useMemo(
-    () => sectionsByModule[activeModule],
-    [activeModule, sectionsByModule],
-  );
-
-  const allowedTabs = useMemo(
-    () =>
-      tabs.filter((tab) => {
-        const module: LibraryModule =
-          tab.key === 'dishTraining'
-            ? 'TRAINING'
-            : tab.key === 'companyPolicy'
-              ? 'POLICY'
-              : 'MANAGEMENT';
-        return sectionsByModule[module].some((section) =>
-          userTrainingAccess.includes(section.key as LibrarySection),
-        );
-      }),
-    [sectionsByModule, tabs, userTrainingAccess],
-  );
-
-  useEffect(() => {
-    if (!allowedTabs.some((tab) => tab.key === activeTab)) {
-      const fallbackTab = allowedTabs[0];
-      if (fallbackTab) {
-        setActiveTab(fallbackTab.key);
+  const sectionLabelByKey = useMemo(() => {
+    const map = new Map<LibrarySection, string>();
+    const grouped = getSectionsByModule(text);
+    for (const sectionList of Object.values(grouped)) {
+      for (const sectionEntry of sectionList) {
+        map.set(sectionEntry.key, sectionEntry.label);
       }
     }
-  }, [activeTab, allowedTabs]);
+    return map;
+  }, [text]);
+
+  const availableScenarios = useMemo(
+    () =>
+      scenarios
+        .map((scenario) => ({
+          ...scenario,
+          sections: scenario.sections.filter((section) =>
+            userTrainingAccess.includes(section),
+          ),
+        }))
+        .filter((scenario) => scenario.sections.length > 0),
+    [scenarios, userTrainingAccess],
+  );
 
   useEffect(() => {
-    const firstSection = sectionOptions.find((sectionOption) =>
-      userTrainingAccess.includes(sectionOption.key as LibrarySection),
-    );
-    if (firstSection) {
-      setActiveSection(firstSection.key as LibrarySection);
+    if (!availableScenarios.length) {
+      setActiveScenarioKey(null);
+      setActiveSection(null);
+      return;
     }
-  }, [sectionOptions, userTrainingAccess]);
+
+    setActiveScenarioKey((current) => {
+      if (current && availableScenarios.some((scenario) => scenario.key === current)) {
+        return current;
+      }
+      return availableScenarios[0].key;
+    });
+  }, [availableScenarios]);
+
+  const activeScenario = useMemo(
+    () =>
+      availableScenarios.find((scenario) => scenario.key === activeScenarioKey) ??
+      availableScenarios[0] ??
+      null,
+    [activeScenarioKey, availableScenarios],
+  );
 
   useEffect(() => {
+    if (!activeScenario) {
+      setActiveSection(null);
+      return;
+    }
+
+    setActiveSection((current) => {
+      if (current && activeScenario.sections.includes(current)) {
+        return current;
+      }
+
+      return activeScenario.sections[0] ?? null;
+    });
+  }, [activeScenario]);
+
+  useEffect(() => {
+    setSearchKeyword('');
     setSelectedVideo(null);
-    setOpenedDocument(null);
     setShouldAutoFullscreen(false);
-  }, [activeModule, activeSection]);
+  }, [activeScenarioKey, activeSection]);
 
   useEffect(() => {
     setVideoAspectRatio(16 / 9);
@@ -157,10 +213,30 @@ export function TrainingPage({
 
   useEffect(() => {
     let isActive = true;
+
+    void loadTrainingCompletionMap(currentUser.id)
+      .then((data) => {
+        if (isActive) {
+          setCompletionByFile(data);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setCompletionByFile({});
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentUser.id]);
+
+  useEffect(() => {
+    let isActive = true;
     setIsLoadingLibrary(true);
     setLibraryError(null);
 
-    void fetchLibraryFiles(accessToken, { module: activeModule })
+    void fetchLibraryFiles(accessToken, {})
       .then((items) => {
         if (isActive) {
           setLibraryItems(items);
@@ -181,7 +257,7 @@ export function TrainingPage({
     return () => {
       isActive = false;
     };
-  }, [accessToken, activeModule, text.training.loadError]);
+  }, [accessToken, text.training.loadError]);
 
   useEffect(() => {
     let isActive = true;
@@ -195,8 +271,7 @@ export function TrainingPage({
         const nextQuizLinksByKey = links.reduce<Record<string, string>>(
           (accumulator, item) => {
             if (item.quizUrl) {
-              accumulator[getQuizLinkKey(item.section, item.language)] =
-                item.quizUrl;
+              accumulator[getQuizLinkKey(item.section, item.language)] = item.quizUrl;
             }
             return accumulator;
           },
@@ -216,15 +291,36 @@ export function TrainingPage({
     };
   }, [accessToken]);
 
-  const visibleSectionOptions = sectionOptions.filter((sectionOption) =>
-    userTrainingAccess.includes(sectionOption.key as LibrarySection),
-  );
+  const selectedSectionLabel =
+    (activeSection ? sectionLabelByKey.get(activeSection) : null) ?? '';
 
-  const selectedSection =
-    visibleSectionOptions.find(
-      (sectionOption) => sectionOption.key === activeSection,
-    ) ?? visibleSectionOptions[0];
-  const selectedSectionKey = selectedSection?.key;
+  const sectionItems = useMemo(() => {
+    if (!activeSection) {
+      return [];
+    }
+
+    const normalizedSearch = searchKeyword.trim().toLowerCase();
+
+    return libraryItems
+      .filter(
+        (item) =>
+          item.section === activeSection &&
+          (item.mediaType === 'document' || item.mediaType === 'video'),
+      )
+      .filter((item) => {
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        return item.originalName.toLowerCase().includes(normalizedSearch);
+      })
+      .sort(
+        (left, right) =>
+          new Date(right.uploadedAt).getTime() - new Date(left.uploadedAt).getTime(),
+      );
+  }, [activeSection, libraryItems, searchKeyword]);
+
+  const selectedSectionKey = activeSection;
   const dbQuizBaseUrl = selectedSectionKey
     ? quizLinksByKey[getQuizLinkKey(selectedSectionKey, quizLanguage)] ?? ''
     : '';
@@ -233,38 +329,56 @@ export function TrainingPage({
     : '';
   const quizBaseUrl = dbQuizBaseUrl || fallbackQuizBaseUrl;
 
-  const sectionKeyForItems = selectedSection?.key ?? activeSection;
-
-  const docs = libraryItems.filter(
-    (item) =>
-      item.section === sectionKeyForItems && item.mediaType === 'document',
-  );
-
-  const videos = libraryItems.filter(
-    (item) => item.section === sectionKeyForItems && item.mediaType === 'video',
-  );
-
-  useEffect(() => {
-    if (!openedDocument) {
-      return;
-    }
-
-    const isDocumentStillVisible = docs.some(
-      (item) => item.fileName === openedDocument.fileName,
-    );
-
-    if (!isDocumentStillVisible) {
-      setOpenedDocument(null);
-    }
-  }, [docs, openedDocument]);
-
   const quizUrl = useMemo(() => {
-    if (!quizBaseUrl || !openedDocument) {
+    if (!quizBaseUrl || !selectedSectionKey) {
       return null;
     }
 
-    return appendQuizContextToUrl(quizBaseUrl, openedDocument);
-  }, [openedDocument, quizBaseUrl]);
+    return buildQuizUrl(quizBaseUrl, selectedSectionKey, openedDocument);
+  }, [openedDocument, quizBaseUrl, selectedSectionKey]);
+
+  useEffect(() => {
+    if (!webPreviewDocument) {
+      return;
+    }
+
+    const stillExists = sectionItems.some(
+      (item) => item.fileName === webPreviewDocument.fileName,
+    );
+
+    if (!stillExists) {
+      setWebPreviewDocument(null);
+    }
+  }, [sectionItems, webPreviewDocument]);
+
+  const quizStatusText = !quizBaseUrl
+    ? text.training.quizLinkMissing
+    : openedDocument && openedDocument.section === selectedSectionKey
+      ? text.training.quizReady
+      : text.training.quizDirectAvailable;
+
+  const hasSearchResults = sectionItems.length > 0;
+  const isWebPlatform = Platform.OS === 'web';
+  const showSidePreview = isWebPlatform && windowWidth >= 1180;
+  const previewFrameHeight = showSidePreview
+    ? Math.max(360, Math.min(windowHeight - 320, 560))
+    : Math.max(300, Math.min(windowHeight * 0.45, 460));
+
+  const videoFrameSize = useMemo(() => {
+    const modalCardInnerMaxWidth = Math.min(windowWidth - 56, 736);
+    const modalMaxHeight = Math.max(220, windowHeight - 140);
+    const widthByHeightLimit = modalMaxHeight * videoAspectRatio;
+    const frameWidth = Math.max(
+      180,
+      Math.min(modalCardInnerMaxWidth, widthByHeightLimit),
+    );
+    const frameHeight = frameWidth / videoAspectRatio;
+
+    return {
+      width: frameWidth,
+      height: frameHeight,
+    };
+  }, [videoAspectRatio, windowHeight, windowWidth]);
 
   function updateVideoAspectRatioFromEvent(event: unknown) {
     const readyEvent = event as {
@@ -287,22 +401,6 @@ export function TrainingPage({
     }
   }
 
-  const videoFrameSize = useMemo(() => {
-    const modalCardInnerMaxWidth = Math.min(windowWidth - 56, 736);
-    const modalMaxHeight = Math.max(220, windowHeight - 140);
-    const widthByHeightLimit = modalMaxHeight * videoAspectRatio;
-    const frameWidth = Math.max(
-      180,
-      Math.min(modalCardInnerMaxWidth, widthByHeightLimit),
-    );
-    const frameHeight = frameWidth / videoAspectRatio;
-
-    return {
-      width: frameWidth,
-      height: frameHeight,
-    };
-  }, [videoAspectRatio, windowHeight, windowWidth]);
-
   async function openFullscreenFromPlayer() {
     if (!selectedVideo) {
       return;
@@ -313,16 +411,32 @@ export function TrainingPage({
     try {
       await videoRef.current?.presentFullscreenPlayer();
     } catch {
-      // Keep playback in the current modal when fullscreen is unavailable.
+      // Keep playback in current modal when fullscreen is unavailable.
     }
   }
 
-  function openDocumentFile(item: LibraryFileItem) {
+  function openDocument(item: LibraryFileItem) {
     setOpenedDocument({
       fileName: item.fileName,
       originalName: item.originalName,
       section: item.section,
     });
+
+    if (isWebPlatform) {
+      setWebPreviewDocument(item);
+      return;
+    }
+
+    void Linking.openURL(item.fileUrl);
+  }
+
+  function openDocumentExternally(item: LibraryFileItem) {
+    setOpenedDocument({
+      fileName: item.fileName,
+      originalName: item.originalName,
+      section: item.section,
+    });
+
     void Linking.openURL(item.fileUrl);
   }
 
@@ -334,235 +448,342 @@ export function TrainingPage({
     void Linking.openURL(quizUrl);
   }
 
-  const quizStatusText = !quizBaseUrl
-    ? text.training.quizLinkMissing
-    : openedDocument
-      ? text.training.quizReady
-      : text.training.quizLocked;
+  async function toggleCompletion(fileName: string) {
+    const currentlyCompleted = Boolean(completionByFile[fileName]);
+
+    setCompletionByFile((current) => {
+      const next = { ...current };
+      if (currentlyCompleted) {
+        delete next[fileName];
+      } else {
+        next[fileName] = { completedAt: new Date().toISOString() };
+      }
+      return next;
+    });
+
+    try {
+      const saved = await setTrainingItemCompletion(
+        currentUser.id,
+        fileName,
+        !currentlyCompleted,
+      );
+      setCompletionByFile(saved);
+    } catch {
+      setCompletionByFile((current) => {
+        const next = { ...current };
+        if (!currentlyCompleted) {
+          delete next[fileName];
+        } else {
+          next[fileName] = { completedAt: new Date().toISOString() };
+        }
+        return next;
+      });
+    }
+  }
 
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{text.training.title}</Text>
       <Text style={styles.subtitle}>{text.training.intro}</Text>
 
+      <Text style={styles.blockLabel}>{text.training.scenarioLabel}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.trainingTabRow}
+        contentContainerStyle={styles.pillRow}
       >
-        {allowedTabs.map((tab) => (
+        {availableScenarios.map((scenario) => (
           <Pressable
-            key={tab.key}
+            key={scenario.key}
             style={[
-              styles.trainingTab,
-              activeTab === tab.key && styles.trainingTabActive,
+              styles.pill,
+              activeScenario?.key === scenario.key && styles.pillActive,
             ]}
-            onPress={() => setActiveTab(tab.key)}
+            onPress={() => setActiveScenarioKey(scenario.key)}
           >
             <Text
               style={[
-                styles.trainingTabText,
-                activeTab === tab.key && styles.trainingTabTextActive,
+                styles.pillText,
+                activeScenario?.key === scenario.key && styles.pillTextActive,
               ]}
             >
-              {tab.label}
+              {scenario.label}
             </Text>
           </Pressable>
         ))}
       </ScrollView>
 
+      <Text style={styles.blockLabel}>{text.training.sectionLabel}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.trainingTabRow}
+        contentContainerStyle={styles.pillRow}
       >
-        {visibleSectionOptions.map((sectionOption) => (
+        {(activeScenario?.sections ?? []).map((section) => (
           <Pressable
-            key={sectionOption.key}
-            style={[
-              styles.trainingTab,
-              activeSection === sectionOption.key && styles.trainingTabActive,
-            ]}
-            onPress={() =>
-              setActiveSection(sectionOption.key as LibrarySection)
-            }
+            key={section}
+            style={[styles.pill, activeSection === section && styles.pillActive]}
+            onPress={() => setActiveSection(section)}
           >
             <Text
               style={[
-                styles.trainingTabText,
-                activeSection === sectionOption.key &&
-                  styles.trainingTabTextActive,
+                styles.pillText,
+                activeSection === section && styles.pillTextActive,
               ]}
             >
-              {sectionOption.label}
+              {sectionLabelByKey.get(section)}
             </Text>
           </Pressable>
         ))}
       </ScrollView>
+
+      <View style={styles.quizCard}>
+        <View style={styles.quizHeaderRow}>
+          <View style={styles.quizHeaderCopy}>
+            <Text style={styles.quizTitle}>{text.training.workflowTitle}</Text>
+            <Text style={styles.quizHint}>{text.training.workflowHint}</Text>
+          </View>
+
+          <Pressable
+            style={[styles.quizActionButton, !quizUrl && styles.quizActionButtonDisabled]}
+            onPress={openQuiz}
+            disabled={!quizUrl}
+          >
+            <Text style={styles.quizActionButtonText}>{text.training.quizButton}</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.quizLanguageRow}>
+          <Text style={styles.quizLanguageLabel}>{text.training.quizLanguageLabel}</Text>
+          <View style={styles.quizLanguageChipRow}>
+            {(['fr', 'bn'] as TrainingQuizLinkLanguage[]).map((languageValue) => (
+              <Pressable
+                key={`quiz-language-${languageValue}`}
+                style={[
+                  styles.quizLanguageChip,
+                  quizLanguage === languageValue && styles.quizLanguageChipActive,
+                ]}
+                onPress={() => setQuizLanguage(languageValue)}
+              >
+                <Text
+                  style={[
+                    styles.quizLanguageChipText,
+                    quizLanguage === languageValue && styles.quizLanguageChipTextActive,
+                  ]}
+                >
+                  {languageValue === 'fr'
+                    ? text.training.quizLanguageFr
+                    : text.training.quizLanguageBn}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <Text style={styles.quizStatusText}>{quizStatusText}</Text>
+      </View>
+
+      <View style={styles.searchWrap}>
+        <TextInput
+          style={styles.searchInput}
+          value={searchKeyword}
+          onChangeText={setSearchKeyword}
+          placeholder={text.training.searchPlaceholder}
+          placeholderTextColor="#a98a8d"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </View>
 
       {libraryError ? <Text style={styles.error}>{libraryError}</Text> : null}
 
-      {allowedTabs.length === 0 ? (
-        <Text style={styles.docEmpty}>{text.training.noAccessConfigured}</Text>
+      {!availableScenarios.length ? (
+        <Text style={styles.emptyText}>{text.training.noAccessConfigured}</Text>
       ) : null}
 
-      {selectedSection ? (
-        <View style={styles.docBlock}>
-          <Text style={styles.docBlockTitle}>{selectedSection.label}</Text>
+      {availableScenarios.length > 0 ? (
+        <View
+          style={[
+            styles.contentSplit,
+            showSidePreview && styles.contentSplitWide,
+          ]}
+        >
+          <View style={[styles.taskListWrap, showSidePreview && styles.taskListWrapWide]}>
+            <Text style={styles.taskListTitle}>{selectedSectionLabel}</Text>
 
-          <View style={styles.workflowCard}>
-            <Text style={styles.workflowTitle}>{text.training.workflowTitle}</Text>
-            <Text style={styles.workflowHint}>{text.training.workflowHint}</Text>
-
-            <View style={styles.quizLanguageRow}>
-              <Text style={styles.quizLanguageLabel}>
-                {text.training.quizLanguageLabel}
+            {!hasSearchResults ? (
+              <Text style={styles.emptyText}>
+                {isLoadingLibrary
+                  ? text.training.loadingLibrary
+                  : searchKeyword.trim().length > 0
+                    ? text.training.searchEmpty
+                    : text.training.noDocuments}
               </Text>
-              <View style={styles.quizLanguageChipRow}>
-                {(['fr', 'bn'] as TrainingQuizLinkLanguage[]).map(
-                  (languageValue) => (
-                    <Pressable
-                      key={`quiz-language-${languageValue}`}
-                      style={[
-                        styles.quizLanguageChip,
-                        quizLanguage === languageValue &&
-                          styles.quizLanguageChipActive,
-                      ]}
-                      onPress={() => setQuizLanguage(languageValue)}
-                    >
-                      <Text
-                        style={[
-                          styles.quizLanguageChipText,
-                          quizLanguage === languageValue &&
-                            styles.quizLanguageChipTextActive,
-                        ]}
-                      >
-                        {languageValue === 'fr'
-                          ? text.training.quizLanguageFr
-                          : text.training.quizLanguageBn}
+            ) : (
+              <View style={styles.taskList}>
+                {sectionItems.map((item) => {
+                  const isDocument = item.mediaType === 'document';
+                  const isCompleted = Boolean(completionByFile[item.fileName]);
+
+                  return (
+                    <View key={item.fileName} style={styles.taskCard}>
+                      <View style={styles.taskCardHeader}>
+                        <Text style={styles.taskCardTitle}>{item.originalName}</Text>
+                        <Text style={styles.taskTypeBadge}>
+                          {isDocument
+                            ? text.training.taskTypeDocument
+                            : text.training.taskTypeVideo}
+                        </Text>
+                      </View>
+
+                      <Text style={styles.taskMeta}>
+                        {formatDateLabel(item.uploadedAt)}
                       </Text>
-                    </Pressable>
-                  ),
-                )}
+
+                      <View style={styles.taskStatusRow}>
+                        <Text style={styles.taskStatusText}>
+                          {isCompleted
+                            ? text.training.completionDone
+                            : text.training.completionTodo}
+                        </Text>
+                      </View>
+
+                      <View style={styles.taskActionsRow}>
+                        {isDocument ? (
+                          <>
+                            <Pressable
+                              style={styles.taskActionButton}
+                              onPress={() => openDocument(item)}
+                            >
+                              <Text style={styles.taskActionButtonText}>
+                                {isWebPlatform
+                                  ? text.training.previewButton
+                                  : text.training.openPdfButton}
+                              </Text>
+                            </Pressable>
+                            <Pressable
+                              style={styles.taskActionButton}
+                              onPress={() => openDocumentExternally(item)}
+                            >
+                              <Text style={styles.taskActionButtonText}>
+                                {text.training.openExternalButton}
+                              </Text>
+                            </Pressable>
+                          </>
+                        ) : (
+                          <Pressable
+                            style={styles.taskActionButton}
+                            onPress={() => {
+                              setSelectedVideo(item);
+                              setShouldAutoFullscreen(true);
+                            }}
+                          >
+                            <Text style={styles.taskActionButtonText}>
+                              {text.training.playVideoButton}
+                            </Text>
+                          </Pressable>
+                        )}
+
+                        <Pressable
+                          style={[
+                            styles.taskActionButton,
+                            styles.taskCompletionButton,
+                            isCompleted && styles.taskCompletionButtonDone,
+                          ]}
+                          onPress={() => {
+                            void toggleCompletion(item.fileName);
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.taskActionButtonText,
+                              isCompleted && styles.taskCompletionButtonTextDone,
+                            ]}
+                          >
+                            {isCompleted
+                              ? text.training.markUndone
+                              : text.training.markDone}
+                          </Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  );
+                })}
               </View>
-            </View>
-
-            <View style={styles.workflowStepRow}>
-              <View
-                style={[
-                  styles.workflowStepBadge,
-                  openedDocument && styles.workflowStepBadgeDone,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.workflowStepBadgeText,
-                    openedDocument && styles.workflowStepBadgeTextDone,
-                  ]}
-                >
-                  1
-                </Text>
-              </View>
-              <Text style={styles.workflowStepText}>{text.training.workflowStepRead}</Text>
-            </View>
-
-            <View style={styles.workflowStepRow}>
-              <View
-                style={[
-                  styles.workflowStepBadge,
-                  quizUrl && styles.workflowStepBadgeDone,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.workflowStepBadgeText,
-                    quizUrl && styles.workflowStepBadgeTextDone,
-                  ]}
-                >
-                  2
-                </Text>
-              </View>
-              <Text style={styles.workflowStepText}>{text.training.workflowStepQuiz}</Text>
-            </View>
-
-            <Pressable
-              style={[
-                styles.quizActionButton,
-                !quizUrl && styles.quizActionButtonDisabled,
-              ]}
-              onPress={openQuiz}
-              disabled={!quizUrl}
-            >
-              <Text style={styles.quizActionButtonText}>{text.training.quizButton}</Text>
-            </Pressable>
-
-            <Text style={styles.workflowStatusText}>{quizStatusText}</Text>
+            )}
           </View>
 
-          <Text style={styles.docItemMeta}>{text.training.documentsTitle}</Text>
-          {docs.length === 0 ? (
-            <Text style={styles.docEmpty}>
-              {isLoadingLibrary
-                ? text.training.loadingLibrary
-                : text.training.noDocuments}
-            </Text>
-          ) : (
-            docs.map((item) => {
-              const isOpened =
-                openedDocument?.fileName === item.fileName &&
-                openedDocument.section === item.section;
-
-              return (
-                <View
-                  key={`${item.fileName}-doc`}
-                  style={[styles.docItem, isOpened && styles.docItemActive]}
-                >
-                  <Text style={styles.docItemTitle}>{item.originalName}</Text>
-                  <Text style={styles.docItemMeta}>
-                    {new Date(item.uploadedAt).toLocaleDateString()}
-                  </Text>
+          {isWebPlatform ? (
+            <View
+              style={[
+                styles.previewWrap,
+                showSidePreview ? styles.previewWrapSide : styles.previewWrapBelow,
+              ]}
+            >
+              <Text style={styles.previewTitle}>{text.training.previewTitle}</Text>
+              <Text style={styles.previewHint}>{text.training.webPreviewHint}</Text>
+              {webPreviewDocument ? (
+                <View style={styles.previewControlsRow}>
                   <Pressable
-                    style={styles.docActionButton}
-                    onPress={() => openDocumentFile(item)}
+                    style={styles.previewControlButton}
+                    onPress={() => setIsWebPreviewFullscreen(true)}
                   >
-                    <Text style={styles.docActionButtonText}>
-                      {text.training.openPdfButton}
+                    <Text style={styles.previewControlButtonText}>
+                      {text.training.previewFullscreen}
                     </Text>
                   </Pressable>
                 </View>
-              );
-            })
-          )}
-
-          <Text style={styles.docItemMeta}>{text.training.videosTitle}</Text>
-          {videos.length === 0 ? (
-            <Text style={styles.docEmpty}>
-              {isLoadingLibrary
-                ? text.training.loadingLibrary
-                : text.training.noVideos}
-            </Text>
-          ) : (
-            <View style={styles.videoSelectorGrid}>
-              {videos.map((item) => (
-                <Pressable
-                  key={`${item.fileName}-video`}
-                  style={styles.videoSelectorCard}
-                  onPress={() => {
-                    setSelectedVideo(item);
-                    setShouldAutoFullscreen(true);
-                  }}
-                >
-                  <Text style={styles.videoSelectorCardTitle} numberOfLines={2}>
-                    {item.originalName}
-                  </Text>
-                  <Text style={styles.videoSelectorCardMeta}>
-                    {new Date(item.uploadedAt).toLocaleDateString()}
-                  </Text>
-                </Pressable>
-              ))}
+              ) : null}
+              <View style={[styles.previewFrameShell, { height: previewFrameHeight }]}>
+                {webPreviewDocument ? (
+                  <WebPdfFrame
+                    src={buildWebPreviewUrl(webPreviewDocument.fileUrl)}
+                    title={webPreviewDocument.originalName}
+                  />
+                ) : (
+                  <View style={styles.previewEmptyWrap}>
+                    <Text style={styles.previewEmptyText}>
+                      {text.training.previewEmpty}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
-          )}
+          ) : null}
         </View>
+      ) : null}
+
+      {isWebPlatform ? (
+        <Modal
+          visible={isWebPreviewFullscreen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setIsWebPreviewFullscreen(false)}
+        >
+          <View style={styles.previewFullscreenBackdrop}>
+            <View style={styles.previewFullscreenCard}>
+              <View style={styles.previewFullscreenHeader}>
+                <Text style={styles.previewFullscreenTitle} numberOfLines={1}>
+                  {webPreviewDocument?.originalName ?? text.training.previewTitle}
+                </Text>
+                <Pressable
+                  style={styles.previewControlButton}
+                  onPress={() => setIsWebPreviewFullscreen(false)}
+                >
+                  <Text style={styles.previewControlButtonText}>X</Text>
+                </Pressable>
+              </View>
+              <View style={styles.previewFullscreenFrameShell}>
+                {webPreviewDocument ? (
+                  <WebPdfFrame
+                    src={buildWebPreviewUrl(webPreviewDocument.fileUrl)}
+                    title={webPreviewDocument.originalName}
+                  />
+                ) : null}
+              </View>
+            </View>
+          </View>
+        </Modal>
       ) : null}
 
       <Modal

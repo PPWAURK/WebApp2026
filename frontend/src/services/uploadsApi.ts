@@ -7,6 +7,7 @@ export type UploadedFileResponse = {
   fileName: string;
   category: 'images' | 'videos' | 'documents';
   originalName: string;
+  customCategory: string | null;
   mimeType: string;
   size: number;
   fileUrl: string;
@@ -67,11 +68,15 @@ export async function uploadSingleFile(
   classification: {
     module: LibraryModule;
     section: LibrarySection;
+    customCategory?: string | null;
   },
 ): Promise<UploadedFileResponse> {
   const formData = new FormData();
   formData.append('module', classification.module);
   formData.append('section', classification.section);
+  if (classification.customCategory && classification.customCategory.trim()) {
+    formData.append('customCategory', classification.customCategory.trim());
+  }
   const resolvedMimeType = resolveMimeType(file);
 
   if (file.file) {
@@ -121,6 +126,7 @@ export async function fetchLibraryFiles(
     module?: LibraryModule;
     section?: LibrarySection;
     mediaType?: 'image' | 'video' | 'document';
+    customCategory?: string;
   },
 ): Promise<LibraryFileItem[]> {
   const params = new URLSearchParams();
@@ -135,6 +141,13 @@ export async function fetchLibraryFiles(
 
   if (filters.mediaType) {
     params.set('mediaType', filters.mediaType);
+  }
+
+  if (filters.customCategory) {
+    const normalizedCustomCategory = filters.customCategory.trim();
+    if (normalizedCustomCategory) {
+      params.set('customCategory', normalizedCustomCategory);
+    }
   }
 
   const queryString = params.toString();

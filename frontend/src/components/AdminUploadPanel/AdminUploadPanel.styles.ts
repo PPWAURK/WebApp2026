@@ -49,6 +49,32 @@ export const styles = StyleSheet.create({
   uploadChipTextActive: {
     color: '#7a181d',
   },
+  categoryInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  categoryInput: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#dfb0b2',
+    backgroundColor: '#ffffff',
+    color: '#7a181d',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  categoryAddButton: {
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d39a9d',
+    backgroundColor: '#fffafa',
+  },
   uploadResultBox: {
     borderRadius: 12,
     borderWidth: 1,

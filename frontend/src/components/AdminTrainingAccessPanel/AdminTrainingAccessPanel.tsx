@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import {
-  getModuleOptions,
-  getSectionsByModule,
-  type LibraryModule,
-} from '../../constants/documentTaxonomy';
+  getTrainingScenarios,
+  type TrainingScenario,
+} from '../../constants/trainingScenario';
+import { getSectionsByModule, type LibrarySection } from '../../constants/documentTaxonomy';
 import type { AppText } from '../../locales/translations';
 import {
   fetchTrainingAccessByLevel,
@@ -32,10 +32,41 @@ function getQuizLinkKey(
   return `${section}:${language}`;
 }
 
+function sortSections(sections: TrainingSection[]) {
+  return [...sections].sort().join(',');
+}
+
 export function AdminTrainingAccessPanel({
   accessToken,
   text,
 }: AdminTrainingAccessPanelProps) {
+  const scenarios = useMemo(() => getTrainingScenarios(text), [text]);
+
+  const sectionLabelByKey = useMemo(() => {
+    const map = new Map<TrainingSection, string>();
+    const grouped = getSectionsByModule(text);
+    for (const sectionList of Object.values(grouped)) {
+      for (const section of sectionList) {
+        map.set(section.key as TrainingSection, section.label);
+      }
+    }
+
+    return map;
+  }, [text]);
+
+  const managedSections = useMemo(
+    () =>
+      Array.from(
+        new Set(scenarios.flatMap((scenario) => scenario.sections)),
+      ) as TrainingSection[],
+    [scenarios],
+  );
+
+  const managedSectionSet = useMemo(
+    () => new Set<TrainingSection>(managedSections),
+    [managedSections],
+  );
+
   const [levelProfiles, setLevelProfiles] = useState<TrainingAccessByLevelProfile[]>([]);
   const [selectedLevel, setSelectedLevel] = useState<EmployeeLevel | null>(null);
   const [draftSections, setDraftSections] = useState<TrainingSection[]>([]);
@@ -49,25 +80,6 @@ export function AdminTrainingAccessPanel({
   const [savedQuizLinksByKey, setSavedQuizLinksByKey] = useState<Record<string, string>>({});
   const [quizLinkDraftsByKey, setQuizLinkDraftsByKey] = useState<Record<string, string>>({});
 
-  const moduleOptions = useMemo(() => getModuleOptions(text), [text]);
-
-  const moduleSections = useMemo(
-    () =>
-      Object.entries(getSectionsByModule(text)).map(([module, sections]) => ({
-        module: module as LibraryModule,
-        sections: sections.map((section) => ({
-          key: section.key as TrainingSection,
-          label: section.label,
-        })),
-      })),
-    [text],
-  );
-
-  const allSections = useMemo(
-    () => moduleSections.flatMap((entry) => entry.sections),
-    [moduleSections],
-  );
-
   const sectionProfileByLevel = useMemo(() => {
     const map = new Map<EmployeeLevel, TrainingSection[]>();
     for (const profile of levelProfiles) {
@@ -77,7 +89,9 @@ export function AdminTrainingAccessPanel({
   }, [levelProfiles]);
 
   const levelOptions = useMemo(() => {
-    const levels = Array.from(new Set(levelProfiles.map((profile) => profile.employeeLevel)));
+    const levels = Array.from(
+      new Set(levelProfiles.map((profile) => profile.employeeLevel)),
+    );
     return levels.sort((left, right) => left.localeCompare(right));
   }, [levelProfiles]);
 
@@ -123,8 +137,7 @@ export function AdminTrainingAccessPanel({
 
         const nextSavedByKey = quizLinks.reduce<Record<string, string>>(
           (accumulator, item) => {
-            accumulator[getQuizLinkKey(item.section, item.language)] =
-              item.quizUrl ?? '';
+            accumulator[getQuizLinkKey(item.section, item.language)] = item.quizUrl ?? '';
             return accumulator;
           },
           {},
@@ -152,7 +165,7 @@ export function AdminTrainingAccessPanel({
   }, [accessToken, text.adminTraining.loadQuizLinksError]);
 
   useEffect(() => {
-    if (levelOptions.length === 0) {
+    if (!levelOptions.length) {
       setSelectedLevel(null);
       setDraftSections([]);
       return;
@@ -163,27 +176,32 @@ export function AdminTrainingAccessPanel({
     );
   }, [levelOptions]);
 
-  useEffect(() => {
-    if (!selectedLevel) {
-      setDraftSections([]);
-      return;
-    }
-
-    setDraftSections(sectionProfileByLevel.get(selectedLevel) ?? []);
-  }, [sectionProfileByLevel, selectedLevel]);
-
   const baseSectionsForLevel = useMemo(
     () => (selectedLevel ? sectionProfileByLevel.get(selectedLevel) ?? [] : []),
     [sectionProfileByLevel, selectedLevel],
   );
 
-  const isDirty = useMemo(() => {
-    const normalize = (sections: TrainingSection[]) => [...sections].sort().join(',');
-    return normalize(draftSections) !== normalize(baseSectionsForLevel);
-  }, [baseSectionsForLevel, draftSections]);
+  const baseManagedSectionsForLevel = useMemo(
+    () => baseSectionsForLevel.filter((section) => managedSectionSet.has(section)),
+    [baseSectionsForLevel, managedSectionSet],
+  );
+
+  const hiddenSectionsForLevel = useMemo(
+    () => baseSectionsForLevel.filter((section) => !managedSectionSet.has(section)),
+    [baseSectionsForLevel, managedSectionSet],
+  );
+
+  useEffect(() => {
+    setDraftSections(baseManagedSectionsForLevel);
+  }, [baseManagedSectionsForLevel]);
+
+  const isDirty = useMemo(
+    () => sortSections(draftSections) !== sortSections(baseManagedSectionsForLevel),
+    [baseManagedSectionsForLevel, draftSections],
+  );
 
   const selectedCount = draftSections.length;
-  const totalCount = allSections.length;
+  const totalCount = managedSections.length;
 
   function toggleSection(section: TrainingSection) {
     setDraftSections((current) =>
@@ -194,7 +212,7 @@ export function AdminTrainingAccessPanel({
   }
 
   function selectAllSections() {
-    setDraftSections(allSections.map((section) => section.key));
+    setDraftSections([...managedSections]);
   }
 
   function clearAllSections() {
@@ -202,18 +220,27 @@ export function AdminTrainingAccessPanel({
   }
 
   function resetLevelProfile() {
-    setDraftSections(baseSectionsForLevel);
+    setDraftSections(baseManagedSectionsForLevel);
   }
 
-  function toggleModuleSections(sectionKeys: TrainingSection[]) {
+  function toggleScenarioSections(scenario: TrainingScenario) {
+    const sectionKeys = scenario.sections;
+
     setDraftSections((current) => {
       const allSelected = sectionKeys.every((key) => current.includes(key));
+
       if (allSelected) {
         return current.filter((key) => !sectionKeys.includes(key));
       }
 
       return Array.from(new Set([...current, ...sectionKeys]));
     });
+  }
+
+  function clearScenarioSections(scenario: TrainingScenario) {
+    setDraftSections((current) =>
+      current.filter((key) => !scenario.sections.includes(key)),
+    );
   }
 
   function updateQuizLinkDraft(
@@ -269,17 +296,24 @@ export function AdminTrainingAccessPanel({
 
     setIsSaving(true);
     setError(null);
+
+    const payloadSections = Array.from(
+      new Set([...draftSections, ...hiddenSectionsForLevel]),
+    );
+
     try {
       const updatedProfile = await updateTrainingAccessByLevel(
         accessToken,
         selectedLevel,
-        draftSections,
+        payloadSections,
       );
 
       setLevelProfiles((current) =>
         current.some((entry) => entry.employeeLevel === updatedProfile.employeeLevel)
           ? current.map((entry) =>
-              entry.employeeLevel === updatedProfile.employeeLevel ? updatedProfile : entry,
+              entry.employeeLevel === updatedProfile.employeeLevel
+                ? updatedProfile
+                : entry,
             )
           : [...current, updatedProfile],
       );
@@ -304,14 +338,8 @@ export function AdminTrainingAccessPanel({
           {levelOptions.map((level) => (
             <Pressable
               key={level}
-              style={[
-                styles.uploadChip,
-                selectedLevel === level && styles.uploadChipActive,
-              ]}
-              onPress={() => {
-                setSelectedLevel(level);
-                setDraftSections(sectionProfileByLevel.get(level) ?? []);
-              }}
+              style={[styles.uploadChip, selectedLevel === level && styles.uploadChipActive]}
+              onPress={() => setSelectedLevel(level)}
             >
               <Text
                 style={[
@@ -354,54 +382,65 @@ export function AdminTrainingAccessPanel({
           </Pressable>
         </View>
 
-        {moduleSections.map((moduleEntry) => {
-          const moduleLabel =
-            moduleOptions.find((option) => option.key === moduleEntry.module)?.label ??
-            moduleEntry.module;
-          const moduleKeys = moduleEntry.sections.map((section) => section.key);
-          const moduleSelected = moduleKeys.filter((key) => draftSections.includes(key)).length;
+        <Text style={styles.matrixTitle}>{text.adminTraining.scenarioMatrixTitle}</Text>
+        <Text style={styles.docItemMeta}>{text.adminTraining.scenarioMatrixSubtitle}</Text>
+
+        {scenarios.map((scenario) => {
+          const selectedInScenario = scenario.sections.filter((section) =>
+            draftSections.includes(section),
+          ).length;
 
           return (
-            <View key={moduleEntry.module} style={styles.moduleCard}>
-              <View style={styles.moduleHeader}>
+            <View key={scenario.key} style={styles.scenarioCard}>
+              <View style={styles.scenarioHeaderRow}>
                 <View>
-                  <Text style={styles.moduleTitle}>{moduleLabel}</Text>
+                  <Text style={styles.scenarioTitle}>{scenario.label}</Text>
                   <Text style={styles.moduleMeta}>
-                    {moduleSelected}/{moduleKeys.length}
+                    {selectedInScenario}/{scenario.sections.length}
                   </Text>
                 </View>
-                <Pressable
-                  style={styles.moduleToggleButton}
-                  onPress={() => toggleModuleSections(moduleKeys)}
-                >
-                  <Text style={styles.moduleToggleButtonText}>
-                    {moduleSelected === moduleKeys.length
-                      ? text.adminTraining.removeModule
-                      : text.adminTraining.addModule}
-                  </Text>
-                </Pressable>
+
+                <View style={styles.scenarioActionsRow}>
+                  <Pressable
+                    style={styles.scenarioActionButton}
+                    onPress={() => toggleScenarioSections(scenario)}
+                  >
+                    <Text style={styles.scenarioActionButtonText}>
+                      {text.adminTraining.selectScenario}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.scenarioActionButton}
+                    onPress={() => clearScenarioSections(scenario)}
+                  >
+                    <Text style={styles.scenarioActionButtonText}>
+                      {text.adminTraining.clearScenario}
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
 
               <View style={styles.uploadChipWrap}>
-                {moduleEntry.sections.map((section) => (
-                  <Pressable
-                    key={section.key}
-                    style={[
-                      styles.uploadChip,
-                      draftSections.includes(section.key) && styles.uploadChipActive,
-                    ]}
-                    onPress={() => toggleSection(section.key)}
-                  >
-                    <Text
-                      style={[
-                        styles.uploadChipText,
-                        draftSections.includes(section.key) && styles.uploadChipTextActive,
-                      ]}
+                {scenario.sections.map((section) => {
+                  const checked = draftSections.includes(section);
+
+                  return (
+                    <Pressable
+                      key={section}
+                      style={[styles.uploadChip, checked && styles.uploadChipActive]}
+                      onPress={() => toggleSection(section)}
                     >
-                      {section.label}
-                    </Text>
-                  </Pressable>
-                ))}
+                      <Text
+                        style={[
+                          styles.uploadChipText,
+                          checked && styles.uploadChipTextActive,
+                        ]}
+                      >
+                        {sectionLabelByKey.get(section as LibrarySection) ?? section}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </View>
           );
@@ -416,72 +455,68 @@ export function AdminTrainingAccessPanel({
         {isQuizLinksLoading ? (
           <Text style={styles.docItemMeta}>{text.adminTraining.loading}</Text>
         ) : (
-          moduleSections.map((moduleEntry) => {
-            const moduleLabel =
-              moduleOptions.find((option) => option.key === moduleEntry.module)?.label ??
-              moduleEntry.module;
+          scenarios.map((scenario) => (
+            <View key={`quiz-link-${scenario.key}`} style={styles.scenarioCard}>
+              <Text style={styles.scenarioTitle}>{scenario.label}</Text>
 
-            return (
-              <View key={`quiz-link-module-${moduleEntry.module}`} style={styles.moduleCard}>
-                <Text style={styles.moduleTitle}>{moduleLabel}</Text>
+              {scenario.sections.map((section) => (
+                <View key={`quiz-link-${section}`} style={styles.quizLinkSectionCard}>
+                  <Text style={styles.docItemTitle}>
+                    {sectionLabelByKey.get(section as LibrarySection) ?? section}
+                  </Text>
 
-                {moduleEntry.sections.map((section) => (
-                  <View key={`quiz-link-${section.key}`} style={styles.quizLinkSectionCard}>
-                    <Text style={styles.docItemTitle}>{section.label}</Text>
+                  {QUIZ_LINK_LANGUAGES.map((languageValue) => {
+                    const linkKey = getQuizLinkKey(section, languageValue);
+                    const draftValue = quizLinkDraftsByKey[linkKey] ?? '';
+                    const savedValue = savedQuizLinksByKey[linkKey] ?? '';
+                    const isQuizDirty = draftValue.trim() !== savedValue.trim();
+                    const isSavingQuizLink = savingQuizLinkKey === linkKey;
 
-                    {QUIZ_LINK_LANGUAGES.map((languageValue) => {
-                      const linkKey = getQuizLinkKey(section.key, languageValue);
-                      const draftValue = quizLinkDraftsByKey[linkKey] ?? '';
-                      const savedValue = savedQuizLinksByKey[linkKey] ?? '';
-                      const isQuizDirty = draftValue.trim() !== savedValue.trim();
-                      const isSavingQuizLink = savingQuizLinkKey === linkKey;
-
-                      return (
-                        <View
-                          key={`quiz-link-row-${section.key}-${languageValue}`}
-                          style={styles.quizLinkLanguageRow}
+                    return (
+                      <View
+                        key={`quiz-link-row-${section}-${languageValue}`}
+                        style={styles.quizLinkLanguageRow}
+                      >
+                        <Text style={styles.quizLanguageBadge}>
+                          {languageValue === 'fr'
+                            ? text.adminTraining.quizLanguageFr
+                            : text.adminTraining.quizLanguageBn}
+                        </Text>
+                        <TextInput
+                          style={styles.quizLinkInput}
+                          value={draftValue}
+                          onChangeText={(value) =>
+                            updateQuizLinkDraft(section, languageValue, value)
+                          }
+                          placeholder={text.adminTraining.quizLinkPlaceholder}
+                          placeholderTextColor="#a98a8d"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          keyboardType="url"
+                        />
+                        <Pressable
+                          style={[
+                            styles.quizLinkSaveButton,
+                            (!isQuizDirty || isSavingQuizLink) && styles.buttonDisabled,
+                          ]}
+                          disabled={!isQuizDirty || isSavingQuizLink}
+                          onPress={() => {
+                            void saveQuizLink(section, languageValue);
+                          }}
                         >
-                          <Text style={styles.quizLanguageBadge}>
-                            {languageValue === 'fr'
-                              ? text.adminTraining.quizLanguageFr
-                              : text.adminTraining.quizLanguageBn}
+                          <Text style={styles.quizLinkSaveButtonText}>
+                            {isSavingQuizLink
+                              ? text.adminTraining.saving
+                              : text.adminTraining.quizLinkSave}
                           </Text>
-                          <TextInput
-                            style={styles.quizLinkInput}
-                            value={draftValue}
-                            onChangeText={(value) =>
-                              updateQuizLinkDraft(section.key, languageValue, value)
-                            }
-                            placeholder={text.adminTraining.quizLinkPlaceholder}
-                            placeholderTextColor="#a98a8d"
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            keyboardType="url"
-                          />
-                          <Pressable
-                            style={[
-                              styles.quizLinkSaveButton,
-                              (!isQuizDirty || isSavingQuizLink) && styles.buttonDisabled,
-                            ]}
-                            disabled={!isQuizDirty || isSavingQuizLink}
-                            onPress={() => {
-                              void saveQuizLink(section.key, languageValue);
-                            }}
-                          >
-                            <Text style={styles.quizLinkSaveButtonText}>
-                              {isSavingQuizLink
-                                ? text.adminTraining.saving
-                                : text.adminTraining.quizLinkSave}
-                            </Text>
-                          </Pressable>
-                        </View>
-                      );
-                    })}
-                  </View>
-                ))}
-              </View>
-            );
-          })
+                        </Pressable>
+                      </View>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+          ))
         )}
       </View>
 

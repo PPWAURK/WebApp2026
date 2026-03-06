@@ -57,7 +57,12 @@ export class UploadsService {
   async handleSingleUpload(
     file: Express.Multer.File,
     req: { protocol: string; get: (name: string) => string | undefined },
-    metadataInput: { module?: string; section?: string; uploadedByUserId?: number },
+    metadataInput: {
+      module?: string;
+      section?: string;
+      customCategory?: string;
+      uploadedByUserId?: number;
+    },
   ) {
     if (!file) {
       throw new BadRequestException('A file is required');
@@ -74,17 +79,21 @@ export class UploadsService {
     const category = this.getCategoryFromMimeType(resolvedMimeType);
     const mediaType = this.getMediaType(resolvedMimeType);
     const normalizedOriginalName = this.normalizeOriginalName(file.originalname);
+    const normalizedCustomCategory = this.normalizeCustomCategory(
+      metadataInput.customCategory,
+    );
 
     const createdDocument = await this.prisma.document.create({
       data: {
-      fileName: file.filename,
-      category,
-      originalName: normalizedOriginalName,
-      mimeType: resolvedMimeType,
-      size: file.size,
-      mediaType,
-      module,
-      section,
+        fileName: file.filename,
+        category,
+        originalName: normalizedOriginalName,
+        customCategory: normalizedCustomCategory ?? null,
+        mimeType: resolvedMimeType,
+        size: file.size,
+        mediaType,
+        module,
+        section,
         uploadedByUserId: metadataInput.uploadedByUserId ?? null,
       },
     });
@@ -94,6 +103,7 @@ export class UploadsService {
       fileName: createdDocument.fileName,
       category: createdDocument.category,
       originalName: createdDocument.originalName,
+      customCategory: createdDocument.customCategory,
       mimeType: createdDocument.mimeType,
       size: createdDocument.size,
       fileUrl: this.buildFileUrl(req, createdDocument.category, createdDocument.fileName),
@@ -106,7 +116,12 @@ export class UploadsService {
   async handleMultipleUpload(
     files: Express.Multer.File[],
     req: { protocol: string; get: (name: string) => string | undefined },
-    metadataInput: { module?: string; section?: string; uploadedByUserId?: number },
+    metadataInput: {
+      module?: string;
+      section?: string;
+      customCategory?: string;
+      uploadedByUserId?: number;
+    },
   ) {
     if (!files?.length) {
       throw new BadRequestException('At least one file is required');
@@ -119,7 +134,12 @@ export class UploadsService {
 
   async listLibrary(
     req: { protocol: string; get: (name: string) => string | undefined },
-    filters: { module?: string; section?: string; mediaType?: string },
+    filters: {
+      module?: string;
+      section?: string;
+      mediaType?: string;
+      customCategory?: string;
+    },
     authContext: { role?: string; trainingAccess?: string[] | undefined },
   ) {
     const moduleFilter = filters.module
@@ -131,11 +151,17 @@ export class UploadsService {
     const mediaTypeFilter = filters.mediaType
       ? this.parseMediaType(filters.mediaType)
       : undefined;
+    const customCategoryFilter = this.normalizeCustomCategory(
+      filters.customCategory,
+    );
 
     const where: Prisma.DocumentWhereInput = {
       ...(moduleFilter ? { module: moduleFilter } : {}),
       ...(sectionFilter ? { section: sectionFilter } : {}),
       ...(mediaTypeFilter ? { mediaType: mediaTypeFilter } : {}),
+      ...(customCategoryFilter
+        ? { customCategory: customCategoryFilter }
+        : {}),
     };
 
     if (authContext.role !== 'ADMIN') {
@@ -333,5 +359,22 @@ export class UploadsService {
 
     const extension = extname(originalName || '').replace('.', '').toLowerCase();
     return this.fallbackMimeTypesByExtension[extension] ?? normalizedMimeType;
+  }
+
+  private normalizeCustomCategory(value: string | undefined) {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+
+    if (trimmed.length > 80) {
+      throw new BadRequestException('customCategory must be 80 characters or less');
+    }
+
+    return trimmed;
   }
 }
