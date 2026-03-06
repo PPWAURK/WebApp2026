@@ -1,6 +1,7 @@
 import { PrismaService } from '../prisma/prisma.service';
 export declare class UploadsService {
     private readonly prisma;
+    private readonly fallbackMimeTypesByExtension;
     private readonly storageRoot;
     private readonly publicApiBaseUrl;
     private readonly storageDirs;
@@ -11,12 +12,14 @@ export declare class UploadsService {
     }, metadataInput: {
         module?: string;
         section?: string;
+        customCategory?: string;
         uploadedByUserId?: number;
     }): Promise<{
         documentId: number;
         fileName: string;
         category: import("@prisma/client").$Enums.UploadCategory;
         originalName: string;
+        customCategory: any;
         mimeType: string;
         size: number;
         fileUrl: string;
@@ -30,12 +33,14 @@ export declare class UploadsService {
     }, metadataInput: {
         module?: string;
         section?: string;
+        customCategory?: string;
         uploadedByUserId?: number;
     }): Promise<{
         documentId: number;
         fileName: string;
         category: import("@prisma/client").$Enums.UploadCategory;
         originalName: string;
+        customCategory: any;
         mimeType: string;
         size: number;
         fileUrl: string;
@@ -50,12 +55,14 @@ export declare class UploadsService {
         module?: string;
         section?: string;
         mediaType?: string;
+        customCategory?: string;
     }, authContext: {
         role?: string;
         trainingAccess?: string[] | undefined;
     }): Promise<{
         fileUrl: string;
         id: number;
+        section: import("@prisma/client").$Enums.UploadSection;
         fileName: string;
         category: import("@prisma/client").$Enums.UploadCategory;
         originalName: string;
@@ -63,7 +70,6 @@ export declare class UploadsService {
         size: number;
         mediaType: import("@prisma/client").$Enums.UploadMediaType;
         module: import("@prisma/client").$Enums.UploadModule;
-        section: import("@prisma/client").$Enums.UploadSection;
         uploadedAt: Date;
         uploadedByUserId: number | null;
         documentId: number;
@@ -82,4 +88,6 @@ export declare class UploadsService {
     private ensureStorageFolders;
     private resolveStorageRoot;
     private normalizeOriginalName;
+    private resolveMimeType;
+    private normalizeCustomCategory;
 }

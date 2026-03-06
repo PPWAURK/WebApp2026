@@ -18,6 +18,25 @@ const prisma_service_1 = require("../prisma/prisma.service");
 const upload_taxonomy_1 = require("./upload-taxonomy");
 let UploadsService = class UploadsService {
     prisma;
+    fallbackMimeTypesByExtension = {
+        mp4: 'video/mp4',
+        mov: 'video/quicktime',
+        m4v: 'video/x-m4v',
+        webm: 'video/webm',
+        avi: 'video/x-msvideo',
+        mkv: 'video/x-matroska',
+        png: 'image/png',
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        gif: 'image/gif',
+        webp: 'image/webp',
+        pdf: 'application/pdf',
+        doc: 'application/msword',
+        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        xls: 'application/vnd.ms-excel',
+        xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        txt: 'text/plain',
+    };
     storageRoot = this.resolveStorageRoot(process.env.STORAGE_ROOT_PATH);
     publicApiBaseUrl = process.env.PUBLIC_API_BASE_URL;
     storageDirs = {
@@ -38,15 +57,18 @@ let UploadsService = class UploadsService {
         if (!(0, upload_taxonomy_1.isSectionInModule)(module, section)) {
             throw new common_1.BadRequestException('Section does not belong to selected module');
         }
-        const category = this.getCategoryFromMimeType(file.mimetype);
-        const mediaType = this.getMediaType(file.mimetype);
+        const resolvedMimeType = this.resolveMimeType(file.mimetype, file.originalname);
+        const category = this.getCategoryFromMimeType(resolvedMimeType);
+        const mediaType = this.getMediaType(resolvedMimeType);
         const normalizedOriginalName = this.normalizeOriginalName(file.originalname);
+        const normalizedCustomCategory = this.normalizeCustomCategory(metadataInput.customCategory);
         const createdDocument = await this.prisma.document.create({
             data: {
                 fileName: file.filename,
                 category,
                 originalName: normalizedOriginalName,
-                mimeType: file.mimetype,
+                customCategory: normalizedCustomCategory ?? null,
+                mimeType: resolvedMimeType,
                 size: file.size,
                 mediaType,
                 module,
@@ -59,6 +81,7 @@ let UploadsService = class UploadsService {
             fileName: createdDocument.fileName,
             category: createdDocument.category,
             originalName: createdDocument.originalName,
+            customCategory: createdDocument.customCategory,
             mimeType: createdDocument.mimeType,
             size: createdDocument.size,
             fileUrl: this.buildFileUrl(req, createdDocument.category, createdDocument.fileName),
@@ -83,10 +106,14 @@ let UploadsService = class UploadsService {
         const mediaTypeFilter = filters.mediaType
             ? this.parseMediaType(filters.mediaType)
             : undefined;
+        const customCategoryFilter = this.normalizeCustomCategory(filters.customCategory);
         const where = {
             ...(moduleFilter ? { module: moduleFilter } : {}),
             ...(sectionFilter ? { section: sectionFilter } : {}),
             ...(mediaTypeFilter ? { mediaType: mediaTypeFilter } : {}),
+            ...(customCategoryFilter
+                ? { customCategory: customCategoryFilter }
+                : {}),
         };
         if (authContext.role !== 'ADMIN') {
             const allowedSections = (authContext.trainingAccess ?? []).filter((section) => (0, upload_taxonomy_1.isUploadSection)(section));
@@ -225,6 +252,29 @@ let UploadsService = class UploadsService {
             return decodedName;
         }
         return originalName;
+    }
+    resolveMimeType(mimeType, originalName) {
+        const normalizedMimeType = mimeType.trim().toLowerCase();
+        if (normalizedMimeType &&
+            normalizedMimeType !== 'application/octet-stream' &&
+            normalizedMimeType !== '*/*') {
+            return normalizedMimeType;
+        }
+        const extension = (0, path_1.extname)(originalName || '').replace('.', '').toLowerCase();
+        return this.fallbackMimeTypesByExtension[extension] ?? normalizedMimeType;
+    }
+    normalizeCustomCategory(value) {
+        if (typeof value !== 'string') {
+            return undefined;
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return undefined;
+        }
+        if (trimmed.length > 80) {
+            throw new common_1.BadRequestException('customCategory must be 80 characters or less');
+        }
+        return trimmed;
     }
 };
 exports.UploadsService = UploadsService;

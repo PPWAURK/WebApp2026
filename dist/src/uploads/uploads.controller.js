@@ -22,9 +22,48 @@ const platform_express_1 = require("@nestjs/platform-express");
 const path_1 = require("path");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const uploads_service_1 = require("./uploads.service");
-const UPLOAD_MAX_FILE_SIZE = 50 * 1024 * 1024;
+const UPLOAD_MAX_FILE_SIZE = 800 * 1024 * 1024;
 const UPLOAD_MAX_FILES = 10;
 const STORAGE_ROOT_PATH = process.env.STORAGE_ROOT_PATH ?? (0, path_1.join)(process.cwd(), 'uploads');
+const FALLBACK_MIME_TYPES_BY_EXTENSION = {
+    mp4: 'video/mp4',
+    mov: 'video/quicktime',
+    m4v: 'video/x-m4v',
+    webm: 'video/webm',
+    avi: 'video/x-msvideo',
+    mkv: 'video/x-matroska',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    pdf: 'application/pdf',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    txt: 'text/plain',
+};
+const ALLOWED_DOCUMENT_MIME_TYPES = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+];
+function resolveUploadMimeType(mimeType, originalName) {
+    const normalizedMimeType = mimeType?.trim().toLowerCase();
+    if (normalizedMimeType &&
+        normalizedMimeType !== 'application/octet-stream' &&
+        normalizedMimeType !== '*/*') {
+        return normalizedMimeType;
+    }
+    const extension = (0, path_1.extname)(originalName || '').replace('.', '').toLowerCase();
+    return (FALLBACK_MIME_TYPES_BY_EXTENSION[extension] ??
+        normalizedMimeType ??
+        'application/octet-stream');
+}
 function getStorageDirectoryByMimeType(mimeType) {
     if (mimeType.startsWith('image/')) {
         return (0, path_1.join)(STORAGE_ROOT_PATH, 'images');
@@ -47,40 +86,34 @@ function isAllowedMimeType(mimeType) {
     if (mimeType.startsWith('image/') || mimeType.startsWith('video/')) {
         return true;
     }
-    const allowedDocumentMimeTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'text/plain',
-    ];
-    return allowedDocumentMimeTypes.includes(mimeType);
+    return ALLOWED_DOCUMENT_MIME_TYPES.includes(mimeType);
 }
 let UploadsController = class UploadsController {
     uploadsService;
     constructor(uploadsService) {
         this.uploadsService = uploadsService;
     }
-    uploadSingle(file, req, module, section) {
+    uploadSingle(file, req, module, section, customCategory) {
         const authenticatedRequest = req;
         return this.uploadsService.handleSingleUpload(file, req, {
             module,
             section,
+            customCategory,
             uploadedByUserId: authenticatedRequest.user?.id,
         });
     }
-    uploadMultiple(files, req, module, section) {
+    uploadMultiple(files, req, module, section, customCategory) {
         const authenticatedRequest = req;
         return this.uploadsService.handleMultipleUpload(files, req, {
             module,
             section,
+            customCategory,
             uploadedByUserId: authenticatedRequest.user?.id,
         });
     }
-    listLibrary(req, module, section, mediaType) {
+    listLibrary(req, module, section, mediaType, customCategory) {
         const authenticatedRequest = req;
-        return this.uploadsService.listLibrary(req, { module, section, mediaType }, {
+        return this.uploadsService.listLibrary(req, { module, section, mediaType, customCategory }, {
             role: authenticatedRequest.user?.role,
             trainingAccess: authenticatedRequest.user?.trainingAccess,
         });
@@ -127,6 +160,10 @@ __decorate([
                         'CLEANING_FORM',
                     ],
                 },
+                customCategory: {
+                    type: 'string',
+                    maxLength: 80,
+                },
             },
             required: ['file', 'module', 'section'],
         },
@@ -137,7 +174,8 @@ __decorate([
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
         storage: (0, multer_1.diskStorage)({
             destination: (_req, file, callback) => {
-                const destination = getStorageDirectoryByMimeType(file.mimetype);
+                const resolvedMimeType = resolveUploadMimeType(file.mimetype, file.originalname);
+                const destination = getStorageDirectoryByMimeType(resolvedMimeType);
                 ensureDirectoryExists(destination);
                 callback(null, destination);
             },
@@ -149,10 +187,12 @@ __decorate([
             fileSize: UPLOAD_MAX_FILE_SIZE,
         },
         fileFilter: (_req, file, callback) => {
-            if (!isAllowedMimeType(file.mimetype)) {
+            const resolvedMimeType = resolveUploadMimeType(file.mimetype, file.originalname);
+            if (!isAllowedMimeType(resolvedMimeType)) {
                 callback(new common_1.BadRequestException('Only image, video and document files are allowed'), false);
                 return;
             }
+            file.mimetype = resolvedMimeType;
             callback(null, true);
         },
     })),
@@ -160,8 +200,9 @@ __decorate([
     __param(1, (0, common_1.Req)()),
     __param(2, (0, common_1.Body)('module')),
     __param(3, (0, common_1.Body)('section')),
+    __param(4, (0, common_1.Body)('customCategory')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Object, Object]),
+    __metadata("design:paramtypes", [Object, Object, Object, Object, Object]),
     __metadata("design:returntype", void 0)
 ], UploadsController.prototype, "uploadSingle", null);
 __decorate([
@@ -196,6 +237,10 @@ __decorate([
                         'CLEANING_FORM',
                     ],
                 },
+                customCategory: {
+                    type: 'string',
+                    maxLength: 80,
+                },
             },
             required: ['files', 'module', 'section'],
         },
@@ -206,7 +251,8 @@ __decorate([
     (0, common_1.UseInterceptors)((0, platform_express_1.FilesInterceptor)('files', UPLOAD_MAX_FILES, {
         storage: (0, multer_1.diskStorage)({
             destination: (_req, file, callback) => {
-                const destination = getStorageDirectoryByMimeType(file.mimetype);
+                const resolvedMimeType = resolveUploadMimeType(file.mimetype, file.originalname);
+                const destination = getStorageDirectoryByMimeType(resolvedMimeType);
                 ensureDirectoryExists(destination);
                 callback(null, destination);
             },
@@ -218,10 +264,12 @@ __decorate([
             fileSize: UPLOAD_MAX_FILE_SIZE,
         },
         fileFilter: (_req, file, callback) => {
-            if (!isAllowedMimeType(file.mimetype)) {
+            const resolvedMimeType = resolveUploadMimeType(file.mimetype, file.originalname);
+            if (!isAllowedMimeType(resolvedMimeType)) {
                 callback(new common_1.BadRequestException('Only image, video and document files are allowed'), false);
                 return;
             }
+            file.mimetype = resolvedMimeType;
             callback(null, true);
         },
     })),
@@ -229,8 +277,9 @@ __decorate([
     __param(1, (0, common_1.Req)()),
     __param(2, (0, common_1.Body)('module')),
     __param(3, (0, common_1.Body)('section')),
+    __param(4, (0, common_1.Body)('customCategory')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array, Object, Object, Object]),
+    __metadata("design:paramtypes", [Array, Object, Object, Object, Object]),
     __metadata("design:returntype", void 0)
 ], UploadsController.prototype, "uploadMultiple", null);
 __decorate([
@@ -242,8 +291,9 @@ __decorate([
     __param(1, (0, common_1.Query)('module')),
     __param(2, (0, common_1.Query)('section')),
     __param(3, (0, common_1.Query)('mediaType')),
+    __param(4, (0, common_1.Query)('customCategory')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Object, Object]),
+    __metadata("design:paramtypes", [Object, Object, Object, Object, Object]),
     __metadata("design:returntype", void 0)
 ], UploadsController.prototype, "listLibrary", null);
 __decorate([

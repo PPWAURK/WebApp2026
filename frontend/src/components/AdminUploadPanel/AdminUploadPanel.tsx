@@ -47,9 +47,6 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
   const moduleOptions = useMemo(() => getModuleOptions(text), [text]);
   const sectionsByModule = useMemo(() => getSectionsByModule(text), [text]);
   const [selectedModule, setSelectedModule] = useState<LibraryModule>('TRAINING');
-  const [selectedCategorySection, setSelectedCategorySection] = useState<LibrarySection>(
-    'RECIPE_TRAINING',
-  );
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpload, setLastUpload] = useState<UploadedFileResponse | null>(null);
@@ -71,6 +68,8 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
   const confirmDeleteResolverRef = useRef<((value: boolean) => void) | null>(null);
 
   const availableSections = sectionsByModule[selectedModule];
+  const defaultCategorySection = (availableSections[0]?.key ??
+    'RECIPE_TRAINING') as LibrarySection;
 
   const selectedCategory = useMemo(
     () => moduleCategories.find((item) => item.id === selectedCategoryId) ?? null,
@@ -89,12 +88,6 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
   }
 
   useEffect(() => {
-    const defaultSection = sectionsByModule[selectedModule][0]?.key as
-      | LibrarySection
-      | undefined;
-    if (defaultSection) {
-      setSelectedCategorySection(defaultSection);
-    }
     setSelectedCategoryId(null);
     setCategoryInput('');
     setError(null);
@@ -208,7 +201,7 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
       const created = await createModuleCategory(accessToken, {
         module: selectedModule,
         name: normalized,
-        section: selectedCategorySection,
+        section: defaultCategorySection,
       });
 
       setModuleCategories((current) => sortCategories([...current, created]));
@@ -414,30 +407,6 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
       {!isLoadingCategories && !categoryLoadError && moduleCategories.length === 0 ? (
         <Text style={styles.uploadResultMeta}>{text.upload.emptyCategories}</Text>
       ) : null}
-
-      <Text style={styles.uploadFieldTitle}>{text.upload.categorySectionLabel}</Text>
-      <View style={styles.uploadChipWrap}>
-        {availableSections.map((sectionOption) => (
-          <Pressable
-            key={`category-section-${sectionOption.key}`}
-            style={[
-              styles.uploadChip,
-              selectedCategorySection === sectionOption.key && styles.uploadChipActive,
-            ]}
-            onPress={() => setSelectedCategorySection(sectionOption.key as LibrarySection)}
-          >
-            <Text
-              style={[
-                styles.uploadChipText,
-                selectedCategorySection === sectionOption.key &&
-                  styles.uploadChipTextActive,
-              ]}
-            >
-              {sectionOption.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
 
       <View style={styles.categoryInputRow}>
         <TextInput

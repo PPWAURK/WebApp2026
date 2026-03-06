@@ -1,0 +1,165 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.styles = void 0;
+const react_native_1 = require("react-native");
+exports.styles = react_native_1.StyleSheet.create({
+    uploadCard: {
+        backgroundColor: 'rgba(255,255,255,0.92)',
+        borderRadius: 18,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: '#e8c3c4',
+        gap: 10,
+    },
+    uploadTitle: {
+        color: '#7f1b21',
+        fontFamily: 'Manrope_700Bold',
+        fontSize: 15,
+    },
+    uploadSubtitle: {
+        color: '#8d5458',
+        fontFamily: 'Manrope_400Regular',
+        fontSize: 13,
+    },
+    uploadFieldTitle: {
+        color: '#7f1b21',
+        fontFamily: 'Manrope_700Bold',
+        fontSize: 13,
+    },
+    uploadChipWrap: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    uploadChip: {
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: '#dfb0b2',
+        backgroundColor: '#fffafa',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    uploadChipActive: {
+        borderColor: '#b75d62',
+        backgroundColor: '#f8e2e4',
+    },
+    uploadChipText: {
+        color: '#8d5458',
+        fontFamily: 'Manrope_700Bold',
+        fontSize: 11,
+    },
+    uploadChipTextActive: {
+        color: '#7a181d',
+    },
+    categoryInputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    categoryInput: {
+        flex: 1,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#dfb0b2',
+        backgroundColor: '#ffffff',
+        color: '#7a181d',
+        fontFamily: 'Manrope_400Regular',
+        fontSize: 12,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+    },
+    categoryAddButton: {
+        borderRadius: 10,
+        paddingVertical: 9,
+        paddingHorizontal: 12,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#d39a9d',
+        backgroundColor: '#fffafa',
+    },
+    uploadResultBox: {
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#edd3d5',
+        backgroundColor: '#fffdfd',
+        padding: 10,
+        gap: 6,
+    },
+    uploadResultText: {
+        color: '#7b2328',
+        fontFamily: 'Manrope_700Bold',
+        fontSize: 13,
+    },
+    uploadResultLink: {
+        color: '#ab1e24',
+        fontFamily: 'Manrope_400Regular',
+        fontSize: 12,
+    },
+    uploadResultMeta: {
+        color: '#91555a',
+        fontFamily: 'Manrope_400Regular',
+        fontSize: 12,
+    },
+    mediaItemCard: {
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#e7c8ca',
+        backgroundColor: '#fff8f8',
+        padding: 8,
+        gap: 6,
+    },
+    mediaActionRow: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    secondaryButton: {
+        flex: 1,
+        borderRadius: 10,
+        paddingVertical: 9,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#d39a9d',
+        backgroundColor: '#fffafa',
+    },
+    secondaryButtonText: {
+        color: '#7f1b21',
+        fontFamily: 'Manrope_700Bold',
+        fontSize: 12,
+    },
+    deleteButton: {
+        flex: 1,
+        borderRadius: 10,
+        paddingVertical: 9,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#d88084',
+        backgroundColor: '#fff1f2',
+    },
+    deleteButtonText: {
+        color: '#ab1e24',
+        fontFamily: 'Manrope_700Bold',
+        fontSize: 12,
+    },
+    error: {
+        color: '#b42318',
+        fontFamily: 'Manrope_700Bold',
+        fontSize: 13,
+    },
+    primaryButton: {
+        borderRadius: 14,
+        paddingVertical: 12,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#d39a9d',
+        backgroundColor: '#fffafa',
+    },
+    buttonDisabled: {
+        opacity: 0.65,
+    },
+    primaryButtonText: {
+        color: '#7f1b21',
+        fontFamily: 'Manrope_700Bold',
+        fontSize: 14,
+    },
+});
+//# sourceMappingURL=AdminUploadPanel.styles.js.map

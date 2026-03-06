@@ -54,7 +54,6 @@ type SessionCardProps = {
   user: User;
   accessToken: string;
   text: AppText;
-  onLogout: () => void;
 };
 
 const EMPLOYEE_LEVELS: EmployeeLevel[] = [
@@ -86,15 +85,36 @@ const PICKER_TYPES = [
 
 const NEWS_ATTACHMENT_MODULE = 'TRAINING';
 const NEWS_ATTACHMENT_SECTION = 'RECIPE_TRAINING';
+type NewsLane = 'NEWS' | 'CONGRATS' | 'CRITIQUE';
+
+const NEWS_LANE_MARKERS: Record<NewsLane, string> = {
+  NEWS: '[NEWS]',
+  CONGRATS: '[CONGRATS]',
+  CRITIQUE: '[CRITIQUE]',
+};
+
+function getNewsLaneFromTitle(title: string): NewsLane {
+  const normalizedTitle = title.trim().toUpperCase();
+  if (normalizedTitle.startsWith(NEWS_LANE_MARKERS.CONGRATS)) {
+    return 'CONGRATS';
+  }
+  if (normalizedTitle.startsWith(NEWS_LANE_MARKERS.CRITIQUE)) {
+    return 'CRITIQUE';
+  }
+  return 'NEWS';
+}
+
+function stripNewsLaneMarker(title: string): string {
+  return title
+    .replace(/^\s*\[(NEWS|CONGRATS|CRITIQUE)\]\s*/i, '')
+    .trim();
+}
 
 export function SessionCard({
   user,
   accessToken,
   text,
-  onLogout,
 }: SessionCardProps) {
-  const roleLabel = text.dashboard.roleValues[user.role];
-  const workplaceLabel = text.dashboard.workplaceValues[user.workplaceRole];
   const isManager = user.role === 'MANAGER';
   const isAdmin = user.role === 'ADMIN';
   const isSupervisor = isManager || isAdmin;
@@ -148,6 +168,7 @@ export function SessionCard({
     useState<UploadedFileResponse | null>(null);
   const [whatsNewTitle, setWhatsNewTitle] = useState('');
   const [whatsNewMessage, setWhatsNewMessage] = useState('');
+  const [whatsNewLane, setWhatsNewLane] = useState<NewsLane>('NEWS');
   const [whatsNewAudience, setWhatsNewAudience] = useState<NewsAudience>('ALL');
   const [whatsNewPublishing, setWhatsNewPublishing] = useState(false);
   const [newsFeed, setNewsFeed] = useState<NewsPostItem[]>([]);
@@ -916,7 +937,7 @@ export function SessionCard({
 
     try {
       const createdPost = await createNewsPost(accessToken, {
-        title,
+        title: `${NEWS_LANE_MARKERS[whatsNewLane]} ${title}`,
         message,
         audience: whatsNewAudience,
         attachmentDocumentId: whatsNewLastUpload?.documentId,
@@ -930,6 +951,7 @@ export function SessionCard({
       });
       setWhatsNewTitle('');
       setWhatsNewMessage('');
+      setWhatsNewLane('NEWS');
       setWhatsNewAudience('ALL');
       setWhatsNewLastUpload(null);
     } catch {
@@ -1024,6 +1046,8 @@ export function SessionCard({
   }
 
   function renderWhatsNewUploadCard() {
+    const hasAttachment = Boolean(whatsNewLastUpload);
+
     return (
       <View style={[styles.quickBlock, styles.whatsNewHighlightBlock]}>
         <View style={styles.whatsNewHeader}>
@@ -1032,109 +1056,195 @@ export function SessionCard({
               <Ionicons name="megaphone-outline" size={18} color="#ffffff" />
             </View>
             <View style={styles.whatsNewHeaderTitleWrap}>
-              <Text style={styles.quickBlockTitle}>
+              <Text style={styles.panelTitleOnDark}>
                 {text.dashboard.whatsNewTitle}
               </Text>
             </View>
           </View>
+          <View style={styles.whatsNewStatusPill}>
+            <Text style={styles.whatsNewStatusPillText}>
+              {hasAttachment
+                ? text.dashboard.whatsNewAttachmentReady
+                : text.dashboard.whatsNewCta}
+            </Text>
+          </View>
         </View>
 
-        <Text style={styles.subtitle}>{text.dashboard.whatsNewSubtitle}</Text>
+        <View style={styles.whatsNewIntroStrip}>
+          <Text style={styles.whatsNewKicker}>{text.dashboard.whatsNewSubtitle}</Text>
+        </View>
 
-        <TextInput
-          style={styles.quickSearchInput}
-          value={whatsNewTitle}
-          onChangeText={setWhatsNewTitle}
-          placeholder={text.dashboard.whatsNewTitlePlaceholder}
-          placeholderTextColor="#a98a8d"
-        />
-        <TextInput
-          style={[styles.quickSearchInput, styles.whatsNewMessageInput]}
-          value={whatsNewMessage}
-          onChangeText={setWhatsNewMessage}
-          placeholder={text.dashboard.whatsNewMessagePlaceholder}
-          placeholderTextColor="#a98a8d"
-          multiline
-          textAlignVertical="top"
-        />
-
-        <Text style={styles.quickSectionTitle}>
-          {text.dashboard.whatsNewAudienceLabel}
-        </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chartSupplierTabs}
-        >
-          {(
-            [
-              { key: 'ALL', label: text.dashboard.whatsNewAudienceAll },
-              {
-                key: 'MANAGERS',
-                label: text.dashboard.whatsNewAudienceManagers,
-              },
-              {
-                key: 'EMPLOYEES',
-                label: text.dashboard.whatsNewAudienceEmployees,
-              },
-            ] as const
-          ).map((option) => {
-            const isActive = whatsNewAudience === option.key;
-            return (
-              <Pressable
-                key={`whats-new-audience-${option.key}`}
-                style={[
-                  styles.chartSupplierChip,
-                  isActive && styles.chartSupplierChipActive,
-                ]}
-                onPress={() => setWhatsNewAudience(option.key)}
-              >
-                <Text
+        <View style={styles.whatsNewFieldBlock}>
+          <Text style={styles.whatsNewFieldLabel}>{text.dashboard.whatsNewTypeLabel}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.whatsNewTypeTabs}
+          >
+            {(
+              [
+                {
+                  key: 'NEWS',
+                  label: text.dashboard.whatsNewTypeNews,
+                  icon: '📰',
+                  activeBorderColor: 'rgba(171,30,36,0.45)',
+                  activeBackgroundColor: 'rgba(171,30,36,0.12)',
+                },
+                {
+                  key: 'CONGRATS',
+                  label: text.dashboard.whatsNewTypeCongrats,
+                  icon: '🎉',
+                  activeBorderColor: 'rgba(198,90,110,0.45)',
+                  activeBackgroundColor: 'rgba(198,90,110,0.12)',
+                },
+                {
+                  key: 'CRITIQUE',
+                  label: text.dashboard.whatsNewTypeCritique,
+                  icon: '⚠️',
+                  activeBorderColor: 'rgba(145,24,30,0.45)',
+                  activeBackgroundColor: 'rgba(145,24,30,0.14)',
+                },
+              ] as const
+            ).map((option) => {
+              const isActive = whatsNewLane === option.key;
+              return (
+                <Pressable
+                  key={`whats-new-lane-${option.key}`}
                   style={[
-                    styles.chartSupplierChipText,
-                    isActive && styles.chartSupplierChipTextActive,
+                    styles.whatsNewTypeChip,
+                    isActive && styles.whatsNewTypeChipActive,
+                    isActive && {
+                      borderColor: option.activeBorderColor,
+                      backgroundColor: option.activeBackgroundColor,
+                    },
                   ]}
+                  onPress={() => setWhatsNewLane(option.key)}
                 >
-                  {option.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                  <Text
+                    style={[
+                      styles.whatsNewTypeChipText,
+                      isActive && styles.whatsNewTypeChipTextActive,
+                    ]}
+                  >
+                    {`${option.icon} ${option.label}`}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
 
-        <Pressable
-          style={[
-            styles.whatsNewPublishButton,
-            whatsNewPublishing && styles.buttonDisabled,
-          ]}
-          disabled={whatsNewPublishing}
-          onPress={() => {
-            void handlePublishWhatsNew();
-          }}
-        >
-          <Text style={styles.whatsNewPublishButtonText}>
-            {whatsNewPublishing
-              ? text.dashboard.whatsNewPublishing
-              : text.dashboard.whatsNewCta}
+        <View style={styles.whatsNewFieldBlock}>
+          <Text style={styles.whatsNewFieldLabel}>
+            {text.dashboard.whatsNewTitlePlaceholder}
           </Text>
-        </Pressable>
+          <TextInput
+            style={styles.whatsNewInput}
+            value={whatsNewTitle}
+            onChangeText={setWhatsNewTitle}
+            placeholder={text.dashboard.whatsNewTitlePlaceholder}
+            placeholderTextColor="#a98a8d"
+          />
+        </View>
 
-        <Pressable
-          style={[
-            styles.secondaryButton,
-            whatsNewUploading && styles.buttonDisabled,
-          ]}
-          disabled={whatsNewUploading}
-          onPress={() => {
-            void handleWhatsNewUpload();
-          }}
-        >
-          <Text style={styles.secondaryButtonText}>
-            {whatsNewUploading
-              ? text.upload.uploading
-              : text.dashboard.whatsNewAttachCta}
+        <View style={styles.whatsNewFieldBlock}>
+          <Text style={styles.whatsNewFieldLabel}>
+            {text.dashboard.whatsNewMessagePlaceholder}
           </Text>
-        </Pressable>
+          <TextInput
+            style={[styles.whatsNewInput, styles.whatsNewMessageInput]}
+            value={whatsNewMessage}
+            onChangeText={setWhatsNewMessage}
+            placeholder={text.dashboard.whatsNewMessagePlaceholder}
+            placeholderTextColor="#a98a8d"
+            multiline
+            textAlignVertical="top"
+          />
+        </View>
+
+        <View style={styles.whatsNewFieldBlock}>
+          <Text style={styles.whatsNewFieldLabel}>
+            {text.dashboard.whatsNewAudienceLabel}
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.whatsNewAudienceTabs}
+          >
+            {(
+              [
+                { key: 'ALL', label: text.dashboard.whatsNewAudienceAll },
+                {
+                  key: 'MANAGERS',
+                  label: text.dashboard.whatsNewAudienceManagers,
+                },
+                {
+                  key: 'EMPLOYEES',
+                  label: text.dashboard.whatsNewAudienceEmployees,
+                },
+              ] as const
+            ).map((option) => {
+              const isActive = whatsNewAudience === option.key;
+              return (
+                <Pressable
+                  key={`whats-new-audience-${option.key}`}
+                  style={[
+                    styles.whatsNewAudienceChip,
+                    isActive && styles.whatsNewAudienceChipActive,
+                  ]}
+                  onPress={() => setWhatsNewAudience(option.key)}
+                >
+                  <Text
+                    style={[
+                      styles.whatsNewAudienceChipText,
+                      isActive && styles.whatsNewAudienceChipTextActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        <View style={styles.whatsNewActionRow}>
+          <Pressable
+            style={[
+              styles.whatsNewPublishButton,
+              styles.whatsNewActionButton,
+              whatsNewPublishing && styles.buttonDisabled,
+            ]}
+            disabled={whatsNewPublishing}
+            onPress={() => {
+              void handlePublishWhatsNew();
+            }}
+          >
+            <Text style={styles.whatsNewPublishButtonText}>
+              {whatsNewPublishing
+                ? text.dashboard.whatsNewPublishing
+                : text.dashboard.whatsNewCta}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[
+              styles.whatsNewSecondaryButton,
+              styles.whatsNewActionButton,
+              whatsNewUploading && styles.buttonDisabled,
+            ]}
+            disabled={whatsNewUploading}
+            onPress={() => {
+              void handleWhatsNewUpload();
+            }}
+          >
+            <Text style={styles.whatsNewSecondaryButtonText}>
+              {whatsNewUploading
+                ? text.upload.uploading
+                : text.dashboard.whatsNewAttachCta}
+            </Text>
+          </Pressable>
+        </View>
 
         {whatsNewError ? (
           <Text style={styles.errorText}>{whatsNewError}</Text>
@@ -1142,10 +1252,10 @@ export function SessionCard({
 
         {whatsNewLastUpload ? (
           <View style={styles.whatsNewAttachmentCard}>
-            <Text style={styles.quickRowTitle}>
+            <Text style={styles.panelSectionLabelOnDark}>
               {text.dashboard.whatsNewAttachmentReady}
             </Text>
-            <Text style={styles.subtitle}>
+            <Text style={styles.panelSubtitleOnDark}>
               {whatsNewLastUpload.originalName}
             </Text>
           </View>
@@ -1156,6 +1266,52 @@ export function SessionCard({
 
   function renderNewsFeedCard() {
     const unreadCount = newsFeed.filter((item) => !item.isRead).length;
+    const laneConfigs: Array<{
+      key: NewsLane;
+      label: string;
+      icon: string;
+      color: string;
+      badgeBorder: string;
+      badgeBackground: string;
+    }> = [
+      {
+        key: 'NEWS',
+        label: text.dashboard.newsColumnNews,
+        icon: '📰',
+        color: '#c9545b',
+        badgeBorder: 'rgba(201,84,91,0.56)',
+        badgeBackground: 'rgba(201,84,91,0.14)',
+      },
+      {
+        key: 'CONGRATS',
+        label: text.dashboard.newsColumnCongrats,
+        icon: '🎉',
+        color: '#d77a95',
+        badgeBorder: 'rgba(215,122,149,0.56)',
+        badgeBackground: 'rgba(215,122,149,0.14)',
+      },
+      {
+        key: 'CRITIQUE',
+        label: text.dashboard.newsColumnCritique,
+        icon: '⚠️',
+        color: '#ab1e24',
+        badgeBorder: 'rgba(171,30,36,0.56)',
+        badgeBackground: 'rgba(171,30,36,0.16)',
+      },
+    ];
+
+    const lanePosts = newsFeed.slice(0, 24).reduce<Record<NewsLane, NewsPostItem[]>>(
+      (accumulator, post) => {
+        const lane = getNewsLaneFromTitle(post.title);
+        accumulator[lane].push(post);
+        return accumulator;
+      },
+      {
+        NEWS: [],
+        CONGRATS: [],
+        CRITIQUE: [],
+      },
+    );
 
     return (
       <View style={[styles.quickBlock, styles.newsFeedHighlightBlock]}>
@@ -1165,10 +1321,10 @@ export function SessionCard({
               <Ionicons name="sparkles-outline" size={16} color="#ffffff" />
             </View>
             <View>
-              <Text style={styles.quickBlockTitle}>
+              <Text style={styles.panelTitleOnDark}>
                 {text.dashboard.newsFeedTitle}
               </Text>
-              <Text style={styles.newsFeedKicker}>FIL D'INFORMATION</Text>
+              <Text style={styles.newsFeedKicker}>QUOI DE NEUF</Text>
             </View>
           </View>
           {unreadCount > 0 ? (
@@ -1178,29 +1334,29 @@ export function SessionCard({
           ) : null}
         </View>
         <View style={styles.newsFeedIntroStrip}>
-          <Text style={styles.subtitle}>{text.dashboard.newsFeedSubtitle}</Text>
+          <Text style={styles.panelSubtitleOnDark}>{text.dashboard.newsFeedSubtitle}</Text>
         </View>
 
-        <Text style={styles.quickSectionTitle}>
+        <Text style={styles.panelSectionLabelOnDark}>
           {text.dashboard.newsMonthFilterLabel}
         </Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chartSupplierTabs}
+          contentContainerStyle={styles.newsFilterTabs}
         >
           <Pressable
             style={[
-              styles.chartSupplierChip,
-              selectedNewsMonth === 'ALL' && styles.chartSupplierChipActive,
+              styles.newsFilterChip,
+              selectedNewsMonth === 'ALL' && styles.newsFilterChipActive,
             ]}
             onPress={() => setSelectedNewsMonth('ALL')}
           >
             <Text
               style={[
-                styles.chartSupplierChipText,
+                styles.newsFilterChipText,
                 selectedNewsMonth === 'ALL' &&
-                  styles.chartSupplierChipTextActive,
+                  styles.newsFilterChipTextActive,
               ]}
             >
               {text.dashboard.newsMonthFilterAll}
@@ -1213,15 +1369,15 @@ export function SessionCard({
               <Pressable
                 key={`news-month-${month}`}
                 style={[
-                  styles.chartSupplierChip,
-                  isActive && styles.chartSupplierChipActive,
+                  styles.newsFilterChip,
+                  isActive && styles.newsFilterChipActive,
                 ]}
                 onPress={() => setSelectedNewsMonth(month)}
               >
                 <Text
                   style={[
-                    styles.chartSupplierChipText,
-                    isActive && styles.chartSupplierChipTextActive,
+                    styles.newsFilterChipText,
+                    isActive && styles.newsFilterChipTextActive,
                   ]}
                 >
                   {month}
@@ -1232,178 +1388,234 @@ export function SessionCard({
         </ScrollView>
 
         {newsFeedLoading ? (
-          <Text style={styles.subtitle}>{text.adminTraining.loading}</Text>
+          <Text style={styles.panelSubtitleOnDark}>{text.adminTraining.loading}</Text>
         ) : null}
         {newsFeedError ? (
           <Text style={styles.errorText}>{newsFeedError}</Text>
         ) : null}
 
         {!newsFeedLoading && !newsFeedError && newsFeed.length === 0 ? (
-          <Text style={styles.subtitle}>{text.dashboard.newsFeedEmpty}</Text>
+          <Text style={styles.panelSubtitleOnDark}>{text.dashboard.newsFeedEmpty}</Text>
         ) : null}
 
-        {newsFeed.slice(0, 8).map((post) => (
-          <Pressable
-            key={`news-${post.id}`}
-            style={[
-              styles.quickRowCard,
-              !post.isRead && styles.quickNewsUnreadCard,
-            ]}
-            onPress={() => {
-              void handleOpenNews(post);
-            }}
-          >
-            <View style={styles.quickNewsRowHeader}>
-              <Text style={styles.quickRowTitle}>{post.title}</Text>
-
-              {!isAdmin ? (
-                <Pressable
-                  style={[
-                    styles.iconActionButton,
-                    post.isRead && styles.newsReadConfirmButtonDone,
-                    markingNewsReadId === post.id && styles.buttonDisabled,
-                  ]}
-                  accessibilityLabel={text.dashboard.newsConfirmReadButton}
-                  disabled={post.isRead || markingNewsReadId === post.id}
-                  onPress={(event) => {
-                    event.stopPropagation?.();
-                    void handleConfirmNewsRead(post);
-                  }}
-                >
-                  <Ionicons
-                    name={
-                      post.isRead
-                        ? 'checkmark-done-outline'
-                        : markingNewsReadId === post.id
-                          ? 'hourglass-outline'
-                          : 'checkmark-outline'
-                    }
-                    size={18}
-                    color={post.isRead ? '#2f7d32' : '#7f1b21'}
-                  />
-                </Pressable>
-              ) : (
-                <Pressable
-                  style={[
-                    styles.iconActionButton,
-                    expandedNewsTrackingId === post.id &&
-                      styles.newsTrackingActiveButton,
-                    loadingNewsTrackingId === post.id && styles.buttonDisabled,
-                  ]}
-                  accessibilityLabel={text.dashboard.newsReadTrackingButton}
-                  disabled={loadingNewsTrackingId === post.id}
-                  onPress={(event) => {
-                    event.stopPropagation?.();
-                    void handleToggleReadTracking(post);
-                  }}
-                >
-                  <Ionicons
-                    name={
-                      loadingNewsTrackingId === post.id
-                        ? 'hourglass-outline'
-                        : 'people-outline'
-                    }
-                    size={18}
-                    color="#7f1b21"
-                  />
-                </Pressable>
-              )}
-            </View>
-            <Text style={styles.subtitle}>{post.message}</Text>
-            <Text style={styles.subtitle}>
-              {new Date(post.createdAt).toLocaleString()}
-            </Text>
-            <Text style={styles.subtitle}>
-              {post.createdBy.name ?? post.createdBy.email}
-            </Text>
-            {!isAdmin ? (
-              <Text style={styles.subtitle}>
-                {post.isRead
-                  ? text.dashboard.newsReadConfirmed
-                  : text.dashboard.newsReadPendingConfirm}
-              </Text>
-            ) : null}
-            {post.attachment ? (
-              <Text style={styles.quickNewsLink}>
-                {post.attachment.originalName}
-              </Text>
-            ) : null}
-
-            {isAdmin && expandedNewsTrackingId === post.id ? (
-              <View style={styles.newsTrackingCard}>
-                {newsTrackingByPostId[post.id] ? (
-                  <>
-                    <Text style={styles.quickSectionTitle}>
-                      {text.dashboard.newsReadTrackingTitle}
+        {!newsFeedLoading && !newsFeedError && newsFeed.length > 0 ? (
+          <View style={styles.newsBoard}>
+            {laneConfigs.map((laneConfig) => (
+              <View key={`news-lane-${laneConfig.key}`} style={styles.newsLaneColumn}>
+                <View style={styles.newsLaneHeader}>
+                  <View style={styles.newsLaneTitleWrap}>
+                    <View
+                      style={[
+                        styles.newsLaneDot,
+                        { backgroundColor: laneConfig.color },
+                      ]}
+                    />
+                    <Text style={styles.newsLaneTitle}>
+                      {`${laneConfig.icon} ${laneConfig.label}`}
                     </Text>
-                    <Text style={styles.subtitle}>
-                      {`${text.dashboard.newsReadTrackingGlobal}: ${newsTrackingByPostId[post.id].readCount}/${newsTrackingByPostId[post.id].totalUsers}`}
-                    </Text>
-
-                    {newsTrackingByPostId[post.id].byRestaurant.map((group) => (
-                      <View
-                        key={`news-tracking-restaurant-${post.id}-${group.restaurant?.id ?? 'none'}`}
-                        style={styles.newsTrackingRestaurantGroup}
-                      >
-                        <Text style={styles.quickRowTitle}>
-                          {group.restaurant?.name ??
-                            text.dashboard.newsReadTrackingNoRestaurant}
-                        </Text>
-                        <Text style={styles.subtitle}>
-                          {`${text.dashboard.newsReadTrackingUnread}: ${group.unreadCount} | ${text.dashboard.newsReadTrackingRead}: ${group.readCount}`}
-                        </Text>
-
-                        {group.unreadUsers.length === 0 ? (
-                          <Text style={styles.subtitle}>
-                            {text.dashboard.newsReadTrackingAllRead}
-                          </Text>
-                        ) : (
-                          group.unreadUsers.map((unreadUser) => (
-                            <Text
-                              key={`news-tracking-user-${post.id}-${unreadUser.id}`}
-                              style={styles.subtitle}
-                            >
-                              {`- ${unreadUser.name ?? unreadUser.email} (${unreadUser.role})`}
-                            </Text>
-                          ))
-                        )}
-                      </View>
-                    ))}
-                  </>
-                ) : (
-                  <Text style={styles.subtitle}>
-                    {text.adminTraining.loading}
+                  </View>
+                  <Text style={styles.newsLaneCount}>
+                    {lanePosts[laneConfig.key].length}
                   </Text>
-                )}
-              </View>
-            ) : null}
+                </View>
 
-            {isAdmin ? (
-              <Pressable
-                style={[
-                  styles.iconDeleteButton,
-                  deletingNewsId === post.id && styles.buttonDisabled,
-                ]}
-                accessibilityLabel={text.dashboard.newsDeleteButton}
-                disabled={deletingNewsId === post.id}
-                onPress={(event) => {
-                  event.stopPropagation?.();
-                  void handleDeleteNews(post);
-                }}
-              >
-                <Ionicons
-                  name={
-                    deletingNewsId === post.id
-                      ? 'hourglass-outline'
-                      : 'trash-outline'
-                  }
-                  size={18}
-                  color="#ab1e24"
-                />
-              </Pressable>
-            ) : null}
-          </Pressable>
-        ))}
+                <View style={styles.newsLaneBody}>
+                  {lanePosts[laneConfig.key].length === 0 ? (
+                    <Text style={styles.panelSubtitleOnDark}>
+                      {text.dashboard.newsFeedEmpty}
+                    </Text>
+                  ) : (
+                    lanePosts[laneConfig.key].map((post) => (
+                      <Pressable
+                        key={`news-${laneConfig.key}-${post.id}`}
+                        style={[
+                          styles.newsPostCard,
+                          !post.isRead && styles.newsPostCardUnread,
+                        ]}
+                        onPress={() => {
+                          void handleOpenNews(post);
+                        }}
+                      >
+                        <View style={styles.newsPostMetaRow}>
+                          <Text style={styles.newsPostMetaText}>
+                            {new Date(post.createdAt).toLocaleString()}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.newsPostTag,
+                              {
+                                borderColor: laneConfig.badgeBorder,
+                                backgroundColor: laneConfig.badgeBackground,
+                              },
+                            ]}
+                          >
+                            {laneConfig.label}
+                          </Text>
+                        </View>
+
+                        <View style={styles.quickNewsRowHeader}>
+                          <Text style={styles.newsPostTitle}>
+                            {stripNewsLaneMarker(post.title)}
+                          </Text>
+
+                          {!isAdmin ? (
+                            <Pressable
+                              style={[
+                                styles.iconActionButton,
+                                post.isRead && styles.newsReadConfirmButtonDone,
+                                markingNewsReadId === post.id &&
+                                  styles.buttonDisabled,
+                              ]}
+                              accessibilityLabel={text.dashboard.newsConfirmReadButton}
+                              disabled={post.isRead || markingNewsReadId === post.id}
+                              onPress={(event) => {
+                                event.stopPropagation?.();
+                                void handleConfirmNewsRead(post);
+                              }}
+                            >
+                              <Ionicons
+                                name={
+                                  post.isRead
+                                    ? 'checkmark-done-outline'
+                                    : markingNewsReadId === post.id
+                                      ? 'hourglass-outline'
+                                      : 'checkmark-outline'
+                                }
+                                size={18}
+                                color={post.isRead ? '#2f7d32' : '#7f1b21'}
+                              />
+                            </Pressable>
+                          ) : (
+                            <Pressable
+                              style={[
+                                styles.iconActionButton,
+                                expandedNewsTrackingId === post.id &&
+                                  styles.newsTrackingActiveButton,
+                                loadingNewsTrackingId === post.id &&
+                                  styles.buttonDisabled,
+                              ]}
+                              accessibilityLabel={text.dashboard.newsReadTrackingButton}
+                              disabled={loadingNewsTrackingId === post.id}
+                              onPress={(event) => {
+                                event.stopPropagation?.();
+                                void handleToggleReadTracking(post);
+                              }}
+                            >
+                              <Ionicons
+                                name={
+                                  loadingNewsTrackingId === post.id
+                                    ? 'hourglass-outline'
+                                    : 'people-outline'
+                                }
+                                size={18}
+                                color="#7f1b21"
+                              />
+                            </Pressable>
+                          )}
+                        </View>
+
+                        <Text style={styles.newsPostBodyText}>{post.message}</Text>
+                        <Text style={styles.newsPostMetaText}>
+                          {post.createdBy.name ?? post.createdBy.email}
+                        </Text>
+
+                        {!isAdmin ? (
+                          <Text style={styles.panelSubtitleOnDark}>
+                            {post.isRead
+                              ? text.dashboard.newsReadConfirmed
+                              : text.dashboard.newsReadPendingConfirm}
+                          </Text>
+                        ) : null}
+
+                        {post.attachment ? (
+                          <Text style={styles.quickNewsLink}>
+                            {post.attachment.originalName}
+                          </Text>
+                        ) : null}
+
+                        {isAdmin && expandedNewsTrackingId === post.id ? (
+                          <View style={styles.newsTrackingCard}>
+                            {newsTrackingByPostId[post.id] ? (
+                              <>
+                                <Text style={styles.panelSectionLabelOnDark}>
+                                  {text.dashboard.newsReadTrackingTitle}
+                                </Text>
+                                <Text style={styles.panelSubtitleOnDark}>
+                                  {`${text.dashboard.newsReadTrackingGlobal}: ${newsTrackingByPostId[post.id].readCount}/${newsTrackingByPostId[post.id].totalUsers}`}
+                                </Text>
+
+                                {newsTrackingByPostId[post.id].byRestaurant.map(
+                                  (group) => (
+                                    <View
+                                      key={`news-tracking-restaurant-${post.id}-${group.restaurant?.id ?? 'none'}`}
+                                      style={styles.newsTrackingRestaurantGroup}
+                                    >
+                                      <Text style={styles.panelSectionLabelOnDark}>
+                                        {group.restaurant?.name ??
+                                          text.dashboard.newsReadTrackingNoRestaurant}
+                                      </Text>
+                                      <Text style={styles.panelSubtitleOnDark}>
+                                        {`${text.dashboard.newsReadTrackingUnread}: ${group.unreadCount} | ${text.dashboard.newsReadTrackingRead}: ${group.readCount}`}
+                                      </Text>
+
+                                      {group.unreadUsers.length === 0 ? (
+                                        <Text style={styles.panelSubtitleOnDark}>
+                                          {text.dashboard.newsReadTrackingAllRead}
+                                        </Text>
+                                      ) : (
+                                        group.unreadUsers.map((unreadUser) => (
+                                          <Text
+                                            key={`news-tracking-user-${post.id}-${unreadUser.id}`}
+                                            style={styles.panelSubtitleOnDark}
+                                          >
+                                            {`- ${unreadUser.name ?? unreadUser.email} (${unreadUser.role})`}
+                                          </Text>
+                                        ))
+                                      )}
+                                    </View>
+                                  ),
+                                )}
+                              </>
+                            ) : (
+                              <Text style={styles.panelSubtitleOnDark}>
+                                {text.adminTraining.loading}
+                              </Text>
+                            )}
+                          </View>
+                        ) : null}
+
+                        {isAdmin ? (
+                          <Pressable
+                            style={[
+                              styles.iconDeleteButton,
+                              deletingNewsId === post.id && styles.buttonDisabled,
+                            ]}
+                            accessibilityLabel={text.dashboard.newsDeleteButton}
+                            disabled={deletingNewsId === post.id}
+                            onPress={(event) => {
+                              event.stopPropagation?.();
+                              void handleDeleteNews(post);
+                            }}
+                          >
+                            <Ionicons
+                              name={
+                                deletingNewsId === post.id
+                                  ? 'hourglass-outline'
+                                  : 'trash-outline'
+                              }
+                              size={18}
+                              color="#ab1e24"
+                            />
+                          </Pressable>
+                        ) : null}
+                      </Pressable>
+                    ))
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
     );
   }
@@ -1938,54 +2150,17 @@ export function SessionCard({
 
   return (
     <View style={styles.stackCardWrap}>
+      <View style={styles.announcementTopStack}>
+        {renderNewsFeedCard()}
+        {isAdmin ? renderWhatsNewUploadCard() : null}
+      </View>
+
       <View style={isSupervisor ? styles.managerDashboardLayout : undefined}>
         <View style={isSupervisor ? styles.managerLeftColumn : undefined}>
-          <View style={[styles.card, isSupervisor && styles.managerLeftCard]}>
-            <Text style={styles.title}>
-              {text.dashboard.welcome}{' '}
-              {user.name ?? text.dashboard.fallbackName}
-            </Text>
-            <Text style={styles.subtitle}>{user.email}</Text>
-            {user.restaurant ? (
-              <Text style={styles.subtitle}>
-                {user.restaurant.name} - {user.restaurant.address}
-              </Text>
-            ) : null}
-
-            <View style={styles.pillRow}>
-              <Text style={styles.pill}>
-                {text.dashboard.role}: {roleLabel}
-              </Text>
-              <Text style={styles.pill}>
-                {text.dashboard.workplace}: {workplaceLabel}
-              </Text>
-            </View>
-
-            <Text style={styles.meta}>
-              {text.dashboard.probation}:{' '}
-              {user.isOnProbation ? text.dashboard.yes : text.dashboard.no}
-            </Text>
-
-            <Pressable style={styles.secondaryButton} onPress={onLogout}>
-              <Text style={styles.secondaryButtonText}>
-                {text.dashboard.logout}
-              </Text>
-            </Pressable>
-          </View>
-
-          {!isAdmin ? (
-            <View
-              style={!isSupervisor ? styles.employeeNewsSpacing : undefined}
-            >
-              {renderNewsFeedCard()}
-            </View>
-          ) : null}
-
           {isAdmin ? renderLevelQuickBlock() : null}
 
           {isAdmin ? (
             <>
-              <AdminRestaurantPanel accessToken={accessToken} text={text} />
               <AdminTrainingAccessPanel
                 accessToken={accessToken}
                 currentUser={user}
@@ -2000,8 +2175,9 @@ export function SessionCard({
         {isSupervisor ? (
           <View style={styles.quickColumn}>
             {!isAdmin ? renderLevelQuickBlock() : null}
-            {isAdmin ? renderNewsFeedCard() : null}
-            {isAdmin ? renderWhatsNewUploadCard() : null}
+            {isAdmin ? (
+              <AdminRestaurantPanel accessToken={accessToken} text={text} />
+            ) : null}
             {isAdmin ? (
               <AdminUploadPanel accessToken={accessToken} text={text} />
             ) : null}

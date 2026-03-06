@@ -187,7 +187,10 @@ export class UploadsService {
       ...(customCategoryFilter ? { customCategory: customCategoryFilter } : {}),
     };
 
-    if (authContext.role !== 'ADMIN') {
+    if (
+      authContext.role !== 'ADMIN' &&
+      moduleFilter !== UploadModule.FORMS
+    ) {
       const allowedSections = (authContext.trainingAccess ?? []).filter((section) =>
         isUploadSection(section),
       );

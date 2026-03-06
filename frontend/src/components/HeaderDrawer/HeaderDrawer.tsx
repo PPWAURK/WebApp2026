@@ -16,6 +16,7 @@ type HeaderDrawerProps = {
   onClose: () => void;
   onSelectPage: (page: MenuPage) => void;
   onSelectLanguage: (language: Language) => void;
+  onLogout: () => void;
 };
 
 export function HeaderDrawer(props: HeaderDrawerProps) {
@@ -39,6 +40,8 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
           ]
       : []),
   ];
+  const displayName =
+    props.currentUser.name?.trim() || props.text.dashboard.fallbackName;
 
   useEffect(() => {
     Animated.timing(translateX, {
@@ -68,7 +71,7 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>{props.text.header.title}</Text>
           <Text style={styles.headerSubtitle}>
-            {props.text.header.connected}
+            {`${props.text.dashboard.welcome} ${displayName} - ${props.text.header.connected}`}
           </Text>
         </View>
 
@@ -189,6 +192,16 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
             ) : null}
           </View>
         ) : null}
+
+        <Pressable
+          style={styles.drawerItem}
+          onPress={() => {
+            props.onClose();
+            props.onLogout();
+          }}
+        >
+          <Text style={styles.drawerItemText}>{props.text.dashboard.logout}</Text>
+        </Pressable>
 
         <View style={styles.languageSection}>
           <Text style={styles.languageTitle}>{props.text.drawer.languageTitle}</Text>
