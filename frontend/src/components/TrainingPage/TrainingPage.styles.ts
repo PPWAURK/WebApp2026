@@ -59,6 +59,82 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 14,
   },
+  workflowCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e8b3b6',
+    backgroundColor: '#fff0f1',
+    padding: 10,
+    gap: 8,
+    marginBottom: 4,
+  },
+  workflowTitle: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  workflowHint: {
+    color: '#8f5559',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  workflowStepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  workflowStepBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#dca4a7',
+    backgroundColor: '#ffffff',
+  },
+  workflowStepBadgeDone: {
+    borderColor: '#ab1e24',
+    backgroundColor: '#ab1e24',
+  },
+  workflowStepBadgeText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  workflowStepBadgeTextDone: {
+    color: '#ffffff',
+  },
+  workflowStepText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  quizActionButton: {
+    marginTop: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ab1e24',
+    backgroundColor: '#ab1e24',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    alignItems: 'center',
+  },
+  quizActionButtonDisabled: {
+    borderColor: '#d6abaf',
+    backgroundColor: '#d6abaf',
+  },
+  quizActionButtonText: {
+    color: '#ffffff',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  workflowStatusText: {
+    color: '#8f5559',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+  },
   docEmpty: {
     color: '#a06a6f',
     fontFamily: 'Manrope_400Regular',
@@ -71,7 +147,11 @@ export const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     paddingHorizontal: 10,
     paddingVertical: 8,
-    gap: 4,
+    gap: 6,
+  },
+  docItemActive: {
+    borderColor: '#ab1e24',
+    backgroundColor: '#fff1f1',
   },
   docItemTitle: {
     color: '#7a2328',
@@ -81,6 +161,20 @@ export const styles = StyleSheet.create({
   docItemMeta: {
     color: '#996165',
     fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+  },
+  docActionButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d89b9f',
+    backgroundColor: '#fff8f8',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  docActionButtonText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
     fontSize: 12,
   },
   videoSelectorGrid: {
@@ -158,10 +252,15 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 14,
   },
+  videoPlayerShell: {
+    alignSelf: 'center',
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#000000',
+  },
   videoPlayer: {
     width: '100%',
-    aspectRatio: 16 / 9,
-    borderRadius: 12,
+    height: '100%',
     backgroundColor: '#000000',
   },
 });

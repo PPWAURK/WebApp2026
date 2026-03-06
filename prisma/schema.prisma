@@ -193,6 +193,18 @@ model NewsPostRead {
   @@map("news_post_reads")
 }
 
+model TrainingQuizLink {
+  id        Int           @id @default(autoincrement())
+  section   UploadSection
+  language  String        @db.VarChar(5)
+  quizUrl   String        @map("quiz_url") @db.VarChar(2048)
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime      @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@unique([section, language])
+  @@map("training_quiz_links")
+}
+
 enum Role {
   ADMIN
   MANAGER

@@ -12,6 +12,17 @@ import {
   type UploadSection,
 } from '../uploads/upload-taxonomy';
 
+const TRAINING_QUIZ_LINK_LANGUAGES = ['fr', 'bn'] as const;
+type TrainingQuizLinkLanguage = (typeof TRAINING_QUIZ_LINK_LANGUAGES)[number];
+
+function isTrainingQuizLinkLanguage(
+  value: string,
+): value is TrainingQuizLinkLanguage {
+  return (
+    TRAINING_QUIZ_LINK_LANGUAGES as ReadonlyArray<string>
+  ).includes(value);
+}
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -198,6 +209,96 @@ export class UsersService {
     return {
       employeeLevel: updated.employeeLevel,
       sections: this.normalizeTrainingAccess(updated.sections),
+    };
+  }
+
+  async listTrainingQuizLinks() {
+    const savedLinks = await this.prisma.trainingQuizLink.findMany({
+      select: {
+        section: true,
+        language: true,
+        quizUrl: true,
+      },
+    });
+
+    const savedLinkMap = new Map(
+      savedLinks.map((entry) => [
+        `${entry.section}:${entry.language.toLowerCase()}`,
+        entry.quizUrl,
+      ]),
+    );
+
+    return this.getAllTrainingSections().flatMap((section) =>
+      TRAINING_QUIZ_LINK_LANGUAGES.map((language) => ({
+        section,
+        language,
+        quizUrl: savedLinkMap.get(`${section}:${language}`) ?? null,
+      })),
+    );
+  }
+
+  async upsertTrainingQuizLink(
+    sectionRaw: string,
+    languageRaw: string,
+    quizUrlRaw: string | undefined | null,
+    actorRole: string,
+  ) {
+    if (actorRole !== Role.ADMIN) {
+      throw new BadRequestException('Only ADMIN can manage quiz links');
+    }
+
+    if (!isUploadSection(sectionRaw)) {
+      throw new BadRequestException('Invalid training section');
+    }
+
+    const language = languageRaw.toLowerCase();
+    if (!isTrainingQuizLinkLanguage(language)) {
+      throw new BadRequestException('Invalid quiz link language');
+    }
+
+    const normalizedQuizUrl = this.normalizeQuizUrl(quizUrlRaw);
+
+    if (!normalizedQuizUrl) {
+      await this.prisma.trainingQuizLink.deleteMany({
+        where: {
+          section: sectionRaw,
+          language,
+        },
+      });
+
+      return {
+        section: sectionRaw,
+        language,
+        quizUrl: null,
+      };
+    }
+
+    const updated = await this.prisma.trainingQuizLink.upsert({
+      where: {
+        section_language: {
+          section: sectionRaw,
+          language,
+        },
+      },
+      create: {
+        section: sectionRaw,
+        language,
+        quizUrl: normalizedQuizUrl,
+      },
+      update: {
+        quizUrl: normalizedQuizUrl,
+      },
+      select: {
+        section: true,
+        language: true,
+        quizUrl: true,
+      },
+    });
+
+    return {
+      section: updated.section,
+      language,
+      quizUrl: updated.quizUrl,
     };
   }
 
@@ -940,5 +1041,26 @@ export class UsersService {
     }
 
     return Role.EMPLOYEE;
+  }
+
+  private normalizeQuizUrl(value: string | undefined | null): string | null {
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new Error('INVALID_PROTOCOL');
+      }
+      return parsed.toString();
+    } catch {
+      throw new BadRequestException('quizUrl must be a valid URL');
+    }
   }
 }

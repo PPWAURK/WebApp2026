@@ -1193,6 +1193,7 @@ export default function App() {
       return (
         <TrainingPage
           text={language.text}
+          language={language.language}
           accessToken={auth.session.accessToken}
           currentUser={auth.session.user}
         />
@@ -1300,7 +1301,6 @@ export default function App() {
         user={auth.session.user}
         accessToken={auth.session.accessToken}
         text={language.text}
-        onLogout={() => void auth.logout()}
       />
     );
   }
@@ -1322,6 +1322,9 @@ export default function App() {
               onSelectPage={(page) => goToMenuPage(page)}
               onSelectLanguage={(nextLanguage) => {
                 void language.setLanguage(nextLanguage);
+              }}
+              onLogout={() => {
+                void auth.logout();
               }}
             />
           ) : null}

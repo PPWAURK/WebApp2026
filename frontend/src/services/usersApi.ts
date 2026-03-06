@@ -27,6 +27,14 @@ export type TrainingAccessByLevelProfile = {
   sections: TrainingSection[];
 };
 
+export type TrainingQuizLinkLanguage = 'fr' | 'bn';
+
+export type TrainingQuizLinkItem = {
+  section: TrainingSection;
+  language: TrainingQuizLinkLanguage;
+  quizUrl: string | null;
+};
+
 export type UnassignedUser = {
   id: number;
   email: string;
@@ -155,6 +163,67 @@ export async function updateTrainingAccessByLevel(
   }
 
   return data as TrainingAccessByLevelProfile;
+}
+
+export async function fetchTrainingQuizLinks(
+  token: string,
+): Promise<TrainingQuizLinkItem[]> {
+  const response = await fetch(`${API_URL}/users/training-quiz-links`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = (await response.json()) as
+    | TrainingQuizLinkItem[]
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : (errorData.message ?? 'Failed to load training quiz links');
+    throw new Error(message);
+  }
+
+  return data as TrainingQuizLinkItem[];
+}
+
+export async function updateTrainingQuizLink(
+  token: string,
+  section: TrainingSection,
+  language: TrainingQuizLinkLanguage,
+  quizUrl: string | null,
+): Promise<TrainingQuizLinkItem> {
+  const response = await fetch(
+    `${API_URL}/users/training-quiz-links/${section}/${language}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ quizUrl }),
+    },
+  );
+
+  const data = (await response.json()) as
+    | TrainingQuizLinkItem
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : (errorData.message ?? 'Failed to update training quiz link');
+    throw new Error(message);
+  }
+
+  return data as TrainingQuizLinkItem;
 }
 
 export async function fetchUnassignedUsers(

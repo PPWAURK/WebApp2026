@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import {
   getModuleOptions,
   getSectionsByModule,
@@ -8,8 +8,11 @@ import {
 import type { AppText } from '../../locales/translations';
 import {
   fetchTrainingAccessByLevel,
+  fetchTrainingQuizLinks,
   updateTrainingAccessByLevel,
+  updateTrainingQuizLink,
   type TrainingAccessByLevelProfile,
+  type TrainingQuizLinkLanguage,
 } from '../../services/usersApi';
 import { styles } from './AdminTrainingAccessPanel.styles';
 import type { EmployeeLevel, TrainingSection, User } from '../../types/auth';
@@ -20,13 +23,31 @@ type AdminTrainingAccessPanelProps = {
   text: AppText;
 };
 
-export function AdminTrainingAccessPanel({ accessToken, text }: AdminTrainingAccessPanelProps) {
+const QUIZ_LINK_LANGUAGES: TrainingQuizLinkLanguage[] = ['fr', 'bn'];
+
+function getQuizLinkKey(
+  section: TrainingSection,
+  language: TrainingQuizLinkLanguage,
+) {
+  return `${section}:${language}`;
+}
+
+export function AdminTrainingAccessPanel({
+  accessToken,
+  text,
+}: AdminTrainingAccessPanelProps) {
   const [levelProfiles, setLevelProfiles] = useState<TrainingAccessByLevelProfile[]>([]);
   const [selectedLevel, setSelectedLevel] = useState<EmployeeLevel | null>(null);
   const [draftSections, setDraftSections] = useState<TrainingSection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [isQuizLinksLoading, setIsQuizLinksLoading] = useState(false);
+  const [quizLinksError, setQuizLinksError] = useState<string | null>(null);
+  const [savingQuizLinkKey, setSavingQuizLinkKey] = useState<string | null>(null);
+  const [savedQuizLinksByKey, setSavedQuizLinksByKey] = useState<Record<string, string>>({});
+  const [quizLinkDraftsByKey, setQuizLinkDraftsByKey] = useState<Record<string, string>>({});
 
   const moduleOptions = useMemo(() => getModuleOptions(text), [text]);
 
@@ -88,6 +109,47 @@ export function AdminTrainingAccessPanel({ accessToken, text }: AdminTrainingAcc
       isActive = false;
     };
   }, [accessToken, text.adminTraining.loadLevelProfilesError]);
+
+  useEffect(() => {
+    let isActive = true;
+    setIsQuizLinksLoading(true);
+    setQuizLinksError(null);
+
+    void fetchTrainingQuizLinks(accessToken)
+      .then((quizLinks) => {
+        if (!isActive) {
+          return;
+        }
+
+        const nextSavedByKey = quizLinks.reduce<Record<string, string>>(
+          (accumulator, item) => {
+            accumulator[getQuizLinkKey(item.section, item.language)] =
+              item.quizUrl ?? '';
+            return accumulator;
+          },
+          {},
+        );
+
+        setSavedQuizLinksByKey(nextSavedByKey);
+        setQuizLinkDraftsByKey(nextSavedByKey);
+      })
+      .catch(() => {
+        if (isActive) {
+          setSavedQuizLinksByKey({});
+          setQuizLinkDraftsByKey({});
+          setQuizLinksError(text.adminTraining.loadQuizLinksError);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsQuizLinksLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accessToken, text.adminTraining.loadQuizLinksError]);
 
   useEffect(() => {
     if (levelOptions.length === 0) {
@@ -152,6 +214,52 @@ export function AdminTrainingAccessPanel({ accessToken, text }: AdminTrainingAcc
 
       return Array.from(new Set([...current, ...sectionKeys]));
     });
+  }
+
+  function updateQuizLinkDraft(
+    section: TrainingSection,
+    language: TrainingQuizLinkLanguage,
+    value: string,
+  ) {
+    const key = getQuizLinkKey(section, language);
+    setQuizLinkDraftsByKey((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  }
+
+  async function saveQuizLink(
+    section: TrainingSection,
+    language: TrainingQuizLinkLanguage,
+  ) {
+    const key = getQuizLinkKey(section, language);
+    const draftValue = (quizLinkDraftsByKey[key] ?? '').trim();
+
+    setSavingQuizLinkKey(key);
+    setQuizLinksError(null);
+
+    try {
+      const updated = await updateTrainingQuizLink(
+        accessToken,
+        section,
+        language,
+        draftValue || null,
+      );
+
+      const normalizedValue = updated.quizUrl ?? '';
+      setSavedQuizLinksByKey((current) => ({
+        ...current,
+        [key]: normalizedValue,
+      }));
+      setQuizLinkDraftsByKey((current) => ({
+        ...current,
+        [key]: normalizedValue,
+      }));
+    } catch {
+      setQuizLinksError(text.adminTraining.saveQuizLinksError);
+    } finally {
+      setSavingQuizLinkKey(null);
+    }
   }
 
   async function saveAccess() {
@@ -228,17 +336,21 @@ export function AdminTrainingAccessPanel({ accessToken, text }: AdminTrainingAcc
 
         <View style={styles.quickActionsRow}>
           <Pressable style={styles.quickActionButton} onPress={selectAllSections}>
-            <Text style={styles.quickActionButtonText}>Tout selectionner</Text>
+            <Text style={styles.quickActionButtonText}>
+              {text.adminTraining.selectAllSections}
+            </Text>
           </Pressable>
           <Pressable style={styles.quickActionButton} onPress={clearAllSections}>
-            <Text style={styles.quickActionButtonText}>Tout retirer</Text>
+            <Text style={styles.quickActionButtonText}>
+              {text.adminTraining.clearAllSections}
+            </Text>
           </Pressable>
           <Pressable
             style={[styles.quickActionButton, !isDirty && styles.buttonDisabled]}
             disabled={!isDirty}
             onPress={resetLevelProfile}
           >
-            <Text style={styles.quickActionButtonText}>Reinitialiser</Text>
+            <Text style={styles.quickActionButtonText}>{text.adminTraining.resetSections}</Text>
           </Pressable>
         </View>
 
@@ -263,7 +375,9 @@ export function AdminTrainingAccessPanel({ accessToken, text }: AdminTrainingAcc
                   onPress={() => toggleModuleSections(moduleKeys)}
                 >
                   <Text style={styles.moduleToggleButtonText}>
-                    {moduleSelected === moduleKeys.length ? 'Retirer module' : 'Ajouter module'}
+                    {moduleSelected === moduleKeys.length
+                      ? text.adminTraining.removeModule
+                      : text.adminTraining.addModule}
                   </Text>
                 </Pressable>
               </View>
@@ -292,6 +406,83 @@ export function AdminTrainingAccessPanel({ accessToken, text }: AdminTrainingAcc
             </View>
           );
         })}
+      </View>
+
+      <View style={styles.sectionCard}>
+        <Text style={styles.uploadFieldTitle}>{text.adminTraining.quizLinksTitle}</Text>
+        <Text style={styles.docItemMeta}>{text.adminTraining.quizLinksSubtitle}</Text>
+
+        {quizLinksError ? <Text style={styles.error}>{quizLinksError}</Text> : null}
+        {isQuizLinksLoading ? (
+          <Text style={styles.docItemMeta}>{text.adminTraining.loading}</Text>
+        ) : (
+          moduleSections.map((moduleEntry) => {
+            const moduleLabel =
+              moduleOptions.find((option) => option.key === moduleEntry.module)?.label ??
+              moduleEntry.module;
+
+            return (
+              <View key={`quiz-link-module-${moduleEntry.module}`} style={styles.moduleCard}>
+                <Text style={styles.moduleTitle}>{moduleLabel}</Text>
+
+                {moduleEntry.sections.map((section) => (
+                  <View key={`quiz-link-${section.key}`} style={styles.quizLinkSectionCard}>
+                    <Text style={styles.docItemTitle}>{section.label}</Text>
+
+                    {QUIZ_LINK_LANGUAGES.map((languageValue) => {
+                      const linkKey = getQuizLinkKey(section.key, languageValue);
+                      const draftValue = quizLinkDraftsByKey[linkKey] ?? '';
+                      const savedValue = savedQuizLinksByKey[linkKey] ?? '';
+                      const isQuizDirty = draftValue.trim() !== savedValue.trim();
+                      const isSavingQuizLink = savingQuizLinkKey === linkKey;
+
+                      return (
+                        <View
+                          key={`quiz-link-row-${section.key}-${languageValue}`}
+                          style={styles.quizLinkLanguageRow}
+                        >
+                          <Text style={styles.quizLanguageBadge}>
+                            {languageValue === 'fr'
+                              ? text.adminTraining.quizLanguageFr
+                              : text.adminTraining.quizLanguageBn}
+                          </Text>
+                          <TextInput
+                            style={styles.quizLinkInput}
+                            value={draftValue}
+                            onChangeText={(value) =>
+                              updateQuizLinkDraft(section.key, languageValue, value)
+                            }
+                            placeholder={text.adminTraining.quizLinkPlaceholder}
+                            placeholderTextColor="#a98a8d"
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            keyboardType="url"
+                          />
+                          <Pressable
+                            style={[
+                              styles.quizLinkSaveButton,
+                              (!isQuizDirty || isSavingQuizLink) && styles.buttonDisabled,
+                            ]}
+                            disabled={!isQuizDirty || isSavingQuizLink}
+                            onPress={() => {
+                              void saveQuizLink(section.key, languageValue);
+                            }}
+                          >
+                            <Text style={styles.quizLinkSaveButtonText}>
+                              {isSavingQuizLink
+                                ? text.adminTraining.saving
+                                : text.adminTraining.quizLinkSave}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ))}
+              </View>
+            );
+          })
+        )}
       </View>
 
       <Pressable

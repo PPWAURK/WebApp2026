@@ -159,6 +159,49 @@ export class UsersController {
   }
 
   @ApiOperation({
+    summary: 'List training quiz links by section and language',
+  })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('training-quiz-links')
+  listTrainingQuizLinks(@Req() req: AuthenticatedRequest) {
+    const actor = req.user;
+    if (!actor) {
+      throw new ForbiddenException('Unauthorized');
+    }
+
+    return this.usersService.listTrainingQuizLinks();
+  }
+
+  @ApiOperation({
+    summary: 'Create or update one training quiz link (admin)',
+  })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('training-quiz-links/:section/:language')
+  updateTrainingQuizLink(
+    @Req() req: AuthenticatedRequest,
+    @Param('section') section: string,
+    @Param('language') language: string,
+    @Body('quizUrl') quizUrl: string | undefined | null,
+  ) {
+    const actor = req.user;
+    if (!actor) {
+      throw new ForbiddenException('Unauthorized');
+    }
+    if (actor.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.usersService.upsertTrainingQuizLink(
+      section,
+      language,
+      quizUrl,
+      actor.role,
+    );
+  }
+
+  @ApiOperation({
     summary: 'List employees not yet assigned to any restaurant',
   })
   @ApiBearerAuth()
