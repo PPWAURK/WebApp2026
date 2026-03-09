@@ -535,11 +535,11 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = onUnauthorized(() => {
-      void auth.logout();
+      void auth.logout(language.text.auth.sessionExpired);
     });
 
     return unsubscribe;
-  }, [auth]);
+  }, [auth, language.text.auth.sessionExpired]);
 
   useEffect(() => {
     return () => {

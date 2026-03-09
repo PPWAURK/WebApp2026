@@ -41,7 +41,7 @@ type AuthContextValue = {
   setRememberMe: Dispatch<SetStateAction<boolean>>;
   submitAuth: (currentMode: AuthMode, text: AppText, language: Language) => Promise<void>;
   forgotPassword: (text: AppText, language: Language) => Promise<void>;
-  logout: () => Promise<void>;
+  logout: (noticeMessage?: string | null) => Promise<void>;
   toggleMode: () => void;
   updateSessionUser: (user: User) => Promise<void>;
   postLoginAnimationPending: boolean;
@@ -232,7 +232,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function logout() {
+  async function logout(noticeMessage?: string | null) {
     await clearSession();
     setSession(null);
     setEmail('');
@@ -240,7 +240,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setName('');
     setMode('login');
     setError(null);
-    setNotice(null);
+    setNotice(noticeMessage ?? null);
     setForgotPasswordCooldownSeconds(0);
     setPostLoginAnimationPending(false);
   }
