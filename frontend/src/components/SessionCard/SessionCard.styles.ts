@@ -170,6 +170,31 @@ export const styles = StyleSheet.create({
   whatsNewAudienceChipTextActive: {
     color: '#7a181d',
   },
+  whatsNewLevelsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  whatsNewLevelChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#dfb0b2',
+    backgroundColor: '#fffafa',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  whatsNewLevelChipActive: {
+    borderColor: '#b75d62',
+    backgroundColor: '#f8e2e4',
+  },
+  whatsNewLevelChipText: {
+    color: '#8d5458',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  whatsNewLevelChipTextActive: {
+    color: '#7a181d',
+  },
   quickBlockTitle: {
     color: '#7f1b21',
     fontFamily: 'Manrope_700Bold',
@@ -434,6 +459,37 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
     flex: 1,
+  },
+  newsTagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  newsAudiencePill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#ddc1c3',
+    backgroundColor: '#fff2f3',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  newsAudiencePillText: {
+    color: '#8d5458',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
+  },
+  newsIndexedTag: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#e7c7ca',
+    backgroundColor: '#fffdfd',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  newsIndexedTagText: {
+    color: '#9e1f25',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
   },
   newsPostBodyText: {
     color: '#8d5458',

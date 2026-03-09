@@ -21,6 +21,7 @@ type AuthenticatedRequest = Request & {
     id?: number;
     role?: string;
     trainingAccess?: string[];
+    employeeLevel?: string;
   };
 };
 
@@ -38,6 +39,8 @@ export class NewsController {
     @Body('title') title: string | undefined,
     @Body('message') message: string | undefined,
     @Body('audience') audience: string | undefined,
+    @Body('tags') tags: unknown,
+    @Body('visibleEmployeeLevels') visibleEmployeeLevels: unknown,
     @Body('module') module: string | undefined,
     @Body('section') section: string | undefined,
     @Body('attachmentDocumentId') attachmentDocumentIdRaw: number | undefined,
@@ -51,6 +54,8 @@ export class NewsController {
       title: title ?? '',
       message: message ?? '',
       audience,
+      tags,
+      visibleEmployeeLevels,
       module,
       section,
       attachmentDocumentId: attachmentDocumentIdRaw,
@@ -66,13 +71,18 @@ export class NewsController {
     @Req() req: AuthenticatedRequest,
     @Query('limit') limitRaw: string | undefined,
     @Query('month') month: string | undefined,
+    @Query('tag') tag: string | undefined,
   ) {
     const actor = req.user;
     if (!actor?.id || !actor.role) {
       throw new ForbiddenException('Unauthenticated request');
     }
 
-    if (actor.role !== 'ADMIN' && actor.role !== 'MANAGER' && actor.role !== 'EMPLOYEE') {
+    if (
+      actor.role !== 'ADMIN' &&
+      actor.role !== 'MANAGER' &&
+      actor.role !== 'EMPLOYEE'
+    ) {
       throw new ForbiddenException('Unsupported role');
     }
 
@@ -82,8 +92,10 @@ export class NewsController {
       userId: actor.id,
       role: actor.role,
       trainingAccess: actor.trainingAccess,
+      employeeLevel: actor.employeeLevel,
       limit,
       month,
+      tag,
     });
   }
 
@@ -116,17 +128,24 @@ export class NewsController {
       throw new ForbiddenException('Unauthenticated request');
     }
 
-    if (actor.role !== 'ADMIN' && actor.role !== 'MANAGER' && actor.role !== 'EMPLOYEE') {
+    if (
+      actor.role !== 'ADMIN' &&
+      actor.role !== 'MANAGER' &&
+      actor.role !== 'EMPLOYEE'
+    ) {
       throw new ForbiddenException('Unsupported role');
     }
 
     return this.newsService.markNewsAsRead(newsId, actor.id, {
       role: actor.role,
       trainingAccess: actor.trainingAccess,
+      employeeLevel: actor.employeeLevel,
     });
   }
 
-  @ApiOperation({ summary: 'Get read tracking by restaurant for one news post (admin only)' })
+  @ApiOperation({
+    summary: 'Get read tracking by restaurant for one news post (admin only)',
+  })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get(':id/read-tracking')

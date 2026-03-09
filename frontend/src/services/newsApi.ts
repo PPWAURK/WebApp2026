@@ -1,5 +1,9 @@
-import type { LibraryModule, LibrarySection } from '../constants/documentTaxonomy';
+import type {
+  LibraryModule,
+  LibrarySection,
+} from '../constants/documentTaxonomy';
 import { API_URL } from '../constants/config';
+import type { EmployeeLevel } from '../types/auth';
 import { throwIfUnauthorized } from './authSession';
 
 export type NewsAudience = 'ALL' | 'MANAGERS' | 'EMPLOYEES';
@@ -9,6 +13,8 @@ export type NewsPostItem = {
   title: string;
   message: string;
   audience: NewsAudience;
+  tags: string[];
+  visibleEmployeeLevels: EmployeeLevel[];
   module: LibraryModule | null;
   section: LibrarySection | null;
   createdAt: string;
@@ -30,6 +36,7 @@ export type NewsPostItem = {
 export type NewsFeedResponse = {
   items: NewsPostItem[];
   availableMonths: string[];
+  availableTags: string[];
 };
 
 export type NewsReadTrackingUser = {
@@ -37,6 +44,7 @@ export type NewsReadTrackingUser = {
   name: string | null;
   email: string;
   role: 'MANAGER' | 'EMPLOYEE';
+  employeeLevel: EmployeeLevel;
 };
 
 export type NewsReadTrackingReadUser = NewsReadTrackingUser & {
@@ -69,6 +77,7 @@ export async function fetchNewsFeed(
   options?: {
     limit?: number;
     month?: string;
+    tag?: string;
   },
 ): Promise<NewsFeedResponse> {
   const params = new URLSearchParams();
@@ -77,6 +86,9 @@ export async function fetchNewsFeed(
   }
   if (options?.month) {
     params.set('month', options.month);
+  }
+  if (options?.tag) {
+    params.set('tag', options.tag);
   }
 
   const query = params.toString();
@@ -88,7 +100,9 @@ export async function fetchNewsFeed(
     },
   });
 
-  const data = (await response.json()) as NewsFeedResponse | { message?: string | string[] };
+  const data = (await response.json()) as
+    | NewsFeedResponse
+    | { message?: string | string[] };
 
   throwIfUnauthorized(response);
 
@@ -96,7 +110,7 @@ export async function fetchNewsFeed(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to load news feed';
+      : (errorData.message ?? 'Failed to load news feed');
     throw new Error(message);
   }
 
@@ -109,6 +123,8 @@ export async function createNewsPost(
     title: string;
     message: string;
     audience: NewsAudience;
+    tags?: string[];
+    visibleEmployeeLevels?: EmployeeLevel[];
     module?: LibraryModule;
     section?: LibrarySection;
     attachmentDocumentId?: number;
@@ -123,7 +139,9 @@ export async function createNewsPost(
     body: JSON.stringify(payload),
   });
 
-  const data = (await response.json()) as NewsPostItem | { message?: string | string[] };
+  const data = (await response.json()) as
+    | NewsPostItem
+    | { message?: string | string[] };
 
   throwIfUnauthorized(response);
 
@@ -131,14 +149,17 @@ export async function createNewsPost(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to create news post';
+      : (errorData.message ?? 'Failed to create news post');
     throw new Error(message);
   }
 
   return data as NewsPostItem;
 }
 
-export async function markNewsAsRead(token: string, newsId: number): Promise<void> {
+export async function markNewsAsRead(
+  token: string,
+  newsId: number,
+): Promise<void> {
   const response = await fetch(`${API_URL}/news/${newsId}/read`, {
     method: 'POST',
     headers: {
@@ -146,19 +167,25 @@ export async function markNewsAsRead(token: string, newsId: number): Promise<voi
     },
   });
 
-  const data = (await response.json()) as { success?: boolean; message?: string | string[] };
+  const data = (await response.json()) as {
+    success?: boolean;
+    message?: string | string[];
+  };
 
   throwIfUnauthorized(response);
 
   if (!response.ok) {
     const message = Array.isArray(data.message)
       ? data.message.join(', ')
-      : data.message ?? 'Failed to mark news as read';
+      : (data.message ?? 'Failed to mark news as read');
     throw new Error(message);
   }
 }
 
-export async function deleteNewsPost(token: string, newsId: number): Promise<void> {
+export async function deleteNewsPost(
+  token: string,
+  newsId: number,
+): Promise<void> {
   const response = await fetch(`${API_URL}/news/${newsId}`, {
     method: 'DELETE',
     headers: {
@@ -166,14 +193,17 @@ export async function deleteNewsPost(token: string, newsId: number): Promise<voi
     },
   });
 
-  const data = (await response.json()) as { success?: boolean; message?: string | string[] };
+  const data = (await response.json()) as {
+    success?: boolean;
+    message?: string | string[];
+  };
 
   throwIfUnauthorized(response);
 
   if (!response.ok) {
     const message = Array.isArray(data.message)
       ? data.message.join(', ')
-      : data.message ?? 'Failed to delete news post';
+      : (data.message ?? 'Failed to delete news post');
     throw new Error(message);
   }
 }
@@ -188,7 +218,9 @@ export async function fetchNewsReadTracking(
     },
   });
 
-  const data = (await response.json()) as NewsReadTrackingResponse | { message?: string | string[] };
+  const data = (await response.json()) as
+    | NewsReadTrackingResponse
+    | { message?: string | string[] };
 
   throwIfUnauthorized(response);
 
@@ -196,7 +228,7 @@ export async function fetchNewsReadTracking(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to fetch news read tracking';
+      : (errorData.message ?? 'Failed to fetch news read tracking');
     throw new Error(message);
   }
 
