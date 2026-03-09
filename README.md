@@ -1,251 +1,258 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# ZHAO Plateforme 2026
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+ZHAO Plateforme 2026 是一个门店运营平台，包含后台 API、员工培训与公告系统、商品与供应商管理、订单流程和门店资料管理。
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+仓库当前是一个前后端分离的项目：
 
-## Description
+- `backend/`: NestJS + Prisma + MySQL
+- `frontend/`: Expo Router + React Native Web
+- `docker-compose.yml`: 本地 MySQL
+- `docker-compose.prod.yml`: 生产环境后端容器编排
+- `.gitlab-ci.yml`: GitLab 构建与部署流水线
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 主要功能
 
-## Backend setup (NestJS + Prisma + MySQL)
+- 用户登录、注册、密码重置
+- 员工角色、等级、岗位和培训权限管理
+- 培训文档、公告发布、阅读追踪
+- 公告标签索引与按员工等级可见范围控制
+- 商品、供应商与图片管理
+- 采购下单、订单历史、订单 PDF
+- 门店资料与日常表格入口
+- 媒体上传和文件公开访问
 
-```bash
-# 1) install deps
-npm install
+## 技术栈
 
-# 2) copy env
-cp .env.example .env
+- Backend: NestJS 11, Prisma 6, MySQL 8
+- Frontend: Expo 54, React 19, React Native Web
+- Auth: JWT
+- Storage: 本地文件系统目录映射
+- Deploy: Docker + GitLab CI/CD
 
-# 3) open SSH tunnel to remote MySQL (example)
-ssh -N -L 3307:127.0.0.1:3306 user@your-server
+## 目录结构
 
-# 4) generate prisma client + run initial migration
-npm run prisma:generate
-npm run prisma:migrate -- --name init
-
-# 5) run api
-npm run start:dev
+```text
+.
+├── backend/
+│   ├── prisma/
+│   └── src/
+│       ├── auth/
+│       ├── news/
+│       ├── orders/
+│       ├── products/
+│       ├── restaurants/
+│       ├── suppliers/
+│       ├── uploads/
+│       └── users/
+├── frontend/
+│   ├── app/
+│   └── src/
+│       ├── components/
+│       ├── locales/
+│       ├── services/
+│       └── types/
+├── docker-compose.yml
+├── docker-compose.prod.yml
+└── README.md
 ```
 
-API docs are available on `http://localhost:3000/docs`.
+## 环境要求
 
-When your reverse proxy keeps a path prefix (e.g. `/backend2`) without rewrite,
-set `API_PREFIX="backend2"` so backend routes are exposed as
-`/backend2/auth/*`, `/backend2/uploads/*`, etc.
+- Node.js 20+
+- npm 10+
+- MySQL 8
+- Docker / Docker Compose（本地起数据库时需要）
 
-For local development, keep `API_PREFIX` empty and `PUBLIC_API_BASE_URL` empty.
+## 本地开发
 
-## Upload service (images and videos)
+### 1. 安装依赖
 
-Authenticated endpoints:
+```bash
+npm install
+npm --prefix backend install
+npm --prefix frontend install
+```
 
-- `POST /uploads/single` with multipart field `file`
-- `POST /uploads/multiple` with multipart field `files` (max 10)
+### 2. 配置环境变量
 
-Public file access:
+复制本地环境样例：
 
-- `GET /uploads/:category/:fileName`
+```bash
+cp .env.example .env
+```
 
-Rules:
+`.env.example` 里的关键变量：
 
-- Accepted MIME types: `image/*`, `video/*` and common documents (pdf, doc, docx, xls, xlsx, txt)
-- Max file size: `50MB` per file
-- `STORAGE_ROOT_PATH` controls where files are physically stored
-- `PUBLIC_API_BASE_URL` controls generated public URLs (useful behind reverse proxy path like `/backend2`)
-- With `STORAGE_ROOT_PATH="/data/storage"`, uploads are saved in:
-  - `/data/storage/images`
-  - `/data/storage/videos`
-  - `/data/storage/documents`
+- `PORT`: 后端端口，默认 `3000`
+- `API_PREFIX`: 反向代理前缀，本地一般留空
+- `DATABASE_URL`: Prisma 连接串
+- `JWT_SECRET`: JWT 密钥
+- `CORS_ORIGIN`: 允许的前端来源
+- `STORAGE_ROOT_PATH`: 上传文件物理目录
+- `PUBLIC_API_BASE_URL`: 生成公开文件地址时使用
+- `APP_WEB_URL`: 前端地址
+- `MAIL_*`: 密码找回邮件配置
+- `ADMIN_EMAILS`: 初始化管理员邮箱列表
+- `ADMIN_DEFAULT_PASSWORD`: 初始化管理员默认密码
 
-`DATABASE_URL` must target the local forwarded port from your SSH tunnel (default in `.env.example`: `127.0.0.1:3307`).
+### 3. 启动数据库
 
-Optional local DB with Docker:
+如果本地直接使用 Docker MySQL：
 
 ```bash
 npm run db:up
 ```
 
-## Project setup
+默认会把 MySQL 暴露到 `127.0.0.1:3307`。
+
+如果你连的是远程 MySQL，也可以像下面这样走 SSH 隧道：
 
 ```bash
-$ npm install
+ssh -N -L 3307:127.0.0.1:3306 user@your-server
 ```
 
-## Compile and run the project
+### 4. 生成 Prisma Client 并迁移数据库
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run prisma:generate
+npm run prisma:migrate
 ```
 
-## Run tests
+如需执行生产迁移：
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run prisma:migrate:deploy
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+如需初始化管理员或测试数据：
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run prisma:seed
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 5. 启动后端
 
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
-=======
-# ZHAO_Plateforme2026-project
-
-
-
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.com/eric-group2600910/ZHAO_Plateforme2026-project.git
-git branch -M main
-git push -uf origin main
+```bash
+npm run start:dev
 ```
 
-## Integrate with your tools
+接口文档默认在：
 
-* [Set up project integrations](https://gitlab.com/eric-group2600910/ZHAO_Plateforme2026-project/-/settings/integrations)
+```text
+http://localhost:3000/docs
+```
 
-## Collaborate with your team
+### 6. 启动前端
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+```bash
+npm --prefix frontend run web
+```
 
-## Test and Deploy
+也可以按平台启动：
 
-Use the built-in continuous integration in GitLab.
+```bash
+npm --prefix frontend run android
+npm --prefix frontend run ios
+```
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+## 常用命令
 
-***
+### 根目录
 
-# Editing this README
+```bash
+npm run db:up
+npm run db:down
+npm run prisma:generate
+npm run prisma:migrate
+npm run prisma:migrate:deploy
+npm run prisma:seed
+npm run start:dev
+npm run test
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### Backend
 
-## Suggestions for a good README
+```bash
+npm --prefix backend run build
+npm --prefix backend run lint
+npm --prefix backend run test
+npm --prefix backend run test:e2e
+```
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+### Frontend
 
-## Name
-Choose a self-explaining name for your project.
+```bash
+npm --prefix frontend run web
+npm --prefix frontend run build
+npm --prefix frontend run typecheck
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## 上传与文件访问
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+上传模块支持图片、视频和常见办公文档。
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+认证接口：
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+- `POST /uploads/single`
+- `POST /uploads/multiple`
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+公开访问：
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+- `GET /uploads/:category/:fileName`
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+说明：
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+- 文件保存路径由 `STORAGE_ROOT_PATH` 控制
+- 对外生成的完整 URL 由 `PUBLIC_API_BASE_URL` 控制
+- 如果反向代理保留了前缀路径，例如 `/backend2`，需要同步设置 `API_PREFIX` 和 `PUBLIC_API_BASE_URL`
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+示例：
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+- `API_PREFIX="backend2"`
+- `PUBLIC_API_BASE_URL="https://api.example.com/backend2"`
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+这样后端会暴露为：
 
-## License
-For open source projects, say how it is licensed.
+- `/backend2/auth/*`
+- `/backend2/uploads/*`
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
->>>>>>> 8024bce8ec524b335c8d843f74e7d04f4f5e0f14
+## 生产部署
+
+生产配置示例见：
+
+- `.env.production.example`
+- `docker-compose.prod.yml`
+- `.gitlab-ci.yml`
+
+当前 GitLab CI/CD 流程大致是：
+
+1. 构建后端 Docker 镜像
+2. 推送镜像到 GitLab Registry
+3. SSH 到服务器
+4. 执行 Prisma 生产迁移
+5. 执行 seed
+6. 使用 `docker compose` 更新后端服务
+
+生产环境需要准备至少这些变量：
+
+- `SERVER_IP`
+- `SSH_PRIVATE_KEY`
+- `ADMIN_EMAILS`
+- `ADMIN_DEFAULT_PASSWORD`
+
+## 开发建议
+
+- 先改 Prisma schema，再执行 `npm run prisma:generate`
+- 前端接口类型变更后，同步更新 `frontend/src/services/*`
+- 提交前至少跑一遍：
+
+```bash
+npm --prefix backend run build
+npm --prefix frontend run typecheck
+```
+
+## 备注
+
+- 当前仓库根目录脚本主要代理到 `backend/`
+- 前端是独立 Expo 项目，需要单独安装和启动
+- README 以当前仓库代码结构为准，不再沿用 Nest 默认模板
