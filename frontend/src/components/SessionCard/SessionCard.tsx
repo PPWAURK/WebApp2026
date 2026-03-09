@@ -105,16 +105,72 @@ function getNewsLaneFromTitle(title: string): NewsLane {
 }
 
 function stripNewsLaneMarker(title: string): string {
-  return title
-    .replace(/^\s*\[(NEWS|CONGRATS|CRITIQUE)\]\s*/i, '')
-    .trim();
+  return title.replace(/^\s*\[(NEWS|CONGRATS|CRITIQUE)\]\s*/i, '').trim();
 }
 
-export function SessionCard({
-  user,
-  accessToken,
-  text,
-}: SessionCardProps) {
+function normalizeNewsTagKey(tag: string): string {
+  return tag.trim().toLocaleLowerCase();
+}
+
+function parseNewsTagsInput(value: string): string[] {
+  const seen = new Set<string>();
+  const tags: string[] = [];
+
+  for (const entry of value.split(/[\n,]/)) {
+    const normalizedTag = entry.trim().replace(/^#+/, '').replace(/\s+/g, ' ');
+
+    if (!normalizedTag) {
+      continue;
+    }
+
+    const key = normalizeNewsTagKey(normalizedTag);
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    tags.push(normalizedTag);
+  }
+
+  return tags;
+}
+
+function formatNewsTag(tag: string): string {
+  return `#${tag}`;
+}
+
+function getNewsAudienceLabel(audience: NewsAudience, text: AppText): string {
+  if (audience === 'MANAGERS') {
+    return text.dashboard.whatsNewAudienceManagers;
+  }
+
+  if (audience === 'EMPLOYEES') {
+    return text.dashboard.whatsNewAudienceEmployees;
+  }
+
+  return text.dashboard.whatsNewAudienceAll;
+}
+
+function getVisibleLevelsSummary(
+  visibleEmployeeLevels: EmployeeLevel[],
+  text: AppText,
+): string {
+  if (visibleEmployeeLevels.length === 0) {
+    return text.dashboard.newsVisibleLevelsAll;
+  }
+
+  const labels = visibleEmployeeLevels.map(
+    (level) => text.dashboard.levels[level],
+  );
+
+  if (labels.length <= 2) {
+    return labels.join(' / ');
+  }
+
+  return `${labels.slice(0, 2).join(' / ')} +${labels.length - 2}`;
+}
+
+export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   const isManager = user.role === 'MANAGER';
   const isAdmin = user.role === 'ADMIN';
   const isSupervisor = isManager || isAdmin;
@@ -168,14 +224,20 @@ export function SessionCard({
     useState<UploadedFileResponse | null>(null);
   const [whatsNewTitle, setWhatsNewTitle] = useState('');
   const [whatsNewMessage, setWhatsNewMessage] = useState('');
+  const [whatsNewTagsInput, setWhatsNewTagsInput] = useState('');
   const [whatsNewLane, setWhatsNewLane] = useState<NewsLane>('NEWS');
   const [whatsNewAudience, setWhatsNewAudience] = useState<NewsAudience>('ALL');
+  const [whatsNewVisibleLevels, setWhatsNewVisibleLevels] = useState<
+    EmployeeLevel[]
+  >([]);
   const [whatsNewPublishing, setWhatsNewPublishing] = useState(false);
   const [newsFeed, setNewsFeed] = useState<NewsPostItem[]>([]);
   const [newsFeedLoading, setNewsFeedLoading] = useState(false);
   const [newsFeedError, setNewsFeedError] = useState<string | null>(null);
   const [newsFeedMonths, setNewsFeedMonths] = useState<string[]>([]);
+  const [newsFeedTags, setNewsFeedTags] = useState<string[]>([]);
   const [selectedNewsMonth, setSelectedNewsMonth] = useState<string>('ALL');
+  const [selectedNewsTag, setSelectedNewsTag] = useState<string>('ALL');
   const [deletingNewsId, setDeletingNewsId] = useState<number | null>(null);
   const [markingNewsReadId, setMarkingNewsReadId] = useState<number | null>(
     null,
@@ -205,6 +267,10 @@ export function SessionCard({
     destructive: true,
   });
   const confirmResolverRef = useRef<((value: boolean) => void) | null>(null);
+  const parsedWhatsNewTags = useMemo(
+    () => parseNewsTagsInput(whatsNewTagsInput),
+    [whatsNewTagsInput],
+  );
 
   useEffect(() => {
     if (!isSupervisor) {
@@ -503,11 +569,13 @@ export function SessionCard({
     void fetchNewsFeed(accessToken, {
       limit: 24,
       month: selectedNewsMonth === 'ALL' ? undefined : selectedNewsMonth,
+      tag: selectedNewsTag === 'ALL' ? undefined : selectedNewsTag,
     })
       .then((payload) => {
         if (isActive) {
           setNewsFeed(payload.items);
           setNewsFeedMonths(payload.availableMonths);
+          setNewsFeedTags(payload.availableTags);
 
           if (
             selectedNewsMonth !== 'ALL' &&
@@ -515,12 +583,24 @@ export function SessionCard({
           ) {
             setSelectedNewsMonth('ALL');
           }
+
+          if (
+            selectedNewsTag !== 'ALL' &&
+            !payload.availableTags.some(
+              (tag) =>
+                normalizeNewsTagKey(tag) ===
+                normalizeNewsTagKey(selectedNewsTag),
+            )
+          ) {
+            setSelectedNewsTag('ALL');
+          }
         }
       })
       .catch(() => {
         if (isActive) {
           setNewsFeed([]);
           setNewsFeedMonths([]);
+          setNewsFeedTags([]);
           setNewsFeedError(text.dashboard.newsLoadError);
         }
       })
@@ -533,7 +613,12 @@ export function SessionCard({
     return () => {
       isActive = false;
     };
-  }, [accessToken, selectedNewsMonth, text.dashboard.newsLoadError]);
+  }, [
+    accessToken,
+    selectedNewsMonth,
+    selectedNewsTag,
+    text.dashboard.newsLoadError,
+  ]);
 
   const employeeRestaurantOptions = useMemo(() => {
     const restaurantsMap = new Map<number, string>();
@@ -926,6 +1011,7 @@ export function SessionCard({
   async function handlePublishWhatsNew() {
     const title = whatsNewTitle.trim();
     const message = whatsNewMessage.trim();
+    const tags = parseNewsTagsInput(whatsNewTagsInput);
 
     if (!title || !message) {
       setWhatsNewError(text.dashboard.whatsNewValidationError);
@@ -940,19 +1026,42 @@ export function SessionCard({
         title: `${NEWS_LANE_MARKERS[whatsNewLane]} ${title}`,
         message,
         audience: whatsNewAudience,
+        tags,
+        visibleEmployeeLevels: whatsNewVisibleLevels,
         attachmentDocumentId: whatsNewLastUpload?.documentId,
       });
 
-      setNewsFeed((current) => [createdPost, ...current]);
+      const createdMonth = `${new Date(createdPost.createdAt).getUTCFullYear()}-${`${new Date(createdPost.createdAt).getUTCMonth() + 1}`.padStart(2, '0')}`;
+      const matchesSelectedMonth =
+        selectedNewsMonth === 'ALL' || selectedNewsMonth === createdMonth;
+      const matchesSelectedTag =
+        selectedNewsTag === 'ALL' ||
+        createdPost.tags.some(
+          (tag) =>
+            normalizeNewsTagKey(tag) === normalizeNewsTagKey(selectedNewsTag),
+        );
+
+      setNewsFeed((current) =>
+        matchesSelectedMonth && matchesSelectedTag
+          ? [createdPost, ...current].slice(0, 24)
+          : current,
+      );
       setNewsFeedMonths((current) => {
-        const createdDate = new Date(createdPost.createdAt);
-        const month = `${createdDate.getUTCFullYear()}-${`${createdDate.getUTCMonth() + 1}`.padStart(2, '0')}`;
-        return current.includes(month) ? current : [month, ...current];
+        return current.includes(createdMonth)
+          ? current
+          : [createdMonth, ...current];
       });
+      setNewsFeedTags((current) =>
+        Array.from(new Set([...current, ...createdPost.tags])).sort(
+          (left, right) => left.localeCompare(right),
+        ),
+      );
       setWhatsNewTitle('');
       setWhatsNewMessage('');
+      setWhatsNewTagsInput('');
       setWhatsNewLane('NEWS');
       setWhatsNewAudience('ALL');
+      setWhatsNewVisibleLevels([]);
       setWhatsNewLastUpload(null);
     } catch {
       setWhatsNewError(text.dashboard.whatsNewPublishError);
@@ -1071,11 +1180,15 @@ export function SessionCard({
         </View>
 
         <View style={styles.whatsNewIntroStrip}>
-          <Text style={styles.whatsNewKicker}>{text.dashboard.whatsNewSubtitle}</Text>
+          <Text style={styles.whatsNewKicker}>
+            {text.dashboard.whatsNewSubtitle}
+          </Text>
         </View>
 
         <View style={styles.whatsNewFieldBlock}>
-          <Text style={styles.whatsNewFieldLabel}>{text.dashboard.whatsNewTypeLabel}</Text>
+          <Text style={styles.whatsNewFieldLabel}>
+            {text.dashboard.whatsNewTypeLabel}
+          </Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -1164,6 +1277,36 @@ export function SessionCard({
 
         <View style={styles.whatsNewFieldBlock}>
           <Text style={styles.whatsNewFieldLabel}>
+            {text.dashboard.whatsNewTagsLabel}
+          </Text>
+          <TextInput
+            style={styles.whatsNewInput}
+            value={whatsNewTagsInput}
+            onChangeText={setWhatsNewTagsInput}
+            placeholder={text.dashboard.whatsNewTagsPlaceholder}
+            placeholderTextColor="#a98a8d"
+          />
+          <Text style={styles.panelSubtitleOnDark}>
+            {text.dashboard.whatsNewTagsHint}
+          </Text>
+          {parsedWhatsNewTags.length > 0 ? (
+            <View style={styles.newsTagRow}>
+              {parsedWhatsNewTags.map((tag) => (
+                <View
+                  key={`whats-new-tag-${tag}`}
+                  style={styles.newsIndexedTag}
+                >
+                  <Text style={styles.newsIndexedTagText}>
+                    {formatNewsTag(tag)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.whatsNewFieldBlock}>
+          <Text style={styles.whatsNewFieldLabel}>
             {text.dashboard.whatsNewAudienceLabel}
           </Text>
           <ScrollView
@@ -1206,6 +1349,64 @@ export function SessionCard({
               );
             })}
           </ScrollView>
+        </View>
+
+        <View style={styles.whatsNewFieldBlock}>
+          <Text style={styles.whatsNewFieldLabel}>
+            {text.dashboard.whatsNewVisibleLevelsLabel}
+          </Text>
+          <Text style={styles.panelSubtitleOnDark}>
+            {text.dashboard.whatsNewVisibleLevelsHint}
+          </Text>
+          <View style={styles.whatsNewLevelsWrap}>
+            <Pressable
+              style={[
+                styles.whatsNewLevelChip,
+                whatsNewVisibleLevels.length === 0 &&
+                  styles.whatsNewLevelChipActive,
+              ]}
+              onPress={() => setWhatsNewVisibleLevels([])}
+            >
+              <Text
+                style={[
+                  styles.whatsNewLevelChipText,
+                  whatsNewVisibleLevels.length === 0 &&
+                    styles.whatsNewLevelChipTextActive,
+                ]}
+              >
+                {text.dashboard.newsVisibleLevelsAll}
+              </Text>
+            </Pressable>
+
+            {EMPLOYEE_LEVELS.map((level) => {
+              const isActive = whatsNewVisibleLevels.includes(level);
+              return (
+                <Pressable
+                  key={`whats-new-visible-level-${level}`}
+                  style={[
+                    styles.whatsNewLevelChip,
+                    isActive && styles.whatsNewLevelChipActive,
+                  ]}
+                  onPress={() =>
+                    setWhatsNewVisibleLevels((current) =>
+                      current.includes(level)
+                        ? current.filter((entry) => entry !== level)
+                        : [...current, level],
+                    )
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.whatsNewLevelChipText,
+                      isActive && styles.whatsNewLevelChipTextActive,
+                    ]}
+                  >
+                    {text.dashboard.levels[level]}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         <View style={styles.whatsNewActionRow}>
@@ -1300,18 +1501,20 @@ export function SessionCard({
       },
     ];
 
-    const lanePosts = newsFeed.slice(0, 24).reduce<Record<NewsLane, NewsPostItem[]>>(
-      (accumulator, post) => {
-        const lane = getNewsLaneFromTitle(post.title);
-        accumulator[lane].push(post);
-        return accumulator;
-      },
-      {
-        NEWS: [],
-        CONGRATS: [],
-        CRITIQUE: [],
-      },
-    );
+    const lanePosts = newsFeed
+      .slice(0, 24)
+      .reduce<Record<NewsLane, NewsPostItem[]>>(
+        (accumulator, post) => {
+          const lane = getNewsLaneFromTitle(post.title);
+          accumulator[lane].push(post);
+          return accumulator;
+        },
+        {
+          NEWS: [],
+          CONGRATS: [],
+          CRITIQUE: [],
+        },
+      );
 
     return (
       <View style={[styles.quickBlock, styles.newsFeedHighlightBlock]}>
@@ -1334,7 +1537,9 @@ export function SessionCard({
           ) : null}
         </View>
         <View style={styles.newsFeedIntroStrip}>
-          <Text style={styles.panelSubtitleOnDark}>{text.dashboard.newsFeedSubtitle}</Text>
+          <Text style={styles.panelSubtitleOnDark}>
+            {text.dashboard.newsFeedSubtitle}
+          </Text>
         </View>
 
         <Text style={styles.panelSectionLabelOnDark}>
@@ -1355,8 +1560,7 @@ export function SessionCard({
             <Text
               style={[
                 styles.newsFilterChipText,
-                selectedNewsMonth === 'ALL' &&
-                  styles.newsFilterChipTextActive,
+                selectedNewsMonth === 'ALL' && styles.newsFilterChipTextActive,
               ]}
             >
               {text.dashboard.newsMonthFilterAll}
@@ -1387,21 +1591,78 @@ export function SessionCard({
           })}
         </ScrollView>
 
+        <Text style={styles.panelSectionLabelOnDark}>
+          {text.dashboard.newsTagFilterLabel}
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.newsFilterTabs}
+        >
+          <Pressable
+            style={[
+              styles.newsFilterChip,
+              selectedNewsTag === 'ALL' && styles.newsFilterChipActive,
+            ]}
+            onPress={() => setSelectedNewsTag('ALL')}
+          >
+            <Text
+              style={[
+                styles.newsFilterChipText,
+                selectedNewsTag === 'ALL' && styles.newsFilterChipTextActive,
+              ]}
+            >
+              {text.dashboard.newsTagFilterAll}
+            </Text>
+          </Pressable>
+
+          {newsFeedTags.map((tag) => {
+            const isActive =
+              normalizeNewsTagKey(selectedNewsTag) === normalizeNewsTagKey(tag);
+            return (
+              <Pressable
+                key={`news-tag-${tag}`}
+                style={[
+                  styles.newsFilterChip,
+                  isActive && styles.newsFilterChipActive,
+                ]}
+                onPress={() => setSelectedNewsTag(tag)}
+              >
+                <Text
+                  style={[
+                    styles.newsFilterChipText,
+                    isActive && styles.newsFilterChipTextActive,
+                  ]}
+                >
+                  {formatNewsTag(tag)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
         {newsFeedLoading ? (
-          <Text style={styles.panelSubtitleOnDark}>{text.adminTraining.loading}</Text>
+          <Text style={styles.panelSubtitleOnDark}>
+            {text.adminTraining.loading}
+          </Text>
         ) : null}
         {newsFeedError ? (
           <Text style={styles.errorText}>{newsFeedError}</Text>
         ) : null}
 
         {!newsFeedLoading && !newsFeedError && newsFeed.length === 0 ? (
-          <Text style={styles.panelSubtitleOnDark}>{text.dashboard.newsFeedEmpty}</Text>
+          <Text style={styles.panelSubtitleOnDark}>
+            {text.dashboard.newsFeedEmpty}
+          </Text>
         ) : null}
 
         {!newsFeedLoading && !newsFeedError && newsFeed.length > 0 ? (
           <View style={styles.newsBoard}>
             {laneConfigs.map((laneConfig) => (
-              <View key={`news-lane-${laneConfig.key}`} style={styles.newsLaneColumn}>
+              <View
+                key={`news-lane-${laneConfig.key}`}
+                style={styles.newsLaneColumn}
+              >
                 <View style={styles.newsLaneHeader}>
                   <View style={styles.newsLaneTitleWrap}>
                     <View
@@ -1466,8 +1727,12 @@ export function SessionCard({
                                 markingNewsReadId === post.id &&
                                   styles.buttonDisabled,
                               ]}
-                              accessibilityLabel={text.dashboard.newsConfirmReadButton}
-                              disabled={post.isRead || markingNewsReadId === post.id}
+                              accessibilityLabel={
+                                text.dashboard.newsConfirmReadButton
+                              }
+                              disabled={
+                                post.isRead || markingNewsReadId === post.id
+                              }
                               onPress={(event) => {
                                 event.stopPropagation?.();
                                 void handleConfirmNewsRead(post);
@@ -1494,7 +1759,9 @@ export function SessionCard({
                                 loadingNewsTrackingId === post.id &&
                                   styles.buttonDisabled,
                               ]}
-                              accessibilityLabel={text.dashboard.newsReadTrackingButton}
+                              accessibilityLabel={
+                                text.dashboard.newsReadTrackingButton
+                              }
                               disabled={loadingNewsTrackingId === post.id}
                               onPress={(event) => {
                                 event.stopPropagation?.();
@@ -1514,9 +1781,32 @@ export function SessionCard({
                           )}
                         </View>
 
-                        <Text style={styles.newsPostBodyText}>{post.message}</Text>
+                        <View style={styles.newsTagRow}>
+                          <View style={styles.newsAudiencePill}>
+                            <Text style={styles.newsAudiencePillText}>
+                              {getNewsAudienceLabel(post.audience, text)}
+                            </Text>
+                          </View>
+                          {post.tags.map((tag) => (
+                            <View
+                              key={`news-post-tag-${post.id}-${tag}`}
+                              style={styles.newsIndexedTag}
+                            >
+                              <Text style={styles.newsIndexedTagText}>
+                                {formatNewsTag(tag)}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+
+                        <Text style={styles.newsPostBodyText}>
+                          {post.message}
+                        </Text>
                         <Text style={styles.newsPostMetaText}>
                           {post.createdBy.name ?? post.createdBy.email}
+                        </Text>
+                        <Text style={styles.newsPostMetaText}>
+                          {`${text.dashboard.newsVisibleLevelsLabel}: ${getVisibleLevelsSummary(post.visibleEmployeeLevels, text)}`}
                         </Text>
 
                         {!isAdmin ? (
@@ -1550,17 +1840,25 @@ export function SessionCard({
                                       key={`news-tracking-restaurant-${post.id}-${group.restaurant?.id ?? 'none'}`}
                                       style={styles.newsTrackingRestaurantGroup}
                                     >
-                                      <Text style={styles.panelSectionLabelOnDark}>
+                                      <Text
+                                        style={styles.panelSectionLabelOnDark}
+                                      >
                                         {group.restaurant?.name ??
-                                          text.dashboard.newsReadTrackingNoRestaurant}
+                                          text.dashboard
+                                            .newsReadTrackingNoRestaurant}
                                       </Text>
                                       <Text style={styles.panelSubtitleOnDark}>
                                         {`${text.dashboard.newsReadTrackingUnread}: ${group.unreadCount} | ${text.dashboard.newsReadTrackingRead}: ${group.readCount}`}
                                       </Text>
 
                                       {group.unreadUsers.length === 0 ? (
-                                        <Text style={styles.panelSubtitleOnDark}>
-                                          {text.dashboard.newsReadTrackingAllRead}
+                                        <Text
+                                          style={styles.panelSubtitleOnDark}
+                                        >
+                                          {
+                                            text.dashboard
+                                              .newsReadTrackingAllRead
+                                          }
                                         </Text>
                                       ) : (
                                         group.unreadUsers.map((unreadUser) => (
@@ -1568,7 +1866,7 @@ export function SessionCard({
                                             key={`news-tracking-user-${post.id}-${unreadUser.id}`}
                                             style={styles.panelSubtitleOnDark}
                                           >
-                                            {`- ${unreadUser.name ?? unreadUser.email} (${unreadUser.role})`}
+                                            {`- ${unreadUser.name ?? unreadUser.email} (${text.dashboard.roleValues[unreadUser.role]} / ${text.dashboard.levels[unreadUser.employeeLevel]})`}
                                           </Text>
                                         ))
                                       )}
@@ -1588,7 +1886,8 @@ export function SessionCard({
                           <Pressable
                             style={[
                               styles.iconDeleteButton,
-                              deletingNewsId === post.id && styles.buttonDisabled,
+                              deletingNewsId === post.id &&
+                                styles.buttonDisabled,
                             ]}
                             accessibilityLabel={text.dashboard.newsDeleteButton}
                             disabled={deletingNewsId === post.id}

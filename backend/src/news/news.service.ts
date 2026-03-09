@@ -4,7 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EmployeeLevel, NewsAudience, Role, UploadSection, type Prisma } from '@prisma/client';
+import {
+  EmployeeLevel,
+  NewsAudience,
+  Role,
+  UploadSection,
+  type Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { isSectionInModule, isUploadSection } from '../uploads/upload-taxonomy';
 
@@ -13,9 +19,43 @@ type RequestLike = {
   get: (name: string) => string | undefined;
 };
 
+type NewsAccessContext = {
+  role: string;
+  trainingAccess?: string[];
+  employeeLevel?: string;
+};
+
+type NewsFeedRow = {
+  id: number;
+  title: string;
+  message: string;
+  audience: NewsAudience;
+  tags: Prisma.JsonValue | null;
+  visibleEmployeeLevels: Prisma.JsonValue | null;
+  module: string | null;
+  section: UploadSection | null;
+  createdAt: Date;
+  createdByUser: {
+    id: number;
+    name: string | null;
+    email: string;
+  };
+  attachmentDocument: {
+    id: number;
+    category: 'images' | 'videos' | 'documents';
+    originalName: string;
+    mimeType: string;
+    mediaType: 'image' | 'video' | 'document';
+    fileName: string;
+  } | null;
+  reads: Array<{ id: number }>;
+};
+
 @Injectable()
 export class NewsService {
   private readonly publicApiBaseUrl = process.env.PUBLIC_API_BASE_URL;
+  private readonly maxNewsTags = 10;
+  private readonly maxNewsTagLength = 30;
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -25,6 +65,8 @@ export class NewsService {
       title: string;
       message: string;
       audience?: string;
+      tags?: unknown;
+      visibleEmployeeLevels?: unknown;
       module?: string;
       section?: string;
       attachmentDocumentId?: number;
@@ -43,21 +85,34 @@ export class NewsService {
     }
 
     const audience = this.parseAudience(input.audience);
+    const tags = this.parseTags(input.tags);
+    const visibleEmployeeLevels = this.parseVisibleEmployeeLevels(
+      input.visibleEmployeeLevels,
+    );
     const module = this.parseUploadModule(input.module);
     const section = this.parseUploadSection(input.section);
 
     if (section && !module) {
-      throw new BadRequestException('module is required when section is provided');
+      throw new BadRequestException(
+        'module is required when section is provided',
+      );
     }
 
     if (module && section && !isSectionInModule(module, section)) {
-      throw new BadRequestException('Section does not belong to selected module');
+      throw new BadRequestException(
+        'Section does not belong to selected module',
+      );
     }
 
     let attachmentDocumentId: number | null = null;
     if (input.attachmentDocumentId !== undefined) {
-      if (!Number.isInteger(input.attachmentDocumentId) || input.attachmentDocumentId <= 0) {
-        throw new BadRequestException('attachmentDocumentId must be a positive integer');
+      if (
+        !Number.isInteger(input.attachmentDocumentId) ||
+        input.attachmentDocumentId <= 0
+      ) {
+        throw new BadRequestException(
+          'attachmentDocumentId must be a positive integer',
+        );
       }
 
       const foundDocument = await this.prisma.document.findUnique({
@@ -78,6 +133,9 @@ export class NewsService {
         title,
         message,
         audience,
+        tags: tags.length > 0 ? tags : undefined,
+        visibleEmployeeLevels:
+          visibleEmployeeLevels.length > 0 ? visibleEmployeeLevels : undefined,
         module: module ?? null,
         section: section ?? null,
         attachmentDocumentId,
@@ -100,24 +158,16 @@ export class NewsService {
       title: created.title,
       message: created.message,
       audience: created.audience,
+      tags: this.normalizeNewsTags(created.tags),
+      visibleEmployeeLevels: this.normalizeVisibleEmployeeLevels(
+        created.visibleEmployeeLevels,
+      ),
       module: created.module,
       section: created.section,
       createdAt: created.createdAt,
       isRead: false,
       createdBy: created.createdByUser,
-      attachment: created.attachmentDocument
-        ? {
-            documentId: created.attachmentDocument.id,
-            originalName: created.attachmentDocument.originalName,
-            mimeType: created.attachmentDocument.mimeType,
-            mediaType: created.attachmentDocument.mediaType,
-            fileUrl: this.buildFileUrl(
-              req,
-              created.attachmentDocument.category,
-              created.attachmentDocument.fileName,
-            ),
-          }
-        : null,
+      attachment: this.buildAttachmentResponse(req, created.attachmentDocument),
     };
   }
 
@@ -127,8 +177,10 @@ export class NewsService {
       userId: number;
       role: string;
       trainingAccess?: string[];
+      employeeLevel?: string;
       limit?: number;
       month?: string;
+      tag?: string;
     },
   ) {
     const limit =
@@ -136,55 +188,15 @@ export class NewsService {
         ? Math.max(1, Math.min(50, context.limit))
         : 20;
 
-    const where: Prisma.NewsPostWhereInput = {};
-
-    if (context.role === 'MANAGER') {
-      where.audience = {
-        in: [NewsAudience.ALL, NewsAudience.MANAGERS],
-      };
-    }
-
-    if (context.role === 'EMPLOYEE') {
-      where.audience = {
-        in: [NewsAudience.ALL, NewsAudience.EMPLOYEES],
-      };
-    }
-
-    if (context.role !== 'ADMIN') {
-      const allowedSections = (context.trainingAccess ?? []).filter((section) =>
-        isUploadSection(section),
-      ) as UploadSection[];
-
-      where.AND = [
-        {
-          OR: [
-            { section: null },
-            ...(allowedSections.length > 0 ? [{ section: { in: allowedSections } }] : []),
-          ],
-        },
-      ];
-    }
-
     const monthRange = this.parseMonthRange(context.month);
-
-    const whereWithMonth: Prisma.NewsPostWhereInput = {
-      ...where,
-      ...(monthRange
-        ? {
-            createdAt: {
-              gte: monthRange.start,
-              lt: monthRange.end,
-            },
-          }
-        : {}),
-    };
+    const tagFilter = this.parseTagFilter(context.tag);
+    const where = this.buildBaseNewsWhere(context);
 
     const rows = await this.prisma.newsPost.findMany({
-      where: whereWithMonth,
+      where,
       orderBy: {
         createdAt: 'desc',
       },
-      take: limit,
       include: {
         createdByUser: {
           select: {
@@ -206,52 +218,41 @@ export class NewsService {
       },
     });
 
-    const monthRows = await this.prisma.newsPost.findMany({
-      where,
-      select: {
-        createdAt: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
-    const availableMonths = Array.from(
-      new Set(
-        monthRows.map((entry) => {
-          const year = entry.createdAt.getUTCFullYear();
-          const month = `${entry.createdAt.getUTCMonth() + 1}`.padStart(2, '0');
-          return `${year}-${month}`;
-        }),
-      ),
+    const accessibleRows = rows.filter((row) =>
+      this.canAccessPost(row, context),
     );
 
+    const availableMonths = Array.from(
+      new Set(accessibleRows.map((row) => this.toMonthKey(row.createdAt))),
+    );
+
+    const availableTags = Array.from(
+      new Set(
+        accessibleRows.flatMap((row) => this.normalizeNewsTags(row.tags)),
+      ),
+    ).sort((left, right) => left.localeCompare(right));
+
+    const filteredRows = accessibleRows
+      .filter((row) => {
+        if (
+          monthRange &&
+          (row.createdAt < monthRange.start || row.createdAt >= monthRange.end)
+        ) {
+          return false;
+        }
+
+        if (tagFilter && !this.postHasTag(row.tags, tagFilter)) {
+          return false;
+        }
+
+        return true;
+      })
+      .slice(0, limit);
+
     return {
-      items: rows.map((row) => ({
-        id: row.id,
-        title: row.title,
-        message: row.message,
-        audience: row.audience,
-        module: row.module,
-        section: row.section,
-        createdAt: row.createdAt,
-        isRead: row.reads.length > 0,
-        createdBy: row.createdByUser,
-        attachment: row.attachmentDocument
-          ? {
-              documentId: row.attachmentDocument.id,
-              originalName: row.attachmentDocument.originalName,
-              mimeType: row.attachmentDocument.mimeType,
-              mediaType: row.attachmentDocument.mediaType,
-              fileUrl: this.buildFileUrl(
-                req,
-                row.attachmentDocument.category,
-                row.attachmentDocument.fileName,
-              ),
-            }
-          : null,
-      })),
+      items: filteredRows.map((row) => this.buildNewsFeedItem(req, row)),
       availableMonths,
+      availableTags,
     };
   }
 
@@ -281,10 +282,7 @@ export class NewsService {
   async markNewsAsRead(
     newsPostId: number,
     userId: number,
-    context: {
-      role: string;
-      trainingAccess?: string[];
-    },
+    context: NewsAccessContext,
   ) {
     const post = await this.prisma.newsPost.findUnique({
       where: {
@@ -294,6 +292,7 @@ export class NewsService {
         id: true,
         audience: true,
         section: true,
+        visibleEmployeeLevels: true,
       },
     });
 
@@ -331,6 +330,7 @@ export class NewsService {
         id: true,
         audience: true,
         section: true,
+        visibleEmployeeLevels: true,
       },
     });
 
@@ -371,13 +371,20 @@ export class NewsService {
       ],
     });
 
-    const usersInAudience = await this.filterUsersBySectionAccess(targetUsers, post.section);
+    const usersInAudience = await this.filterUsersBySectionAccess(
+      targetUsers,
+      post.section,
+    );
+    const usersInVisibleLevels = this.filterUsersByVisibleEmployeeLevels(
+      usersInAudience,
+      this.normalizeVisibleEmployeeLevels(post.visibleEmployeeLevels),
+    );
 
     const reads = await this.prisma.newsPostRead.findMany({
       where: {
         newsPostId,
         userId: {
-          in: usersInAudience.map((user) => user.id),
+          in: usersInVisibleLevels.map((user) => user.id),
         },
       },
       select: {
@@ -386,7 +393,9 @@ export class NewsService {
       },
     });
 
-    const readByUserId = new Map(reads.map((read) => [read.userId, read.readAt]));
+    const readByUserId = new Map(
+      reads.map((read) => [read.userId, read.readAt]),
+    );
 
     const grouped = new Map<
       number | 'UNASSIGNED',
@@ -397,12 +406,13 @@ export class NewsService {
           name: string | null;
           email: string;
           role: string;
+          employeeLevel: EmployeeLevel;
           readAt: Date | null;
         }>;
       }
     >();
 
-    for (const user of usersInAudience) {
+    for (const user of usersInVisibleLevels) {
       const key = user.restaurant?.id ?? 'UNASSIGNED';
       if (!grouped.has(key)) {
         grouped.set(key, {
@@ -427,6 +437,7 @@ export class NewsService {
         name: user.name,
         email: user.email,
         role: user.role,
+        employeeLevel: user.employeeLevel,
         readAt: readByUserId.get(user.id) ?? null,
       });
     }
@@ -440,6 +451,7 @@ export class NewsService {
             name: user.name,
             email: user.email,
             role: user.role,
+            employeeLevel: user.employeeLevel,
           }));
 
         const readUsers = entry.users
@@ -449,6 +461,7 @@ export class NewsService {
             name: user.name,
             email: user.email,
             role: user.role,
+            employeeLevel: user.employeeLevel,
             readAt: user.readAt,
           }));
 
@@ -477,8 +490,14 @@ export class NewsService {
         return left.restaurant.name.localeCompare(right.restaurant.name);
       });
 
-    const totalUsers = byRestaurant.reduce((acc, item) => acc + item.totalUsers, 0);
-    const readCount = byRestaurant.reduce((acc, item) => acc + item.readCount, 0);
+    const totalUsers = byRestaurant.reduce(
+      (accumulator, item) => accumulator + item.totalUsers,
+      0,
+    );
+    const readCount = byRestaurant.reduce(
+      (accumulator, item) => accumulator + item.readCount,
+      0,
+    );
 
     return {
       newsPostId,
@@ -521,37 +540,113 @@ export class NewsService {
     post: {
       audience: NewsAudience;
       section: UploadSection | null;
+      visibleEmployeeLevels: Prisma.JsonValue | null;
     },
-    context: {
-      role: string;
-      trainingAccess?: string[];
-    },
+    context: NewsAccessContext,
   ) {
-    if (context.role !== 'ADMIN' && context.role !== 'MANAGER' && context.role !== 'EMPLOYEE') {
-      throw new ForbiddenException('Unsupported role');
+    if (!this.canAccessPost(post, context)) {
+      throw new ForbiddenException('Cannot mark this news as read');
     }
+  }
+
+  private buildBaseNewsWhere(
+    context: NewsAccessContext,
+  ): Prisma.NewsPostWhereInput {
+    this.ensureSupportedRole(context.role);
+
+    const where: Prisma.NewsPostWhereInput = {};
 
     if (context.role === 'MANAGER') {
-      if (post.audience !== NewsAudience.ALL && post.audience !== NewsAudience.MANAGERS) {
-        throw new ForbiddenException('Cannot mark this news as read');
-      }
+      where.audience = {
+        in: [NewsAudience.ALL, NewsAudience.MANAGERS],
+      };
     }
 
     if (context.role === 'EMPLOYEE') {
-      if (post.audience !== NewsAudience.ALL && post.audience !== NewsAudience.EMPLOYEES) {
-        throw new ForbiddenException('Cannot mark this news as read');
-      }
+      where.audience = {
+        in: [NewsAudience.ALL, NewsAudience.EMPLOYEES],
+      };
     }
 
-    if (context.role !== 'ADMIN' && post.section) {
-      const allowedSections = (context.trainingAccess ?? []).filter((section) =>
-        isUploadSection(section),
-      ) as UploadSection[];
+    if (context.role !== 'ADMIN') {
+      const allowedSections = this.normalizeTrainingAccess(
+        context.trainingAccess,
+      );
 
-      if (!allowedSections.includes(post.section)) {
-        throw new ForbiddenException('Cannot mark this news as read');
-      }
+      where.AND = [
+        {
+          OR: [
+            { section: null },
+            ...(allowedSections.length > 0
+              ? [{ section: { in: allowedSections } }]
+              : []),
+          ],
+        },
+      ];
     }
+
+    return where;
+  }
+
+  private canAccessPost(
+    post: {
+      audience: NewsAudience;
+      section: UploadSection | null;
+      visibleEmployeeLevels: Prisma.JsonValue | null;
+    },
+    context: NewsAccessContext,
+  ) {
+    this.ensureSupportedRole(context.role);
+
+    if (!this.matchesAudience(post.audience, context.role)) {
+      return false;
+    }
+
+    if (
+      context.role !== 'ADMIN' &&
+      post.section &&
+      !this.normalizeTrainingAccess(context.trainingAccess).includes(
+        post.section,
+      )
+    ) {
+      return false;
+    }
+
+    if (context.role === 'ADMIN') {
+      return true;
+    }
+
+    const visibleEmployeeLevels = this.normalizeVisibleEmployeeLevels(
+      post.visibleEmployeeLevels,
+    );
+    if (visibleEmployeeLevels.length === 0) {
+      return true;
+    }
+
+    const employeeLevel = this.parseEmployeeLevel(context.employeeLevel);
+    return employeeLevel
+      ? visibleEmployeeLevels.includes(employeeLevel)
+      : false;
+  }
+
+  private matchesAudience(audience: NewsAudience, role: string) {
+    if (role === 'ADMIN') {
+      return true;
+    }
+
+    if (role === 'MANAGER') {
+      return (
+        audience === NewsAudience.ALL || audience === NewsAudience.MANAGERS
+      );
+    }
+
+    if (role === 'EMPLOYEE') {
+      return (
+        audience === NewsAudience.ALL || audience === NewsAudience.EMPLOYEES
+      );
+    }
+
+    return false;
   }
 
   private async filterUsersBySectionAccess(
@@ -603,6 +698,239 @@ export class NewsService {
     });
   }
 
+  private filterUsersByVisibleEmployeeLevels(
+    users: Array<{
+      id: number;
+      name: string | null;
+      email: string;
+      role: Role;
+      employeeLevel: EmployeeLevel;
+      restaurant: {
+        id: number;
+        name: string;
+        address: string;
+      } | null;
+    }>,
+    visibleEmployeeLevels: EmployeeLevel[],
+  ) {
+    if (visibleEmployeeLevels.length === 0) {
+      return users;
+    }
+
+    return users.filter((user) =>
+      visibleEmployeeLevels.includes(user.employeeLevel),
+    );
+  }
+
+  private buildNewsFeedItem(req: RequestLike, row: NewsFeedRow) {
+    return {
+      id: row.id,
+      title: row.title,
+      message: row.message,
+      audience: row.audience,
+      tags: this.normalizeNewsTags(row.tags),
+      visibleEmployeeLevels: this.normalizeVisibleEmployeeLevels(
+        row.visibleEmployeeLevels,
+      ),
+      module: row.module,
+      section: row.section,
+      createdAt: row.createdAt,
+      isRead: row.reads.length > 0,
+      createdBy: row.createdByUser,
+      attachment: this.buildAttachmentResponse(req, row.attachmentDocument),
+    };
+  }
+
+  private buildAttachmentResponse(
+    req: RequestLike,
+    attachmentDocument:
+      | {
+          id: number;
+          category: 'images' | 'videos' | 'documents';
+          originalName: string;
+          mimeType: string;
+          mediaType: 'image' | 'video' | 'document';
+          fileName: string;
+        }
+      | null
+      | undefined,
+  ) {
+    if (!attachmentDocument) {
+      return null;
+    }
+
+    return {
+      documentId: attachmentDocument.id,
+      originalName: attachmentDocument.originalName,
+      mimeType: attachmentDocument.mimeType,
+      mediaType: attachmentDocument.mediaType,
+      fileUrl: this.buildFileUrl(
+        req,
+        attachmentDocument.category,
+        attachmentDocument.fileName,
+      ),
+    };
+  }
+
+  private parseTags(value: unknown) {
+    if (value === undefined || value === null || value === '') {
+      return [] as string[];
+    }
+
+    const rawTags = Array.isArray(value)
+      ? value
+      : typeof value === 'string'
+        ? value.split(/[\n,]/)
+        : null;
+
+    if (!rawTags) {
+      throw new BadRequestException('tags must be an array of strings');
+    }
+
+    const seen = new Set<string>();
+    const tags: string[] = [];
+
+    for (const entry of rawTags) {
+      if (typeof entry !== 'string') {
+        throw new BadRequestException('tags must be an array of strings');
+      }
+
+      const normalizedTag = entry
+        .trim()
+        .replace(/^#+/, '')
+        .replace(/\s+/g, ' ');
+
+      if (!normalizedTag) {
+        continue;
+      }
+
+      if (normalizedTag.length > this.maxNewsTagLength) {
+        throw new BadRequestException(
+          `each tag must be at most ${this.maxNewsTagLength} characters`,
+        );
+      }
+
+      const key = this.getTagKey(normalizedTag);
+      if (seen.has(key)) {
+        continue;
+      }
+
+      seen.add(key);
+      tags.push(normalizedTag);
+    }
+
+    if (tags.length > this.maxNewsTags) {
+      throw new BadRequestException(
+        `at most ${this.maxNewsTags} tags are allowed`,
+      );
+    }
+
+    return tags;
+  }
+
+  private parseTagFilter(value: string | undefined) {
+    if (!value) {
+      return null;
+    }
+
+    const [tag] = this.parseTags([value]);
+    return tag ? this.getTagKey(tag) : null;
+  }
+
+  private normalizeNewsTags(value: Prisma.JsonValue | null | undefined) {
+    if (!Array.isArray(value)) {
+      return [] as string[];
+    }
+
+    return value.filter((entry): entry is string => typeof entry === 'string');
+  }
+
+  private postHasTag(
+    value: Prisma.JsonValue | null | undefined,
+    tagFilter: string,
+  ) {
+    return this.normalizeNewsTags(value).some(
+      (tag) => this.getTagKey(tag) === tagFilter,
+    );
+  }
+
+  private parseVisibleEmployeeLevels(value: unknown) {
+    if (value === undefined || value === null) {
+      return [] as EmployeeLevel[];
+    }
+
+    const rawLevels = Array.isArray(value) ? value : [value];
+    const seen = new Set<EmployeeLevel>();
+    const levels: EmployeeLevel[] = [];
+
+    for (const entry of rawLevels) {
+      if (typeof entry !== 'string') {
+        throw new BadRequestException(
+          'visibleEmployeeLevels must be an array of employee levels',
+        );
+      }
+
+      const employeeLevel = this.parseEmployeeLevel(entry);
+      if (!employeeLevel) {
+        throw new BadRequestException('Invalid employee level');
+      }
+
+      if (seen.has(employeeLevel)) {
+        continue;
+      }
+
+      seen.add(employeeLevel);
+      levels.push(employeeLevel);
+    }
+
+    return levels;
+  }
+
+  private normalizeVisibleEmployeeLevels(
+    value: Prisma.JsonValue | null | undefined,
+  ) {
+    if (!Array.isArray(value)) {
+      return [] as EmployeeLevel[];
+    }
+
+    return value.filter(
+      (entry): entry is EmployeeLevel =>
+        typeof entry === 'string' && this.parseEmployeeLevel(entry) !== null,
+    );
+  }
+
+  private parseEmployeeLevel(value: string | undefined) {
+    if (!value) {
+      return null;
+    }
+
+    return Object.values(EmployeeLevel).includes(value as EmployeeLevel)
+      ? (value as EmployeeLevel)
+      : null;
+  }
+
+  private normalizeTrainingAccess(trainingAccess: string[] | undefined) {
+    return (trainingAccess ?? []).filter((section): section is UploadSection =>
+      isUploadSection(section),
+    );
+  }
+
+  private ensureSupportedRole(role: string) {
+    if (role !== 'ADMIN' && role !== 'MANAGER' && role !== 'EMPLOYEE') {
+      throw new ForbiddenException('Unsupported role');
+    }
+  }
+
+  private getTagKey(value: string) {
+    return value.trim().toLocaleLowerCase();
+  }
+
+  private toMonthKey(date: Date) {
+    const year = date.getUTCFullYear();
+    const month = `${date.getUTCMonth() + 1}`.padStart(2, '0');
+    return `${year}-${month}`;
+  }
+
   private parseUploadModule(module: string | undefined) {
     if (!module) {
       return undefined;
@@ -645,7 +973,12 @@ export class NewsService {
     const parsedYear = Number(match[1]);
     const parsedMonth = Number(match[2]);
 
-    if (!Number.isInteger(parsedYear) || !Number.isInteger(parsedMonth) || parsedMonth < 1 || parsedMonth > 12) {
+    if (
+      !Number.isInteger(parsedYear) ||
+      !Number.isInteger(parsedMonth) ||
+      parsedMonth < 1 ||
+      parsedMonth > 12
+    ) {
       throw new BadRequestException('Invalid month value');
     }
 
@@ -660,13 +993,20 @@ export class NewsService {
     category: 'images' | 'videos' | 'documents',
     fileName: string,
   ) {
-    const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(/^\/+|\/+$/g, '');
+    const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(
+      /^\/+|\/+$/g,
+      '',
+    );
 
     if (this.publicApiBaseUrl) {
       const normalizedBaseUrl = this.publicApiBaseUrl.replace(/\/$/, '');
-      const normalizedPrefixEscaped = normalizedPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const normalizedPrefixEscaped = normalizedPrefix.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        '\\$&',
+      );
       const hasPrefixAlready =
-        normalizedPrefix.length > 0 && new RegExp(`/${normalizedPrefixEscaped}$`).test(normalizedBaseUrl);
+        normalizedPrefix.length > 0 &&
+        new RegExp(`/${normalizedPrefixEscaped}$`).test(normalizedBaseUrl);
 
       const baseUrlWithPrefix =
         normalizedPrefix.length > 0 && !hasPrefixAlready
