@@ -33,6 +33,7 @@ export const styles = StyleSheet.create({
   },
   trainingTabRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     paddingVertical: 4,
   },
@@ -95,17 +96,26 @@ export const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 10,
   },
+  productInfoRowSmall: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
   productInfoColumn: {
     flex: 1,
+    minWidth: 0,
     gap: 4,
   },
+  productInfoColumnSmall: {
+    width: '100%',
+    gap: 2,
+  },
   productCardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: 'column',
+    alignItems: 'stretch',
     gap: 8,
   },
   productCardContentPressable: {
-    flex: 1,
+    width: '100%',
   },
   productDeleteIconButton: {
     width: 34,
@@ -116,6 +126,7 @@ export const styles = StyleSheet.create({
     backgroundColor: '#fff7f7',
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'flex-end',
   },
   productDeleteLoading: {
     color: '#8f141b',
@@ -159,12 +170,19 @@ export const styles = StyleSheet.create({
   productGridItem: {
     width: '48%',
   },
+  productGridItemSmall: {
+    width: '100%',
+  },
   productImageFrame: {
     width: 110,
     height: 110,
     borderRadius: 10,
     overflow: 'hidden',
     backgroundColor: '#f3dcdd',
+  },
+  productImageFrameSmall: {
+    width: '100%',
+    height: 180,
   },
   productImageThumb: {
     width: '100%',
@@ -234,6 +252,13 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
+  },
+  paginationRowSmall: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
+  paginationButtonSmall: {
+    width: '100%',
   },
   paginationInfo: {
     color: '#7f1b21',

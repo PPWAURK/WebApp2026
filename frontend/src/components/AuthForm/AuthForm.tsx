@@ -60,15 +60,15 @@ const DECOR_ITEMS: DecorItem[] = [
   {
     key: 'pattern-1',
     source: require('../../../assets/四大天王/IMG_9278.png'),
-    small: { x: 13, y: 6, width: 80, height: 80, opacity: 0.5 },
-    tablet: { x: 11, y: 10, width: 180, height: 100, opacity: 0.75 },
+    small: { x: 3, y: 2, width: 150, height: 100, opacity: 0.75 },
+    tablet: { x: 2, y: 2, width: 200, height: 120, opacity: 0.75 },
     desktop: { x: 5, y: 5, width: 250, height: 120, opacity: 0.75 },
   },
   {
     key: 'pattern-3',
     source: require('../../../assets/四大天王/IMG_9276.png'),
-    small: { x: 50, y: 95, width: 75, height: 70, opacity: 0.5 },
-    tablet: { x: 50, y: 92, width: 100, height: 120, opacity: 0.65 },
+    small: { x: 98, y: 95, width: 120, height: 100, opacity: 0.75 },
+    tablet: { x: 98, y: 95, width: 100, height: 120, opacity: 0.65 },
     desktop: { x: 98, y: 95, width: 150, height: 120, opacity: 0.75 },
   },
 ];

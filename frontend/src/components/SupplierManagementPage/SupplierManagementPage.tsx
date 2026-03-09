@@ -7,6 +7,7 @@ import {
   ScrollView,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import type { AppText } from '../../locales/translations';
@@ -38,10 +39,17 @@ export function SupplierManagementPage({
   text,
   accessToken,
 }: SupplierManagementPageProps) {
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 560;
+
   const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);
   const [products, setProducts] = useState<ProductItem[]>([]);
-  const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(
+    null,
+  );
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(
+    null,
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [productFilter, setProductFilter] = useState('');
   const [newSupplierName, setNewSupplierName] = useState('');
@@ -50,16 +58,23 @@ export function SupplierManagementPage({
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
-  const [deletingSupplierId, setDeletingSupplierId] = useState<number | null>(null);
+  const [deletingProductId, setDeletingProductId] = useState<number | null>(
+    null,
+  );
+  const [deletingSupplierId, setDeletingSupplierId] = useState<number | null>(
+    null,
+  );
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
-  const confirmDeleteResolverRef = useRef<((value: boolean) => void) | null>(null);
-  const [confirmSupplierDialogVisible, setConfirmSupplierDialogVisible] = useState(false);
-  const confirmDeleteSupplierResolverRef = useRef<((value: boolean) => void) | null>(
+  const confirmDeleteResolverRef = useRef<((value: boolean) => void) | null>(
     null,
   );
+  const [confirmSupplierDialogVisible, setConfirmSupplierDialogVisible] =
+    useState(false);
+  const confirmDeleteSupplierResolverRef = useRef<
+    ((value: boolean) => void) | null
+  >(null);
 
   const [newProductReference, setNewProductReference] = useState('');
   const [newProductCategory, setNewProductCategory] = useState('');
@@ -109,7 +124,9 @@ export function SupplierManagementPage({
   const supplierProducts = useMemo(
     () =>
       selectedSupplierId
-        ? products.filter((product) => product.supplierId === selectedSupplierId)
+        ? products.filter(
+            (product) => product.supplierId === selectedSupplierId,
+          )
         : [],
     [products, selectedSupplierId],
   );
@@ -130,28 +147,40 @@ export function SupplierManagementPage({
         product.unit,
       ];
 
-      return fields.some((field) =>
-        typeof field === 'string' && field.toLowerCase().includes(normalizedFilter),
+      return fields.some(
+        (field) =>
+          typeof field === 'string' &&
+          field.toLowerCase().includes(normalizedFilter),
       );
     });
   }, [productFilter, supplierProducts]);
 
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(filteredSupplierProducts.length / PRODUCTS_PER_PAGE)),
+    () =>
+      Math.max(
+        1,
+        Math.ceil(filteredSupplierProducts.length / PRODUCTS_PER_PAGE),
+      ),
     [filteredSupplierProducts.length],
   );
 
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
-    return filteredSupplierProducts.slice(startIndex, startIndex + PRODUCTS_PER_PAGE);
+    return filteredSupplierProducts.slice(
+      startIndex,
+      startIndex + PRODUCTS_PER_PAGE,
+    );
   }, [currentPage, filteredSupplierProducts]);
 
   const selectedProduct = useMemo(
-    () => supplierProducts.find((product) => product.id === selectedProductId) ?? null,
+    () =>
+      supplierProducts.find((product) => product.id === selectedProductId) ??
+      null,
     [selectedProductId, supplierProducts],
   );
   const selectedSupplier = useMemo(
-    () => suppliers.find((supplier) => supplier.id === selectedSupplierId) ?? null,
+    () =>
+      suppliers.find((supplier) => supplier.id === selectedSupplierId) ?? null,
     [selectedSupplierId, suppliers],
   );
 
@@ -189,7 +218,9 @@ export function SupplierManagementPage({
     setEditNameFr(selectedProduct.nameFr ?? '');
     setEditSpecification(selectedProduct.specification ?? '');
     setEditPriceHt(
-      selectedProduct.priceHt === null ? '' : selectedProduct.priceHt.toString(),
+      selectedProduct.priceHt === null
+        ? ''
+        : selectedProduct.priceHt.toString(),
     );
     setEditImage(selectedProduct.image ?? '');
   }, [selectedProduct]);
@@ -198,8 +229,12 @@ export function SupplierManagementPage({
     setIsCreatingSupplier(true);
     setError(null);
     try {
-      const created = await createSupplier(accessToken, { name: newSupplierName });
-      const next = [...suppliers, created].sort((a, b) => a.name.localeCompare(b.name));
+      const created = await createSupplier(accessToken, {
+        name: newSupplierName,
+      });
+      const next = [...suppliers, created].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
       setSuppliers(next);
       setSelectedSupplierId(created.id);
       setNewSupplierName('');
@@ -221,7 +256,9 @@ export function SupplierManagementPage({
       return;
     }
 
-    const parsedPrice = newProductPriceHt.trim() ? Number(newProductPriceHt) : null;
+    const parsedPrice = newProductPriceHt.trim()
+      ? Number(newProductPriceHt)
+      : null;
     if (newProductPriceHt.trim() && !Number.isFinite(parsedPrice)) {
       setError(text.supplierManagement.invalidPrice);
       return;
@@ -233,7 +270,9 @@ export function SupplierManagementPage({
     try {
       const created = await createProduct(accessToken, {
         supplierId: selectedSupplierId,
-        reference: newProductReference.trim() ? newProductReference.trim() : null,
+        reference: newProductReference.trim()
+          ? newProductReference.trim()
+          : null,
         category: newProductCategory.trim(),
         nameZh: newProductNameZh.trim(),
         nameFr: newProductNameFr.trim() ? newProductNameFr.trim() : null,
@@ -286,12 +325,16 @@ export function SupplierManagementPage({
         category: editCategory.trim(),
         nameZh: editNameZh.trim(),
         nameFr: editNameFr.trim() ? editNameFr.trim() : null,
-        specification: editSpecification.trim() ? editSpecification.trim() : null,
+        specification: editSpecification.trim()
+          ? editSpecification.trim()
+          : null,
         priceHt: parsedPrice,
       });
 
       setProducts((current) =>
-        current.map((product) => (product.id === updated.id ? updated : product)),
+        current.map((product) =>
+          product.id === updated.id ? updated : product,
+        ),
       );
     } catch {
       setError(text.supplierManagement.saveProductError);
@@ -324,17 +367,23 @@ export function SupplierManagementPage({
     setError(null);
 
     try {
-      const imageUrl = await uploadProductImage(accessToken, selectedProduct.id, {
-        uri: asset.uri,
-        name: asset.name,
-        mimeType: asset.mimeType ?? undefined,
-        file: (asset as { file?: File }).file,
-      });
+      const imageUrl = await uploadProductImage(
+        accessToken,
+        selectedProduct.id,
+        {
+          uri: asset.uri,
+          name: asset.name,
+          mimeType: asset.mimeType ?? undefined,
+          file: (asset as { file?: File }).file,
+        },
+      );
 
       setEditImage(imageUrl);
       setProducts((current) =>
         current.map((product) =>
-          product.id === selectedProduct.id ? { ...product, image: imageUrl } : product,
+          product.id === selectedProduct.id
+            ? { ...product, image: imageUrl }
+            : product,
         ),
       );
     } catch {
@@ -359,7 +408,9 @@ export function SupplierManagementPage({
 
     try {
       await deleteProduct(accessToken, product.id);
-      setProducts((current) => current.filter((entry) => entry.id !== product.id));
+      setProducts((current) =>
+        current.filter((entry) => entry.id !== product.id),
+      );
       if (selectedProductId === product.id) {
         setSelectedProductId(null);
         setIsEditorOpen(false);
@@ -435,9 +486,13 @@ export function SupplierManagementPage({
       <Text style={styles.subtitle}>{text.supplierManagement.subtitle}</Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {isLoading ? <Text style={styles.docEmpty}>{text.supplierManagement.loading}</Text> : null}
+      {isLoading ? (
+        <Text style={styles.docEmpty}>{text.supplierManagement.loading}</Text>
+      ) : null}
 
-      <Text style={styles.uploadFieldTitle}>{text.supplierManagement.newSupplierLabel}</Text>
+      <Text style={styles.uploadFieldTitle}>
+        {text.supplierManagement.newSupplierLabel}
+      </Text>
       <TextInput
         style={styles.input}
         placeholder={text.supplierManagement.newSupplierPlaceholder}
@@ -446,7 +501,10 @@ export function SupplierManagementPage({
         onChangeText={setNewSupplierName}
       />
       <Pressable
-        style={[styles.primaryButton, isCreatingSupplier && styles.buttonDisabled]}
+        style={[
+          styles.primaryButton,
+          isCreatingSupplier && styles.buttonDisabled,
+        ]}
         disabled={isCreatingSupplier}
         onPress={() => {
           void onCreateSupplier();
@@ -459,7 +517,9 @@ export function SupplierManagementPage({
         </Text>
       </Pressable>
 
-      <Text style={styles.uploadFieldTitle}>{text.supplierManagement.suppliersLabel}</Text>
+      <Text style={styles.uploadFieldTitle}>
+        {text.supplierManagement.suppliersLabel}
+      </Text>
       <View style={styles.trainingTabRow}>
         {suppliers.map((supplier) => (
           <Pressable
@@ -473,7 +533,8 @@ export function SupplierManagementPage({
             <Text
               style={[
                 styles.trainingTabText,
-                selectedSupplierId === supplier.id && styles.trainingTabTextActive,
+                selectedSupplierId === supplier.id &&
+                  styles.trainingTabTextActive,
               ]}
             >
               {supplier.name}
@@ -484,7 +545,8 @@ export function SupplierManagementPage({
       <Pressable
         style={[
           styles.dangerButton,
-          (!selectedSupplier || deletingSupplierId !== null) && styles.buttonDisabled,
+          (!selectedSupplier || deletingSupplierId !== null) &&
+            styles.buttonDisabled,
         ]}
         disabled={!selectedSupplier || deletingSupplierId !== null}
         onPress={() => {
@@ -500,9 +562,13 @@ export function SupplierManagementPage({
         </Text>
       </Pressable>
 
-      <Text style={styles.uploadFieldTitle}>{text.supplierManagement.newProductLabel}</Text>
+      <Text style={styles.uploadFieldTitle}>
+        {text.supplierManagement.newProductLabel}
+      </Text>
       {!selectedSupplierId ? (
-        <Text style={styles.docEmpty}>{text.supplierManagement.selectSupplierFirst}</Text>
+        <Text style={styles.docEmpty}>
+          {text.supplierManagement.selectSupplierFirst}
+        </Text>
       ) : null}
       <TextInput
         style={styles.input}
@@ -571,7 +637,9 @@ export function SupplierManagementPage({
         </Text>
       </Pressable>
 
-      <Text style={styles.uploadFieldTitle}>{text.supplierManagement.productsLabel}</Text>
+      <Text style={styles.uploadFieldTitle}>
+        {text.supplierManagement.productsLabel}
+      </Text>
       <TextInput
         style={styles.input}
         placeholder={text.supplierManagement.filterProductsPlaceholder}
@@ -581,118 +649,160 @@ export function SupplierManagementPage({
       />
       <View style={[styles.listBlock, styles.productGrid]}>
         {supplierProducts.length === 0 ? (
-          <Text style={styles.docEmpty}>{text.supplierManagement.noProduct}</Text>
+          <Text style={styles.docEmpty}>
+            {text.supplierManagement.noProduct}
+          </Text>
         ) : filteredSupplierProducts.length === 0 ? (
-          <Text style={styles.docEmpty}>{text.supplierManagement.noFilteredProduct}</Text>
+          <Text style={styles.docEmpty}>
+            {text.supplierManagement.noFilteredProduct}
+          </Text>
         ) : (
-          paginatedProducts.map((product) => (
-            <View
-              key={product.id}
-              style={[
-                styles.docItem,
-                styles.productGridItem,
-                selectedProductId === product.id && styles.trainingTabActive,
-              ]}
-            >
-              <View style={styles.productCardHeaderRow}>
-                <Pressable
-                  style={styles.productCardContentPressable}
-                  onPress={() => {
-                    setSelectedProductId(product.id);
-                    setIsEditorOpen(true);
-                  }}
-                >
-                  <View style={styles.productInfoRow}>
-                    {product.image ? (
-                      <View style={styles.productImageFrame}>
-                        <Image
-                          source={{ uri: product.image }}
-                          style={styles.productImageThumb}
-                          resizeMode="cover"
-                        />
-                      </View>
-                    ) : null}
+          paginatedProducts.map((product) => {
+            const infoRowStyle = isSmallScreen
+              ? styles.productInfoRowSmall
+              : styles.productInfoRow;
+            const productGridItemStyle = isSmallScreen
+              ? styles.productGridItemSmall
+              : styles.productGridItem;
 
-                    <View style={styles.productInfoColumn}>
-                      <Text
+            return (
+              <View
+                key={product.id}
+                style={[
+                  styles.docItem,
+                  productGridItemStyle,
+                  selectedProductId === product.id && styles.trainingTabActive,
+                ]}
+              >
+                <View style={styles.productCardHeaderRow}>
+                  <Pressable
+                    style={styles.productCardContentPressable}
+                    onPress={() => {
+                      setSelectedProductId(product.id);
+                      setIsEditorOpen(true);
+                    }}
+                  >
+                    <View style={infoRowStyle}>
+                      {product.image ? (
+                        <View
+                          style={[
+                            styles.productImageFrame,
+                            isSmallScreen && styles.productImageFrameSmall,
+                          ]}
+                        >
+                          <Image
+                            source={{ uri: product.image }}
+                            style={styles.productImageThumb}
+                            resizeMode="cover"
+                          />
+                        </View>
+                      ) : null}
+
+                      <View
                         style={[
-                          styles.docItemTitle,
-                          selectedProductId === product.id && styles.trainingTabTextActive,
+                          styles.productInfoColumn,
+                          isSmallScreen && styles.productInfoColumnSmall,
                         ]}
                       >
-                        {product.nameFr ?? product.nameZh}
-                      </Text>
-                      {product.nameFr && product.nameZh && product.nameFr !== product.nameZh ? (
+                        <Text
+                          style={[
+                            styles.docItemTitle,
+                            selectedProductId === product.id &&
+                              styles.trainingTabTextActive,
+                          ]}
+                        >
+                          {product.nameFr ?? product.nameZh}
+                        </Text>
+                        {product.nameFr &&
+                        product.nameZh &&
+                        product.nameFr !== product.nameZh ? (
+                          <Text
+                            style={[
+                              styles.docItemMeta,
+                              selectedProductId === product.id &&
+                                styles.trainingTabTextActive,
+                            ]}
+                          >
+                            {product.nameZh}
+                          </Text>
+                        ) : null}
                         <Text
                           style={[
                             styles.docItemMeta,
-                            selectedProductId === product.id && styles.trainingTabTextActive,
+                            selectedProductId === product.id &&
+                              styles.trainingTabTextActive,
                           ]}
                         >
-                          {product.nameZh}
+                          {product.category}
                         </Text>
-                      ) : null}
-                      <Text
-                        style={[
-                          styles.docItemMeta,
-                          selectedProductId === product.id && styles.trainingTabTextActive,
-                        ]}
-                      >
-                        {product.category}
-                      </Text>
-                      {product.specification ? (
+                        {product.specification ? (
+                          <Text
+                            style={[
+                              styles.docItemMeta,
+                              selectedProductId === product.id &&
+                                styles.trainingTabTextActive,
+                            ]}
+                          >
+                            {text.supplierManagement.fields.specification}:{' '}
+                            {product.specification}
+                          </Text>
+                        ) : null}
                         <Text
                           style={[
                             styles.docItemMeta,
-                            selectedProductId === product.id && styles.trainingTabTextActive,
+                            selectedProductId === product.id &&
+                              styles.trainingTabTextActive,
                           ]}
                         >
-                          {text.supplierManagement.fields.specification}: {product.specification}
+                          {text.supplierManagement.tapToEdit}
                         </Text>
-                      ) : null}
-                      <Text
-                        style={[
-                          styles.docItemMeta,
-                          selectedProductId === product.id && styles.trainingTabTextActive,
-                        ]}
-                      >
-                        {text.supplierManagement.tapToEdit}
-                      </Text>
-                    </View>
-                  </View>
-                </Pressable>
-
-                <Pressable
-                  style={styles.productDeleteIconButton}
-                  disabled={deletingProductId === product.id}
-                  onPress={() => {
-                    void onDeleteProduct(product);
-                  }}
-                >
-                  {deletingProductId === product.id ? (
-                    <Text style={styles.productDeleteLoading}>…</Text>
-                  ) : (
-                    <View style={styles.trashIcon}>
-                      <View style={styles.trashLid} />
-                      <View style={styles.trashBody}>
-                        <View style={styles.trashBar} />
-                        <View style={styles.trashBar} />
                       </View>
                     </View>
-                  )}
-                </Pressable>
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.productDeleteIconButton}
+                    disabled={deletingProductId === product.id}
+                    onPress={() => {
+                      void onDeleteProduct(product);
+                    }}
+                  >
+                    {deletingProductId === product.id ? (
+                      <Text style={styles.productDeleteLoading}>…</Text>
+                    ) : (
+                      <View style={styles.trashIcon}>
+                        <View style={styles.trashLid} />
+                        <View style={styles.trashBody}>
+                          <View style={styles.trashBar} />
+                          <View style={styles.trashBar} />
+                        </View>
+                      </View>
+                    )}
+                  </Pressable>
+                </View>
               </View>
-            </View>
-          ))
+            );
+          })
         )}
       </View>
 
       {filteredSupplierProducts.length > PRODUCTS_PER_PAGE ? (
-        <View style={styles.paginationRow}>
+        <View
+          style={[
+            styles.paginationRow,
+            isSmallScreen && styles.paginationRowSmall,
+          ]}
+        >
           <Pressable
-            style={[styles.secondaryButton, currentPage === 1 && styles.buttonDisabled]}
+            style={[
+              styles.secondaryButton,
+              isSmallScreen && styles.paginationButtonSmall,
+              currentPage === 1 && styles.buttonDisabled,
+            ]}
             disabled={currentPage === 1}
-            onPress={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
+            onPress={() =>
+              setCurrentPage((previous) => Math.max(1, previous - 1))
+            }
           >
             <Text style={styles.secondaryButtonText}>
               {text.supplierManagement.paginationPrevious}
@@ -700,11 +810,16 @@ export function SupplierManagementPage({
           </Pressable>
 
           <Text style={styles.paginationInfo}>
-            {text.supplierManagement.paginationPageLabel} {currentPage}/{totalPages}
+            {text.supplierManagement.paginationPageLabel} {currentPage}/
+            {totalPages}
           </Text>
 
           <Pressable
-            style={[styles.secondaryButton, currentPage >= totalPages && styles.buttonDisabled]}
+            style={[
+              styles.secondaryButton,
+              isSmallScreen && styles.paginationButtonSmall,
+              currentPage >= totalPages && styles.buttonDisabled,
+            ]}
             disabled={currentPage >= totalPages}
             onPress={() =>
               setCurrentPage((previous) => Math.min(totalPages, previous + 1))
@@ -723,16 +838,20 @@ export function SupplierManagementPage({
         animationType="fade"
         onRequestClose={() => setIsEditorOpen(false)}
       >
-        <View style={styles.modalBackdrop}> 
+        <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <ScrollView contentContainerStyle={styles.modalContent}>
               <View style={styles.modalHeaderRow}>
-                <Text style={styles.docBlockTitle}>{text.supplierManagement.editProductTitle}</Text>
+                <Text style={styles.docBlockTitle}>
+                  {text.supplierManagement.editProductTitle}
+                </Text>
                 <Pressable
                   style={styles.secondaryButton}
                   onPress={() => setIsEditorOpen(false)}
                 >
-                  <Text style={styles.secondaryButtonText}>{text.supplierManagement.closeEditor}</Text>
+                  <Text style={styles.secondaryButtonText}>
+                    {text.supplierManagement.closeEditor}
+                  </Text>
                 </Pressable>
               </View>
 
@@ -775,7 +894,9 @@ export function SupplierManagementPage({
                     onChangeText={setEditPriceHt}
                   />
 
-                  <Text style={styles.docItemMeta}>{text.supplierManagement.fields.image}</Text>
+                  <Text style={styles.docItemMeta}>
+                    {text.supplierManagement.fields.image}
+                  </Text>
                   {editImage ? (
                     <View style={styles.productImageFrame}>
                       <Image
@@ -785,9 +906,14 @@ export function SupplierManagementPage({
                       />
                     </View>
                   ) : null}
-                  <Text style={styles.docItemLink}>{editImage || text.supplierManagement.noImage}</Text>
+                  <Text style={styles.docItemLink}>
+                    {editImage || text.supplierManagement.noImage}
+                  </Text>
                   <Pressable
-                    style={[styles.secondaryButton, isUploadingImage && styles.buttonDisabled]}
+                    style={[
+                      styles.secondaryButton,
+                      isUploadingImage && styles.buttonDisabled,
+                    ]}
                     disabled={isUploadingImage}
                     onPress={() => {
                       void onUploadProductImage();
@@ -801,7 +927,10 @@ export function SupplierManagementPage({
                   </Pressable>
 
                   <Pressable
-                    style={[styles.primaryButton, isSavingProduct && styles.buttonDisabled]}
+                    style={[
+                      styles.primaryButton,
+                      isSavingProduct && styles.buttonDisabled,
+                    ]}
                     disabled={isSavingProduct}
                     onPress={() => {
                       void onSaveProduct();
