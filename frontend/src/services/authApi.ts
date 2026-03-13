@@ -14,6 +14,7 @@ type AuthPayload = {
   name?: string;
   restaurantId?: number;
   language?: Language;
+  requestManagerRole?: boolean;
 };
 
 export async function requestAuth(

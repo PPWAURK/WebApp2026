@@ -152,6 +152,7 @@ export default function LoginScreen() {
               name={auth.name}
               restaurants={auth.restaurants}
               selectedRestaurantId={auth.selectedRestaurantId}
+              requestManagerRole={auth.requestManagerRole}
               rememberMe={auth.rememberMe}
               isSubmitting={auth.isSubmitting}
               forgotPasswordCooldownSeconds={auth.forgotPasswordCooldownSeconds}
@@ -161,6 +162,9 @@ export default function LoginScreen() {
               onPasswordChange={auth.setPassword}
               onNameChange={auth.setName}
               onSelectRestaurant={auth.setSelectedRestaurantId}
+              onToggleRequestManagerRole={() => {
+                auth.setRequestManagerRole((currentValue) => !currentValue);
+              }}
               onRememberToggle={() => {
                 auth.setRememberMe((currentValue) => !currentValue);
               }}

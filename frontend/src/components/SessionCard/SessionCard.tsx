@@ -272,12 +272,12 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   );
 
   useEffect(() => {
-    if (!isManager) {
+    if (!isSupervisor) {
       return;
     }
 
     const managerRestaurantId = user.restaurant?.id;
-    if (!managerRestaurantId) {
+    if (isManager && !managerRestaurantId) {
       setUsers([]);
       setUsersError(text.dashboard.managerRestaurantMissing);
       return;
@@ -289,7 +289,7 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
 
     void fetchTrainingAccessUsers(
       accessToken,
-      { restaurantId: managerRestaurantId },
+      isManager ? { restaurantId: managerRestaurantId } : undefined,
     )
       .then((result) => {
         if (!isActive) {
@@ -320,6 +320,7 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   }, [
     accessToken,
     isManager,
+    isSupervisor,
     text.dashboard.managerRestaurantMissing,
     text.dashboard.quickLoadUsersError,
     user.id,
@@ -664,7 +665,27 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   const accountApprovalUsers = useMemo(() => {
     const query = accountSearch.trim().toLowerCase();
     return usersFilteredByRestaurant
-      .filter((entry) => !entry.isApproved)
+      .filter(
+        (entry) =>
+          !entry.isApproved &&
+          entry.role === (isAdmin ? 'MANAGER' : 'EMPLOYEE'),
+      )
+      .filter((entry) => {
+        if (!query) {
+          return true;
+        }
+
+        const name = entry.name?.toLowerCase() ?? '';
+        return (
+          name.includes(query) || entry.email.toLowerCase().includes(query)
+        );
+      });
+  }, [accountSearch, isAdmin, usersFilteredByRestaurant]);
+
+  const deletionUsers = useMemo(() => {
+    const query = accountSearch.trim().toLowerCase();
+    return usersFilteredByRestaurant
+      .filter((entry) => entry.role === 'EMPLOYEE')
       .filter((entry) => {
         if (!query) {
           return true;
@@ -677,28 +698,20 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
       });
   }, [accountSearch, usersFilteredByRestaurant]);
 
-  const deletionUsers = useMemo(() => {
-    const query = accountSearch.trim().toLowerCase();
-    return usersFilteredByRestaurant.filter((entry) => {
-      if (!query) {
-        return true;
-      }
-
-      const name = entry.name?.toLowerCase() ?? '';
-      return name.includes(query) || entry.email.toLowerCase().includes(query);
-    });
-  }, [accountSearch, usersFilteredByRestaurant]);
-
   const levelUsers = useMemo(() => {
     const query = levelSearch.trim().toLowerCase();
-    return usersFilteredByRestaurant.filter((entry) => {
-      if (!query) {
-        return true;
-      }
+    return usersFilteredByRestaurant
+      .filter((entry) => entry.role === 'EMPLOYEE')
+      .filter((entry) => {
+        if (!query) {
+          return true;
+        }
 
-      const name = entry.name?.toLowerCase() ?? '';
-      return name.includes(query) || entry.email.toLowerCase().includes(query);
-    });
+        const name = entry.name?.toLowerCase() ?? '';
+        return (
+          name.includes(query) || entry.email.toLowerCase().includes(query)
+        );
+      });
   }, [levelSearch, usersFilteredByRestaurant]);
 
   function getSelectedRestaurantFilterLabel() {
@@ -834,8 +847,12 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
 
   async function handleApproveAccount(entry: TrainingAccessUser) {
     const confirmed = await confirmAction(
-      text.dashboard.quickApproveTitle,
-      text.adminTraining.approveAccountMessage,
+      isAdmin
+        ? text.dashboard.quickApproveManagerTitle
+        : text.dashboard.quickApproveTitle,
+      entry.role === 'MANAGER'
+        ? text.adminTraining.approveManagerAccountMessage
+        : text.adminTraining.approveAccountMessage,
       text.adminTraining.approveAccountConfirm,
     );
     if (!confirmed) {
@@ -1872,117 +1889,121 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   function renderManagerQuickBlocks() {
     return (
       <>
-        {!isAdmin ? (
-          <View style={styles.quickBlock}>
-            <Text style={styles.quickBlockTitle}>
-              {text.dashboard.quickApproveTitle}
+        <View style={styles.quickBlock}>
+          <Text style={styles.quickBlockTitle}>
+            {isAdmin
+              ? text.dashboard.quickApproveManagerTitle
+              : text.dashboard.quickApproveTitle}
+          </Text>
+          {renderAdminRestaurantFilter('approval')}
+          <TextInput
+            style={styles.quickSearchInput}
+            placeholder={text.dashboard.quickSearchPlaceholder}
+            placeholderTextColor="#a98a8d"
+            value={accountSearch}
+            onChangeText={setAccountSearch}
+          />
+          {usersLoading ? (
+            <Text style={styles.subtitle}>{text.adminTraining.loading}</Text>
+          ) : null}
+          {usersError ? (
+            <Text style={styles.errorText}>{usersError}</Text>
+          ) : null}
+          {!usersLoading &&
+          !usersError &&
+          accountApprovalUsers.length === 0 ? (
+            <Text style={styles.subtitle}>
+              {text.dashboard.quickNoPendingAccount}
             </Text>
-            {renderAdminRestaurantFilter('approval')}
-            <TextInput
-              style={styles.quickSearchInput}
-              placeholder={text.dashboard.quickSearchPlaceholder}
-              placeholderTextColor="#a98a8d"
-              value={accountSearch}
-              onChangeText={setAccountSearch}
-            />
-            {usersLoading ? (
-              <Text style={styles.subtitle}>{text.adminTraining.loading}</Text>
-            ) : null}
-            {usersError ? (
-              <Text style={styles.errorText}>{usersError}</Text>
-            ) : null}
-            {!usersLoading &&
-            !usersError &&
-            accountApprovalUsers.length === 0 ? (
-              <Text style={styles.subtitle}>
-                {text.dashboard.quickNoPendingAccount}
-              </Text>
-            ) : null}
-            {accountApprovalUsers.slice(0, 4).map((entry) => (
-              <View key={`approve-${entry.id}`} style={styles.quickRowCard}>
-                <View style={styles.quickLevelRow}>
-                  <View style={styles.quickLevelInfo}>
-                    <Text style={styles.quickRowTitle}>
-                      {entry.name ?? entry.email}
-                    </Text>
-                    <Text style={styles.subtitle}>{entry.email}</Text>
-                  </View>
-                  <Pressable
-                    style={[
-                      styles.iconActionButton,
-                      styles.iconApproveButton,
-                      isApprovingUserId === entry.id && styles.buttonDisabled,
-                    ]}
-                    accessibilityLabel={text.adminTraining.approveAccountButton}
-                    disabled={isApprovingUserId === entry.id}
-                    onPress={() => {
-                      void handleApproveAccount(entry);
-                    }}
-                  >
-                    <Ionicons
-                      name={
-                        isApprovingUserId === entry.id
-                          ? 'hourglass-outline'
-                          : 'checkmark-outline'
-                      }
-                      size={20}
-                      color={
-                        isApprovingUserId === entry.id ? '#7f1b21' : '#2f7d32'
-                      }
-                    />
-                  </Pressable>
+          ) : null}
+          {accountApprovalUsers.slice(0, 4).map((entry) => (
+            <View key={`approve-${entry.id}`} style={styles.quickRowCard}>
+              <View style={styles.quickLevelRow}>
+                <View style={styles.quickLevelInfo}>
+                  <Text style={styles.quickRowTitle}>
+                    {entry.name ?? entry.email}
+                  </Text>
+                  <Text style={styles.subtitle}>{entry.email}</Text>
                 </View>
+                <Pressable
+                  style={[
+                    styles.iconActionButton,
+                    styles.iconApproveButton,
+                    isApprovingUserId === entry.id && styles.buttonDisabled,
+                  ]}
+                  accessibilityLabel={text.adminTraining.approveAccountButton}
+                  disabled={isApprovingUserId === entry.id}
+                  onPress={() => {
+                    void handleApproveAccount(entry);
+                  }}
+                >
+                  <Ionicons
+                    name={
+                      isApprovingUserId === entry.id
+                        ? 'hourglass-outline'
+                        : 'checkmark-outline'
+                    }
+                    size={20}
+                    color={
+                      isApprovingUserId === entry.id ? '#7f1b21' : '#2f7d32'
+                    }
+                  />
+                </Pressable>
               </View>
-            ))}
-
-            <View style={styles.quickSectionDivider}>
-              <Text style={styles.quickSectionTitle}>
-                {text.dashboard.quickDeleteSectionTitle}
-              </Text>
             </View>
+          ))}
 
-            {deletionUsers.length === 0 ? (
-              <Text style={styles.subtitle}>
-                {text.dashboard.quickNoEmployee}
-              </Text>
-            ) : (
-              deletionUsers.slice(0, 4).map((entry) => (
-                <View key={`delete-${entry.id}`} style={styles.quickRowCard}>
-                  <View style={styles.quickLevelRow}>
-                    <View style={styles.quickLevelInfo}>
-                      <Text style={styles.quickRowTitle}>
-                        {entry.name ?? entry.email}
-                      </Text>
-                      <Text style={styles.subtitle}>{entry.email}</Text>
+          {!isAdmin ? (
+            <>
+              <View style={styles.quickSectionDivider}>
+                <Text style={styles.quickSectionTitle}>
+                  {text.dashboard.quickDeleteSectionTitle}
+                </Text>
+              </View>
+
+              {deletionUsers.length === 0 ? (
+                <Text style={styles.subtitle}>
+                  {text.dashboard.quickNoEmployee}
+                </Text>
+              ) : (
+                deletionUsers.slice(0, 4).map((entry) => (
+                  <View key={`delete-${entry.id}`} style={styles.quickRowCard}>
+                    <View style={styles.quickLevelRow}>
+                      <View style={styles.quickLevelInfo}>
+                        <Text style={styles.quickRowTitle}>
+                          {entry.name ?? entry.email}
+                        </Text>
+                        <Text style={styles.subtitle}>{entry.email}</Text>
+                      </View>
+
+                      <Pressable
+                        style={[
+                          styles.iconDeleteButton,
+                          isDeletingUserId === entry.id && styles.buttonDisabled,
+                        ]}
+                        accessibilityLabel={text.dashboard.quickDeleteButton}
+                        disabled={isDeletingUserId === entry.id}
+                        onPress={() => {
+                          void handleDeleteUser(entry);
+                        }}
+                      >
+                        <Ionicons
+                          name={
+                            isDeletingUserId === entry.id
+                              ? 'hourglass-outline'
+                              : 'close-outline'
+                          }
+                          size={20}
+                          color="#ab1e24"
+                        />
+                      </Pressable>
                     </View>
-
-                    <Pressable
-                      style={[
-                        styles.iconDeleteButton,
-                        isDeletingUserId === entry.id && styles.buttonDisabled,
-                      ]}
-                      accessibilityLabel={text.dashboard.quickDeleteButton}
-                      disabled={isDeletingUserId === entry.id}
-                      onPress={() => {
-                        void handleDeleteUser(entry);
-                      }}
-                    >
-                      <Ionicons
-                        name={
-                          isDeletingUserId === entry.id
-                            ? 'hourglass-outline'
-                            : 'close-outline'
-                        }
-                        size={20}
-                        color="#ab1e24"
-                      />
-                    </Pressable>
                   </View>
-                </View>
-              ))
-            )}
-          </View>
-        ) : null}
+                ))
+              )}
+            </>
+          ) : null}
+        </View>
 
         {!isAdmin ? (
           <View style={styles.quickBlock}>

@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEmail,
   IsInt,
   IsIn,
@@ -29,4 +30,8 @@ export class RegisterDto {
   @IsOptional()
   @IsIn(['fr', 'zh'], { message: 'INVALID_LANGUAGE' })
   language?: 'fr' | 'zh';
+
+  @IsOptional()
+  @IsBoolean({ message: 'INVALID_MANAGER_REQUEST' })
+  requestManagerRole?: boolean;
 }

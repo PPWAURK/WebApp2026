@@ -390,6 +390,7 @@ export class UsersService {
     passwordHash: string;
     name?: string;
     restaurantId: number;
+    role?: Role;
     isApproved?: boolean;
     preferredLanguage?: 'fr' | 'zh';
   }) {
@@ -399,7 +400,7 @@ export class UsersService {
         passwordHash: params.passwordHash,
         name: params.name,
         restaurantId: params.restaurantId,
-        role: Role.EMPLOYEE,
+        role: params.role ?? Role.EMPLOYEE,
         employeeLevel: EmployeeLevel.L0_PROBATION,
         isApproved: params.isApproved ?? true,
         isOnProbation: true,
@@ -700,8 +701,14 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    if (user.role !== Role.EMPLOYEE) {
-      throw new BadRequestException('Only EMPLOYEE accounts can be approved');
+    if (actor.actorRole === Role.MANAGER && user.role !== Role.EMPLOYEE) {
+      throw new BadRequestException(
+        'Manager can only approve EMPLOYEE accounts',
+      );
+    }
+
+    if (actor.actorRole === Role.ADMIN && user.role !== Role.MANAGER) {
+      throw new BadRequestException('Admin can only approve MANAGER accounts');
     }
 
     if (
@@ -777,6 +784,10 @@ export class UsersService {
 
     if (user.role === Role.ADMIN) {
       throw new BadRequestException('Cannot update ADMIN level');
+    }
+
+    if (user.role !== Role.EMPLOYEE) {
+      throw new BadRequestException('Only EMPLOYEE level can be updated');
     }
 
     if (actor.actorRole === Role.MANAGER && actor.actorId === userId) {

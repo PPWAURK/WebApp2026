@@ -118,6 +118,27 @@ export const styles = StyleSheet.create({
   restaurantSelectItemTextActive: {
     color: '#ffffff',
   },
+  registerOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 2,
+  },
+  registerOptionTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  registerOptionLabel: {
+    color: RED,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  registerOptionHint: {
+    color: '#7e4a4e',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 11,
+    lineHeight: 16,
+  },
   error: {
     color: RED,
     fontFamily: 'Manrope_700Bold',

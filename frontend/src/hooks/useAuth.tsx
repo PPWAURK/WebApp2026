@@ -35,6 +35,7 @@ type AuthContextValue = {
   email: string;
   password: string;
   name: string;
+  requestManagerRole: boolean;
   rememberMe: boolean;
   error: string | null;
   notice: string | null;
@@ -46,6 +47,7 @@ type AuthContextValue = {
   setPassword: (value: string) => void;
   setName: (value: string) => void;
   setSelectedRestaurantId: (restaurantId: number | null) => void;
+  setRequestManagerRole: Dispatch<SetStateAction<boolean>>;
   setRememberMe: Dispatch<SetStateAction<boolean>>;
   submitAuth: (currentMode: AuthMode, text: AppText, language: Language) => Promise<void>;
   forgotPassword: (text: AppText, language: Language) => Promise<void>;
@@ -61,6 +63,10 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 function mapAuthErrorMessage(rawMessage: string, currentMode: AuthMode, text: AppText) {
   if (rawMessage === text.auth.restaurantMissing || rawMessage.includes('RESTAURANT_REQUIRED')) {
     return text.auth.restaurantMissing;
+  }
+
+  if (rawMessage.includes('ACCOUNT_PENDING_ADMIN_APPROVAL')) {
+    return text.auth.pendingAdminApprovalRequired;
   }
 
   if (rawMessage.includes('ACCOUNT_PENDING_APPROVAL')) {
@@ -99,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [name, setName] = useState('');
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(null);
+  const [requestManagerRole, setRequestManagerRole] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -194,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: currentMode === 'register' ? name.trim() : undefined,
         restaurantId:
           currentMode === 'register' && selectedRestaurantId ? selectedRestaurantId : undefined,
+        requestManagerRole: currentMode === 'register' ? requestManagerRole : undefined,
         language,
       });
 
@@ -202,7 +210,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (registerData.pendingApproval) {
           setMode('login');
           setPassword('');
-          setNotice(text.auth.pendingApprovalSubmitted);
+          setRequestManagerRole(false);
+          setNotice(
+            registerData.message === 'ACCOUNT_PENDING_ADMIN_APPROVAL'
+              ? text.auth.pendingAdminApprovalSubmitted
+              : text.auth.pendingApprovalSubmitted,
+          );
           return;
         }
       }
@@ -260,6 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setEmail('');
     setPassword('');
     setName('');
+    setRequestManagerRole(false);
     setMode('login');
     setError(null);
     setNotice(noticeMessage ?? null);
@@ -271,6 +285,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     setNotice(null);
     setMode((currentMode) => (currentMode === 'login' ? 'register' : 'login'));
+    setRequestManagerRole(false);
   }
 
   async function updateSessionUser(user: User) {
@@ -302,6 +317,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email,
         password,
         name,
+        requestManagerRole,
         rememberMe,
         error,
         notice,
@@ -313,6 +329,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setPassword,
         setName,
         setSelectedRestaurantId,
+        setRequestManagerRole,
         setRememberMe,
         submitAuth,
         forgotPassword,

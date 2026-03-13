@@ -290,7 +290,7 @@ export class UsersController {
     });
   }
 
-  @ApiOperation({ summary: 'Approve employee account request (admin/manager)' })
+  @ApiOperation({ summary: 'Approve pending account request (admin/manager)' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Patch(':id/approve-account')

@@ -23,6 +23,7 @@ type AuthFormProps = {
   name: string;
   restaurants: Restaurant[];
   selectedRestaurantId: number | null;
+  requestManagerRole: boolean;
   rememberMe: boolean;
   isSubmitting: boolean;
   forgotPasswordCooldownSeconds: number;
@@ -32,6 +33,7 @@ type AuthFormProps = {
   onPasswordChange: (value: string) => void;
   onNameChange: (value: string) => void;
   onSelectRestaurant: (restaurantId: number) => void;
+  onToggleRequestManagerRole: () => void;
   onRememberToggle: () => void;
   onSelectLanguage: (language: Language) => void;
   onSubmit: () => void;
@@ -239,6 +241,30 @@ export function AuthForm(props: AuthFormProps) {
               {props.text.auth.restaurantRequired}
             </Text>
           ) : null}
+
+          <Pressable
+            style={styles.registerOptionRow}
+            onPress={props.onToggleRequestManagerRole}
+          >
+            <View
+              style={[
+                styles.rememberBox,
+                props.requestManagerRole && styles.rememberBoxActive,
+              ]}
+            >
+              {props.requestManagerRole ? (
+                <Text style={styles.rememberCheck}>✓</Text>
+              ) : null}
+            </View>
+            <View style={styles.registerOptionTextWrap}>
+              <Text style={styles.registerOptionLabel}>
+                {props.text.auth.registerManagerRequestLabel}
+              </Text>
+              <Text style={styles.registerOptionHint}>
+                {props.text.auth.registerManagerRequestHint}
+              </Text>
+            </View>
+          </Pressable>
         </>
       ) : null}
 

@@ -24,7 +24,7 @@ export const translations = {
     },
     auth: {
       loginTitle: 'Connexion équipe',
-      registerTitle: 'Créer un compte employé',
+      registerTitle: 'Créer un compte',
       apiLabel: 'API',
       namePlaceholder: 'Nom complet',
       emailPlaceholder: 'Adresse e-mail',
@@ -44,8 +44,15 @@ export const translations = {
       passwordTooShort: 'Mot de passe trop court (8 caractères minimum)',
       pendingApprovalSubmitted:
         'Le compte a bien été créé. Un manager doit encore le valider avant la première connexion.',
+      pendingAdminApprovalSubmitted:
+        'Le compte a bien été créé. Un administrateur doit encore valider la demande manager avant la première connexion.',
       pendingApprovalRequired:
         'Ce compte attend encore la validation d’un manager.',
+      pendingAdminApprovalRequired:
+        'Ce compte manager attend encore la validation d’un administrateur.',
+      registerManagerRequestLabel: 'Demander un compte manager',
+      registerManagerRequestHint:
+        'Cochez cette option si ce compte doit être validé comme manager par un administrateur.',
       rememberMe: 'Se souvenir de moi',
       forgotPassword: 'Mot de passe oublié ?',
       sessionExpired: 'Votre session a expiré. Veuillez vous reconnecter.',
@@ -175,7 +182,8 @@ export const translations = {
       newsDeleteMessage: 'Voulez-vous vraiment supprimer cette actualité ?',
       newsDeleteConfirm: 'Supprimer',
       newsDeleteError: 'Impossible de supprimer cette actualité.',
-      quickApproveTitle: 'Comptes à valider',
+      quickApproveTitle: 'Comptes employés à valider',
+      quickApproveManagerTitle: 'Demandes manager à valider',
       quickLevelTitle: 'Niveau des employés',
       quickLatestOrderTitle: 'Dernière commande',
       quickSearchPlaceholder: 'Rechercher par nom ou e-mail',
@@ -572,11 +580,13 @@ export const translations = {
       accountStatusLabel: 'Compte',
       accountStatusValues: {
         approved: 'Validé',
-        pending: 'En attente de validation',
+        pending: 'En attente',
       },
       approveAccountButton: 'Valider le compte',
       approveAccountMessage:
         'Confirmez-vous la validation de cette demande ? L’employé pourra ensuite se connecter.',
+      approveManagerAccountMessage:
+        'Confirmez-vous la validation de cette demande manager ? Le manager pourra ensuite se connecter.',
       approveAccountCancel: 'Annuler',
       approveAccountConfirm: 'Valider',
       approveAccountSaving: 'Validation...',
@@ -669,7 +679,7 @@ export const translations = {
     },
     auth: {
       loginTitle: '员工登录',
-      registerTitle: '创建员工账号',
+      registerTitle: '创建账号',
       apiLabel: '接口',
       namePlaceholder: '姓名',
       emailPlaceholder: '邮箱',
@@ -687,7 +697,13 @@ export const translations = {
       emailAlreadyRegistered: '邮箱已被注册',
       passwordTooShort: '密码太短（至少 8 位）',
       pendingApprovalSubmitted: '账号已创建，需经理审核通过后方可首次登录。',
+      pendingAdminApprovalSubmitted:
+        '账号已创建，需管理员审核通过店长申请后方可首次登录。',
       pendingApprovalRequired: '账号待经理审核，暂时无法登录。',
+      pendingAdminApprovalRequired: '店长账号申请待管理员审核，暂时无法登录。',
+      registerManagerRequestLabel: '申请注册为店长',
+      registerManagerRequestHint:
+        '勾选后，该账号会进入管理员审核，通过后以店长身份登录。',
       rememberMe: '记住我',
       forgotPassword: '忘记密码？',
       sessionExpired: '登录已过期，请重新登录。',
@@ -812,6 +828,7 @@ export const translations = {
       newsDeleteConfirm: '删除',
       newsDeleteError: '删除动态失败。',
       quickApproveTitle: '员工账号审核',
+      quickApproveManagerTitle: '店长账号审核',
       quickLevelTitle: '员工等级调整',
       quickLatestOrderTitle: '最新订单',
       quickSearchPlaceholder: '按姓名或邮箱搜索',
@@ -1182,10 +1199,12 @@ export const translations = {
       accountStatusLabel: '账号',
       accountStatusValues: {
         approved: '已审核',
-        pending: '待经理审核',
+        pending: '待审核',
       },
       approveAccountButton: '审核账号',
       approveAccountMessage: '确认通过该账号申请吗？通过后员工即可登录平台。',
+      approveManagerAccountMessage:
+        '确认通过该店长账号申请吗？通过后对方即可作为店长登录平台。',
       approveAccountCancel: '取消',
       approveAccountConfirm: '通过',
       approveAccountSaving: '审核中...',

@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { EmployeeLevel } from '@prisma/client';
+import { EmployeeLevel, Role } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
@@ -49,7 +49,11 @@ export class AuthService {
     }
 
     if (!user.isApproved) {
-      throw new UnauthorizedException('ACCOUNT_PENDING_APPROVAL');
+      throw new UnauthorizedException(
+        user.role === Role.MANAGER
+          ? 'ACCOUNT_PENDING_ADMIN_APPROVAL'
+          : 'ACCOUNT_PENDING_APPROVAL',
+      );
     }
 
     if (loginDto.language === 'fr' || loginDto.language === 'zh') {
@@ -85,6 +89,7 @@ export class AuthService {
       passwordHash,
       name: registerDto.name,
       restaurantId: registerDto.restaurantId,
+      role: registerDto.requestManagerRole ? Role.MANAGER : Role.EMPLOYEE,
       isApproved: false,
       preferredLanguage:
         registerDto.language === 'fr' || registerDto.language === 'zh'
@@ -95,7 +100,9 @@ export class AuthService {
     return {
       pendingApproval: true,
       userId: createdUser.id,
-      message: 'ACCOUNT_PENDING_APPROVAL',
+      message: registerDto.requestManagerRole
+        ? 'ACCOUNT_PENDING_ADMIN_APPROVAL'
+        : 'ACCOUNT_PENDING_APPROVAL',
     };
   }
 
