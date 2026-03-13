@@ -1965,7 +1965,7 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
                       </Text>
                       <Text style={styles.subtitle}>
                         {text.dashboard.quickApplicantLevelLabel}:{' '}
-                        {text.dashboard.levels.L7_PDI}
+                        {text.dashboard.levels.L7_D}
                       </Text>
                     </>
                   ) : null}

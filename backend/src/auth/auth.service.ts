@@ -91,7 +91,7 @@ export class AuthService {
       restaurantId: registerDto.restaurantId,
       role: registerDto.requestManagerRole ? Role.MANAGER : Role.EMPLOYEE,
       employeeLevel: registerDto.requestManagerRole
-        ? EmployeeLevel.L7_PDI
+        ? EmployeeLevel.L7_D
         : EmployeeLevel.L0_PROBATION,
       isApproved: false,
       preferredLanguage:

@@ -730,7 +730,7 @@ export class UsersService {
       data: {
         isApproved: true,
         ...(user.role === Role.MANAGER
-          ? { employeeLevel: EmployeeLevel.L7_PDI }
+          ? { employeeLevel: EmployeeLevel.L7_D }
           : {}),
       },
       select: {
