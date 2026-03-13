@@ -12,15 +12,21 @@ variables:
 
 default:
   cache:
-    key:
-      files:
-        - package-lock.json
-        - backend/package-lock.json
-        - frontend/package-lock.json
-    paths:
-      - node_modules/
-      - backend/node_modules/
-      - frontend/node_modules/
+    - key:
+        files:
+          - package-lock.json
+      paths:
+        - node_modules/
+    - key:
+        files:
+          - backend/package-lock.json
+      paths:
+        - backend/node_modules/
+    - key:
+        files:
+          - frontend/package-lock.json
+      paths:
+        - frontend/node_modules/
 
 verify:
   stage: verify
