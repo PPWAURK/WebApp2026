@@ -391,6 +391,7 @@ export class UsersService {
     name?: string;
     restaurantId: number;
     role?: Role;
+    employeeLevel?: EmployeeLevel;
     isApproved?: boolean;
     preferredLanguage?: 'fr' | 'zh';
   }) {
@@ -401,7 +402,7 @@ export class UsersService {
         name: params.name,
         restaurantId: params.restaurantId,
         role: params.role ?? Role.EMPLOYEE,
-        employeeLevel: EmployeeLevel.L0_PROBATION,
+        employeeLevel: params.employeeLevel ?? EmployeeLevel.L0_PROBATION,
         isApproved: params.isApproved ?? true,
         isOnProbation: true,
         preferredLanguage: params.preferredLanguage ?? 'fr',
@@ -728,6 +729,9 @@ export class UsersService {
       where: { id: userId },
       data: {
         isApproved: true,
+        ...(user.role === Role.MANAGER
+          ? { employeeLevel: EmployeeLevel.L7_PDI }
+          : {}),
       },
       select: {
         id: true,
@@ -751,6 +755,62 @@ export class UsersService {
     return {
       id: updated.id,
       isApproved: updated.isApproved,
+    };
+  }
+
+  async rejectAccountRequest(
+    userId: number,
+    actor: {
+      actorRole: string;
+      actorRestaurantId: number | null;
+    },
+  ) {
+    this.ensureRoleScope(actor);
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        restaurantId: true,
+        isApproved: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.isApproved) {
+      throw new BadRequestException('Only pending accounts can be rejected');
+    }
+
+    if (actor.actorRole === Role.MANAGER && user.role !== Role.EMPLOYEE) {
+      throw new BadRequestException(
+        'Manager can only reject EMPLOYEE accounts',
+      );
+    }
+
+    if (actor.actorRole === Role.ADMIN && user.role !== Role.MANAGER) {
+      throw new BadRequestException('Admin can only reject MANAGER accounts');
+    }
+
+    if (
+      actor.actorRole === Role.MANAGER &&
+      user.restaurantId !== actor.actorRestaurantId
+    ) {
+      throw new BadRequestException(
+        'Manager can only reject users in own restaurant',
+      );
+    }
+
+    await this.prisma.user.delete({
+      where: { id: userId },
+    });
+
+    return {
+      id: user.id,
+      success: true,
     };
   }
 

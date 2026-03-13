@@ -53,6 +53,9 @@ export const translations = {
       registerManagerRequestLabel: 'Demander un compte manager',
       registerManagerRequestHint:
         'Cochez cette option si ce compte doit être validé comme manager par un administrateur.',
+      managerRestaurantLabel: 'Restaurant demande',
+      managerRestaurantHint:
+        'Choisissez le restaurant pour lequel ce compte demande un poste de manager.',
       rememberMe: 'Se souvenir de moi',
       forgotPassword: 'Mot de passe oublié ?',
       sessionExpired: 'Votre session a expiré. Veuillez vous reconnecter.',
@@ -190,6 +193,8 @@ export const translations = {
       quickRestaurantFilterTitle: 'Filtrer par établissement',
       quickRestaurantFilterAll: 'Tous',
       quickRestaurantFilterUnassigned: 'Non affecté',
+      quickApplicantRestaurantLabel: 'Restaurant demande',
+      quickApplicantLevelLabel: 'Niveau demande',
       quickNoPendingAccount: 'Aucun compte en attente de validation.',
       quickNoEmployee: 'Aucun employé ne correspond à ce filtre.',
       quickNoOrder: 'Aucune commande enregistrée.',
@@ -583,15 +588,24 @@ export const translations = {
         pending: 'En attente',
       },
       approveAccountButton: 'Valider le compte',
+      rejectAccountButton: 'Refuser le compte',
+      rejectAccountTitle: 'Refuser la demande employé',
+      rejectManagerAccountTitle: 'Refuser la demande manager',
       approveAccountMessage:
         'Confirmez-vous la validation de cette demande ? L’employé pourra ensuite se connecter.',
       approveManagerAccountMessage:
         'Confirmez-vous la validation de cette demande manager ? Le manager pourra ensuite se connecter.',
+      rejectAccountMessage:
+        'Confirmez-vous le refus de cette demande ? Le compte en attente sera supprimé.',
+      rejectManagerAccountMessage:
+        'Confirmez-vous le refus de cette demande manager ? Le compte en attente sera supprimé.',
       approveAccountCancel: 'Annuler',
       approveAccountConfirm: 'Valider',
+      rejectAccountConfirm: 'Refuser',
       approveAccountSaving: 'Validation...',
       approveAccountDone: 'Compte validé',
       approveAccountError: 'Impossible de valider le compte',
+      rejectAccountError: 'Impossible de refuser la demande',
       probationStatusLabel: 'Statut',
       probationValues: {
         probation: 'Période d’essai',
@@ -704,6 +718,8 @@ export const translations = {
       registerManagerRequestLabel: '申请注册为店长',
       registerManagerRequestHint:
         '勾选后，该账号会进入管理员审核，通过后以店长身份登录。',
+      managerRestaurantLabel: '申请门店',
+      managerRestaurantHint: '请选择你想申请成为店长的门店。',
       rememberMe: '记住我',
       forgotPassword: '忘记密码？',
       sessionExpired: '登录已过期，请重新登录。',
@@ -835,6 +851,8 @@ export const translations = {
       quickRestaurantFilterTitle: '按门店筛选',
       quickRestaurantFilterAll: '全部',
       quickRestaurantFilterUnassigned: '未分配',
+      quickApplicantRestaurantLabel: '申请门店',
+      quickApplicantLevelLabel: '申请等级',
       quickNoPendingAccount: '暂无待审核账号。',
       quickNoEmployee: '没有符合条件的员工。',
       quickNoOrder: '暂时还没有订单记录。',
@@ -1202,14 +1220,22 @@ export const translations = {
         pending: '待审核',
       },
       approveAccountButton: '审核账号',
+      rejectAccountButton: '拒绝申请',
+      rejectAccountTitle: '拒绝员工申请',
+      rejectManagerAccountTitle: '拒绝店长申请',
       approveAccountMessage: '确认通过该账号申请吗？通过后员工即可登录平台。',
       approveManagerAccountMessage:
         '确认通过该店长账号申请吗？通过后对方即可作为店长登录平台。',
+      rejectAccountMessage: '确认拒绝该账号申请吗？待审核账号会被直接删除。',
+      rejectManagerAccountMessage:
+        '确认拒绝该店长账号申请吗？待审核账号会被直接删除。',
       approveAccountCancel: '取消',
       approveAccountConfirm: '通过',
+      rejectAccountConfirm: '拒绝',
       approveAccountSaving: '审核中...',
       approveAccountDone: '已审核通过',
       approveAccountError: '账号审核失败',
+      rejectAccountError: '拒绝申请失败',
       probationStatusLabel: '状态',
       probationValues: {
         probation: '试用期',

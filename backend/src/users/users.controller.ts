@@ -334,6 +334,28 @@ export class UsersController {
     });
   }
 
+  @ApiOperation({ summary: 'Reject pending account request (admin/manager)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/reject-account')
+  rejectAccountRequest(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) userId: number,
+  ) {
+    const actor = req.user;
+
+    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
+      throw new ForbiddenException(
+        'Only ADMIN and MANAGER can access this resource',
+      );
+    }
+
+    return this.usersService.rejectAccountRequest(userId, {
+      actorRole: actor.role,
+      actorRestaurantId: actor.restaurantId,
+    });
+  }
+
   @ApiOperation({ summary: 'Update employee level (manager only)' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

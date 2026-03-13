@@ -237,6 +237,11 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
+  quickRowActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   quickWorkplaceRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

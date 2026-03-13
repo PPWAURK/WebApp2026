@@ -22,6 +22,7 @@ import {
   approveUserAccount,
   deleteUserAccount,
   fetchTrainingAccessUsers,
+  rejectUserAccount,
   updateUserWorkplaceRole,
   updateUserLevel,
   type TrainingAccessUser,
@@ -182,6 +183,9 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   const [accountSearch, setAccountSearch] = useState('');
   const [levelSearch, setLevelSearch] = useState('');
   const [isApprovingUserId, setIsApprovingUserId] = useState<number | null>(
+    null,
+  );
+  const [isRejectingUserId, setIsRejectingUserId] = useState<number | null>(
     null,
   );
   const [isUpdatingLevelUserId, setIsUpdatingLevelUserId] = useState<
@@ -871,6 +875,34 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
       );
     } finally {
       setIsApprovingUserId(null);
+    }
+  }
+
+  async function handleRejectAccount(entry: TrainingAccessUser) {
+    const confirmed = await confirmAction(
+      entry.role === 'MANAGER'
+        ? text.adminTraining.rejectManagerAccountTitle
+        : text.adminTraining.rejectAccountTitle,
+      entry.role === 'MANAGER'
+        ? text.adminTraining.rejectManagerAccountMessage
+        : text.adminTraining.rejectAccountMessage,
+      text.adminTraining.rejectAccountConfirm,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setIsRejectingUserId(entry.id);
+    setUsersError(null);
+    try {
+      await rejectUserAccount(accessToken, entry.id);
+      setUsers((current) =>
+        current.filter((userEntry) => userEntry.id !== entry.id),
+      );
+    } catch {
+      setUsersError(text.adminTraining.rejectAccountError);
+    } finally {
+      setIsRejectingUserId(null);
     }
   }
 
@@ -1924,31 +1956,73 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
                     {entry.name ?? entry.email}
                   </Text>
                   <Text style={styles.subtitle}>{entry.email}</Text>
+                  {entry.role === 'MANAGER' ? (
+                    <>
+                      <Text style={styles.subtitle}>
+                        {text.dashboard.quickApplicantRestaurantLabel}:{' '}
+                        {entry.restaurant?.name ??
+                          text.dashboard.quickRestaurantFilterUnassigned}
+                      </Text>
+                      <Text style={styles.subtitle}>
+                        {text.dashboard.quickApplicantLevelLabel}:{' '}
+                        {text.dashboard.levels.L7_PDI}
+                      </Text>
+                    </>
+                  ) : null}
                 </View>
-                <Pressable
-                  style={[
-                    styles.iconActionButton,
-                    styles.iconApproveButton,
-                    isApprovingUserId === entry.id && styles.buttonDisabled,
-                  ]}
-                  accessibilityLabel={text.adminTraining.approveAccountButton}
-                  disabled={isApprovingUserId === entry.id}
-                  onPress={() => {
-                    void handleApproveAccount(entry);
-                  }}
-                >
-                  <Ionicons
-                    name={
-                      isApprovingUserId === entry.id
-                        ? 'hourglass-outline'
-                        : 'checkmark-outline'
+                <View style={styles.quickRowActions}>
+                  <Pressable
+                    style={[
+                      styles.iconDeleteButton,
+                      isRejectingUserId === entry.id && styles.buttonDisabled,
+                    ]}
+                    accessibilityLabel={text.adminTraining.rejectAccountButton}
+                    disabled={
+                      isApprovingUserId === entry.id ||
+                      isRejectingUserId === entry.id
                     }
-                    size={20}
-                    color={
-                      isApprovingUserId === entry.id ? '#7f1b21' : '#2f7d32'
+                    onPress={() => {
+                      void handleRejectAccount(entry);
+                    }}
+                  >
+                    <Ionicons
+                      name={
+                        isRejectingUserId === entry.id
+                          ? 'hourglass-outline'
+                          : 'close-outline'
+                      }
+                      size={20}
+                      color="#ab1e24"
+                    />
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.iconActionButton,
+                      styles.iconApproveButton,
+                      isApprovingUserId === entry.id && styles.buttonDisabled,
+                    ]}
+                    accessibilityLabel={text.adminTraining.approveAccountButton}
+                    disabled={
+                      isApprovingUserId === entry.id ||
+                      isRejectingUserId === entry.id
                     }
-                  />
-                </Pressable>
+                    onPress={() => {
+                      void handleApproveAccount(entry);
+                    }}
+                  >
+                    <Ionicons
+                      name={
+                        isApprovingUserId === entry.id
+                          ? 'hourglass-outline'
+                          : 'checkmark-outline'
+                      }
+                      size={20}
+                      color={
+                        isApprovingUserId === entry.id ? '#7f1b21' : '#2f7d32'
+                      }
+                    />
+                  </Pressable>
+                </View>
               </View>
             </View>
           ))}

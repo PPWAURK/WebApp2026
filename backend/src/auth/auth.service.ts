@@ -90,6 +90,9 @@ export class AuthService {
       name: registerDto.name,
       restaurantId: registerDto.restaurantId,
       role: registerDto.requestManagerRole ? Role.MANAGER : Role.EMPLOYEE,
+      employeeLevel: registerDto.requestManagerRole
+        ? EmployeeLevel.L7_PDI
+        : EmployeeLevel.L0_PROBATION,
       isApproved: false,
       preferredLanguage:
         registerDto.language === 'fr' || registerDto.language === 'zh'

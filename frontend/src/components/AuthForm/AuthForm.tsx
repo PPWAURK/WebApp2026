@@ -188,7 +188,9 @@ export function AuthForm(props: AuthFormProps) {
           </View>
 
           <Text style={styles.uploadFieldTitle}>
-            {props.text.auth.restaurantLabel}
+            {props.requestManagerRole
+              ? props.text.auth.managerRestaurantLabel
+              : props.text.auth.restaurantLabel}
           </Text>
           <View style={styles.restaurantSelectWrap}>
             <Pressable
@@ -235,6 +237,12 @@ export function AuthForm(props: AuthFormProps) {
               </View>
             ) : null}
           </View>
+
+          {props.requestManagerRole ? (
+            <Text style={styles.registerOptionHint}>
+              {props.text.auth.managerRestaurantHint}
+            </Text>
+          ) : null}
 
           {props.restaurants.length === 0 ? (
             <Text style={styles.error}>
