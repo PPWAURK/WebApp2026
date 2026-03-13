@@ -6,12 +6,7 @@ import {
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import PDFDocument from 'pdfkit';
-import {
-  createWriteStream,
-  existsSync,
-  mkdirSync,
-  unlinkSync,
-} from 'fs';
+import { createWriteStream, existsSync, mkdirSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -567,7 +562,9 @@ export class OrdersService {
           supplierId: itemSupplierId,
           supplierName: item.purchaseOrder.supplier.nom,
           month,
-          nameFr: this.sanitizeLabel(this.recoverUtf8(item.product.designationFr)),
+          nameFr: this.sanitizeLabel(
+            this.recoverUtf8(item.product.designationFr),
+          ),
           nameZh: this.sanitizeLabel(this.recoverUtf8(item.product.nomCn)),
           totalQuantity: 0,
           orderCount: 0,
@@ -616,7 +613,9 @@ export class OrdersService {
         supplierId,
         supplierName: item.purchaseOrder.supplier.nom,
         month,
-        nameFr: this.sanitizeLabel(this.recoverUtf8(item.product.designationFr)),
+        nameFr: this.sanitizeLabel(
+          this.recoverUtf8(item.product.designationFr),
+        ),
         nameZh: this.sanitizeLabel(this.recoverUtf8(item.product.nomCn)),
         totalQuantity: 0,
         orderCount: 0,
@@ -637,7 +636,10 @@ export class OrdersService {
     });
   }
 
-  async getTopOrderedProductMonths(actor: Actor, supplierId?: number): Promise<string[]> {
+  async getTopOrderedProductMonths(
+    actor: Actor,
+    supplierId?: number,
+  ): Promise<string[]> {
     this.ensureCanManageOrders(actor);
 
     if (supplierId !== undefined) {
@@ -678,7 +680,9 @@ export class OrdersService {
     });
 
     return Array.from(
-      new Set(orders.map((order) => order.deliveryDate.toISOString().slice(0, 7))),
+      new Set(
+        orders.map((order) => order.deliveryDate.toISOString().slice(0, 7)),
+      ),
     ).sort((left, right) => right.localeCompare(left));
   }
 
@@ -698,9 +702,15 @@ export class OrdersService {
     }
 
     const period = this.normalizeHistoryPeriod(query.period);
-    const { start, end, previousStart, previousEnd } = this.resolveHistoryPeriodRange(period);
+    const { start, end, previousStart, previousEnd } =
+      this.resolveHistoryPeriodRange(period);
 
-    const currentWhere = this.buildOrderAnalyticsWhere(actor, supplierId, start, end);
+    const currentWhere = this.buildOrderAnalyticsWhere(
+      actor,
+      supplierId,
+      start,
+      end,
+    );
     const previousWhere = this.buildOrderAnalyticsWhere(
       actor,
       supplierId,
@@ -708,73 +718,90 @@ export class OrdersService {
       previousEnd,
     );
 
-    const [currentOrders, previousOrders, currentItems, previousItems, trendOrders] =
-      await Promise.all([
-        this.prisma.purchaseOrder.findMany({
-          where: currentWhere,
-          select: {
-            id: true,
-            deliveryDate: true,
-            totalItems: true,
-            totalAmount: true,
-          },
-          orderBy: {
-            deliveryDate: 'desc',
-          },
-        }),
-        this.prisma.purchaseOrder.findMany({
-          where: previousWhere,
-          select: {
-            id: true,
-            deliveryDate: true,
-            totalItems: true,
-            totalAmount: true,
-          },
-        }),
-        this.prisma.purchaseOrderItem.findMany({
-          where: {
-            purchaseOrder: currentWhere,
-          },
-          select: {
-            productId: true,
-            quantity: true,
-            product: {
-              select: {
-                designationFr: true,
-                nomCn: true,
-              },
+    const [
+      currentOrders,
+      previousOrders,
+      currentItems,
+      previousItems,
+      trendOrders,
+    ] = await Promise.all([
+      this.prisma.purchaseOrder.findMany({
+        where: currentWhere,
+        select: {
+          id: true,
+          deliveryDate: true,
+          totalItems: true,
+          totalAmount: true,
+        },
+        orderBy: {
+          deliveryDate: 'desc',
+        },
+      }),
+      this.prisma.purchaseOrder.findMany({
+        where: previousWhere,
+        select: {
+          id: true,
+          deliveryDate: true,
+          totalItems: true,
+          totalAmount: true,
+        },
+      }),
+      this.prisma.purchaseOrderItem.findMany({
+        where: {
+          purchaseOrder: currentWhere,
+        },
+        select: {
+          productId: true,
+          quantity: true,
+          product: {
+            select: {
+              designationFr: true,
+              nomCn: true,
             },
           },
-        }),
-        this.prisma.purchaseOrderItem.findMany({
-          where: {
-            purchaseOrder: previousWhere,
-          },
-          select: {
-            productId: true,
-            quantity: true,
-          },
-        }),
-        this.prisma.purchaseOrder.findMany({
-          where: this.buildOrderAnalyticsWhere(
-            actor,
-            supplierId,
-            new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 5, 1)),
-            undefined,
+        },
+      }),
+      this.prisma.purchaseOrderItem.findMany({
+        where: {
+          purchaseOrder: previousWhere,
+        },
+        select: {
+          productId: true,
+          quantity: true,
+        },
+      }),
+      this.prisma.purchaseOrder.findMany({
+        where: this.buildOrderAnalyticsWhere(
+          actor,
+          supplierId,
+          new Date(
+            Date.UTC(
+              new Date().getUTCFullYear(),
+              new Date().getUTCMonth() - 5,
+              1,
+            ),
           ),
-          select: {
-            deliveryDate: true,
-            totalItems: true,
-            totalAmount: true,
-          },
-          orderBy: {
-            deliveryDate: 'asc',
-          },
-        }),
-      ]);
+          undefined,
+        ),
+        select: {
+          deliveryDate: true,
+          totalItems: true,
+          totalAmount: true,
+        },
+        orderBy: {
+          deliveryDate: 'asc',
+        },
+      }),
+    ]);
 
-    const currentTotals = this.computeHistoryTotals(currentOrders, currentItems);
-    const previousTotals = this.computeHistoryTotals(previousOrders, previousItems);
+    const currentTotals = this.computeHistoryTotals(
+      currentOrders,
+      currentItems,
+    );
+    const previousTotals = this.computeHistoryTotals(
+      previousOrders,
+      previousItems,
+    );
 
     const deltaItems = currentTotals.totalItems - previousTotals.totalItems;
     const deltaAmount = currentTotals.totalAmount - previousTotals.totalAmount;
@@ -784,7 +811,12 @@ export class OrdersService {
 
     const topProductsMap = new Map<
       number,
-      { productId: number; totalQuantity: number; nameFr: string; nameZh: string }
+      {
+        productId: number;
+        totalQuantity: number;
+        nameFr: string;
+        nameZh: string;
+      }
     >();
 
     for (const item of currentItems) {
@@ -792,7 +824,9 @@ export class OrdersService {
       const entry = topProductsMap.get(productId) ?? {
         productId,
         totalQuantity: 0,
-        nameFr: this.sanitizeLabel(this.recoverUtf8(item.product.designationFr)),
+        nameFr: this.sanitizeLabel(
+          this.recoverUtf8(item.product.designationFr),
+        ),
         nameZh: this.sanitizeLabel(this.recoverUtf8(item.product.nomCn)),
       };
 
@@ -804,7 +838,10 @@ export class OrdersService {
       .sort((left, right) => right.totalQuantity - left.totalQuantity)
       .slice(0, 5);
 
-    const dayMap = new Map<string, { date: string; totalItems: number; orders: number }>();
+    const dayMap = new Map<
+      string,
+      { date: string; totalItems: number; orders: number }
+    >();
     for (const order of currentOrders) {
       const date = order.deliveryDate.toISOString().slice(0, 10);
       const entry = dayMap.get(date) ?? { date, totalItems: 0, orders: 0 };
@@ -813,13 +850,14 @@ export class OrdersService {
       dayMap.set(date, entry);
     }
 
-    const busiestDay = Array.from(dayMap.values()).sort((left, right) => {
-      if (left.totalItems !== right.totalItems) {
-        return right.totalItems - left.totalItems;
-      }
+    const busiestDay =
+      Array.from(dayMap.values()).sort((left, right) => {
+        if (left.totalItems !== right.totalItems) {
+          return right.totalItems - left.totalItems;
+        }
 
-      return right.orders - left.orders;
-    })[0] ?? null;
+        return right.orders - left.orders;
+      })[0] ?? null;
 
     const trendMap = new Map<
       string,
@@ -854,11 +892,15 @@ export class OrdersService {
         uniqueProducts: deltaUniqueProducts,
         itemsRate:
           previousTotals.totalItems > 0
-            ? Number(((deltaItems / previousTotals.totalItems) * 100).toFixed(1))
+            ? Number(
+                ((deltaItems / previousTotals.totalItems) * 100).toFixed(1),
+              )
             : null,
         amountRate:
           previousTotals.totalAmount > 0
-            ? Number(((deltaAmount / previousTotals.totalAmount) * 100).toFixed(1))
+            ? Number(
+                ((deltaAmount / previousTotals.totalAmount) * 100).toFixed(1),
+              )
             : null,
       },
       topProducts,
@@ -921,7 +963,9 @@ export class OrdersService {
       return raw;
     }
 
-    throw new BadRequestException('period must be one of 7d, 30d, this_month, last_month, all');
+    throw new BadRequestException(
+      'period must be one of 7d, 30d, this_month, last_month, all',
+    );
   }
 
   private resolveHistoryPeriodRange(period: HistoryAnalyticsPeriod) {
@@ -963,8 +1007,12 @@ export class OrdersService {
     }
 
     if (period === 'this_month') {
-      const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-      const previousStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+      const start = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+      );
+      const previousStart = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
+      );
 
       return {
         start,
@@ -975,9 +1023,15 @@ export class OrdersService {
     }
 
     if (period === 'last_month') {
-      const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-      const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-      const previousStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, 1));
+      const start = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
+      );
+      const end = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+      );
+      const previousStart = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, 1),
+      );
 
       return {
         start,
@@ -1028,12 +1082,16 @@ export class OrdersService {
     items: Array<{ productId: bigint | number }>,
   ): HistoryAnalyticsTotals {
     const ordersCount = orders.length;
-    const totalItems = orders.reduce((sum, order) => sum + Number(order.totalItems), 0);
+    const totalItems = orders.reduce(
+      (sum, order) => sum + Number(order.totalItems),
+      0,
+    );
     const totalAmount = orders.reduce(
       (sum, order) => sum + Number(order.totalAmount),
       0,
     );
-    const uniqueProducts = new Set(items.map((item) => Number(item.productId))).size;
+    const uniqueProducts = new Set(items.map((item) => Number(item.productId)))
+      .size;
 
     return {
       orders: ordersCount,
@@ -1042,7 +1100,8 @@ export class OrdersService {
       uniqueProducts,
       avgOrderAmount:
         ordersCount > 0 ? Number((totalAmount / ordersCount).toFixed(2)) : 0,
-      avgOrderItems: ordersCount > 0 ? Number((totalItems / ordersCount).toFixed(1)) : 0,
+      avgOrderItems:
+        ordersCount > 0 ? Number((totalItems / ordersCount).toFixed(1)) : 0,
     };
   }
 
@@ -1074,7 +1133,12 @@ export class OrdersService {
     const year = Number(yearRaw);
     const month = Number(monthRaw);
 
-    if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    if (
+      !Number.isInteger(year) ||
+      !Number.isInteger(month) ||
+      month < 1 ||
+      month > 12
+    ) {
       throw new BadRequestException('month must be valid');
     }
 
@@ -1096,13 +1160,20 @@ export class OrdersService {
     req: { protocol: string; get: (name: string) => string | undefined },
     orderId: number,
   ) {
-    const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(/^\/+|\/+$/g, '');
+    const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(
+      /^\/+|\/+$/g,
+      '',
+    );
 
     if (this.publicApiBaseUrl) {
       const normalizedBaseUrl = this.publicApiBaseUrl.replace(/\/$/, '');
-      const normalizedPrefixEscaped = normalizedPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const normalizedPrefixEscaped = normalizedPrefix.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        '\\$&',
+      );
       const hasPrefixAlready =
-        normalizedPrefix.length > 0 && new RegExp(`/${normalizedPrefixEscaped}$`).test(normalizedBaseUrl);
+        normalizedPrefix.length > 0 &&
+        new RegExp(`/${normalizedPrefixEscaped}$`).test(normalizedBaseUrl);
 
       const baseUrlWithPrefix =
         normalizedPrefix.length > 0 && !hasPrefixAlready
@@ -1251,17 +1322,22 @@ export class OrdersService {
           width: colOrderUnit - 8,
           align: 'center',
         })
-        .text('Qte', left + colProduct + colSpecification + colOrderUnit + 4, y + 7, {
-          width: colQty - 8,
-          align: 'center',
-        })
+        .text(
+          'Qte',
+          left + colProduct + colSpecification + colOrderUnit + 4,
+          y + 7,
+          {
+            width: colQty - 8,
+            align: 'center',
+          },
+        )
         .text(
           'PU HT',
           left + colProduct + colSpecification + colOrderUnit + colQty + 4,
           y + 7,
           {
-          width: colUnitPrice - 8,
-          align: 'right',
+            width: colUnitPrice - 8,
+            align: 'right',
           },
         );
       doc.y = y + rowHeight;
@@ -1517,8 +1593,7 @@ export class OrdersService {
     const safeValue = this.recoverUtf8(value);
     if (!safeValue) return '-';
 
-    return safeValue
-      .replace(/[\x00-\x1F\x7F]/g, ' ')
+    return this.replaceControlCharsWithSpaces(safeValue)
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -1540,10 +1615,22 @@ export class OrdersService {
   }
 
   private hasControlChars(value: string) {
-    return /[\x00-\x1F\x7F]/.test(value);
+    return Array.from(value).some((character) =>
+      this.isAsciiControlCharacter(character.codePointAt(0)),
+    );
   }
 
   private containsCjk(value: string) {
     return /[\u3400-\u9FFF]/.test(value);
+  }
+
+  private replaceControlCharsWithSpaces(value: string) {
+    return Array.from(value, (character) =>
+      this.isAsciiControlCharacter(character.codePointAt(0)) ? ' ' : character,
+    ).join('');
+  }
+
+  private isAsciiControlCharacter(codePoint: number | undefined) {
+    return codePoint !== undefined && (codePoint <= 0x1f || codePoint === 0x7f);
   }
 }

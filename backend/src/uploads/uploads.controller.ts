@@ -65,7 +65,10 @@ const ALLOWED_DOCUMENT_MIME_TYPES = [
   'text/plain',
 ];
 
-function resolveUploadMimeType(mimeType: string | undefined, originalName: string) {
+function resolveUploadMimeType(
+  mimeType: string | undefined,
+  originalName: string,
+) {
   const normalizedMimeType = mimeType?.trim().toLowerCase();
   if (
     normalizedMimeType &&
@@ -75,7 +78,9 @@ function resolveUploadMimeType(mimeType: string | undefined, originalName: strin
     return normalizedMimeType;
   }
 
-  const extension = extname(originalName || '').replace('.', '').toLowerCase();
+  const extension = extname(originalName || '')
+    .replace('.', '')
+    .toLowerCase();
   return (
     FALLBACK_MIME_TYPES_BY_EXTENSION[extension] ??
     normalizedMimeType ??
@@ -386,7 +391,8 @@ export class UploadsController {
   }
 
   @ApiOperation({
-    summary: 'Delete one module category and clear category tags in library (admin only)',
+    summary:
+      'Delete one module category and clear category tags in library (admin only)',
   })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

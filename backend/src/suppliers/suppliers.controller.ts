@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   Get,
   Param,
+  Patch,
   ParseIntPipe,
   Post,
   Req,
@@ -55,6 +56,22 @@ export class SuppliersController {
     }
 
     return this.suppliersService.createSupplier(name ?? '');
+  }
+
+  @ApiOperation({ summary: 'Update supplier display order' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('order')
+  reorderSuppliers(
+    @Req() req: AuthenticatedRequest,
+    @Body('supplierIds') supplierIds: unknown,
+  ) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') {
+      throw new ForbiddenException('Only ADMIN can reorder suppliers');
+    }
+
+    return this.suppliersService.reorderSuppliers(supplierIds);
   }
 
   @ApiOperation({ summary: 'Delete one supplier' })

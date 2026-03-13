@@ -15,7 +15,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { EmployeeLevel, WorkplaceRole } from '@prisma/client';
+import { EmployeeLevel, Role, WorkplaceRole } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { existsSync, mkdirSync } from 'fs';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -334,7 +334,7 @@ export class UsersController {
     });
   }
 
-  @ApiOperation({ summary: 'Update employee level (admin/manager)' })
+  @ApiOperation({ summary: 'Update employee level (manager only)' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Patch(':id/level')
@@ -345,10 +345,8 @@ export class UsersController {
   ) {
     const actor = req.user;
 
-    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException(
-        'Only ADMIN and MANAGER can access this resource',
-      );
+    if (!actor || actor.role !== 'MANAGER') {
+      throw new ForbiddenException('Manager only');
     }
 
     if (
@@ -414,6 +412,10 @@ export class UsersController {
   ) {
     if (!req.user) {
       throw new ForbiddenException('Unauthenticated request');
+    }
+
+    if (req.user.role !== Role.ADMIN) {
+      throw new ForbiddenException('Only ADMIN can update own profile name');
     }
 
     if (typeof nameRaw !== 'string') {

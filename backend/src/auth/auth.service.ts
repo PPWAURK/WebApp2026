@@ -53,7 +53,10 @@ export class AuthService {
     }
 
     if (loginDto.language === 'fr' || loginDto.language === 'zh') {
-      await this.usersService.updatePreferredLanguage(user.id, loginDto.language);
+      await this.usersService.updatePreferredLanguage(
+        user.id,
+        loginDto.language,
+      );
     }
 
     const authenticatedUser = await this.usersService.findById(user.id);
@@ -72,7 +75,9 @@ export class AuthService {
       throw new ConflictException('EMAIL_ALREADY_REGISTERED');
     }
 
-    await this.restaurantsService.ensureRestaurantExists(registerDto.restaurantId);
+    await this.restaurantsService.ensureRestaurantExists(
+      registerDto.restaurantId,
+    );
 
     const passwordHash = await bcrypt.hash(registerDto.password, 10);
     const createdUser = await this.usersService.createEmployee({
@@ -118,7 +123,8 @@ export class AuthService {
     });
 
     if (lastResetRequest) {
-      const elapsedSinceLastRequestMs = Date.now() - lastResetRequest.createdAt.getTime();
+      const elapsedSinceLastRequestMs =
+        Date.now() - lastResetRequest.createdAt.getTime();
       if (elapsedSinceLastRequestMs < this.resetEmailCooldownMs) {
         return {
           success: true,
@@ -129,7 +135,9 @@ export class AuthService {
 
     const plainToken = randomBytes(32).toString('hex');
     const tokenHash = this.hashResetToken(plainToken);
-    const expiresAt = new Date(Date.now() + this.resetTokenLifetimeMinutes * 60 * 1000);
+    const expiresAt = new Date(
+      Date.now() + this.resetTokenLifetimeMinutes * 60 * 1000,
+    );
 
     await this.prisma.passwordResetToken.create({
       data: {

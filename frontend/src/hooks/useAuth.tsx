@@ -7,9 +7,17 @@ import {
   useEffect,
   useState,
 } from 'react';
-import { requestAuth, requestForgotPassword } from '../services/authApi';
+import {
+  requestAuth,
+  requestCurrentUser,
+  requestForgotPassword,
+} from '../services/authApi';
 import { fetchRestaurants } from '../services/restaurantsApi';
-import { clearSession, loadStoredSession, persistSession } from '../services/sessionStorage';
+import {
+  clearSession,
+  loadStoredSession,
+  persistSession,
+} from '../services/sessionStorage';
 import type { AppText } from '../locales/translations';
 import type {
   AuthMode,
@@ -103,8 +111,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const stored = await loadStoredSession();
         setRememberMe(stored.rememberMe);
-        setSession(stored.session);
+
+        if (!stored.session?.accessToken) {
+          setSession(null);
+          return;
+        }
+
+        const currentUser = await requestCurrentUser(stored.session.accessToken);
+        const validatedSession = {
+          accessToken: stored.session.accessToken,
+          user: currentUser,
+        };
+
+        setSession(validatedSession);
+        await persistSession(validatedSession, stored.rememberMe);
       } catch {
+        await clearSession();
         setSession(null);
       } finally {
         setIsLoadingSession(false);

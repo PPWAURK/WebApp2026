@@ -1,7 +1,5 @@
 import type { LibrarySection } from './documentTaxonomy';
 
-export const API_URL = 'https://api.zhaoplatforme.com/backend2';
-
 export type TrainingQuizLinkLanguage = 'fr' | 'bn';
 
 function readPublicEnv(name: string): string {
@@ -12,6 +10,16 @@ function readPublicEnv(name: string): string {
   const rawValue = process.env[name];
   return typeof rawValue === 'string' ? rawValue.trim() : '';
 }
+
+function normalizeBaseUrl(value: string): string {
+  return value.replace(/\/+$/g, '');
+}
+
+const DEFAULT_API_URL = 'https://api.zhaoplatforme.com/backend2';
+
+export const API_URL = normalizeBaseUrl(
+  readPublicEnv('EXPO_PUBLIC_API_URL') || DEFAULT_API_URL);
+
 
 export const TRAINING_QUIZ_URL = readPublicEnv(
   'EXPO_PUBLIC_TRAINING_QUIZ_URL',

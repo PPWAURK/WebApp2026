@@ -1,6 +1,12 @@
 import { API_URL } from '../constants/config';
 import type { Language } from '../types/language';
-import type { AuthMode, AuthResponse, RegisterResponse } from '../types/auth';
+import type {
+  AuthMode,
+  AuthResponse,
+  RegisterResponse,
+  User,
+} from '../types/auth';
+import { throwIfUnauthorized } from './authSession';
 
 type AuthPayload = {
   email: string;
@@ -88,4 +94,26 @@ export async function requestResetPassword(
   return {
     message: Array.isArray(data.message) ? data.message.join(', ') : data.message ?? 'OK',
   };
+}
+
+export async function requestCurrentUser(accessToken: string): Promise<User> {
+  const response = await fetch(`${API_URL}/auth/me`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const data = (await response.json()) as User | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Une erreur est survenue';
+    throw new Error(message);
+  }
+
+  return data as User;
 }

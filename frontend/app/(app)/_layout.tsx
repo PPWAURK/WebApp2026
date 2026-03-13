@@ -1,6 +1,7 @@
 import { Redirect, Stack } from 'expo-router';
 import { ActivityIndicator, SafeAreaView } from 'react-native';
 import { useAuth } from '../../src/hooks/useAuth';
+import { OrderFlowProvider } from '../../src/hooks/useOrderFlow';
 import { styles } from '../../src/styles/App.styles';
 
 export default function AppGroupLayout() {
@@ -18,5 +19,9 @@ export default function AppGroupLayout() {
     return <Redirect href="/login" />;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <OrderFlowProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </OrderFlowProvider>
+  );
 }

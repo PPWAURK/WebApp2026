@@ -293,7 +293,6 @@ export declare const translations: {
             readonly noVideos: "Aucune video disponible";
             readonly loadError: "Impossible de charger les documents";
             readonly openPdfButton: "Ouvrir le PDF";
-            readonly openExternalButton: "Ouvrir en externe";
             readonly previewButton: "Apercu web";
             readonly previewTitle: "Apercu PDF";
             readonly previewHint: "Selectionnez un document pour ouvrir un apercu.";
@@ -850,7 +849,6 @@ export declare const translations: {
             readonly noVideos: "暂无视频";
             readonly loadError: "加载文档失败";
             readonly openPdfButton: "打开 PDF";
-            readonly openExternalButton: "外部打开";
             readonly previewButton: "网页预览";
             readonly previewTitle: "PDF 预览";
             readonly previewHint: "选择文档后可在页面内预览。";

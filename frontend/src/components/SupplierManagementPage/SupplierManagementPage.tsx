@@ -23,6 +23,7 @@ import {
   createSupplier,
   deleteSupplier,
   fetchSuppliers,
+  reorderSuppliers,
   type SupplierItem,
 } from '../../services/suppliersApi';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -55,6 +56,7 @@ export function SupplierManagementPage({
   const [newSupplierName, setNewSupplierName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isCreatingSupplier, setIsCreatingSupplier] = useState(false);
+  const [isReorderingSuppliers, setIsReorderingSuppliers] = useState(false);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -183,6 +185,13 @@ export function SupplierManagementPage({
       suppliers.find((supplier) => supplier.id === selectedSupplierId) ?? null,
     [selectedSupplierId, suppliers],
   );
+  const selectedSupplierIndex =
+    selectedSupplierId === null
+      ? -1
+      : suppliers.findIndex((supplier) => supplier.id === selectedSupplierId);
+  const canMoveSelectedSupplierUp = selectedSupplierIndex > 0;
+  const canMoveSelectedSupplierDown =
+    selectedSupplierIndex >= 0 && selectedSupplierIndex < suppliers.length - 1;
 
   useEffect(() => {
     if (!supplierProducts.some((product) => product.id === selectedProductId)) {
@@ -232,16 +241,46 @@ export function SupplierManagementPage({
       const created = await createSupplier(accessToken, {
         name: newSupplierName,
       });
-      const next = [...suppliers, created].sort((a, b) =>
-        a.name.localeCompare(b.name),
-      );
-      setSuppliers(next);
+      setSuppliers((current) => [...current, created]);
       setSelectedSupplierId(created.id);
       setNewSupplierName('');
     } catch {
       setError(text.supplierManagement.createSupplierError);
     } finally {
       setIsCreatingSupplier(false);
+    }
+  }
+
+  async function onMoveSelectedSupplier(direction: -1 | 1) {
+    if (selectedSupplierIndex < 0) {
+      return;
+    }
+
+    const targetIndex = selectedSupplierIndex + direction;
+    if (targetIndex < 0 || targetIndex >= suppliers.length) {
+      return;
+    }
+
+    const nextSuppliers = [...suppliers];
+    const [movedSupplier] = nextSuppliers.splice(selectedSupplierIndex, 1);
+    nextSuppliers.splice(targetIndex, 0, movedSupplier);
+
+    setIsReorderingSuppliers(true);
+    setError(null);
+
+    try {
+      const reordered = await reorderSuppliers(accessToken, {
+        supplierIds: nextSuppliers.map((supplier) => supplier.id),
+      });
+      setSuppliers(reordered);
+    } catch (reorderError) {
+      if (reorderError instanceof Error && reorderError.message.trim()) {
+        setError(reorderError.message);
+      } else {
+        setError(text.supplierManagement.reorderSupplierError);
+      }
+    } finally {
+      setIsReorderingSuppliers(false);
     }
   }
 
@@ -542,13 +581,66 @@ export function SupplierManagementPage({
           </Pressable>
         ))}
       </View>
+      <Text style={styles.supplierOrderHint}>
+        {text.supplierManagement.supplierOrderHint}
+      </Text>
+      <View
+        style={[
+          styles.supplierOrderActions,
+          isSmallScreen && styles.supplierOrderActionsSmall,
+        ]}
+      >
+        <Pressable
+          style={[
+            styles.secondaryButton,
+            styles.supplierOrderButton,
+            (!canMoveSelectedSupplierUp || isReorderingSuppliers) &&
+              styles.buttonDisabled,
+          ]}
+          disabled={!canMoveSelectedSupplierUp || isReorderingSuppliers}
+          onPress={() => {
+            void onMoveSelectedSupplier(-1);
+          }}
+        >
+          <Text style={styles.secondaryButtonText}>
+            {text.supplierManagement.moveSupplierUpButton}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.secondaryButton,
+            styles.supplierOrderButton,
+            (!canMoveSelectedSupplierDown || isReorderingSuppliers) &&
+              styles.buttonDisabled,
+          ]}
+          disabled={!canMoveSelectedSupplierDown || isReorderingSuppliers}
+          onPress={() => {
+            void onMoveSelectedSupplier(1);
+          }}
+        >
+          <Text style={styles.secondaryButtonText}>
+            {text.supplierManagement.moveSupplierDownButton}
+          </Text>
+        </Pressable>
+      </View>
+      {isReorderingSuppliers ? (
+        <Text style={styles.docEmpty}>
+          {text.supplierManagement.reorderingSupplier}
+        </Text>
+      ) : null}
       <Pressable
         style={[
           styles.dangerButton,
-          (!selectedSupplier || deletingSupplierId !== null) &&
+          (!selectedSupplier ||
+            deletingSupplierId !== null ||
+            isReorderingSuppliers) &&
             styles.buttonDisabled,
         ]}
-        disabled={!selectedSupplier || deletingSupplierId !== null}
+        disabled={
+          !selectedSupplier ||
+          deletingSupplierId !== null ||
+          isReorderingSuppliers
+        }
         onPress={() => {
           if (selectedSupplier) {
             void onDeleteSupplier(selectedSupplier);

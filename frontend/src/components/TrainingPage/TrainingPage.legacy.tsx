@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { createElement, useEffect, useMemo, useRef, useState } from 'react';
 import { ResizeMode, Video, VideoFullscreenUpdate } from 'expo-av';
 import {
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -43,6 +44,11 @@ type OpenedDocumentState = {
   section: LibrarySection;
 };
 
+type WebPdfFrameProps = {
+  src: string;
+  title: string;
+};
+
 function appendQuizContextToUrl(
   baseUrl: string,
   context: OpenedDocumentState,
@@ -63,6 +69,40 @@ function getQuizLinkKey(
   return `${section}:${language}`;
 }
 
+function WebPdfFrame({ src, title }: WebPdfFrameProps) {
+  if (Platform.OS !== 'web') {
+    return null;
+  }
+
+  return createElement('iframe', {
+    src,
+    title,
+    style: {
+      border: '0',
+      width: '100%',
+      height: '100%',
+      backgroundColor: '#ffffff',
+      borderRadius: '12px',
+    },
+  });
+}
+
+function buildWebPreviewUrl(src: string): string {
+  const [baseUrl, hash = ''] = src.split('#', 2);
+  const previewParams = new URLSearchParams(hash);
+
+  if (!previewParams.has('page')) {
+    previewParams.set('page', '1');
+  }
+
+  previewParams.set('zoom', 'page-height');
+  previewParams.set('toolbar', '0');
+  previewParams.set('navpanes', '0');
+  previewParams.set('scrollbar', '0');
+
+  return `${baseUrl}#${previewParams.toString()}`;
+}
+
 export function TrainingPageLegacy({
   text,
   accessToken,
@@ -79,6 +119,8 @@ export function TrainingPageLegacy({
   );
   const [openedDocument, setOpenedDocument] =
     useState<OpenedDocumentState | null>(null);
+  const [webPreviewDocument, setWebPreviewDocument] =
+    useState<LibraryFileItem | null>(null);
   const [quizLinksByKey, setQuizLinksByKey] = useState<Record<string, string>>(
     {},
   );
@@ -148,6 +190,7 @@ export function TrainingPageLegacy({
   useEffect(() => {
     setSelectedVideo(null);
     setOpenedDocument(null);
+    setWebPreviewDocument(null);
     setShouldAutoFullscreen(false);
   }, [activeModule, activeSection]);
 
@@ -323,6 +366,12 @@ export function TrainingPageLegacy({
       originalName: item.originalName,
       section: item.section,
     });
+
+    if (Platform.OS === 'web') {
+      setWebPreviewDocument(item);
+      return;
+    }
+
     void Linking.openURL(item.fileUrl);
   }
 
@@ -564,6 +613,47 @@ export function TrainingPageLegacy({
           )}
         </View>
       ) : null}
+
+      <Modal
+        visible={Boolean(webPreviewDocument)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setWebPreviewDocument(null)}
+      >
+        <View style={styles.videoModalBackdrop}>
+          <View style={styles.previewModalCard}>
+            <View style={styles.previewModalHeader}>
+              <View style={styles.previewModalTextBlock}>
+                <Text style={styles.previewModalTitle}>
+                  {webPreviewDocument?.originalName ?? text.training.previewTitle}
+                </Text>
+                <Text style={styles.previewModalHint}>
+                  {text.training.webPreviewHint}
+                </Text>
+              </View>
+              <Pressable
+                style={styles.previewModalCloseButton}
+                onPress={() => setWebPreviewDocument(null)}
+                accessibilityRole="button"
+                accessibilityLabel={text.dashboard.levelModalClose}
+              >
+                <Text style={styles.previewModalCloseText}>X</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.previewFrameShell}>
+              {webPreviewDocument ? (
+                <WebPdfFrame
+                  src={buildWebPreviewUrl(webPreviewDocument.fileUrl)}
+                  title={
+                    webPreviewDocument.originalName ?? text.training.previewTitle
+                  }
+                />
+              ) : null}
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={Boolean(selectedVideo)}

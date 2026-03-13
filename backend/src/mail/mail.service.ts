@@ -21,6 +21,7 @@ export class MailService {
 
   private buildEmailLayout(input: {
     title: string;
+    brandLabel?: string;
     intro: string;
     body: string;
     buttonLabel?: string;
@@ -29,11 +30,10 @@ export class MailService {
     logoUrl?: string;
   }) {
     const safeTitle = this.escapeHtml(input.title);
+    const safeBrandLabel = this.escapeHtml(input.brandLabel ?? 'ZHAO Platform');
     const safeIntro = this.escapeHtml(input.intro);
     const safeBody = this.escapeHtml(input.body).replace(/\n/g, '<br/>');
-    const safeFooter = this.escapeHtml(
-      input.footer ?? 'Si vous avez une question, contactez votre manager.',
-    );
+    const safeFooter = input.footer ? this.escapeHtml(input.footer) : null;
     const buttonHtml =
       input.buttonLabel && input.buttonUrl
         ? `<p style="margin:24px 0 16px;">
@@ -48,6 +48,13 @@ export class MailService {
       ? `<img src="${this.escapeHtml(input.logoUrl)}" alt="ZHAO" width="72" height="72"
            style="display:block;width:72px;height:72px;border-radius:12px;object-fit:cover;border:1px solid rgba(255,255,255,0.45);margin-bottom:10px;"/>`
       : '';
+    const footerHtml = safeFooter
+      ? `<tr>
+            <td style="padding:16px 24px;border-top:1px solid #edd9cc;font-size:12px;line-height:1.6;color:#8c6f6f;">
+              ${safeFooter}
+            </td>
+          </tr>`
+      : '';
 
     return `
       <div style="margin:0;padding:24px;background:#f8f1eb;font-family:Arial,sans-serif;color:#472325;">
@@ -55,7 +62,7 @@ export class MailService {
           <tr>
             <td style="padding:22px 24px;background:#b51e24;color:#fff5f5;">
               ${logoHtml}
-              <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;opacity:0.9;">ZHAO Plateforme</div>
+              <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;opacity:0.9;">${safeBrandLabel}</div>
               <h1 style="margin:8px 0 0;font-size:22px;line-height:1.3;color:#fff5f5;">${safeTitle}</h1>
             </td>
           </tr>
@@ -66,11 +73,7 @@ export class MailService {
               ${buttonHtml}
             </td>
           </tr>
-          <tr>
-            <td style="padding:16px 24px;border-top:1px solid #edd9cc;font-size:12px;line-height:1.6;color:#8c6f6f;">
-              ${safeFooter}
-            </td>
-          </tr>
+          ${footerHtml}
         </table>
       </div>
     `.trim();
@@ -151,30 +154,31 @@ export class MailService {
     const fullResetUrl = `${resetUrl}/reset-password?token=${encodeURIComponent(input.resetToken)}`;
     const greeting = input.recipientName?.trim() || input.email;
     const language = this.normalizeLanguage(input.language);
+    const brandLabel = language === 'zh' ? 'ZHAO 平台' : 'ZHAO Plateforme';
     const intro =
       language === 'zh' ? `你好 ${greeting}，` : `Bonjour ${greeting},`;
     const body =
       language === 'zh'
-        ? '我们收到了你的密码重置请求。请点击下方按钮设置新密码。\n\n此链接30分钟内有效。'
-        :
-          'Nous avons recu une demande de reinitialisation de votre mot de passe. ' +
-          'Cliquez sur le bouton ci-dessous pour definir un nouveau mot de passe.\n\n' +
-          'Ce lien est valide pendant 30 minutes.';
+        ? '我们收到了你的重置密码请求。点击下面的按钮，就可以设置新密码。\n\n这个链接 30 分钟内有效。'
+        : 'On a reçu une demande pour changer votre mot de passe. ' +
+          'Cliquez sur le bouton ci-dessous pour en choisir un nouveau.\n\n' +
+          'Ce lien reste valable 30 minutes.';
     const subject =
-      language === 'zh' ? '重置密码请求' : 'Reinitialisation du mot de passe';
+      language === 'zh'
+        ? '重置你的密码'
+        : 'Réinitialisez votre mot de passe';
     const footer =
       language === 'zh'
-        ? '如果这不是你的操作，请忽略此邮件。链接将在30分钟后失效。'
-        : 'Si vous n etes pas a l origine de cette demande, ignorez simplement ce message. Ce lien expire dans 30 minutes.';
+        ? '如果这不是你本人操作，直接忽略这封邮件就可以。'
+        : 'Si vous n’avez pas demandé ce changement, vous pouvez simplement ignorer ce message.';
     const buttonLabel =
-      language === 'zh'
-        ? '重置我的密码'
-        : 'Reinitialiser mon mot de passe';
+      language === 'zh' ? '重置密码' : 'Réinitialiser mon mot de passe';
     const textTail =
       language === 'zh'
         ? '如果这不是你的操作，请直接忽略此邮件。'
-        : 'Si vous n etes pas a l origine de cette demande, ignorez simplement ce message.';
-    const linkLabel = language === 'zh' ? '重置链接' : 'Lien de reinitialisation';
+        : 'Si vous n’êtes pas à l’origine de cette demande, ignorez simplement ce message.';
+    const linkLabel =
+      language === 'zh' ? '重置链接' : 'Lien de réinitialisation';
 
     await this.sendMail({
       to: input.email,
@@ -186,6 +190,7 @@ export class MailService {
         textTail,
       html: this.buildEmailLayout({
         title: subject,
+        brandLabel,
         intro,
         body,
         buttonLabel,
@@ -205,28 +210,37 @@ export class MailService {
     const appUrl = `${config.appWebUrl ?? ''}`.replace(/\/$/, '');
     const greeting = input.recipientName?.trim() || input.email;
     const language = this.normalizeLanguage(input.language);
-    const intro = language === 'zh' ? `你好 ${greeting}，` : `Bonjour ${greeting},`;
+    const brandLabel = language === 'zh' ? 'ZHAO 平台' : 'ZHAO Plateforme';
+    const intro =
+      language === 'zh' ? `你好 ${greeting}，` : `Bonjour ${greeting},`;
     const body =
       language === 'zh'
-        ? '好消息：你的账号已通过经理审核。现在你可以登录并访问平台。'
-        :
-          'Bonne nouvelle: votre compte a ete approuve par votre manager. ' +
-          'Vous pouvez maintenant vous connecter et acceder a votre espace.';
-    const subject = language === 'zh' ? '账号审核通过' : 'Compte approuve';
+        ? '你的账号已经通过审核，现在可以登录平台了。'
+        : 'Bonne nouvelle, votre compte a été validé. ' +
+          'Vous pouvez maintenant vous connecter à la plateforme.';
+    const subject = language === 'zh' ? '你的账号已通过审核' : 'Votre compte est validé';
     const buttonLabel =
-      language === 'zh' ? '前往登录' : 'Acceder a la connexion';
+      language === 'zh' ? '立即登录' : 'Se connecter';
+    const footer =
+      language === 'zh'
+        ? '如有问题，请联系你的经理。'
+        : 'Si vous avez une question, contactez votre manager.';
+    const appUrlLabel =
+      language === 'zh' ? '登录地址' : 'Connexion';
 
     await this.sendMail({
       to: input.email,
       subject,
-      text: `${intro}\n\n${body}${appUrl ? `\n\nConnexion: ${appUrl}` : ''}`,
+      text: `${intro}\n\n${body}${appUrl ? `\n\n${appUrlLabel}: ${appUrl}` : ''}`,
       html: this.buildEmailLayout({
         title: subject,
+        brandLabel,
         intro,
         body,
         buttonLabel: appUrl ? buttonLabel : undefined,
         buttonUrl: appUrl || undefined,
         logoUrl: config.logoUrl,
+        footer,
       }),
     });
   }

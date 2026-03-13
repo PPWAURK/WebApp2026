@@ -41,10 +41,16 @@ function WebPdfFrame({ src, title }) {
     });
 }
 function buildWebPreviewUrl(src) {
-    if (src.includes('#')) {
-        return src;
+    const [baseUrl, hash = ''] = src.split('#', 2);
+    const previewParams = new URLSearchParams(hash);
+    if (!previewParams.has('page')) {
+        previewParams.set('page', '1');
     }
-    return `${src}#page=1&zoom=page-height&toolbar=1&navpanes=0&scrollbar=1`;
+    previewParams.set('zoom', 'page-height');
+    previewParams.set('toolbar', '0');
+    previewParams.set('navpanes', '0');
+    previewParams.set('scrollbar', '0');
+    return `${baseUrl}#${previewParams.toString()}`;
 }
 function formatDateLabel(value) {
     return new Date(value).toLocaleDateString();
@@ -282,14 +288,6 @@ function TrainingPage({ text, accessToken, currentUser, language, }) {
         }
         void react_native_1.Linking.openURL(item.fileUrl);
     }
-    function openDocumentExternally(item) {
-        setOpenedDocument({
-            fileName: item.fileName,
-            originalName: item.originalName,
-            section: item.section,
-        });
-        void react_native_1.Linking.openURL(item.fileUrl);
-    }
     function openQuiz() {
         if (!quizUrl) {
             return;
@@ -444,11 +442,6 @@ function TrainingPage({ text, accessToken, currentUser, language, }) {
                                 {isWebPlatform
                                 ? text.training.previewButton
                                 : text.training.openPdfButton}
-                              </react_native_1.Text>
-                            </react_native_1.Pressable>
-                            <react_native_1.Pressable style={TrainingPage_styles_1.styles.taskActionButton} onPress={() => openDocumentExternally(item)}>
-                              <react_native_1.Text style={TrainingPage_styles_1.styles.taskActionButtonText}>
-                                {text.training.openExternalButton}
                               </react_native_1.Text>
                             </react_native_1.Pressable>
                           </>) : (<react_native_1.Pressable style={TrainingPage_styles_1.styles.taskActionButton} onPress={() => {

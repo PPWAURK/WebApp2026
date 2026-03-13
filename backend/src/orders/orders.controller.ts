@@ -81,7 +81,10 @@ export class OrdersController {
     );
   }
 
-  @ApiOperation({ summary: 'Top 5 ordered products for dashboard (optionally filtered by supplier)' })
+  @ApiOperation({
+    summary:
+      'Top 5 ordered products for dashboard (optionally filtered by supplier)',
+  })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('dashboard/top-products')
@@ -109,11 +112,15 @@ export class OrdersController {
       throw new BadRequestException('month must match YYYY-MM');
     }
 
-    return this.ordersService.getTopOrderedProductsBySupplier({
-      id: user.id,
-      role: user.role,
-      restaurantId: user.restaurantId,
-    }, supplierId, monthRaw);
+    return this.ordersService.getTopOrderedProductsBySupplier(
+      {
+        id: user.id,
+        role: user.role,
+        restaurantId: user.restaurantId,
+      },
+      supplierId,
+      monthRaw,
+    );
   }
 
   @ApiOperation({ summary: 'List available months for top-products chart' })

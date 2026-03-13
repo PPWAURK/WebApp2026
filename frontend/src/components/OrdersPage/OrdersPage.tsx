@@ -12,7 +12,13 @@ type OrdersPageProps = {
   accessToken: string;
   language: Language;
   quantities: Record<number, number>;
+  selectedSupplierId: number | 'ALL';
+  selectedCategory: string;
+  productSearch: string;
   onQuantitiesChange: (next: Record<number, number>) => void;
+  onSelectedSupplierIdChange: (next: number | 'ALL') => void;
+  onSelectedCategoryChange: (next: string) => void;
+  onProductSearchChange: (next: string) => void;
   onSubmitOrder: (recap: OrderRecapData) => void;
 };
 
@@ -21,7 +27,13 @@ export function OrdersPage({
   accessToken,
   language,
   quantities,
+  selectedSupplierId,
+  selectedCategory,
+  productSearch,
   onQuantitiesChange,
+  onSelectedSupplierIdChange,
+  onSelectedCategoryChange,
+  onProductSearchChange,
   onSubmitOrder,
 }: OrdersPageProps) {
   const { width } = useWindowDimensions();
@@ -29,11 +41,8 @@ export function OrdersPage({
 
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);
-  const [selectedSupplierId, setSelectedSupplierId] = useState<number | 'ALL'>('ALL');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [productSearch, setProductSearch] = useState('');
 
   useEffect(() => {
     let isActive = true;
@@ -49,13 +58,6 @@ export function OrdersPage({
         setProducts(productResult);
         setSuppliers(supplierResult);
 
-        if (supplierResult.length > 0) {
-          setSelectedSupplierId((current) =>
-            current === 'ALL' ? supplierResult[0].id : current,
-          );
-        } else {
-          setSelectedSupplierId('ALL');
-        }
       })
       .catch(() => {
         if (isActive) {
@@ -75,6 +77,40 @@ export function OrdersPage({
     };
   }, [accessToken, text.orders.loadError]);
 
+  useEffect(() => {
+    if (suppliers.length === 0) {
+      if (selectedSupplierId !== 'ALL') {
+        onSelectedSupplierIdChange('ALL');
+      }
+      if (selectedCategory !== 'ALL') {
+        onSelectedCategoryChange('ALL');
+      }
+      return;
+    }
+
+    const hasStoredSupplier =
+      selectedSupplierId !== 'ALL' &&
+      suppliers.some((supplier) => supplier.id === selectedSupplierId);
+
+    if (hasStoredSupplier) {
+      return;
+    }
+
+    const supplierWithSelectedItems = products.find(
+      (product) => (quantities[product.id] ?? 0) > 0,
+    )?.supplierId;
+
+    onSelectedSupplierIdChange(supplierWithSelectedItems ?? suppliers[0].id);
+  }, [
+    onSelectedCategoryChange,
+    onSelectedSupplierIdChange,
+    products,
+    quantities,
+    selectedCategory,
+    selectedSupplierId,
+    suppliers,
+  ]);
+
   function changeQuantity(productId: number, delta: number) {
     const next = (quantities[productId] ?? 0) + delta;
     const clamped = Math.max(0, next);
@@ -91,6 +127,16 @@ export function OrdersPage({
 
     return products.filter((product) => product.supplierId === selectedSupplierId);
   }, [products, selectedSupplierId]);
+
+  useEffect(() => {
+    if (selectedCategory === 'ALL') {
+      return;
+    }
+
+    if (!supplierProducts.some((product) => product.category === selectedCategory)) {
+      onSelectedCategoryChange('ALL');
+    }
+  }, [onSelectedCategoryChange, selectedCategory, supplierProducts]);
 
   const summary = useMemo(() => {
     return supplierProducts.reduce(
@@ -191,8 +237,8 @@ export function OrdersPage({
                   selectedSupplierId === supplier.id && styles.trainingTabActive,
                 ]}
                 onPress={() => {
-                  setSelectedSupplierId(supplier.id);
-                  setSelectedCategory('ALL');
+                  onSelectedSupplierIdChange(supplier.id);
+                  onSelectedCategoryChange('ALL');
                 }}
               >
                 <Text
@@ -215,7 +261,7 @@ export function OrdersPage({
           <TextInput
             style={styles.searchInput}
             value={productSearch}
-            onChangeText={setProductSearch}
+            onChangeText={onProductSearchChange}
             placeholder={text.orders.searchProductsPlaceholder}
             placeholderTextColor="#aa777b"
           />
@@ -225,7 +271,7 @@ export function OrdersPage({
                 styles.uploadChip,
                 selectedCategory === 'ALL' && styles.uploadChipActive,
               ]}
-              onPress={() => setSelectedCategory('ALL')}
+              onPress={() => onSelectedCategoryChange('ALL')}
             >
               <Text
                 style={[
@@ -244,7 +290,7 @@ export function OrdersPage({
                   styles.uploadChip,
                   selectedCategory === category && styles.uploadChipActive,
                 ]}
-                onPress={() => setSelectedCategory(category)}
+                onPress={() => onSelectedCategoryChange(category)}
               >
                 <Text
                   style={[

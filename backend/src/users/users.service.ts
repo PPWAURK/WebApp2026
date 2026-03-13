@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -18,9 +19,9 @@ type TrainingQuizLinkLanguage = (typeof TRAINING_QUIZ_LINK_LANGUAGES)[number];
 function isTrainingQuizLinkLanguage(
   value: string,
 ): value is TrainingQuizLinkLanguage {
-  return (
-    TRAINING_QUIZ_LINK_LANGUAGES as ReadonlyArray<string>
-  ).includes(value);
+  return (TRAINING_QUIZ_LINK_LANGUAGES as ReadonlyArray<string>).includes(
+    value,
+  );
 }
 
 @Injectable()
@@ -755,6 +756,10 @@ export class UsersService {
       actorRestaurantId: number | null;
     },
   ) {
+    if (actor.actorRole !== Role.MANAGER) {
+      throw new ForbiddenException('Only MANAGER can update employee level');
+    }
+
     this.ensureRoleScope(actor);
 
     const user = await this.prisma.user.findUnique({

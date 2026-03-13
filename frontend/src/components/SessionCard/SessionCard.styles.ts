@@ -144,32 +144,6 @@ export const styles = StyleSheet.create({
   whatsNewTypeChipTextActive: {
     color: '#7a181d',
   },
-  whatsNewAudienceTabs: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 2,
-  },
-  whatsNewAudienceChip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#dfb0b2',
-    backgroundColor: '#fffafa',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  whatsNewAudienceChipActive: {
-    borderColor: '#b75d62',
-    backgroundColor: '#f8e2e4',
-  },
-  whatsNewAudienceChipText: {
-    color: '#8d5458',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 11,
-  },
-  whatsNewAudienceChipTextActive: {
-    color: '#7a181d',
-  },
   whatsNewLevelsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -934,6 +908,10 @@ export const styles = StyleSheet.create({
     backgroundColor: '#fffafa',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconApproveButton: {
+    borderColor: '#b8d6bb',
+    backgroundColor: '#f3fbf4',
   },
   iconDeleteButton: {
     width: 40,

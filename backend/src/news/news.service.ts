@@ -509,16 +509,13 @@ export class NewsService {
   }
 
   private parseAudience(value: string | undefined): NewsAudience {
-    if (!value) {
-      return NewsAudience.ALL;
-    }
-
     if (
+      !value ||
       value === NewsAudience.ALL ||
       value === NewsAudience.MANAGERS ||
       value === NewsAudience.EMPLOYEES
     ) {
-      return value;
+      return NewsAudience.ALL;
     }
 
     throw new BadRequestException('Invalid audience');

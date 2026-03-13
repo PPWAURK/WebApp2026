@@ -57,6 +57,22 @@ export const styles = StyleSheet.create({
   trainingTabTextActive: {
     color: '#ffffff',
   },
+  supplierOrderHint: {
+    color: '#996165',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+  },
+  supplierOrderActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  supplierOrderActionsSmall: {
+    flexDirection: 'column',
+  },
+  supplierOrderButton: {
+    flex: 1,
+    paddingHorizontal: 12,
+  },
   docBlockTitle: {
     color: '#7f1b21',
     fontFamily: 'Manrope_700Bold',

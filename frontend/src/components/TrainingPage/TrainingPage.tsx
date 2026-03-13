@@ -96,11 +96,19 @@ function WebPdfFrame({ src, title }: WebPdfFrameProps) {
 }
 
 function buildWebPreviewUrl(src: string): string {
-  if (src.includes('#')) {
-    return src;
+  const [baseUrl, hash = ''] = src.split('#', 2);
+  const previewParams = new URLSearchParams(hash);
+
+  if (!previewParams.has('page')) {
+    previewParams.set('page', '1');
   }
 
-  return `${src}#page=1&zoom=page-height&toolbar=1&navpanes=0&scrollbar=1`;
+  previewParams.set('zoom', 'page-height');
+  previewParams.set('toolbar', '0');
+  previewParams.set('navpanes', '0');
+  previewParams.set('scrollbar', '0');
+
+  return `${baseUrl}#${previewParams.toString()}`;
 }
 
 function formatDateLabel(value: string) {
@@ -430,16 +438,6 @@ export function TrainingPage({
     void Linking.openURL(item.fileUrl);
   }
 
-  function openDocumentExternally(item: LibraryFileItem) {
-    setOpenedDocument({
-      fileName: item.fileName,
-      originalName: item.originalName,
-      section: item.section,
-    });
-
-    void Linking.openURL(item.fileUrl);
-  }
-
   function openQuiz() {
     if (!quizUrl) {
       return;
@@ -659,14 +657,6 @@ export function TrainingPage({
                                 {isWebPlatform
                                   ? text.training.previewButton
                                   : text.training.openPdfButton}
-                              </Text>
-                            </Pressable>
-                            <Pressable
-                              style={styles.taskActionButton}
-                              onPress={() => openDocumentExternally(item)}
-                            >
-                              <Text style={styles.taskActionButtonText}>
-                                {text.training.openExternalButton}
                               </Text>
                             </Pressable>
                           </>

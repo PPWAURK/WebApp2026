@@ -97,6 +97,7 @@ export function ProfilePage({
 
   const roleLabel = text.dashboard.roleValues[user.role];
   const workplaceLabel = text.dashboard.workplaceValues[user.workplaceRole];
+  const canEditName = user.role === 'ADMIN';
 
   return (
     <View style={styles.card}>
@@ -124,33 +125,48 @@ export function ProfilePage({
         </View>
       </View>
 
-      <View style={styles.nameEditorBlock}>
-        <Text style={styles.docBlockTitle}>{text.profile.nameLabel}</Text>
-        <TextInput
-          style={styles.nameInput}
-          value={nameDraft}
-          onChangeText={setNameDraft}
-          placeholder={text.profile.nameEditPlaceholder}
-          placeholderTextColor="#aa7a7e"
-          autoCapitalize="words"
-          autoCorrect={false}
-          editable={!isSavingName}
-        />
-        <Pressable
-          style={[styles.primaryButton, isSavingName && styles.buttonDisabled]}
-          disabled={isSavingName}
-          onPress={() => {
-            void handleSaveName();
-          }}
-        >
-          <Text style={styles.primaryButtonText}>
-            {isSavingName
-              ? text.profile.savingName
-              : text.profile.saveNameButton}
+      {canEditName ? (
+        <View style={styles.nameEditorBlock}>
+          <Text style={styles.docBlockTitle}>{text.profile.nameLabel}</Text>
+          <TextInput
+            style={styles.nameInput}
+            value={nameDraft}
+            onChangeText={setNameDraft}
+            placeholder={text.profile.nameEditPlaceholder}
+            placeholderTextColor="#aa7a7e"
+            autoCapitalize="words"
+            autoCorrect={false}
+            editable={!isSavingName}
+          />
+          <Pressable
+            style={[
+              styles.primaryButton,
+              isSavingName && styles.buttonDisabled,
+            ]}
+            disabled={isSavingName}
+            onPress={() => {
+              void handleSaveName();
+            }}
+          >
+            <Text style={styles.primaryButtonText}>
+              {isSavingName
+                ? text.profile.savingName
+                : text.profile.saveNameButton}
+            </Text>
+          </Pressable>
+          {nameError ? <Text style={styles.error}>{nameError}</Text> : null}
+        </View>
+      ) : (
+        <View style={styles.docBlock}>
+          <Text style={styles.docBlockTitle}>{text.profile.nameLabel}</Text>
+          <Text style={styles.docItemMeta}>
+            {user.name ?? text.dashboard.fallbackName}
           </Text>
-        </Pressable>
-        {nameError ? <Text style={styles.error}>{nameError}</Text> : null}
-      </View>
+          <Text style={styles.docItemMeta}>
+            {text.profile.nameEditRestricted}
+          </Text>
+        </View>
+      )}
 
       <Pressable
         style={[

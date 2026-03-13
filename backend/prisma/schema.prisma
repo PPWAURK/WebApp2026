@@ -93,8 +93,10 @@ model Produit {
 model Fournisseur {
   id             Int             @id @default(autoincrement())
   nom            String          @db.VarChar(255)
+  sortOrder      Int             @map("sort_order")
   purchaseOrders PurchaseOrder[]
 
+  @@index([sortOrder])
   @@map("fournisseurs")
 }
 

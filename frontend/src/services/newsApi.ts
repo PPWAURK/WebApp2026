@@ -122,7 +122,7 @@ export async function createNewsPost(
   payload: {
     title: string;
     message: string;
-    audience: NewsAudience;
+    audience?: NewsAudience;
     tags?: string[];
     visibleEmployeeLevels?: EmployeeLevel[];
     module?: LibraryModule;

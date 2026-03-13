@@ -226,7 +226,6 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   const [whatsNewMessage, setWhatsNewMessage] = useState('');
   const [whatsNewTagsInput, setWhatsNewTagsInput] = useState('');
   const [whatsNewLane, setWhatsNewLane] = useState<NewsLane>('NEWS');
-  const [whatsNewAudience, setWhatsNewAudience] = useState<NewsAudience>('ALL');
   const [whatsNewVisibleLevels, setWhatsNewVisibleLevels] = useState<
     EmployeeLevel[]
   >([]);
@@ -273,12 +272,12 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   );
 
   useEffect(() => {
-    if (!isSupervisor) {
+    if (!isManager) {
       return;
     }
 
     const managerRestaurantId = user.restaurant?.id;
-    if (isManager && !managerRestaurantId) {
+    if (!managerRestaurantId) {
       setUsers([]);
       setUsersError(text.dashboard.managerRestaurantMissing);
       return;
@@ -290,7 +289,7 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
 
     void fetchTrainingAccessUsers(
       accessToken,
-      isManager ? { restaurantId: managerRestaurantId } : undefined,
+      { restaurantId: managerRestaurantId },
     )
       .then((result) => {
         if (!isActive) {
@@ -321,7 +320,6 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   }, [
     accessToken,
     isManager,
-    isSupervisor,
     text.dashboard.managerRestaurantMissing,
     text.dashboard.quickLoadUsersError,
     user.id,
@@ -1025,7 +1023,6 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
       const createdPost = await createNewsPost(accessToken, {
         title: `${NEWS_LANE_MARKERS[whatsNewLane]} ${title}`,
         message,
-        audience: whatsNewAudience,
         tags,
         visibleEmployeeLevels: whatsNewVisibleLevels,
         attachmentDocumentId: whatsNewLastUpload?.documentId,
@@ -1060,7 +1057,6 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
       setWhatsNewMessage('');
       setWhatsNewTagsInput('');
       setWhatsNewLane('NEWS');
-      setWhatsNewAudience('ALL');
       setWhatsNewVisibleLevels([]);
       setWhatsNewLastUpload(null);
     } catch {
@@ -1303,52 +1299,6 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
               ))}
             </View>
           ) : null}
-        </View>
-
-        <View style={styles.whatsNewFieldBlock}>
-          <Text style={styles.whatsNewFieldLabel}>
-            {text.dashboard.whatsNewAudienceLabel}
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.whatsNewAudienceTabs}
-          >
-            {(
-              [
-                { key: 'ALL', label: text.dashboard.whatsNewAudienceAll },
-                {
-                  key: 'MANAGERS',
-                  label: text.dashboard.whatsNewAudienceManagers,
-                },
-                {
-                  key: 'EMPLOYEES',
-                  label: text.dashboard.whatsNewAudienceEmployees,
-                },
-              ] as const
-            ).map((option) => {
-              const isActive = whatsNewAudience === option.key;
-              return (
-                <Pressable
-                  key={`whats-new-audience-${option.key}`}
-                  style={[
-                    styles.whatsNewAudienceChip,
-                    isActive && styles.whatsNewAudienceChipActive,
-                  ]}
-                  onPress={() => setWhatsNewAudience(option.key)}
-                >
-                  <Text
-                    style={[
-                      styles.whatsNewAudienceChipText,
-                      isActive && styles.whatsNewAudienceChipTextActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
         </View>
 
         <View style={styles.whatsNewFieldBlock}>
@@ -1950,26 +1900,38 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
             ) : null}
             {accountApprovalUsers.slice(0, 4).map((entry) => (
               <View key={`approve-${entry.id}`} style={styles.quickRowCard}>
-                <Text style={styles.quickRowTitle}>
-                  {entry.name ?? entry.email}
-                </Text>
-                <Text style={styles.subtitle}>{entry.email}</Text>
-                <Pressable
-                  style={[
-                    styles.secondaryButton,
-                    isApprovingUserId === entry.id && styles.buttonDisabled,
-                  ]}
-                  disabled={isApprovingUserId === entry.id}
-                  onPress={() => {
-                    void handleApproveAccount(entry);
-                  }}
-                >
-                  <Text style={styles.secondaryButtonText}>
-                    {isApprovingUserId === entry.id
-                      ? text.adminTraining.approveAccountSaving
-                      : text.adminTraining.approveAccountButton}
-                  </Text>
-                </Pressable>
+                <View style={styles.quickLevelRow}>
+                  <View style={styles.quickLevelInfo}>
+                    <Text style={styles.quickRowTitle}>
+                      {entry.name ?? entry.email}
+                    </Text>
+                    <Text style={styles.subtitle}>{entry.email}</Text>
+                  </View>
+                  <Pressable
+                    style={[
+                      styles.iconActionButton,
+                      styles.iconApproveButton,
+                      isApprovingUserId === entry.id && styles.buttonDisabled,
+                    ]}
+                    accessibilityLabel={text.adminTraining.approveAccountButton}
+                    disabled={isApprovingUserId === entry.id}
+                    onPress={() => {
+                      void handleApproveAccount(entry);
+                    }}
+                  >
+                    <Ionicons
+                      name={
+                        isApprovingUserId === entry.id
+                          ? 'hourglass-outline'
+                          : 'checkmark-outline'
+                      }
+                      size={20}
+                      color={
+                        isApprovingUserId === entry.id ? '#7f1b21' : '#2f7d32'
+                      }
+                    />
+                  </Pressable>
+                </View>
               </View>
             ))}
 
@@ -2009,7 +1971,7 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
                         name={
                           isDeletingUserId === entry.id
                             ? 'hourglass-outline'
-                            : 'trash-outline'
+                            : 'close-outline'
                         }
                         size={20}
                         color="#ab1e24"
@@ -2456,8 +2418,6 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
 
       <View style={isSupervisor ? styles.managerDashboardLayout : undefined}>
         <View style={isSupervisor ? styles.managerLeftColumn : undefined}>
-          {isAdmin ? renderLevelQuickBlock() : null}
-
           {isAdmin ? (
             <>
               <AdminTrainingAccessPanel
@@ -2473,7 +2433,7 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
 
         {isSupervisor ? (
           <View style={styles.quickColumn}>
-            {!isAdmin ? renderLevelQuickBlock() : null}
+            {isManager ? renderLevelQuickBlock() : null}
             {isAdmin ? (
               <AdminRestaurantPanel accessToken={accessToken} text={text} />
             ) : null}

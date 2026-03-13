@@ -26,6 +26,17 @@ export default function AppRoute() {
         return;
       }
 
+      const actionType = event.data.action?.type;
+      const shouldConfirmLogout =
+        actionType === 'GO_BACK' ||
+        actionType === 'POP' ||
+        actionType === 'POP_TO_TOP';
+
+      // Only intercept explicit back/pop exits from the authenticated stack.
+      if (!shouldConfirmLogout || navigation.canGoBack()) {
+        return;
+      }
+
       event.preventDefault();
 
       const confirmLogout = async () => {

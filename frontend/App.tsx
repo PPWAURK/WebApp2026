@@ -35,6 +35,7 @@ import { SupplierManagementPage } from './src/components/SupplierManagementPage'
 import { TrainingPage, TrainingPageLegacy } from './src/components/TrainingPage';
 import { useAuth } from './src/hooks/useAuth';
 import { useLanguage } from './src/hooks/useLanguage';
+import { useOrderFlow } from './src/hooks/useOrderFlow';
 import { TRAINING_FEATURE_FLAGS } from './src/constants/featureFlags';
 import {
   buildOrderBonUrl,
@@ -51,14 +52,6 @@ import { requestResetPassword } from './src/services/authApi';
 import { styles } from './src/styles/App.styles';
 import type { MenuPage } from './src/types/menu';
 import type { OrderRecapData } from './src/types/order';
-
-function getTodayDateString() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 
 type PreAuthRoute = 'landing' | 'auth' | 'resetPassword';
 
@@ -184,6 +177,23 @@ const DISABLE_POST_LOGIN_REDIRECT = false;
 export default function App() {
   const auth = useAuth();
   const language = useLanguage();
+  const {
+    orderRecap,
+    setOrderRecap,
+    orderQuantities,
+    setOrderQuantities,
+    selectedOrderSupplierId,
+    setSelectedOrderSupplierId,
+    selectedOrderCategory,
+    setSelectedOrderCategory,
+    orderProductSearch,
+    setOrderProductSearch,
+    deliveryDate,
+    setDeliveryDate,
+    latestCreatedOrder,
+    setLatestCreatedOrder,
+    resetOrderDraft,
+  } = useOrderFlow();
   const router = useRouter();
   const pathname = usePathname();
   const params = useLocalSearchParams<{ token?: string | string[] }>();
@@ -192,14 +202,8 @@ export default function App() {
   const preAuthResetToken = normalizeTokenParam(params.token);
   const activePage = pathToMenuPage(pathname) ?? 'dashboard';
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [displayPage, setDisplayPage] = useState<MenuPage>(activePage);
   const [isLoginTransitionLoading, setIsLoginTransitionLoading] =
     useState(false);
-  const [orderRecap, setOrderRecap] = useState<OrderRecapData | null>(null);
-  const [orderQuantities, setOrderQuantities] = useState<
-    Record<number, number>
-  >({});
-  const [deliveryDate, setDeliveryDate] = useState(getTodayDateString());
   const [orderHistory, setOrderHistory] = useState<OrderSummary[]>([]);
   const [isLoadingOrderHistory, setIsLoadingOrderHistory] = useState(false);
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
@@ -207,13 +211,7 @@ export default function App() {
   const [orderSubmitError, setOrderSubmitError] = useState<string | null>(null);
   const [isUploadingProfilePhoto, setIsUploadingProfilePhoto] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
-  const [latestCreatedOrder, setLatestCreatedOrder] = useState<{
-    id: number;
-    number: string;
-    bonUrl: string;
-  } | null>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
-  const pageTransition = useRef(new Animated.Value(1)).current;
   const loginLoaderOpacity = useRef(new Animated.Value(0)).current;
   const loginLoaderScale = useRef(new Animated.Value(0.86)).current;
   const loginLoaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -259,6 +257,7 @@ export default function App() {
 
   function goToMenuPage(page: MenuPage, replace = false) {
     const targetPath = menuPageToPath(page);
+
     if (normalizedPathname === targetPath) {
       return;
     }
@@ -632,21 +631,16 @@ export default function App() {
       if (pathToMenuPage(pathname) !== null) {
         goToPreAuthAuth(true);
       }
-      setDisplayPage('dashboard');
       setIsLoginTransitionLoading(false);
       loginLoaderOpacity.setValue(0);
       loginLoaderScale.setValue(0.86);
-      pageTransition.setValue(1);
-      setOrderRecap(null);
-      setOrderQuantities({});
-      setDeliveryDate(getTodayDateString());
+      resetOrderDraft();
       setOrderHistory([]);
       setIsLoadingOrderHistory(false);
       setDeletingOrderId(null);
       setOrderSubmitError(null);
       setIsUploadingProfilePhoto(false);
       setProfileError(null);
-      setLatestCreatedOrder(null);
       return;
     }
 
@@ -658,7 +652,7 @@ export default function App() {
       auth.session.user.role !== 'MANAGER'
     ) {
       goToMenuPage('dashboard', true);
-      setOrderRecap(null);
+      resetOrderDraft();
     }
 
     if (
@@ -681,17 +675,23 @@ export default function App() {
       return;
     }
 
-    if (pathToMenuPage(pathname) === null && preAuthRoute === 'landing') {
+    if (normalizedPathname === '/') {
       goToMenuPage('dashboard', true);
     }
-  }, [auth.isLoadingSession, auth.session, pathname, preAuthRoute]);
+  }, [auth.isLoadingSession, auth.session, normalizedPathname]);
 
   useEffect(() => {
     if (!auth.session) {
       return;
     }
 
-    if (pathToMenuPage(pathname) !== null) {
+    // Post-login loader is handled by the dedicated /login route. Avoid
+    // hijacking internal authenticated navigation from this legacy effect.
+    if (preAuthRoute !== 'auth' || !auth.postLoginAnimationPending) {
+      return;
+    }
+
+    if (normalizedPathname !== '/login' && normalizedPathname !== '/auth') {
       return;
     }
 
@@ -766,40 +766,14 @@ export default function App() {
       loginLoaderScale.stopAnimation();
       isPostLoginAnimatingRef.current = false;
     };
-  }, [auth.session, loginLoaderOpacity, loginLoaderScale, pathname]);
-
-  useEffect(() => {
-    if (!auth.session) {
-      return;
-    }
-
-    if (activePage === displayPage) {
-      return;
-    }
-
-    pageTransition.stopAnimation();
-
-    Animated.timing(pageTransition, {
-      toValue: 0,
-      duration: 120,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (!finished) {
-        return;
-      }
-
-      setDisplayPage(activePage);
-      pageTransition.setValue(0);
-
-      Animated.timing(pageTransition, {
-        toValue: 1,
-        duration: 200,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    });
-  }, [activePage, auth.session, displayPage, pageTransition]);
+  }, [
+    auth.postLoginAnimationPending,
+    auth.session,
+    loginLoaderOpacity,
+    loginLoaderScale,
+    normalizedPathname,
+    preAuthRoute,
+  ]);
 
   useEffect(() => {
     if (!auth.session) {
@@ -840,6 +814,14 @@ export default function App() {
     void loadOrderHistory();
   }, [activePage, auth.session]);
 
+  useEffect(() => {
+    if (!auth.session || activePage !== 'orderRecap' || orderRecap) {
+      return;
+    }
+
+    goToMenuPage('orders', true);
+  }, [activePage, auth.session, orderRecap]);
+
   async function handleSubmitOrder() {
     if (!auth.session || !orderRecap) {
       return;
@@ -857,6 +839,8 @@ export default function App() {
       setLatestCreatedOrder(created);
       void handleDownloadOrderBon(created);
       await loadOrderHistory();
+      resetOrderDraft();
+      goToMenuPage('orderHistory', true);
     } catch (error) {
       if (error instanceof Error && error.message.trim()) {
         setOrderSubmitError(error.message);
@@ -1018,6 +1002,7 @@ export default function App() {
   function handleProceedToOrderRecap(recap: OrderRecapData) {
     setOrderRecap(recap);
     setLatestCreatedOrder(null);
+    setOrderSubmitError(null);
     goToMenuPage('orderRecap');
   }
 
@@ -1032,7 +1017,13 @@ export default function App() {
         accessToken={auth.session.accessToken}
         language={language.language}
         quantities={orderQuantities}
+        selectedSupplierId={selectedOrderSupplierId}
+        selectedCategory={selectedOrderCategory}
+        productSearch={orderProductSearch}
         onQuantitiesChange={setOrderQuantities}
+        onSelectedSupplierIdChange={setSelectedOrderSupplierId}
+        onSelectedCategoryChange={setSelectedOrderCategory}
+        onProductSearchChange={setOrderProductSearch}
         onSubmitOrder={handleProceedToOrderRecap}
       />
     );
@@ -1244,7 +1235,7 @@ export default function App() {
 
     if (page === 'orderRecap') {
       if (!orderRecap) {
-        return renderOrderBuilder();
+        return null;
       }
 
       return (
@@ -1372,24 +1363,9 @@ export default function App() {
                   auth.session && styles.contentWithHeader,
                 ]}
               >
-                <Animated.View
-                  style={[
-                    styles.pageTransitionLayer,
-                    {
-                      opacity: pageTransition,
-                      transform: [
-                        {
-                          translateY: pageTransition.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [10, 0],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
-                >
-                  {renderAuthenticatedContent(displayPage)}
-                </Animated.View>
+                <View style={styles.pageTransitionLayer}>
+                  {renderAuthenticatedContent(activePage)}
+                </View>
               </ScrollView>
             </KeyboardAvoidingView>
           )}

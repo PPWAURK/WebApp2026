@@ -70,10 +70,15 @@ export class UploadsService {
     }
 
     const module = this.parseUploadModule(metadataInput.module);
-    const resolvedMimeType = this.resolveMimeType(file.mimetype, file.originalname);
+    const resolvedMimeType = this.resolveMimeType(
+      file.mimetype,
+      file.originalname,
+    );
     const category = this.getCategoryFromMimeType(resolvedMimeType);
     const mediaType = this.getMediaType(resolvedMimeType);
-    const normalizedOriginalName = this.normalizeOriginalName(file.originalname);
+    const normalizedOriginalName = this.normalizeOriginalName(
+      file.originalname,
+    );
     const normalizedCustomCategory = this.normalizeCustomCategory(
       metadataInput.customCategory,
     );
@@ -105,7 +110,9 @@ export class UploadsService {
     }
 
     if (!section || !isSectionInModule(module, section)) {
-      throw new BadRequestException('Section does not belong to selected module');
+      throw new BadRequestException(
+        'Section does not belong to selected module',
+      );
     }
 
     const createdDocument = await this.prisma.document.create({
@@ -131,7 +138,11 @@ export class UploadsService {
       customCategory: createdDocument.customCategory,
       mimeType: createdDocument.mimeType,
       size: createdDocument.size,
-      fileUrl: this.buildFileUrl(req, createdDocument.category, createdDocument.fileName),
+      fileUrl: this.buildFileUrl(
+        req,
+        createdDocument.category,
+        createdDocument.fileName,
+      ),
       mediaType: createdDocument.mediaType,
       module: createdDocument.module,
       section: createdDocument.section,
@@ -187,12 +198,9 @@ export class UploadsService {
       ...(customCategoryFilter ? { customCategory: customCategoryFilter } : {}),
     };
 
-    if (
-      authContext.role !== 'ADMIN' &&
-      moduleFilter !== UploadModule.FORMS
-    ) {
-      const allowedSections = (authContext.trainingAccess ?? []).filter((section) =>
-        isUploadSection(section),
+    if (authContext.role !== 'ADMIN' && moduleFilter !== UploadModule.FORMS) {
+      const allowedSections = (authContext.trainingAccess ?? []).filter(
+        (section) => isUploadSection(section),
       );
 
       if (!allowedSections.length) {
@@ -243,7 +251,9 @@ export class UploadsService {
     const section = this.parseUploadSection(input.section);
 
     if (!isSectionInModule(module, section)) {
-      throw new BadRequestException('Section does not belong to selected module');
+      throw new BadRequestException(
+        'Section does not belong to selected module',
+      );
     }
 
     const name = this.normalizeCustomCategory(input.name);
@@ -264,7 +274,9 @@ export class UploadsService {
     });
 
     if (existing) {
-      throw new BadRequestException('Category already exists in selected module');
+      throw new BadRequestException(
+        'Category already exists in selected module',
+      );
     }
 
     return this.prisma.moduleCategory.create({
@@ -324,7 +336,9 @@ export class UploadsService {
     const section = this.parseUploadSection(input.section);
 
     if (!isSectionInModule(module, section)) {
-      throw new BadRequestException('Section does not belong to selected module');
+      throw new BadRequestException(
+        'Section does not belong to selected module',
+      );
     }
 
     const customCategory = this.normalizeCustomCategory(input.customCategory);
@@ -383,7 +397,10 @@ export class UploadsService {
       },
     });
 
-    const filePath = join(this.storageDirs[existing.category], basename(existing.fileName));
+    const filePath = join(
+      this.storageDirs[existing.category],
+      basename(existing.fileName),
+    );
     if (existsSync(filePath)) {
       unlinkSync(filePath);
     }
@@ -398,13 +415,20 @@ export class UploadsService {
     category: UploadCategory,
     fileName: string,
   ) {
-    const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(/^\/+|\/+$/g, '');
+    const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(
+      /^\/+|\/+$/g,
+      '',
+    );
 
     if (this.publicApiBaseUrl) {
       const normalizedBaseUrl = this.publicApiBaseUrl.replace(/\/$/, '');
-      const normalizedPrefixEscaped = normalizedPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const normalizedPrefixEscaped = normalizedPrefix.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        '\\$&',
+      );
       const hasPrefixAlready =
-        normalizedPrefix.length > 0 && new RegExp(`/${normalizedPrefixEscaped}$`).test(normalizedBaseUrl);
+        normalizedPrefix.length > 0 &&
+        new RegExp(`/${normalizedPrefixEscaped}$`).test(normalizedBaseUrl);
 
       const baseUrlWithPrefix =
         normalizedPrefix.length > 0 && !hasPrefixAlready
@@ -528,7 +552,9 @@ export class UploadsService {
       return normalizedMimeType;
     }
 
-    const extension = extname(originalName || '').replace('.', '').toLowerCase();
+    const extension = extname(originalName || '')
+      .replace('.', '')
+      .toLowerCase();
     return this.fallbackMimeTypesByExtension[extension] ?? normalizedMimeType;
   }
 
@@ -543,7 +569,9 @@ export class UploadsService {
     }
 
     if (trimmed.length > 80) {
-      throw new BadRequestException('customCategory must be 80 characters or less');
+      throw new BadRequestException(
+        'customCategory must be 80 characters or less',
+      );
     }
 
     return trimmed;
