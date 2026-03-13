@@ -164,9 +164,7 @@ export class MailService {
           'Cliquez sur le bouton ci-dessous pour en choisir un nouveau.\n\n' +
           'Ce lien reste valable 30 minutes.';
     const subject =
-      language === 'zh'
-        ? '重置你的密码'
-        : 'Réinitialisez votre mot de passe';
+      language === 'zh' ? '重置你的密码' : 'Réinitialisez votre mot de passe';
     const footer =
       language === 'zh'
         ? '如果这不是你本人操作，直接忽略这封邮件就可以。'
@@ -218,15 +216,14 @@ export class MailService {
         ? '你的账号已经通过审核，现在可以登录平台了。'
         : 'Bonne nouvelle, votre compte a été validé. ' +
           'Vous pouvez maintenant vous connecter à la plateforme.';
-    const subject = language === 'zh' ? '你的账号已通过审核' : 'Votre compte est validé';
-    const buttonLabel =
-      language === 'zh' ? '立即登录' : 'Se connecter';
+    const subject =
+      language === 'zh' ? '你的账号已通过审核' : 'Votre compte est validé';
+    const buttonLabel = language === 'zh' ? '立即登录' : 'Se connecter';
     const footer =
       language === 'zh'
         ? '如有问题，请联系你的经理。'
         : 'Si vous avez une question, contactez votre manager.';
-    const appUrlLabel =
-      language === 'zh' ? '登录地址' : 'Connexion';
+    const appUrlLabel = language === 'zh' ? '登录地址' : 'Connexion';
 
     await this.sendMail({
       to: input.email,

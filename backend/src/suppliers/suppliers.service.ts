@@ -60,8 +60,14 @@ export class SuppliersService {
       typeof entry === 'number' ? entry : Number.NaN,
     );
 
-    if (supplierIds.some((supplierId) => !Number.isInteger(supplierId) || supplierId <= 0)) {
-      throw new BadRequestException('supplierIds must contain positive integers only');
+    if (
+      supplierIds.some(
+        (supplierId) => !Number.isInteger(supplierId) || supplierId <= 0,
+      )
+    ) {
+      throw new BadRequestException(
+        'supplierIds must contain positive integers only',
+      );
     }
 
     if (new Set(supplierIds).size !== supplierIds.length) {
@@ -78,7 +84,9 @@ export class SuppliersService {
       );
     }
 
-    const existingIds = new Set(existingSuppliers.map((supplier) => supplier.id));
+    const existingIds = new Set(
+      existingSuppliers.map((supplier) => supplier.id),
+    );
     if (supplierIds.some((supplierId) => !existingIds.has(supplierId))) {
       throw new BadRequestException(
         'supplierIds must include every supplier exactly once',
