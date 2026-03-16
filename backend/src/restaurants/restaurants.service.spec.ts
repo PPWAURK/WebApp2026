@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { RestaurantsService } from './restaurants.service';
 
@@ -60,9 +57,7 @@ describe('RestaurantsService', () => {
         name: 'Paris 11',
         address: '12 Rue Exemple',
       }),
-    ).rejects.toThrow(
-      new ConflictException('Restaurant name already exists'),
-    );
+    ).rejects.toThrow(new ConflictException('Restaurant name already exists'));
   });
 
   it('maps oversized values to a bad request error', async () => {
