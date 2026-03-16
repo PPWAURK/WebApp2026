@@ -215,7 +215,9 @@ export class UsersController {
     return this.usersService.listUnassignedEmployees();
   }
 
-  @ApiOperation({ summary: 'Assign one user to one restaurant' })
+  @ApiOperation({
+    summary: 'Assign one user to one restaurant (admin/manager)',
+  })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Patch(':id/restaurant')
@@ -224,11 +226,19 @@ export class UsersController {
     @Param('id', ParseIntPipe) userId: number,
     @Body('restaurantId', ParseIntPipe) restaurantId: number,
   ) {
-    if (req.user?.role !== 'ADMIN') {
-      throw new ForbiddenException('Admin only');
+    const actor = req.user;
+
+    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
+      throw new ForbiddenException(
+        'Only ADMIN and MANAGER can access this resource',
+      );
     }
 
-    return this.usersService.assignUserRestaurant(userId, restaurantId);
+    return this.usersService.assignUserRestaurant(userId, restaurantId, {
+      actorId: actor.id,
+      actorRole: actor.role,
+      actorRestaurantId: actor.restaurantId,
+    });
   }
 
   @ApiOperation({

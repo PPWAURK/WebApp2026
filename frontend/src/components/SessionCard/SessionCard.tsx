@@ -17,9 +17,16 @@ import { AdminUploadPanel } from '../AdminUploadPanel';
 import { ConfirmDialog } from '../ConfirmDialog';
 import type { AppText } from '../../locales/translations';
 import { styles } from './SessionCard.styles';
-import type { EmployeeLevel, User, WorkplaceRole } from '../../types/auth';
+import type {
+  EmployeeLevel,
+  Restaurant,
+  User,
+  WorkplaceRole,
+} from '../../types/auth';
+import { fetchRestaurants } from '../../services/restaurantsApi';
 import {
   approveUserAccount,
+  assignUserRestaurant,
   deleteUserAccount,
   fetchTrainingAccessUsers,
   rejectUserAccount,
@@ -175,13 +182,19 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   const isManager = user.role === 'MANAGER';
   const isAdmin = user.role === 'ADMIN';
   const isSupervisor = isManager || isAdmin;
+  const managerRestaurantId = isManager ? (user.restaurant?.id ?? null) : null;
 
   const [users, setUsers] = useState<TrainingAccessUser[]>([]);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [levelBlockError, setLevelBlockError] = useState<string | null>(null);
+  const [transferBlockError, setTransferBlockError] = useState<string | null>(
+    null,
+  );
   const [accountSearch, setAccountSearch] = useState('');
   const [levelSearch, setLevelSearch] = useState('');
+  const [transferSearch, setTransferSearch] = useState('');
   const [isApprovingUserId, setIsApprovingUserId] = useState<number | null>(
     null,
   );
@@ -195,8 +208,16 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
     number | null
   >(null);
   const [isDeletingUserId, setIsDeletingUserId] = useState<number | null>(null);
+  const [isTransferringUserId, setIsTransferringUserId] = useState<
+    number | null
+  >(null);
   const [levelEditorUser, setLevelEditorUser] =
     useState<TrainingAccessUser | null>(null);
+  const [selectedTransferUserId, setSelectedTransferUserId] = useState<
+    number | null
+  >(null);
+  const [selectedTransferRestaurantId, setSelectedTransferRestaurantId] =
+    useState<number | null>(null);
   const [openRestaurantFilterFor, setOpenRestaurantFilterFor] = useState<
     'approval' | 'level' | null
   >(null);
@@ -276,11 +297,39 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   );
 
   useEffect(() => {
+    if (!isManager) {
+      setRestaurants([]);
+      return;
+    }
+
+    let isActive = true;
+    setTransferBlockError(null);
+
+    void fetchRestaurants()
+      .then((result) => {
+        if (!isActive) {
+          return;
+        }
+
+        setRestaurants(result);
+      })
+      .catch(() => {
+        if (isActive) {
+          setRestaurants([]);
+          setTransferBlockError(text.api.loadRestaurantsError);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [isManager, text.api.loadRestaurantsError]);
+
+  useEffect(() => {
     if (!isSupervisor) {
       return;
     }
 
-    const managerRestaurantId = user.restaurant?.id;
     if (isManager && !managerRestaurantId) {
       setUsers([]);
       setUsersError(text.dashboard.managerRestaurantMissing);
@@ -293,7 +342,9 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
 
     void fetchTrainingAccessUsers(
       accessToken,
-      isManager ? { restaurantId: managerRestaurantId } : undefined,
+      isManager && managerRestaurantId
+        ? { restaurantId: managerRestaurantId }
+        : undefined,
     )
       .then((result) => {
         if (!isActive) {
@@ -325,10 +376,10 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
     accessToken,
     isManager,
     isSupervisor,
+    managerRestaurantId,
     text.dashboard.managerRestaurantMissing,
     text.dashboard.quickLoadUsersError,
     user.id,
-    user.restaurant?.id,
   ]);
 
   useEffect(() => {
@@ -702,6 +753,74 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
       });
   }, [accountSearch, usersFilteredByRestaurant]);
 
+  const managerTransferUsers = useMemo(
+    () => users.filter((entry) => entry.role === 'EMPLOYEE'),
+    [users],
+  );
+
+  const visibleTransferUsers = useMemo(() => {
+    const query = transferSearch.trim().toLowerCase();
+
+    if (!query) {
+      return managerTransferUsers;
+    }
+
+    return managerTransferUsers.filter((entry) => {
+      const name = entry.name?.toLowerCase() ?? '';
+      return name.includes(query) || entry.email.toLowerCase().includes(query);
+    });
+  }, [managerTransferUsers, transferSearch]);
+
+  const selectedTransferUser = useMemo(
+    () =>
+      managerTransferUsers.find(
+        (entry) => entry.id === selectedTransferUserId,
+      ) ?? null,
+    [managerTransferUsers, selectedTransferUserId],
+  );
+
+  const availableTransferRestaurants = useMemo(
+    () =>
+      restaurants.filter(
+        (restaurant) => restaurant.id !== selectedTransferUser?.restaurantId,
+      ),
+    [restaurants, selectedTransferUser?.restaurantId],
+  );
+
+  useEffect(() => {
+    if (!isManager) {
+      return;
+    }
+
+    if (
+      selectedTransferUserId &&
+      visibleTransferUsers.some((entry) => entry.id === selectedTransferUserId)
+    ) {
+      return;
+    }
+
+    setSelectedTransferUserId(visibleTransferUsers[0]?.id ?? null);
+  }, [isManager, selectedTransferUserId, visibleTransferUsers]);
+
+  useEffect(() => {
+    if (!isManager) {
+      return;
+    }
+
+    if (
+      selectedTransferRestaurantId &&
+      availableTransferRestaurants.some(
+        (restaurant) => restaurant.id === selectedTransferRestaurantId,
+      )
+    ) {
+      return;
+    }
+
+    setSelectedTransferRestaurantId(
+      availableTransferRestaurants[0]?.id ?? null,
+    );
+  }, [availableTransferRestaurants, isManager, selectedTransferRestaurantId]);
+
   const levelUsers = useMemo(() => {
     const query = levelSearch.trim().toLowerCase();
     return usersFilteredByRestaurant
@@ -1011,6 +1130,36 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
       );
     } finally {
       setIsDeletingUserId(null);
+    }
+  }
+
+  async function handleTransferUser() {
+    if (!selectedTransferUser || !selectedTransferRestaurantId) {
+      return;
+    }
+
+    setIsTransferringUserId(selectedTransferUser.id);
+    setTransferBlockError(null);
+
+    try {
+      const updated = await assignUserRestaurant(
+        accessToken,
+        selectedTransferUser.id,
+        selectedTransferRestaurantId,
+      );
+
+      setUsers((current) =>
+        current.filter((userEntry) => userEntry.id !== updated.id),
+      );
+      setTransferSearch('');
+    } catch (transferError) {
+      if (transferError instanceof Error && transferError.message.trim()) {
+        setTransferBlockError(transferError.message);
+      } else {
+        setTransferBlockError(text.api.assignRestaurantError);
+      }
+    } finally {
+      setIsTransferringUserId(null);
     }
   }
 
@@ -1941,9 +2090,7 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
           {usersError ? (
             <Text style={styles.errorText}>{usersError}</Text>
           ) : null}
-          {!usersLoading &&
-          !usersError &&
-          accountApprovalUsers.length === 0 ? (
+          {!usersLoading && !usersError && accountApprovalUsers.length === 0 ? (
             <Text style={styles.subtitle}>
               {text.dashboard.quickNoPendingAccount}
             </Text>
@@ -2053,7 +2200,8 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
                       <Pressable
                         style={[
                           styles.iconDeleteButton,
-                          isDeletingUserId === entry.id && styles.buttonDisabled,
+                          isDeletingUserId === entry.id &&
+                            styles.buttonDisabled,
                         ]}
                         accessibilityLabel={text.dashboard.quickDeleteButton}
                         disabled={isDeletingUserId === entry.id}
@@ -2075,6 +2223,134 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
                   </View>
                 ))
               )}
+
+              <View style={styles.quickSectionDivider}>
+                <Text style={styles.quickSectionTitle}>
+                  {text.adminRestaurant.transferEmployees}
+                </Text>
+              </View>
+
+              <TextInput
+                style={styles.quickSearchInput}
+                placeholder={text.adminRestaurant.transferSearchPlaceholder}
+                placeholderTextColor="#a98a8d"
+                value={transferSearch}
+                onChangeText={setTransferSearch}
+              />
+
+              {transferBlockError ? (
+                <Text style={styles.errorText}>{transferBlockError}</Text>
+              ) : null}
+
+              {visibleTransferUsers.length === 0 ? (
+                <Text style={styles.subtitle}>
+                  {text.dashboard.quickNoEmployee}
+                </Text>
+              ) : (
+                <View style={styles.quickWorkplaceRow}>
+                  {visibleTransferUsers.map((entry) => {
+                    const isActive = selectedTransferUserId === entry.id;
+
+                    return (
+                      <Pressable
+                        key={`transfer-user-${entry.id}`}
+                        style={[
+                          styles.quickWorkplaceChip,
+                          isActive && styles.quickWorkplaceChipActive,
+                        ]}
+                        onPress={() => setSelectedTransferUserId(entry.id)}
+                      >
+                        <Text
+                          style={[
+                            styles.quickWorkplaceChipText,
+                            isActive && styles.quickWorkplaceChipTextActive,
+                          ]}
+                        >
+                          {entry.name ?? entry.email}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+
+              {selectedTransferUser ? (
+                <View style={styles.quickRowCard}>
+                  <Text style={styles.quickRowTitle}>
+                    {selectedTransferUser.name ?? selectedTransferUser.email}
+                  </Text>
+                  <Text style={styles.subtitle}>
+                    {selectedTransferUser.email}
+                  </Text>
+                  <Text style={styles.subtitle}>
+                    {text.adminRestaurant.currentRestaurantLabel}:{' '}
+                    {selectedTransferUser.restaurant?.name ??
+                      text.adminRestaurant.unassignedLabel}
+                  </Text>
+                  <Text style={styles.quickSectionTitle}>
+                    {text.adminRestaurant.assignToRestaurant}
+                  </Text>
+
+                  {availableTransferRestaurants.length === 0 ? (
+                    <Text style={styles.subtitle}>
+                      {text.dashboard.quickTransferNoDestination}
+                    </Text>
+                  ) : (
+                    <View style={styles.quickWorkplaceRow}>
+                      {availableTransferRestaurants.map((restaurant) => {
+                        const isActive =
+                          selectedTransferRestaurantId === restaurant.id;
+
+                        return (
+                          <Pressable
+                            key={`transfer-restaurant-${restaurant.id}`}
+                            style={[
+                              styles.quickWorkplaceChip,
+                              isActive && styles.quickWorkplaceChipActive,
+                            ]}
+                            onPress={() =>
+                              setSelectedTransferRestaurantId(restaurant.id)
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.quickWorkplaceChipText,
+                                isActive && styles.quickWorkplaceChipTextActive,
+                              ]}
+                            >
+                              {restaurant.name}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                  <Pressable
+                    style={[
+                      styles.secondaryButton,
+                      (isTransferringUserId === selectedTransferUser.id ||
+                        !selectedTransferRestaurantId ||
+                        availableTransferRestaurants.length === 0) &&
+                        styles.buttonDisabled,
+                    ]}
+                    disabled={
+                      isTransferringUserId === selectedTransferUser.id ||
+                      !selectedTransferRestaurantId ||
+                      availableTransferRestaurants.length === 0
+                    }
+                    onPress={() => {
+                      void handleTransferUser();
+                    }}
+                  >
+                    <Text style={styles.secondaryButtonText}>
+                      {isTransferringUserId === selectedTransferUser.id
+                        ? text.adminRestaurant.transferring
+                        : text.adminRestaurant.transferButton}
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : null}
             </>
           ) : null}
         </View>

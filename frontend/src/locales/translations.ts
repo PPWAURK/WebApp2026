@@ -210,6 +210,8 @@ export const translations = {
       quickDeleteMessage:
         'Supprimer ce compte employé ? Cette action est irréversible.',
       quickDeleteConfirm: 'Supprimer',
+      quickTransferNoDestination:
+        'Aucun autre restaurant n’est disponible pour le transfert.',
       employeeLevelLabel: 'Niveau',
       levelModalTitle: 'Modifier le niveau de l’employé',
       levelModalClose: 'Fermer',
@@ -548,7 +550,7 @@ export const translations = {
     },
     adminRestaurant: {
       title: 'Gestion des restaurants',
-      subtitle: 'Ajoutez un restaurant et réaffectez les employés.',
+      subtitle: 'Ajoutez de nouveaux restaurants.',
       newRestaurant: 'Nouveau restaurant',
       namePlaceholder: 'Nom du restaurant',
       addressPlaceholder: 'Adresse du restaurant',
@@ -866,6 +868,7 @@ export const translations = {
       quickDeleteLoading: '删除中...',
       quickDeleteMessage: '确认删除该员工账号吗？此操作不可恢复。',
       quickDeleteConfirm: '删除',
+      quickTransferNoDestination: '暂无其他可转入的门店。',
       employeeLevelLabel: '等级',
       levelModalTitle: '调整员工等级',
       levelModalClose: '关闭',
@@ -1180,7 +1183,7 @@ export const translations = {
     },
     adminRestaurant: {
       title: '门店管理',
-      subtitle: '新增门店并调整员工所属门店。',
+      subtitle: '新增门店。',
       newRestaurant: '新增门店',
       namePlaceholder: '门店名称',
       addressPlaceholder: '门店地址',

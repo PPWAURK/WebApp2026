@@ -484,7 +484,23 @@ export class UsersService {
     });
   }
 
-  async assignUserRestaurant(userId: number, restaurantId: number) {
+  async assignUserRestaurant(
+    userId: number,
+    restaurantId: number,
+    actor?: {
+      actorId: number;
+      actorRole: string;
+      actorRestaurantId: number | null;
+    },
+  ) {
+    const effectiveActor = actor ?? {
+      actorId: 0,
+      actorRole: Role.ADMIN,
+      actorRestaurantId: null,
+    };
+
+    this.ensureRoleScope(effectiveActor);
+
     const restaurant = await this.prisma.restaurant.findUnique({
       where: { id: restaurantId },
       select: { id: true },
@@ -511,6 +527,20 @@ export class UsersService {
       throw new BadRequestException(
         'Cannot assign restaurant to ADMIN via this endpoint',
       );
+    }
+
+    if (effectiveActor.actorRole === Role.MANAGER) {
+      if (user.role !== Role.EMPLOYEE) {
+        throw new BadRequestException(
+          'Manager can only move EMPLOYEE accounts',
+        );
+      }
+
+      if (user.restaurantId !== effectiveActor.actorRestaurantId) {
+        throw new BadRequestException(
+          'Manager can only move employees from own restaurant',
+        );
+      }
     }
 
     return this.prisma.user.update({

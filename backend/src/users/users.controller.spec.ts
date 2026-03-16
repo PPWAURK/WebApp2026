@@ -6,10 +6,14 @@ import { UsersService } from './users.service';
 
 describe('UsersController', () => {
   let controller: UsersController;
-  let usersService: { updateOwnProfile: jest.Mock };
+  let usersService: {
+    assignUserRestaurant: jest.Mock;
+    updateOwnProfile: jest.Mock;
+  };
 
   beforeEach(async () => {
     usersService = {
+      assignUserRestaurant: jest.fn(),
       updateOwnProfile: jest.fn(),
     };
 
@@ -65,5 +69,52 @@ describe('UsersController', () => {
       name: 'Alice',
     });
     expect(result).toBe(expected);
+  });
+
+  it('allows managers to move one employee to another restaurant', () => {
+    const expected = {
+      id: 22,
+      restaurantId: 5,
+    };
+    usersService.assignUserRestaurant.mockReturnValue(expected);
+
+    const result = controller.updateUserRestaurant(
+      {
+        user: {
+          id: 8,
+          role: Role.MANAGER,
+          restaurantId: 3,
+        },
+      } as never,
+      22,
+      5,
+    );
+
+    expect(usersService.assignUserRestaurant).toHaveBeenCalledWith(22, 5, {
+      actorId: 8,
+      actorRole: Role.MANAGER,
+      actorRestaurantId: 3,
+    });
+    expect(result).toBe(expected);
+  });
+
+  it('rejects employees when moving one user to another restaurant', () => {
+    expect(() =>
+      controller.updateUserRestaurant(
+        {
+          user: {
+            id: 12,
+            role: Role.EMPLOYEE,
+            restaurantId: 3,
+          },
+        } as never,
+        22,
+        5,
+      ),
+    ).toThrow(
+      new ForbiddenException('Only ADMIN and MANAGER can access this resource'),
+    );
+
+    expect(usersService.assignUserRestaurant).not.toHaveBeenCalled();
   });
 });
