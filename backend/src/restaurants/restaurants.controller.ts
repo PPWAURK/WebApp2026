@@ -10,6 +10,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { RestaurantsService } from './restaurants.service';
 
 type AuthenticatedRequest = Request & {
@@ -35,16 +36,12 @@ export class RestaurantsController {
   @Post()
   createRestaurant(
     @Req() req: AuthenticatedRequest,
-    @Body('name') name: string | undefined,
-    @Body('address') address: string | undefined,
+    @Body() createRestaurantDto: CreateRestaurantDto,
   ) {
     if (req.user?.role !== 'ADMIN') {
       throw new ForbiddenException('Admin only');
     }
 
-    return this.restaurantsService.createRestaurant({
-      name: name ?? '',
-      address: address ?? '',
-    });
+    return this.restaurantsService.createRestaurant(createRestaurantDto);
   }
 }

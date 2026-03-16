@@ -94,8 +94,12 @@ export function AdminRestaurantPanel({ accessToken, text }: AdminRestaurantPanel
       setSelectedRestaurantId(created.id);
       setRestaurantName('');
       setRestaurantAddress('');
-    } catch {
-      setError(text.adminRestaurant.createError);
+    } catch (createError) {
+      if (createError instanceof Error && createError.message.trim()) {
+        setError(createError.message);
+      } else {
+        setError(text.adminRestaurant.createError);
+      }
     } finally {
       setIsSavingRestaurant(false);
     }

@@ -1,8 +1,10 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -29,12 +31,32 @@ export class RestaurantsService {
       throw new BadRequestException('Restaurant address is required');
     }
 
-    return this.prisma.restaurant.create({
-      data: {
-        name,
-        address,
-      },
-    });
+    try {
+      return await this.prisma.restaurant.create({
+        data: {
+          name,
+          address,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('Restaurant name already exists');
+      }
+
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2000'
+      ) {
+        throw new BadRequestException(
+          'Restaurant name or address exceeds the allowed length',
+        );
+      }
+
+      throw error;
+    }
   }
 
   async ensureRestaurantExists(restaurantId: number) {
