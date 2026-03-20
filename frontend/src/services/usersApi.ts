@@ -12,6 +12,7 @@ export type TrainingAccessUser = {
   id: number;
   email: string;
   name: string | null;
+  profilePhoto?: string | null;
   role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
   workplaceRole: WorkplaceRole;
   employeeLevel: EmployeeLevel;

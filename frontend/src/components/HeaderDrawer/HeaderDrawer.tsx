@@ -28,6 +28,9 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
   );
   const menuItems: Array<{ key: MenuPage; label: string }> = [
     { key: 'dashboard', label: props.text.drawer.dashboard },
+    ...(props.currentUser.role === 'ADMIN' || props.currentUser.role === 'MANAGER'
+      ? [{ key: 'teamOverview' as MenuPage, label: props.text.drawer.teamOverview }]
+      : []),
     { key: 'profile', label: props.text.drawer.profile },
     { key: 'training', label: props.text.drawer.training },
     { key: 'restaurantForms', label: props.text.drawer.restaurantForms },

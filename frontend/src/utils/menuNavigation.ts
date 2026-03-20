@@ -14,6 +14,10 @@ export function normalizePathname(pathname: string): string {
 export function pathnameToMenuPage(pathname: string): MenuPage | null {
   const normalized = normalizePathname(pathname);
 
+  if (normalized === '/team-overview') {
+    return 'teamOverview';
+  }
+
   if (normalized === '/profile') {
     return 'profile';
   }
@@ -50,6 +54,10 @@ export function pathnameToMenuPage(pathname: string): MenuPage | null {
 }
 
 export function menuPageToPath(page: MenuPage): string {
+  if (page === 'teamOverview') {
+    return '/team-overview';
+  }
+
   if (page === 'profile') {
     return '/profile';
   }

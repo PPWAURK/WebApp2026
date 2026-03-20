@@ -45,6 +45,10 @@ type PrimaryNavItem = {
 };
 
 function getActivePageLabel(text: AppText, page: MenuPage): string {
+  if (page === 'teamOverview') {
+    return text.drawer.teamOverview;
+  }
+
   if (page === 'profile') {
     return text.drawer.profile;
   }
@@ -112,12 +116,23 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
         ];
   const canAccessOrders =
     props.currentUser.role === 'ADMIN' || props.currentUser.role === 'MANAGER';
+  const canAccessTeamOverview =
+    props.currentUser.role === 'ADMIN' || props.currentUser.role === 'MANAGER';
   const primaryItems: PrimaryNavItem[] = [
     {
       key: 'dashboard',
       label: props.text.drawer.dashboard,
       icon: 'grid-outline',
     },
+    ...(canAccessTeamOverview
+      ? [
+          {
+            key: 'teamOverview' as const,
+            label: props.text.drawer.teamOverview,
+            icon: 'people-outline' as keyof typeof Ionicons.glyphMap,
+          },
+        ]
+      : []),
     {
       key: 'profile',
       label: props.text.drawer.profile,

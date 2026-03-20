@@ -1,0 +1,834 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import type { AppText } from '../../locales/translations';
+import { fetchRestaurants } from '../../services/restaurantsApi';
+import {
+  fetchTrainingAccessUsers,
+  type TrainingAccessUser,
+} from '../../services/usersApi';
+import type {
+  EmployeeLevel,
+  Restaurant,
+  User,
+  WorkplaceRole,
+} from '../../types/auth';
+import { styles } from './TeamOverviewPage.styles';
+
+type TeamOverviewPageProps = {
+  text: AppText;
+  accessToken: string;
+  currentUser: User;
+};
+
+type StoreSummary = {
+  key: string;
+  id: number | null;
+  name: string;
+  address: string;
+  total: number;
+  managementCount: number;
+  probationCount: number;
+  workplaceCounts: Record<WorkplaceRole, number>;
+  roster: TrainingAccessUser[];
+};
+
+const LEVEL_ORDER: EmployeeLevel[] = [
+  'L0_PROBATION',
+  'L1_PARTNER',
+  'L2_PARTNER',
+  'L3_PARTNER',
+  'L4_EXCELLENT',
+  'L5_PAM',
+  'L5_AM',
+  'L6_PM',
+  'L6_MA',
+  'L7_PDI',
+  'L7_D',
+];
+
+const WORKPLACE_ORDER: WorkplaceRole[] = ['SALLE', 'CUISINE', 'BOTH'];
+
+function createEmptyWorkplaceCounts(): Record<WorkplaceRole, number> {
+  return {
+    SALLE: 0,
+    CUISINE: 0,
+    BOTH: 0,
+  };
+}
+
+function getDisplayName(
+  user: Pick<TrainingAccessUser, 'name' | 'email'>,
+  fallbackName: string,
+) {
+  const trimmedName = user.name?.trim();
+  if (trimmedName) {
+    return trimmedName;
+  }
+
+  const emailPrefix = user.email.split('@')[0]?.trim();
+  if (emailPrefix) {
+    return emailPrefix;
+  }
+
+  return fallbackName;
+}
+
+function getInitial(name: string) {
+  const trimmed = name.trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() : 'U';
+}
+
+function getRolePriority(role: TrainingAccessUser['role']) {
+  if (role === 'ADMIN') {
+    return 0;
+  }
+
+  if (role === 'MANAGER') {
+    return 1;
+  }
+
+  return 2;
+}
+
+export function TeamOverviewPage({
+  text,
+  accessToken,
+  currentUser,
+}: TeamOverviewPageProps) {
+  const { width } = useWindowDimensions();
+  const isWideLayout = width >= 1280;
+  const isMediumLayout = width >= 860;
+  const isCompactLayout = width < 720;
+  const rosterCardWidth =
+    width >= 1760
+      ? '19.2%'
+      : width >= 1480
+        ? '24%'
+        : width >= 1180
+          ? '32%'
+          : width >= 820
+            ? '48.5%'
+            : '100%';
+  const [users, setUsers] = useState<TrainingAccessUser[]>([]);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedRosterKey, setSelectedRosterKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    setIsLoading(true);
+    setError(null);
+
+    void Promise.allSettled([
+      fetchTrainingAccessUsers(accessToken),
+      fetchRestaurants(),
+    ])
+      .then(([usersResult, restaurantsResult]) => {
+        if (!isActive) {
+          return;
+        }
+
+        if (usersResult.status !== 'fulfilled') {
+          setError(text.teamOverview.loadError);
+          return;
+        }
+
+        setUsers(usersResult.value);
+
+        if (restaurantsResult.status === 'fulfilled') {
+          setRestaurants(restaurantsResult.value);
+        } else {
+          const nextRestaurants = usersResult.value
+            .map((entry) => entry.restaurant)
+            .filter(
+              (
+                restaurant,
+              ): restaurant is NonNullable<TrainingAccessUser['restaurant']> =>
+                restaurant !== null,
+            )
+            .map((restaurant) => ({
+              id: restaurant.id,
+              name: restaurant.name,
+              address: text.profile.noAddress,
+            }));
+
+          setRestaurants(nextRestaurants);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setError(text.teamOverview.loadError);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accessToken, text.profile.noAddress, text.teamOverview.loadError]);
+
+  const approvedUsers = useMemo(
+    () => users.filter((entry) => entry.isApproved),
+    [users],
+  );
+
+  const scopedUsers = useMemo(() => {
+    if (currentUser.role !== 'MANAGER') {
+      return approvedUsers;
+    }
+
+    if (!currentUser.restaurant?.id) {
+      return [];
+    }
+
+    return approvedUsers.filter(
+      (entry) => entry.restaurant?.id === currentUser.restaurant?.id,
+    );
+  }, [approvedUsers, currentUser.restaurant?.id, currentUser.role]);
+
+  const restaurantDirectory = useMemo(() => {
+    const next = new Map<number, Restaurant>();
+
+    for (const restaurant of restaurants) {
+      next.set(restaurant.id, restaurant);
+    }
+
+    if (currentUser.restaurant) {
+      next.set(currentUser.restaurant.id, currentUser.restaurant);
+    }
+
+    return next;
+  }, [currentUser.restaurant, restaurants]);
+
+  const scopedRestaurants = useMemo(() => {
+    if (currentUser.role === 'MANAGER') {
+      if (!currentUser.restaurant) {
+        return [];
+      }
+
+      const scopedRestaurant =
+        restaurantDirectory.get(currentUser.restaurant.id) ?? currentUser.restaurant;
+
+      return [scopedRestaurant];
+    }
+
+    return Array.from(restaurantDirectory.values()).sort((left, right) =>
+      left.name.localeCompare(right.name),
+    );
+  }, [currentUser.restaurant, currentUser.role, restaurantDirectory]);
+
+  const storeSummaries = useMemo(() => {
+    const next = new Map<string, StoreSummary>();
+
+    for (const restaurant of scopedRestaurants) {
+      next.set(`restaurant-${restaurant.id}`, {
+        key: `restaurant-${restaurant.id}`,
+        id: restaurant.id,
+        name: restaurant.name,
+        address: restaurant.address,
+        total: 0,
+        managementCount: 0,
+        probationCount: 0,
+        workplaceCounts: createEmptyWorkplaceCounts(),
+        roster: [],
+      });
+    }
+
+    for (const entry of scopedUsers) {
+      const key = entry.restaurant?.id
+        ? `restaurant-${entry.restaurant.id}`
+        : 'unassigned';
+      const restaurantRecord = entry.restaurant?.id
+        ? restaurantDirectory.get(entry.restaurant.id)
+        : null;
+
+      if (!next.has(key)) {
+        next.set(key, {
+          key,
+          id: entry.restaurant?.id ?? null,
+          name: restaurantRecord?.name ?? entry.restaurant?.name ?? text.teamOverview.unassignedRestaurant,
+          address: restaurantRecord?.address ?? text.profile.noAddress,
+          total: 0,
+          managementCount: 0,
+          probationCount: 0,
+          workplaceCounts: createEmptyWorkplaceCounts(),
+          roster: [],
+        });
+      }
+
+      const summary = next.get(key);
+      if (!summary) {
+        continue;
+      }
+
+      summary.total += 1;
+      summary.workplaceCounts[entry.workplaceRole] += 1;
+      summary.roster.push(entry);
+
+      if (entry.role === 'ADMIN' || entry.role === 'MANAGER') {
+        summary.managementCount += 1;
+      }
+
+      if (entry.isOnProbation) {
+        summary.probationCount += 1;
+      }
+    }
+
+    return Array.from(next.values())
+      .map((summary) => ({
+        ...summary,
+        roster: [...summary.roster].sort((left, right) => {
+          const roleOrder = getRolePriority(left.role) - getRolePriority(right.role);
+          if (roleOrder !== 0) {
+            return roleOrder;
+          }
+
+          return getDisplayName(left, text.dashboard.fallbackName).localeCompare(
+            getDisplayName(right, text.dashboard.fallbackName),
+          );
+        }),
+      }))
+      .sort((left, right) => {
+        if (left.id !== null && right.id !== null && left.total !== right.total) {
+          return right.total - left.total;
+        }
+
+        if (left.id === null && right.id !== null) {
+          return 1;
+        }
+
+        if (left.id !== null && right.id === null) {
+          return -1;
+        }
+
+        return left.name.localeCompare(right.name);
+      });
+  }, [
+    scopedRestaurants,
+    restaurantDirectory,
+    scopedUsers,
+    text.dashboard.fallbackName,
+    text.profile.noAddress,
+    text.teamOverview.unassignedRestaurant,
+  ]);
+
+  const restaurantCount = scopedRestaurants.length;
+  const teamCount = scopedUsers.length;
+  const managementCount = scopedUsers.filter(
+    (entry) => entry.role === 'ADMIN' || entry.role === 'MANAGER',
+  ).length;
+  const probationCount = scopedUsers.filter((entry) => entry.isOnProbation).length;
+
+  const levelDistribution = useMemo(
+    () =>
+      LEVEL_ORDER.map((level) => ({
+        level,
+        count: scopedUsers.filter((entry) => entry.employeeLevel === level).length,
+      })).filter((entry) => entry.count > 0),
+    [scopedUsers],
+  );
+
+  const workplaceDistribution = useMemo(
+    () =>
+      WORKPLACE_ORDER.map((workplaceRole) => ({
+        workplaceRole,
+        count: scopedUsers.filter(
+          (entry) => entry.workplaceRole === workplaceRole,
+        ).length,
+      })),
+    [scopedUsers],
+  );
+
+  const scopeValue =
+    currentUser.role === 'MANAGER'
+      ? currentUser.restaurant?.name ?? text.profile.noRestaurant
+      : text.teamOverview.scopeAllValue;
+  const emptyMessage =
+    currentUser.role === 'MANAGER' && !currentUser.restaurant
+      ? text.dashboard.managerRestaurantMissing
+      : text.teamOverview.empty;
+  const sectionCardWidth = !isMediumLayout ? '100%' : isWideLayout ? '48.5%' : '100%';
+  const storeCardWidth = !isMediumLayout ? '100%' : isWideLayout ? '32%' : '48.5%';
+  const metricCardWidth = isCompactLayout ? '100%' : isMediumLayout ? '24%' : '48.5%';
+  const maxLevelCount = Math.max(...levelDistribution.map((entry) => entry.count), 1);
+  const selectedRosterSummary = useMemo(
+    () =>
+      storeSummaries.find((summary) => summary.key === selectedRosterKey) ??
+      storeSummaries[0] ??
+      null,
+    [selectedRosterKey, storeSummaries],
+  );
+
+  useEffect(() => {
+    if (storeSummaries.length === 0) {
+      if (selectedRosterKey !== null) {
+        setSelectedRosterKey(null);
+      }
+      return;
+    }
+
+    if (
+      selectedRosterKey &&
+      storeSummaries.some((summary) => summary.key === selectedRosterKey)
+    ) {
+      return;
+    }
+
+    const preferredSummary =
+      storeSummaries.find((summary) => summary.total > 0) ?? storeSummaries[0];
+
+    setSelectedRosterKey(preferredSummary.key);
+  }, [selectedRosterKey, storeSummaries]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.feedbackState}>
+        <ActivityIndicator size="large" color="#ab1e24" />
+        <Text style={styles.feedbackText}>{text.teamOverview.loading}</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.feedbackState}>
+        <Ionicons name="alert-circle-outline" size={24} color="#ab1e24" />
+        <Text style={styles.feedbackText}>{error}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      style={styles.page}
+      contentContainerStyle={styles.pageContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.heroCard}>
+        <View style={styles.heroTextWrap}>
+          <Text style={styles.heroBadge}>{text.teamOverview.title}</Text>
+          <Text style={styles.heroTitle}>{text.teamOverview.title}</Text>
+          <Text style={styles.heroSubtitle}>{text.teamOverview.subtitle}</Text>
+        </View>
+
+        <View style={styles.scopeCard}>
+          <Text style={styles.scopeLabel}>
+            {currentUser.role === 'MANAGER'
+              ? text.teamOverview.scopeCurrentRestaurant
+              : text.teamOverview.scopeAllRestaurants}
+          </Text>
+          <Text style={styles.scopeValue}>{scopeValue}</Text>
+        </View>
+      </View>
+
+      <View style={styles.metricGrid}>
+        {[
+          {
+            icon: 'storefront-outline' as const,
+            label: text.teamOverview.metricRestaurants,
+            value: restaurantCount,
+          },
+          {
+            icon: 'people-outline' as const,
+            label: text.teamOverview.metricPeople,
+            value: teamCount,
+          },
+          {
+            icon: 'shield-checkmark-outline' as const,
+            label: text.teamOverview.metricManagers,
+            value: managementCount,
+          },
+          {
+            icon: 'hourglass-outline' as const,
+            label: text.teamOverview.metricProbation,
+            value: probationCount,
+          },
+        ].map((item) => (
+          <View key={item.label} style={[styles.metricCard, { width: metricCardWidth }]}>
+            <View style={styles.metricIconWrap}>
+              <Ionicons name={item.icon} size={18} color="#ab1e24" />
+            </View>
+            <Text style={styles.metricValue}>{item.value}</Text>
+            <Text style={styles.metricLabel}>{item.label}</Text>
+          </View>
+        ))}
+      </View>
+
+      {teamCount === 0 ? (
+        <View style={styles.emptyCard}>
+          <Ionicons name="people-outline" size={24} color="#ab1e24" />
+          <Text style={styles.emptyTitle}>{text.teamOverview.title}</Text>
+          <Text style={styles.emptyText}>{emptyMessage}</Text>
+        </View>
+      ) : (
+        <>
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>
+                  {text.teamOverview.restaurantSectionTitle}
+                </Text>
+                <Text style={styles.sectionSubtitle}>
+                  {text.teamOverview.restaurantSectionSubtitle}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.storeGrid}>
+              {storeSummaries.map((summary) => {
+                const managerNames = summary.roster
+                  .filter(
+                    (entry) => entry.role === 'ADMIN' || entry.role === 'MANAGER',
+                  )
+                  .map((entry) =>
+                    getDisplayName(entry, text.dashboard.fallbackName),
+                  );
+
+                return (
+                  <View
+                    key={summary.key}
+                    style={[styles.storeCard, { width: storeCardWidth }]}
+                  >
+                    <View style={styles.storeHeader}>
+                      <View style={styles.storeTextWrap}>
+                        <Text style={styles.storeName}>{summary.name}</Text>
+                        <Text style={styles.storeAddress}>{summary.address}</Text>
+                      </View>
+                      <View style={styles.storeCountBadge}>
+                        <Text style={styles.storeCountValue}>{summary.total}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.storeStatRow}>
+                      <View style={styles.storeStatChip}>
+                        <Text style={styles.storeStatLabel}>
+                          {text.teamOverview.membersLabel}
+                        </Text>
+                        <Text style={styles.storeStatValue}>{summary.total}</Text>
+                      </View>
+                      <View style={styles.storeStatChip}>
+                        <Text style={styles.storeStatLabel}>
+                          {text.teamOverview.managersLabel}
+                        </Text>
+                        <Text style={styles.storeStatValue}>
+                          {summary.managementCount}
+                        </Text>
+                      </View>
+                      <View style={styles.storeStatChip}>
+                        <Text style={styles.storeStatLabel}>
+                          {text.teamOverview.probationLabel}
+                        </Text>
+                        <Text style={styles.storeStatValue}>
+                          {summary.probationCount}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.workplaceChipRow}>
+                      {WORKPLACE_ORDER.map((workplaceRole) => (
+                        <View key={workplaceRole} style={styles.workplaceChip}>
+                          <Text style={styles.workplaceChipLabel}>
+                            {text.dashboard.workplaceValues[workplaceRole]}
+                          </Text>
+                          <Text style={styles.workplaceChipValue}>
+                            {summary.workplaceCounts[workplaceRole]}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+
+                    <View style={styles.managerBlock}>
+                      <Text style={styles.managerLabel}>
+                        {text.teamOverview.managerLineLabel}
+                      </Text>
+                      <Text style={styles.managerValue}>
+                        {managerNames.length > 0
+                          ? managerNames.join(' · ')
+                          : text.teamOverview.noManagerAssigned}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.insightGrid}>
+            <View style={[styles.sectionCard, { width: sectionCardWidth }]}>
+              <View style={styles.sectionHeader}>
+                <View>
+                  <Text style={styles.sectionTitle}>
+                    {text.teamOverview.levelSectionTitle}
+                  </Text>
+                  <Text style={styles.sectionSubtitle}>
+                    {text.teamOverview.levelSectionSubtitle}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.distributionList}>
+                {levelDistribution.map((entry) => {
+                  const percentage =
+                    teamCount > 0 ? Math.round((entry.count / teamCount) * 100) : 0;
+                  const barWidth = Math.max(
+                    10,
+                    Math.round((entry.count / maxLevelCount) * 100),
+                  );
+
+                  return (
+                    <View key={entry.level} style={styles.distributionRow}>
+                      <View style={styles.distributionTextWrap}>
+                        <Text style={styles.distributionLabel}>
+                          {text.dashboard.levels[entry.level]}
+                        </Text>
+                        <Text style={styles.distributionValue}>
+                          {entry.count} · {percentage}%
+                        </Text>
+                      </View>
+                      <View style={styles.distributionTrack}>
+                        <View
+                          style={[
+                            styles.distributionFill,
+                            { width: `${barWidth}%` },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={[styles.sectionCard, { width: sectionCardWidth }]}>
+              <View style={styles.sectionHeader}>
+                <View>
+                  <Text style={styles.sectionTitle}>
+                    {text.teamOverview.workplaceSectionTitle}
+                  </Text>
+                  <Text style={styles.sectionSubtitle}>
+                    {text.teamOverview.workplaceSectionSubtitle}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.workplaceSummaryGrid}>
+                {workplaceDistribution.map((entry) => (
+                  <View key={entry.workplaceRole} style={styles.workplaceSummaryCard}>
+                    <Text style={styles.workplaceSummaryValue}>{entry.count}</Text>
+                    <Text style={styles.workplaceSummaryLabel}>
+                      {text.dashboard.workplaceValues[entry.workplaceRole]}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>
+                  {text.teamOverview.rosterSectionTitle}
+                </Text>
+                <Text style={styles.sectionSubtitle}>
+                  {text.teamOverview.rosterSectionSubtitle}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.rosterFilterBlock}>
+              <Text style={styles.rosterFilterLabel}>
+                {text.teamOverview.rosterFilterLabel}
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.rosterFilterRow}
+              >
+                {storeSummaries.map((summary) => {
+                  const isActive = selectedRosterSummary?.key === summary.key;
+
+                  return (
+                    <Pressable
+                      key={`${summary.key}-filter`}
+                      style={[
+                        styles.rosterFilterButton,
+                        isActive && styles.rosterFilterButtonActive,
+                      ]}
+                      onPress={() => setSelectedRosterKey(summary.key)}
+                    >
+                      <Text
+                        style={[
+                          styles.rosterFilterButtonText,
+                          isActive && styles.rosterFilterButtonTextActive,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {summary.name}
+                      </Text>
+                      <View
+                        style={[
+                          styles.rosterFilterCount,
+                          isActive && styles.rosterFilterCountActive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.rosterFilterCountText,
+                            isActive && styles.rosterFilterCountTextActive,
+                          ]}
+                        >
+                          {summary.total}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {selectedRosterSummary ? (
+              <View style={styles.rosterSectionCard}>
+                <View style={styles.rosterSectionHeader}>
+                  <View style={styles.rosterSectionHeading}>
+                    <Text style={styles.rosterStoreName}>
+                      {selectedRosterSummary.name}
+                    </Text>
+                    <Text style={styles.rosterStoreAddress}>
+                      {selectedRosterSummary.address}
+                    </Text>
+                  </View>
+                  <View style={styles.rosterHeaderStats}>
+                    <View style={styles.rosterHeaderBadge}>
+                      <Text style={styles.rosterHeaderBadgeValue}>
+                        {selectedRosterSummary.total}
+                      </Text>
+                      <Text style={styles.rosterHeaderBadgeLabel}>
+                        {text.teamOverview.membersLabel}
+                      </Text>
+                    </View>
+                    <View style={styles.rosterHeaderBadge}>
+                      <Text style={styles.rosterHeaderBadgeValue}>
+                        {selectedRosterSummary.managementCount}
+                      </Text>
+                      <Text style={styles.rosterHeaderBadgeLabel}>
+                        {text.teamOverview.managersLabel}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {selectedRosterSummary.roster.length === 0 ? (
+                  <View style={styles.rosterEmptyState}>
+                    <Text style={styles.rosterEmptyText}>
+                      {text.teamOverview.emptyStore}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.rosterList}>
+                    {selectedRosterSummary.roster.map((entry, index) => {
+                      const displayName = getDisplayName(
+                        entry,
+                        text.dashboard.fallbackName,
+                      );
+
+                      return (
+                        <View
+                          key={entry.id}
+                          style={[
+                            styles.rosterCompactCard,
+                            { width: rosterCardWidth },
+                          ]}
+                        >
+                          <View style={styles.rosterCardTop}>
+                            <View style={styles.rosterOrderBadge}>
+                              <Text style={styles.rosterOrderBadgeText}>
+                                {index + 1}
+                              </Text>
+                            </View>
+                            <View style={styles.avatarWrap}>
+                              {entry.profilePhoto ? (
+                                <Image
+                                  source={{ uri: entry.profilePhoto }}
+                                  style={styles.avatarImage}
+                                />
+                              ) : (
+                                <Text style={styles.avatarText}>
+                                  {getInitial(displayName)}
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+
+                          <View style={styles.rosterBody}>
+                            <Text style={styles.rosterName} numberOfLines={1}>
+                              {displayName}
+                            </Text>
+                            <Text style={styles.rosterEmail} numberOfLines={1}>
+                              {entry.email}
+                            </Text>
+                          </View>
+
+                          <View style={styles.rosterMetaStack}>
+                            <View style={styles.rosterMetaLine}>
+                              <Text style={styles.rosterFactLabel}>
+                                {text.dashboard.role}
+                              </Text>
+                              <Text
+                                style={styles.rosterFactValue}
+                                numberOfLines={1}
+                              >
+                                {text.dashboard.roleValues[entry.role]}
+                              </Text>
+                            </View>
+                            <View style={styles.rosterMetaLine}>
+                              <Text style={styles.rosterFactLabel}>
+                                {text.dashboard.workplace}
+                              </Text>
+                              <Text
+                                style={styles.rosterFactValue}
+                                numberOfLines={1}
+                              >
+                                {text.dashboard.workplaceValues[entry.workplaceRole]}
+                              </Text>
+                            </View>
+                            <View style={styles.rosterMetaLine}>
+                              <Text style={styles.rosterFactLabel}>
+                                {text.dashboard.employeeLevelLabel}
+                              </Text>
+                              <Text
+                                style={styles.rosterFactValue}
+                                numberOfLines={1}
+                              >
+                                {text.dashboard.levels[entry.employeeLevel]}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            ) : null}
+          </View>
+        </>
+      )}
+    </ScrollView>
+  );
+}

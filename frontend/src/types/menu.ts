@@ -1,5 +1,6 @@
 export type MenuPage =
   | 'dashboard'
+  | 'teamOverview'
   | 'profile'
   | 'training'
   | 'restaurantForms'

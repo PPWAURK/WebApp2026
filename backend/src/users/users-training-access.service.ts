@@ -50,6 +50,7 @@ export class UsersTrainingAccessService {
         id: true,
         email: true,
         name: true,
+        profilePhoto: true,
         restaurantId: true,
         restaurant: {
           select: {
