@@ -5,7 +5,6 @@ const LIGHT_RED = '#d86e73';
 const BORDER = '#d9a7aa';
 const PALE_RED = '#e5b0b3';
 const CARD_BG = '#f2f2f2';
-const INPUT_HEIGHT = 40;
 
 export const styles = StyleSheet.create({
   card: {
@@ -212,11 +211,12 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_400Regular',
     fontSize: 14,
     paddingVertical: 0,
+    paddingHorizontal: 0,
+    margin: 0,
     borderWidth: 0,
     borderColor: 'transparent',
     backgroundColor: 'transparent',
-    outlineColor: 'transparent',
-    outlineWidth: 0,
+    borderRadius: 0,
   },
   eyeButton: {
     width: 24,

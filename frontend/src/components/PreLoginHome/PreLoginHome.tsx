@@ -1,4 +1,4 @@
-import { Image, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { Image, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import type { AppText } from '../../locales/translations';
 import { styles } from './PreLoginHome.styles';
 
@@ -104,10 +104,15 @@ export function PreLoginHome(props: PreLoginHomeProps) {
   const lanternOffset = isSmall ? 72 : isTablet ? 98 : 130;
 
   const decorPreset = isSmall ? 'small' : isTablet ? 'tablet' : 'desktop';
+  const nonInteractiveStyle =
+    Platform.OS === 'web' ? ({ pointerEvents: 'none' } as never) : null;
 
   return (
     <View style={styles.container}>
-      <View style={styles.decorLayer} pointerEvents="none">
+      <View
+        style={[styles.decorLayer, nonInteractiveStyle]}
+        pointerEvents={Platform.OS === 'web' ? undefined : 'none'}
+      >
         {DECOR_ITEMS.map((item) => {
           const layout = item[decorPreset];
 
@@ -135,7 +140,10 @@ export function PreLoginHome(props: PreLoginHomeProps) {
 
       <View style={styles.centerStack}>
         <View style={[styles.lanternWrap, { marginBottom: lanternOffset }]}>
-          <View pointerEvents="none" style={styles.stringWrap}>
+          <View
+            style={[styles.stringWrap, nonInteractiveStyle]}
+            pointerEvents={Platform.OS === 'web' ? undefined : 'none'}
+          >
             <View style={styles.stringWaveWrap}>
               {Array.from({ length: waveCount }).map((_, index) => (
                 <View

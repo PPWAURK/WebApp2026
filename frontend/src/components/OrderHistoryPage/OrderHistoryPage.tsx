@@ -1,6 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import { Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import type { AppText } from '../../locales/translations';
 import {
   fetchOrderHistoryAnalytics,
@@ -47,6 +47,24 @@ function monthLabel(value: string) {
   return value.slice(0, 7);
 }
 
+function formatAmount(value: number) {
+  return value.toFixed(2);
+}
+
+function formatAverage(value: number) {
+  if (!Number.isFinite(value)) {
+    return '0';
+  }
+
+  const rounded = Number(value.toFixed(1));
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+function getPeriodLabel(text: AppText, period: PeriodKey) {
+  const option = PERIODS.find((entry) => entry.key === period);
+  return option ? text.orders[option.textKey] : text.orders.periodAll;
+}
+
 export function OrderHistoryPage({
   text,
   accessToken,
@@ -57,6 +75,10 @@ export function OrderHistoryPage({
   onDownloadOrderBon,
   onDeleteOrder,
 }: OrderHistoryPageProps) {
+  const { width } = useWindowDimensions();
+  const isMediumScreen = width >= 820;
+  const isWideLayout = width >= 1180;
+
   const [selectedSupplierKey, setSelectedSupplierKey] = useState<string | null>(null);
   const [period, setPeriod] = useState<PeriodKey>('this_month');
   const [sortBy, setSortBy] = useState<SortKey>('date_desc');
@@ -224,285 +246,505 @@ export function OrderHistoryPage({
     1,
   );
 
-  const pieTotal = (analytics?.current.totalItems ?? 0) + (analytics?.previous.totalItems ?? 0);
-  const pieRatio = pieTotal > 0 ? (analytics?.current.totalItems ?? 0) / pieTotal : 0.5;
-  const pieRadius = 20;
-  const pieCircumference = 2 * Math.PI * pieRadius;
-  const pieCurrentDash = pieCircumference * pieRatio;
+  const filteredTotalItems = useMemo(
+    () => filteredSortedOrders.reduce((sum, order) => sum + order.totalItems, 0),
+    [filteredSortedOrders],
+  );
+
+  const filteredTotalAmount = useMemo(
+    () => filteredSortedOrders.reduce((sum, order) => sum + order.totalAmount, 0),
+    [filteredSortedOrders],
+  );
+
+  const averageOrderItems =
+    analytics?.current.avgOrderItems ??
+    (filteredSortedOrders.length > 0 ? filteredTotalItems / filteredSortedOrders.length : 0);
+
+  const activePeriodLabel = getPeriodLabel(text, period);
 
   return (
-    <View style={styles.card}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerTextWrap}>
-          <Text style={styles.title}>{text.orders.historyTitle}</Text>
-          <Text style={styles.subtitle}>{text.orders.historySubtitle}</Text>
-        </View>
-        <Pressable style={styles.refreshButton} onPress={onRefresh}>
-          <Text style={styles.refreshButtonText}>{text.orders.refreshHistoryButton}</Text>
-        </Pressable>
-      </View>
-
-      {isLoading ? <Text style={styles.docEmpty}>{text.orders.loading}</Text> : null}
-      {!isLoading && orders.length === 0 ? <Text style={styles.docEmpty}>{text.orders.historyEmpty}</Text> : null}
-
-      {groupedOrders.length > 0 ? (
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>{text.orders.supplierTabsTitle}</Text>
-          <View style={styles.tabsRail}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.tabsScroll}
-            contentContainerStyle={styles.tabsWrap}
-          >
-            {groupedOrders.map((supplierGroup) => {
-              const isActive = supplierGroup.supplierKey === selectedSupplierKey;
-              return (
-                <Pressable
-                  key={`tab-${supplierGroup.supplierKey}`}
-                  style={[styles.tabChip, isActive && styles.tabChipActive]}
-                  onPress={() => setSelectedSupplierKey(supplierGroup.supplierKey)}
-                >
-                  <Text
-                    style={[styles.tabChipText, isActive && styles.tabChipTextActive]}
-                    numberOfLines={1}
-                  >
-                    {supplierGroup.supplierName}
+    <View style={styles.pageRoot}>
+      <ScrollView
+        style={styles.pageScroll}
+        contentContainerStyle={styles.pageContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.heroCard}>
+          <View style={styles.heroHeader}>
+            <View style={styles.heroCopy}>
+              <Text style={styles.title}>{text.orders.historyTitle}</Text>
+              <Text style={styles.subtitle}>{text.orders.historySubtitle}</Text>
+            </View>
+            <View style={styles.heroHeaderActions}>
+              {selectedSupplierGroup ? (
+                <View style={styles.heroBadge}>
+                  <Ionicons name="storefront-outline" size={14} color="#ab1e24" />
+                  <Text style={styles.heroBadgeText} numberOfLines={1}>
+                    {selectedSupplierGroup.supplierName}
                   </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+                </View>
+              ) : null}
+              <Pressable style={styles.heroActionButton} onPress={onRefresh}>
+                <Ionicons name="refresh-outline" size={16} color="#ab1e24" />
+                <Text style={styles.heroActionButtonText}>{text.orders.refreshHistoryButton}</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <View style={styles.heroMetaRow}>
+            <View style={styles.metaPill}>
+              <Ionicons name="calendar-outline" size={14} color="#ab1e24" />
+              <Text style={styles.metaPillText}>{activePeriodLabel}</Text>
+            </View>
+            <View style={styles.metaPill}>
+              <Ionicons name="albums-outline" size={14} color="#ab1e24" />
+              <Text style={styles.metaPillText}>{filteredSortedOrders.length}</Text>
+            </View>
+            <View style={styles.metaPill}>
+              <Ionicons name="layers-outline" size={14} color="#ab1e24" />
+              <Text style={styles.metaPillText}>{ordersByDate.length}</Text>
+            </View>
+          </View>
+
+          <View style={styles.heroStatsRow}>
+            <View style={styles.heroStatCard}>
+              <Text style={styles.heroStatLabel}>{text.orders.kpiUniqueProducts}</Text>
+              <Text style={styles.heroStatValue}>{analytics?.current.uniqueProducts ?? 0}</Text>
+            </View>
+            <View style={styles.heroStatCard}>
+              <Text style={styles.heroStatLabel}>{text.orders.kpiTotalItems}</Text>
+              <Text style={styles.heroStatValue}>{analytics?.current.totalItems ?? filteredTotalItems}</Text>
+            </View>
+            <View style={styles.heroStatCard}>
+              <Text style={styles.heroStatLabel}>{text.orders.kpiTotalAmount}</Text>
+              <Text style={styles.heroStatValue}>
+                {formatAmount(analytics?.current.totalAmount ?? filteredTotalAmount)}
+              </Text>
+            </View>
+            <View style={styles.heroStatCard}>
+              <Text style={styles.heroStatLabel}>{text.orders.avgOrderItemsLabel}</Text>
+              <Text style={styles.heroStatValue}>{formatAverage(averageOrderItems)}</Text>
+            </View>
           </View>
         </View>
-      ) : null}
 
-      <View style={styles.filterSection}>
-        <Text style={styles.filterSectionTitle}>{text.orders.periodTabsTitle}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
-          {PERIODS.map((periodOption) => {
-            const isActive = periodOption.key === period;
-            return (
-              <Pressable
-                key={`period-${periodOption.key}`}
-                style={[styles.filterChip, isActive && styles.filterChipActive]}
-                onPress={() => setPeriod(periodOption.key)}
+        {groupedOrders.length > 0 ? (
+          <View style={styles.toolbarCard}>
+            <View style={styles.toolSection}>
+              <Text style={styles.toolSectionTitle}>{text.orders.supplierTabsTitle}</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chipRail}
               >
-                <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
-                  {text.orders[periodOption.textKey]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+                {groupedOrders.map((supplierGroup) => {
+                  const isActive = supplierGroup.supplierKey === selectedSupplierKey;
 
-      <TextInput
-        style={styles.searchInput}
-        placeholder={text.orders.searchHistoryPlaceholder}
-        placeholderTextColor="#aa777b"
-        value={search}
-        onChangeText={setSearch}
-      />
-
-      <View style={styles.filterSection}>
-        <Text style={styles.filterSectionTitle}>{text.orders.sortTabsTitle}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
-          {SORTS.map((sortOption) => {
-            const isActive = sortOption.key === sortBy;
-            return (
-              <Pressable
-                key={`sort-${sortOption.key}`}
-                style={[styles.filterChip, isActive && styles.filterChipActive]}
-                onPress={() => setSortBy(sortOption.key)}
-              >
-                <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
-                  {text.orders[sortOption.textKey]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {analyticsLoading ? <Text style={styles.docEmpty}>{text.orders.loading}</Text> : null}
-      {analyticsError ? <Text style={styles.docEmpty}>{analyticsError}</Text> : null}
-
-      {analytics ? (
-        <>
-          <View style={styles.kpiGrid}>
-            <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>{text.orders.kpiUniqueProducts}</Text>
-              <Text style={styles.kpiValue}>{analytics.current.uniqueProducts}</Text>
+                  return (
+                    <Pressable
+                      key={`supplier-${supplierGroup.supplierKey}`}
+                      style={[styles.supplierChip, isActive && styles.supplierChipActive]}
+                      onPress={() => setSelectedSupplierKey(supplierGroup.supplierKey)}
+                    >
+                      <Text
+                        style={[styles.supplierChipText, isActive && styles.supplierChipTextActive]}
+                        numberOfLines={1}
+                      >
+                        {supplierGroup.supplierName}
+                      </Text>
+                      <View
+                        style={[
+                          styles.supplierChipCount,
+                          isActive && styles.supplierChipCountActive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.supplierChipCountText,
+                            isActive && styles.supplierChipCountTextActive,
+                          ]}
+                        >
+                          {supplierGroup.orders.length}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
             </View>
-            <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>{text.orders.kpiTotalItems}</Text>
-              <Text style={styles.kpiValue}>{analytics.current.totalItems}</Text>
-            </View>
-            <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>{text.orders.kpiTotalAmount}</Text>
-              <Text style={styles.kpiValue}>{analytics.current.totalAmount.toFixed(2)}</Text>
-            </View>
-            <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>{text.orders.kpiDeltaVsPrevious}</Text>
-              <View style={styles.deltaPieRow}>
-                <Svg width={52} height={52} viewBox="0 0 52 52">
-                  <Circle
-                    cx="26"
-                    cy="26"
-                    r={pieRadius}
-                    stroke="#d8a4a7"
-                    strokeWidth="10"
-                    fill="none"
+
+            <View style={[styles.toolbarGrid, isMediumScreen && styles.toolbarGridWide]}>
+              <View style={[styles.toolSection, styles.searchSection]}>
+                <View style={styles.searchShell}>
+                  <Ionicons name="search-outline" size={18} color="#8d5a5f" />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder={text.orders.searchHistoryPlaceholder}
+                    placeholderTextColor="#aa777b"
+                    value={search}
+                    onChangeText={setSearch}
                   />
-                  <Circle
-                    cx="26"
-                    cy="26"
-                    r={pieRadius}
-                    stroke="#c83d45"
-                    strokeWidth="10"
-                    fill="none"
-                    strokeDasharray={`${pieCurrentDash} ${pieCircumference}`}
-                    strokeLinecap="round"
-                    transform="rotate(-90 26 26)"
-                  />
-                </Svg>
-                <View style={styles.deltaPieLegend}>
-                  <Text style={styles.deltaLegendCurrent}>{text.orders.thisMonthLabel}</Text>
-                  <Text style={styles.deltaLegendPrevious}>{text.orders.lastMonthLabel}</Text>
                 </View>
               </View>
-              <Text style={styles.kpiValue}>{analytics.delta.itemsRate ?? 0}%</Text>
+
+              <View style={[styles.toolSection, styles.toolSectionWide]}>
+                <Text style={styles.toolSectionTitle}>{text.orders.periodTabsTitle}</Text>
+                <View style={styles.filterWrap}>
+                  {PERIODS.map((periodOption) => {
+                    const isActive = periodOption.key === period;
+                    return (
+                      <Pressable
+                        key={`period-${periodOption.key}`}
+                        style={[styles.filterChip, isActive && styles.filterChipActive]}
+                        onPress={() => setPeriod(periodOption.key)}
+                      >
+                        <Text
+                          style={[styles.filterChipText, isActive && styles.filterChipTextActive]}
+                        >
+                          {text.orders[periodOption.textKey]}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View style={[styles.toolSection, styles.toolSectionWide]}>
+                <Text style={styles.toolSectionTitle}>{text.orders.sortTabsTitle}</Text>
+                <View style={styles.filterWrap}>
+                  {SORTS.map((sortOption) => {
+                    const isActive = sortOption.key === sortBy;
+                    return (
+                      <Pressable
+                        key={`sort-${sortOption.key}`}
+                        style={[styles.filterChip, isActive && styles.filterChipActive]}
+                        onPress={() => setSortBy(sortOption.key)}
+                      >
+                        <Text
+                          style={[styles.filterChipText, isActive && styles.filterChipTextActive]}
+                        >
+                          {text.orders[sortOption.textKey]}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
             </View>
           </View>
+        ) : null}
 
-          <View style={styles.comparisonCard}>
-            <Text style={styles.comparisonTitle}>{text.orders.monthCompareTitle}</Text>
-            <View style={styles.comparisonRow}>
-              <Text style={styles.comparisonLabel}>{text.orders.thisMonthLabel}</Text>
-              <Text style={styles.comparisonValue}>{analytics.current.totalItems}</Text>
-            </View>
-            <View style={styles.comparisonTrack}>
-              <View
-                style={[
-                  styles.comparisonBarCurrent,
-                  { width: `${(analytics.current.totalItems / comparisonMax) * 100}%` },
-                ]}
-              />
-            </View>
-            <View style={styles.comparisonRow}>
-              <Text style={styles.comparisonLabel}>{text.orders.lastMonthLabel}</Text>
-              <Text style={styles.comparisonValue}>{analytics.previous.totalItems}</Text>
-            </View>
-            <View style={styles.comparisonTrack}>
-              <View
-                style={[
-                  styles.comparisonBarPrevious,
-                  { width: `${(analytics.previous.totalItems / comparisonMax) * 100}%` },
-                ]}
-              />
-            </View>
-            <Text style={styles.comparisonDelta}>
-              {text.orders.deltaLabel}: {analytics.delta.items >= 0 ? '+' : ''}
-              {analytics.delta.items}
-            </Text>
+        {analyticsLoading ? (
+          <View style={styles.statusCard}>
+            <Ionicons name="analytics-outline" size={18} color="#ab1e24" />
+            <Text style={styles.statusText}>{text.orders.loading}</Text>
           </View>
+        ) : null}
 
-          <View style={styles.insightsCard}>
-            <Text style={styles.insightsTitle}>{text.orders.insightsTitle}</Text>
-            <Text style={styles.insightLine}>
-              {text.orders.topProductLabel}:{' '}
-              {analytics.topProducts[0]
-                ? analytics.topProducts[0].nameFr || analytics.topProducts[0].nameZh
-                : text.orders.historyEmpty}
-            </Text>
-            <Text style={styles.insightLine}>
-              {text.orders.busiestDayLabel}:{' '}
-              {analytics.busiestDay
-                ? `${analytics.busiestDay.date} (${analytics.busiestDay.totalItems})`
-                : 'N/A'}
-            </Text>
-            <Text style={styles.insightLine}>
-              {text.orders.avgOrderItemsLabel}: {analytics.current.avgOrderItems}
-            </Text>
+        {analyticsError ? (
+          <View style={styles.statusCard}>
+            <Ionicons name="alert-circle-outline" size={18} color="#ab1e24" />
+            <Text style={styles.statusText}>{analyticsError}</Text>
           </View>
-        </>
-      ) : null}
+        ) : null}
 
-      <View style={styles.listBlock}>
-        {ordersByDate.map(([date, dateOrders]) => {
-          const isOpen = expandedDates[date] ?? false;
-          const totalItems = dateOrders.reduce((sum, order) => sum + order.totalItems, 0);
+        {analytics ? (
+          <>
+            <View style={styles.summaryCard}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionHeaderCopy}>
+                  <Text style={styles.sectionEyebrow}>{text.orders.periodTabsTitle}</Text>
+                  <Text style={styles.sectionTitle}>{activePeriodLabel}</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    {selectedSupplierGroup?.supplierName ?? text.orders.supplierTabsTitle}
+                  </Text>
+                </View>
+                <View style={styles.sectionCountPill}>
+                  <Text style={styles.sectionCountText}>{analytics.current.orders}</Text>
+                </View>
+              </View>
 
-          return (
-            <View key={`date-${date}`} style={styles.dateGroup}>
-              <Pressable
-                style={styles.dateHeaderButton}
-                onPress={() =>
-                  setExpandedDates((current) => ({
-                    ...current,
-                    [date]: !isOpen,
-                  }))
-                }
-              >
-                <Text style={styles.dateTitle}>{date}</Text>
-                <Text style={styles.dateSummary}>
-                  {dateOrders.length} / {totalItems}
+              <View style={styles.kpiGrid}>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>{text.orders.kpiUniqueProducts}</Text>
+                  <Text style={styles.kpiValue}>{analytics.current.uniqueProducts}</Text>
+                </View>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>{text.orders.kpiTotalItems}</Text>
+                  <Text style={styles.kpiValue}>{analytics.current.totalItems}</Text>
+                </View>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>{text.orders.kpiTotalAmount}</Text>
+                  <Text style={styles.kpiValue}>{formatAmount(analytics.current.totalAmount)}</Text>
+                </View>
+                <View style={styles.kpiCard}>
+                  <Text style={styles.kpiLabel}>{text.orders.kpiDeltaVsPrevious}</Text>
+                  <Text style={styles.kpiValue}>
+                    {analytics.delta.itemsRate !== null
+                      ? `${analytics.delta.itemsRate >= 0 ? '+' : ''}${analytics.delta.itemsRate}%`
+                      : '0%'}
+                  </Text>
+                  <View style={styles.kpiMetaRow}>
+                    <Text style={styles.kpiMetaText}>
+                      {text.orders.thisMonthLabel}: {analytics.current.totalItems}
+                    </Text>
+                    <Text style={styles.kpiMetaText}>
+                      {text.orders.lastMonthLabel}: {analytics.previous.totalItems}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            <View style={[styles.analyticsGrid, isWideLayout && styles.analyticsGridWide]}>
+              <View style={styles.infoCard}>
+                <Text style={styles.infoCardTitle}>{text.orders.monthCompareTitle}</Text>
+
+                <View style={styles.comparisonBlock}>
+                  <View style={styles.comparisonRow}>
+                    <Text style={styles.comparisonLabel}>{text.orders.thisMonthLabel}</Text>
+                    <Text style={styles.comparisonValue}>{analytics.current.totalItems}</Text>
+                  </View>
+                  <View style={styles.comparisonTrack}>
+                    <View
+                      style={[
+                        styles.comparisonBarCurrent,
+                        { width: `${(analytics.current.totalItems / comparisonMax) * 100}%` },
+                      ]}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.comparisonBlock}>
+                  <View style={styles.comparisonRow}>
+                    <Text style={styles.comparisonLabel}>{text.orders.lastMonthLabel}</Text>
+                    <Text style={styles.comparisonValue}>{analytics.previous.totalItems}</Text>
+                  </View>
+                  <View style={styles.comparisonTrack}>
+                    <View
+                      style={[
+                        styles.comparisonBarPrevious,
+                        { width: `${(analytics.previous.totalItems / comparisonMax) * 100}%` },
+                      ]}
+                    />
+                  </View>
+                </View>
+
+                <Text style={styles.comparisonDelta}>
+                  {text.orders.deltaLabel}: {analytics.delta.items >= 0 ? '+' : ''}
+                  {analytics.delta.items}
                 </Text>
-              </Pressable>
+              </View>
 
-              {isOpen
-                ? dateOrders.map((order) => (
-                    <View key={order.id} style={styles.docItem}>
-                      <Text style={styles.docItemTitle}>{order.number}</Text>
-                      <Text style={styles.docItemMeta}>
-                        {text.orders.deliveryAddressLabel}: {order.deliveryAddress}
-                      </Text>
-                      <Text style={styles.docItemMeta}>
-                        {text.orders.summaryItems}: {order.totalItems}
-                      </Text>
-                      <Text style={styles.docItemMeta}>
-                        {text.orders.summaryAmount}: {order.totalAmount.toFixed(2)}
-                      </Text>
-                      <View style={styles.actionsRow}>
-                        <Pressable
-                          style={[styles.secondaryButton, styles.actionButtonHalf]}
-                          onPress={() => onDownloadOrderBon(order)}
-                        >
-                          <Text style={styles.secondaryButtonText}>{text.orders.downloadBonButton}</Text>
-                        </Pressable>
-                        <Pressable
-                          style={[styles.secondaryButton, styles.actionButtonHalf]}
-                          onPress={() => onDeleteOrder(order)}
-                          disabled={deletingOrderId === order.id}
-                        >
-                          <Text style={styles.secondaryButtonText}>
-                            {deletingOrderId === order.id
-                              ? text.orders.deletingHistoryButton
-                              : text.orders.deleteHistoryButton}
-                          </Text>
-                        </Pressable>
+              <View style={styles.infoCard}>
+                <Text style={styles.infoCardTitle}>{text.orders.insightsTitle}</Text>
+                <View style={styles.insightRow}>
+                  <Ionicons name="pricetag-outline" size={16} color="#ab1e24" />
+                  <Text style={styles.insightText}>
+                    {text.orders.topProductLabel}:{' '}
+                    {analytics.topProducts[0]
+                      ? analytics.topProducts[0].nameFr || analytics.topProducts[0].nameZh
+                      : text.orders.historyEmpty}
+                  </Text>
+                </View>
+                <View style={styles.insightRow}>
+                  <Ionicons name="calendar-clear-outline" size={16} color="#ab1e24" />
+                  <Text style={styles.insightText}>
+                    {text.orders.busiestDayLabel}:{' '}
+                    {analytics.busiestDay
+                      ? `${analytics.busiestDay.date} (${analytics.busiestDay.totalItems})`
+                      : 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.insightRow}>
+                  <Ionicons name="cube-outline" size={16} color="#ab1e24" />
+                  <Text style={styles.insightText}>
+                    {text.orders.avgOrderItemsLabel}: {formatAverage(analytics.current.avgOrderItems)}
+                  </Text>
+                </View>
+              </View>
+
+              {analytics.monthlyTrend.length ? (
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoCardTitle}>{text.orders.trendTitle}</Text>
+                  {analytics.monthlyTrend.map((entry) => (
+                    <View key={`trend-${entry.month}`} style={styles.trendRow}>
+                      <Text style={styles.trendMonth}>{monthLabel(entry.month)}</Text>
+                      <View style={styles.trendValues}>
+                        <Text style={styles.trendMetric}>{entry.totalItems}</Text>
+                        <Text style={styles.trendMetric}>{entry.totalAmount.toFixed(0)}</Text>
                       </View>
                     </View>
-                  ))
-                : null}
+                  ))}
+                </View>
+              ) : null}
             </View>
-          );
-        })}
-      </View>
+          </>
+        ) : null}
 
-      {analytics?.monthlyTrend?.length ? (
-        <View style={styles.trendCard}>
-          <Text style={styles.trendTitle}>{text.orders.trendTitle}</Text>
-          {analytics.monthlyTrend.map((entry) => (
-            <View key={`trend-${entry.month}`} style={styles.trendRow}>
-              <Text style={styles.trendMonth}>{monthLabel(entry.month)}</Text>
-              <Text style={styles.trendMeta}>{entry.totalItems}</Text>
-              <Text style={styles.trendMeta}>{entry.totalAmount.toFixed(0)}</Text>
+        <View style={styles.historyCard}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeaderCopy}>
+              <Text style={styles.sectionEyebrow}>{text.orders.historyTitle}</Text>
+              <Text style={styles.sectionTitle}>
+                {selectedSupplierGroup?.supplierName ?? text.orders.supplierTabsTitle}
+              </Text>
+              <Text style={styles.sectionSubtitle}>{text.orders.historySubtitle}</Text>
             </View>
-          ))}
+            <View style={styles.sectionCountPill}>
+              <Text style={styles.sectionCountText}>{filteredSortedOrders.length}</Text>
+            </View>
+          </View>
+
+          {isLoading ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="time-outline" size={20} color="#ab1e24" />
+              <Text style={styles.emptyStateText}>{text.orders.loading}</Text>
+            </View>
+          ) : null}
+
+          {!isLoading && orders.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="receipt-outline" size={20} color="#ab1e24" />
+              <Text style={styles.emptyStateText}>{text.orders.historyEmpty}</Text>
+            </View>
+          ) : null}
+
+          {!isLoading && orders.length > 0 && filteredSortedOrders.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={20} color="#ab1e24" />
+              <Text style={styles.emptyStateText}>{text.orders.historyEmpty}</Text>
+            </View>
+          ) : null}
+
+          {!isLoading && filteredSortedOrders.length > 0 ? (
+            <View style={styles.listBlock}>
+              {ordersByDate.map(([date, dateOrders]) => {
+                const isOpen = expandedDates[date] ?? false;
+                const totalItems = dateOrders.reduce((sum, order) => sum + order.totalItems, 0);
+                const totalAmount = dateOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+
+                return (
+                  <View
+                    key={`date-${date}`}
+                    style={[styles.dateSection, isOpen && styles.dateSectionOpen]}
+                  >
+                    <Pressable
+                      style={styles.dateHeaderButton}
+                      onPress={() =>
+                        setExpandedDates((current) => ({
+                          ...current,
+                          [date]: !isOpen,
+                        }))
+                      }
+                    >
+                      <View style={styles.dateHeaderMain}>
+                        <View style={styles.dateIconWrap}>
+                          <Ionicons name="calendar-outline" size={16} color="#ab1e24" />
+                        </View>
+                        <View style={styles.dateInfo}>
+                          <Text style={styles.dateTitle}>{date}</Text>
+                          <View style={styles.dateMetaRow}>
+                            <View style={styles.dateMetaPill}>
+                              <Ionicons name="receipt-outline" size={13} color="#ab1e24" />
+                              <Text style={styles.dateMetaText}>{dateOrders.length}</Text>
+                            </View>
+                            <View style={styles.dateMetaPill}>
+                              <Ionicons name="cube-outline" size={13} color="#ab1e24" />
+                              <Text style={styles.dateMetaText}>{totalItems}</Text>
+                            </View>
+                            <View style={styles.dateMetaPill}>
+                              <Ionicons name="cash-outline" size={13} color="#ab1e24" />
+                              <Text style={styles.dateMetaText}>{formatAmount(totalAmount)}</Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                      <Ionicons
+                        name={isOpen ? 'chevron-up-outline' : 'chevron-down-outline'}
+                        size={18}
+                        color="#8d5a5f"
+                      />
+                    </Pressable>
+
+                    {isOpen ? (
+                      <View style={styles.ordersGrid}>
+                        {dateOrders.map((order) => (
+                          <View key={order.id} style={styles.orderCard}>
+                            <View style={styles.orderCardHeader}>
+                              <View style={styles.orderCardCopy}>
+                                <Text style={styles.orderNumber}>{order.number}</Text>
+                                <Text style={styles.orderAddress} numberOfLines={2}>
+                                  {order.deliveryAddress}
+                                </Text>
+                              </View>
+                              <View style={styles.orderAmountPill}>
+                                <Text style={styles.orderAmountLabel}>{text.orders.summaryAmount}</Text>
+                                <Text style={styles.orderAmountValue}>
+                                  {formatAmount(order.totalAmount)}
+                                </Text>
+                              </View>
+                            </View>
+
+                            <View style={styles.orderMetaGrid}>
+                              <View style={styles.orderMetaItem}>
+                                <Text style={styles.orderMetaLabel}>
+                                  {text.orders.deliveryAddressLabel}
+                                </Text>
+                                <Text style={styles.orderMetaValue} numberOfLines={2}>
+                                  {order.deliveryAddress}
+                                </Text>
+                              </View>
+                              <View style={styles.orderMetaItemSmall}>
+                                <Text style={styles.orderMetaLabel}>{text.orders.summaryItems}</Text>
+                                <Text style={styles.orderMetaValue}>{order.totalItems}</Text>
+                              </View>
+                              <View style={styles.orderMetaItemSmall}>
+                                <Text style={styles.orderMetaLabel}>
+                                  {text.orders.deliveryDateLabel}
+                                </Text>
+                                <Text style={styles.orderMetaValue}>{order.deliveryDate}</Text>
+                              </View>
+                            </View>
+
+                            <View style={styles.orderActionsRow}>
+                              <Pressable
+                                style={styles.primaryButton}
+                                onPress={() => onDownloadOrderBon(order)}
+                              >
+                                <Ionicons name="download-outline" size={16} color="#ffffff" />
+                                <Text style={styles.primaryButtonText}>
+                                  {text.orders.downloadBonButton}
+                                </Text>
+                              </Pressable>
+
+                              <Pressable
+                                style={[
+                                  styles.secondaryButton,
+                                  deletingOrderId === order.id && styles.disabledButton,
+                                ]}
+                                onPress={() => onDeleteOrder(order)}
+                                disabled={deletingOrderId === order.id}
+                              >
+                                <Ionicons name="trash-outline" size={16} color="#ab1e24" />
+                                <Text style={styles.secondaryButtonText}>
+                                  {deletingOrderId === order.id
+                                    ? text.orders.deletingHistoryButton
+                                    : text.orders.deleteHistoryButton}
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
         </View>
-      ) : null}
+      </ScrollView>
     </View>
   );
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { createRestaurant } from '../../services/restaurantsApi';
 import type { AppText } from '../../locales/translations';
@@ -42,44 +43,66 @@ export function AdminRestaurantPanel({
 
   return (
     <View style={styles.uploadCard}>
-      <Text style={styles.uploadTitle}>{text.adminRestaurant.title}</Text>
-      <Text style={styles.uploadSubtitle}>{text.adminRestaurant.subtitle}</Text>
+      <View style={styles.header}>
+        <View style={styles.headerMain}>
+          <View style={styles.headerIconWrap}>
+            <Ionicons name="storefront-outline" size={18} color="#ffffff" />
+          </View>
+          <Text style={styles.uploadTitle}>{text.adminRestaurant.title}</Text>
+        </View>
+        <View style={styles.statusPill}>
+          <Text style={styles.statusPillText}>
+            {text.adminRestaurant.newRestaurant}
+          </Text>
+        </View>
+      </View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <View style={styles.introStrip}>
+        <Text style={styles.uploadSubtitle}>{text.adminRestaurant.subtitle}</Text>
+      </View>
 
-      <Text style={styles.uploadFieldTitle}>
-        {text.adminRestaurant.newRestaurant}
-      </Text>
-      <TextInput
-        style={styles.input}
-        placeholder={text.adminRestaurant.namePlaceholder}
-        placeholderTextColor="#a98a8d"
-        value={restaurantName}
-        onChangeText={setRestaurantName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder={text.adminRestaurant.addressPlaceholder}
-        placeholderTextColor="#a98a8d"
-        value={restaurantAddress}
-        onChangeText={setRestaurantAddress}
-      />
-      <Pressable
-        style={[
-          styles.primaryButton,
-          isSavingRestaurant && styles.buttonDisabled,
-        ]}
-        disabled={isSavingRestaurant}
-        onPress={() => {
-          void onCreateRestaurant();
-        }}
-      >
-        <Text style={styles.primaryButtonText}>
-          {isSavingRestaurant
-            ? text.adminRestaurant.creating
-            : text.adminRestaurant.createButton}
-        </Text>
-      </Pressable>
+      <View style={styles.body}>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <View style={styles.fieldBlock}>
+          <Text style={styles.uploadFieldTitle}>
+            {text.adminRestaurant.newRestaurant}
+          </Text>
+          <TextInput
+            style={styles.input}
+            placeholder={text.adminRestaurant.namePlaceholder}
+            placeholderTextColor="#a98a8d"
+            value={restaurantName}
+            onChangeText={setRestaurantName}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder={text.adminRestaurant.addressPlaceholder}
+            placeholderTextColor="#a98a8d"
+            value={restaurantAddress}
+            onChangeText={setRestaurantAddress}
+          />
+        </View>
+      </View>
+
+      <View style={styles.footer}>
+        <Pressable
+          style={[
+            styles.primaryButton,
+            isSavingRestaurant && styles.buttonDisabled,
+          ]}
+          disabled={isSavingRestaurant}
+          onPress={() => {
+            void onCreateRestaurant();
+          }}
+        >
+          <Text style={styles.primaryButtonText}>
+            {isSavingRestaurant
+              ? text.adminRestaurant.creating
+              : text.adminRestaurant.createButton}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

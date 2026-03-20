@@ -1,4 +1,5 @@
 import * as DocumentPicker from 'expo-document-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
@@ -42,6 +43,9 @@ export function SupplierManagementPage({
 }: SupplierManagementPageProps) {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 560;
+  const isMediumScreen = width >= 760;
+  const isWideLayout = width >= 1400;
+  const useSingleColumnProductGrid = width < 1180;
 
   const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);
   const [products, setProducts] = useState<ProductItem[]>([]);
@@ -133,6 +137,20 @@ export function SupplierManagementPage({
     [products, selectedSupplierId],
   );
 
+  const supplierProductCountById = useMemo(() => {
+    const next = new Map<number, number>();
+
+    for (const supplier of suppliers) {
+      next.set(supplier.id, 0);
+    }
+
+    for (const product of products) {
+      next.set(product.supplierId, (next.get(product.supplierId) ?? 0) + 1);
+    }
+
+    return next;
+  }, [products, suppliers]);
+
   const filteredSupplierProducts = useMemo(() => {
     const normalizedFilter = productFilter.trim().toLowerCase();
     if (!normalizedFilter) {
@@ -192,6 +210,7 @@ export function SupplierManagementPage({
   const canMoveSelectedSupplierUp = selectedSupplierIndex > 0;
   const canMoveSelectedSupplierDown =
     selectedSupplierIndex >= 0 && selectedSupplierIndex < suppliers.length - 1;
+  const selectedSupplierProductCount = supplierProducts.length;
 
   useEffect(() => {
     if (!supplierProducts.some((product) => product.id === selectedProductId)) {
@@ -519,410 +538,618 @@ export function SupplierManagementPage({
     setConfirmSupplierDialogVisible(false);
   }
 
-  return (
-    <View style={styles.card}>
-      <Text style={styles.title}>{text.supplierManagement.title}</Text>
-      <Text style={styles.subtitle}>{text.supplierManagement.subtitle}</Text>
+  function renderFieldInput(options: {
+    label: string;
+    value: string;
+    onChangeText: (value: string) => void;
+    keyboardType?: 'default' | 'decimal-pad';
+    fullWidth?: boolean;
+  }) {
+    const {
+      label,
+      value,
+      onChangeText,
+      keyboardType = 'default',
+      fullWidth = false,
+    } = options;
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {isLoading ? (
-        <Text style={styles.docEmpty}>{text.supplierManagement.loading}</Text>
-      ) : null}
-
-      <Text style={styles.uploadFieldTitle}>
-        {text.supplierManagement.newSupplierLabel}
-      </Text>
-      <TextInput
-        style={styles.input}
-        placeholder={text.supplierManagement.newSupplierPlaceholder}
-        placeholderTextColor="#a98a8d"
-        value={newSupplierName}
-        onChangeText={setNewSupplierName}
-      />
-      <Pressable
-        style={[
-          styles.primaryButton,
-          isCreatingSupplier && styles.buttonDisabled,
-        ]}
-        disabled={isCreatingSupplier}
-        onPress={() => {
-          void onCreateSupplier();
-        }}
-      >
-        <Text style={styles.primaryButtonText}>
-          {isCreatingSupplier
-            ? text.supplierManagement.creatingSupplier
-            : text.supplierManagement.createSupplierButton}
-        </Text>
-      </Pressable>
-
-      <Text style={styles.uploadFieldTitle}>
-        {text.supplierManagement.suppliersLabel}
-      </Text>
-      <View style={styles.trainingTabRow}>
-        {suppliers.map((supplier) => (
-          <Pressable
-            key={supplier.id}
-            style={[
-              styles.trainingTab,
-              selectedSupplierId === supplier.id && styles.trainingTabActive,
-            ]}
-            onPress={() => setSelectedSupplierId(supplier.id)}
-          >
-            <Text
-              style={[
-                styles.trainingTabText,
-                selectedSupplierId === supplier.id &&
-                  styles.trainingTabTextActive,
-              ]}
-            >
-              {supplier.name}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      <Text style={styles.supplierOrderHint}>
-        {text.supplierManagement.supplierOrderHint}
-      </Text>
+    return (
       <View
         style={[
-          styles.supplierOrderActions,
-          isSmallScreen && styles.supplierOrderActionsSmall,
+          styles.fieldGroup,
+          isMediumScreen && !fullWidth && styles.fieldGroupHalf,
+          fullWidth && styles.fieldGroupFull,
         ]}
       >
-        <Pressable
-          style={[
-            styles.secondaryButton,
-            styles.supplierOrderButton,
-            (!canMoveSelectedSupplierUp || isReorderingSuppliers) &&
-              styles.buttonDisabled,
-          ]}
-          disabled={!canMoveSelectedSupplierUp || isReorderingSuppliers}
-          onPress={() => {
-            void onMoveSelectedSupplier(-1);
-          }}
-        >
-          <Text style={styles.secondaryButtonText}>
-            {text.supplierManagement.moveSupplierUpButton}
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[
-            styles.secondaryButton,
-            styles.supplierOrderButton,
-            (!canMoveSelectedSupplierDown || isReorderingSuppliers) &&
-              styles.buttonDisabled,
-          ]}
-          disabled={!canMoveSelectedSupplierDown || isReorderingSuppliers}
-          onPress={() => {
-            void onMoveSelectedSupplier(1);
-          }}
-        >
-          <Text style={styles.secondaryButtonText}>
-            {text.supplierManagement.moveSupplierDownButton}
-          </Text>
-        </Pressable>
+        <Text style={styles.fieldLabel}>{label}</Text>
+        <TextInput
+          style={styles.input}
+          placeholder={label}
+          placeholderTextColor="#a98a8d"
+          value={value}
+          onChangeText={onChangeText}
+          keyboardType={keyboardType}
+        />
       </View>
-      {isReorderingSuppliers ? (
-        <Text style={styles.docEmpty}>
-          {text.supplierManagement.reorderingSupplier}
-        </Text>
-      ) : null}
-      <Pressable
-        style={[
-          styles.dangerButton,
-          (!selectedSupplier ||
-            deletingSupplierId !== null ||
-            isReorderingSuppliers) &&
-            styles.buttonDisabled,
-        ]}
-        disabled={
-          !selectedSupplier ||
-          deletingSupplierId !== null ||
-          isReorderingSuppliers
-        }
-        onPress={() => {
-          if (selectedSupplier) {
-            void onDeleteSupplier(selectedSupplier);
-          }
-        }}
+    );
+  }
+
+  return (
+    <View style={styles.pageRoot}>
+      <ScrollView
+        style={styles.pageScroll}
+        contentContainerStyle={styles.pageContent}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.dangerButtonText}>
-          {deletingSupplierId !== null
-            ? text.supplierManagement.deletingSupplier
-            : text.supplierManagement.deleteSupplierButton}
-        </Text>
-      </Pressable>
+        <View style={styles.heroCard}>
+          <View style={styles.heroHeader}>
+            <View style={styles.heroCopy}>
+              <Text style={styles.title}>{text.supplierManagement.title}</Text>
+              <Text style={styles.subtitle}>{text.supplierManagement.subtitle}</Text>
+            </View>
 
-      <Text style={styles.uploadFieldTitle}>
-        {text.supplierManagement.newProductLabel}
-      </Text>
-      {!selectedSupplierId ? (
-        <Text style={styles.docEmpty}>
-          {text.supplierManagement.selectSupplierFirst}
-        </Text>
-      ) : null}
-      <TextInput
-        style={styles.input}
-        placeholder={text.supplierManagement.fields.reference}
-        placeholderTextColor="#a98a8d"
-        value={newProductReference}
-        onChangeText={setNewProductReference}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder={text.supplierManagement.fields.category}
-        placeholderTextColor="#a98a8d"
-        value={newProductCategory}
-        onChangeText={setNewProductCategory}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder={text.supplierManagement.fields.nameZh}
-        placeholderTextColor="#a98a8d"
-        value={newProductNameZh}
-        onChangeText={setNewProductNameZh}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder={text.supplierManagement.fields.nameFr}
-        placeholderTextColor="#a98a8d"
-        value={newProductNameFr}
-        onChangeText={setNewProductNameFr}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder={text.supplierManagement.fields.specification}
-        placeholderTextColor="#a98a8d"
-        value={newProductSpecification}
-        onChangeText={setNewProductSpecification}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder={text.supplierManagement.fields.unit}
-        placeholderTextColor="#a98a8d"
-        value={newProductUnit}
-        onChangeText={setNewProductUnit}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder={text.supplierManagement.fields.priceHt}
-        placeholderTextColor="#a98a8d"
-        keyboardType="decimal-pad"
-        value={newProductPriceHt}
-        onChangeText={setNewProductPriceHt}
-      />
-      <Pressable
-        style={[
-          styles.primaryButton,
-          (!selectedSupplierId || isCreatingProduct) && styles.buttonDisabled,
-        ]}
-        disabled={!selectedSupplierId || isCreatingProduct}
-        onPress={() => {
-          void onCreateProduct();
-        }}
-      >
-        <Text style={styles.primaryButtonText}>
-          {isCreatingProduct
-            ? text.supplierManagement.creatingProduct
-            : text.supplierManagement.createProductButton}
-        </Text>
-      </Pressable>
+            {selectedSupplier ? (
+              <View style={styles.heroBadge}>
+                <Ionicons name="business-outline" size={16} color="#ab1e24" />
+                <Text style={styles.heroBadgeText} numberOfLines={1}>
+                  {selectedSupplier.name}
+                </Text>
+              </View>
+            ) : null}
+          </View>
 
-      <Text style={styles.uploadFieldTitle}>
-        {text.supplierManagement.productsLabel}
-      </Text>
-      <TextInput
-        style={styles.input}
-        placeholder={text.supplierManagement.filterProductsPlaceholder}
-        placeholderTextColor="#a98a8d"
-        value={productFilter}
-        onChangeText={setProductFilter}
-      />
-      <View style={[styles.listBlock, styles.productGrid]}>
-        {supplierProducts.length === 0 ? (
-          <Text style={styles.docEmpty}>
-            {text.supplierManagement.noProduct}
-          </Text>
-        ) : filteredSupplierProducts.length === 0 ? (
-          <Text style={styles.docEmpty}>
-            {text.supplierManagement.noFilteredProduct}
-          </Text>
-        ) : (
-          paginatedProducts.map((product) => {
-            const infoRowStyle = isSmallScreen
-              ? styles.productInfoRowSmall
-              : styles.productInfoRow;
-            const productGridItemStyle = isSmallScreen
-              ? styles.productGridItemSmall
-              : styles.productGridItem;
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {isLoading ? (
+            <Text style={styles.docEmpty}>{text.supplierManagement.loading}</Text>
+          ) : (
+            <View style={styles.statGrid}>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{suppliers.length}</Text>
+                <Text style={styles.statLabel}>
+                  {text.supplierManagement.suppliersLabel}
+                </Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{selectedSupplierProductCount}</Text>
+                <Text style={styles.statLabel}>
+                  {text.supplierManagement.productsLabel}
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
 
-            return (
+        <View style={[styles.mainGrid, isWideLayout && styles.mainGridWide]}>
+          <View
+            style={[styles.sidebarColumn, isWideLayout && styles.sidebarColumnWide]}
+          >
+            <View style={styles.surfaceCard}>
+              <View style={styles.surfaceHeader}>
+                <View style={styles.surfaceHeaderCopy}>
+                  <Text style={styles.surfaceEyebrow}>
+                    {text.supplierManagement.suppliersLabel}
+                  </Text>
+                  <Text style={styles.surfaceTitle}>
+                    {selectedSupplier?.name ?? text.supplierManagement.suppliersLabel}
+                  </Text>
+                  <Text style={styles.surfaceSubtitle}>
+                    {text.supplierManagement.supplierOrderHint}
+                  </Text>
+                </View>
+                <Text style={styles.surfacePill}>{suppliers.length}</Text>
+              </View>
+
               <View
-                key={product.id}
                 style={[
-                  styles.docItem,
-                  productGridItemStyle,
-                  selectedProductId === product.id && styles.trainingTabActive,
+                  styles.inlineCreateRow,
+                  !isMediumScreen && styles.inlineCreateRowStack,
                 ]}
               >
-                <View style={styles.productCardHeaderRow}>
-                  <Pressable
-                    style={styles.productCardContentPressable}
-                    onPress={() => {
-                      setSelectedProductId(product.id);
-                      setIsEditorOpen(true);
-                    }}
-                  >
-                    <View style={infoRowStyle}>
-                      {product.image ? (
-                        <View
-                          style={[
-                            styles.productImageFrame,
-                            isSmallScreen && styles.productImageFrameSmall,
-                          ]}
-                        >
-                          <Image
-                            source={{ uri: product.image }}
-                            style={styles.productImageThumb}
-                            resizeMode="cover"
-                          />
-                        </View>
-                      ) : null}
+                <View style={styles.inlineInputWrap}>
+                  <Text style={styles.fieldLabel}>
+                    {text.supplierManagement.newSupplierLabel}
+                  </Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={text.supplierManagement.newSupplierPlaceholder}
+                    placeholderTextColor="#a98a8d"
+                    value={newSupplierName}
+                    onChangeText={setNewSupplierName}
+                  />
+                </View>
 
-                      <View
+                <Pressable
+                  style={[
+                    styles.primaryButton,
+                    styles.inlineButton,
+                    isCreatingSupplier && styles.buttonDisabled,
+                  ]}
+                  disabled={isCreatingSupplier}
+                  onPress={() => {
+                    void onCreateSupplier();
+                  }}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {isCreatingSupplier
+                      ? text.supplierManagement.creatingSupplier
+                      : text.supplierManagement.createSupplierButton}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.supplierCards}>
+                {suppliers.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <Text style={styles.docEmpty}>
+                      {text.supplierManagement.loading}
+                    </Text>
+                  </View>
+                ) : (
+                  suppliers.map((supplier, index) => {
+                    const isActive = selectedSupplierId === supplier.id;
+
+                    return (
+                      <Pressable
+                        key={supplier.id}
                         style={[
-                          styles.productInfoColumn,
-                          isSmallScreen && styles.productInfoColumnSmall,
+                          styles.supplierCard,
+                          isActive && styles.supplierCardActive,
                         ]}
+                        onPress={() => setSelectedSupplierId(supplier.id)}
                       >
-                        <Text
-                          style={[
-                            styles.docItemTitle,
-                            selectedProductId === product.id &&
-                              styles.trainingTabTextActive,
-                          ]}
-                        >
-                          {product.nameFr ?? product.nameZh}
-                        </Text>
-                        {product.nameFr &&
-                        product.nameZh &&
-                        product.nameFr !== product.nameZh ? (
+                        <View style={styles.supplierCardTitleRow}>
                           <Text
                             style={[
-                              styles.docItemMeta,
-                              selectedProductId === product.id &&
-                                styles.trainingTabTextActive,
+                              styles.supplierCardTitle,
+                              isActive && styles.supplierCardTitleActive,
                             ]}
+                            numberOfLines={1}
                           >
-                            {product.nameZh}
+                            {supplier.name}
                           </Text>
-                        ) : null}
-                        <Text
-                          style={[
-                            styles.docItemMeta,
-                            selectedProductId === product.id &&
-                              styles.trainingTabTextActive,
-                          ]}
-                        >
-                          {product.category}
-                        </Text>
-                        {product.specification ? (
                           <Text
                             style={[
-                              styles.docItemMeta,
-                              selectedProductId === product.id &&
-                                styles.trainingTabTextActive,
+                              styles.supplierCardIndex,
+                              isActive && styles.supplierCardIndexActive,
                             ]}
                           >
-                            {text.supplierManagement.fields.specification}:{' '}
-                            {product.specification}
+                            #{index + 1}
                           </Text>
-                        ) : null}
-                        <Text
-                          style={[
-                            styles.docItemMeta,
-                            selectedProductId === product.id &&
-                              styles.trainingTabTextActive,
-                          ]}
-                        >
-                          {text.supplierManagement.tapToEdit}
-                        </Text>
-                      </View>
-                    </View>
-                  </Pressable>
-
-                  <Pressable
-                    style={styles.productDeleteIconButton}
-                    disabled={deletingProductId === product.id}
-                    onPress={() => {
-                      void onDeleteProduct(product);
-                    }}
-                  >
-                    {deletingProductId === product.id ? (
-                      <Text style={styles.productDeleteLoading}>…</Text>
-                    ) : (
-                      <View style={styles.trashIcon}>
-                        <View style={styles.trashLid} />
-                        <View style={styles.trashBody}>
-                          <View style={styles.trashBar} />
-                          <View style={styles.trashBar} />
                         </View>
-                      </View>
-                    )}
-                  </Pressable>
+
+                        <View style={styles.supplierCardMetaRow}>
+                          <Text
+                            style={[
+                              styles.supplierCardMeta,
+                              isActive && styles.supplierCardMetaActive,
+                            ]}
+                          >
+                            {text.supplierManagement.productsLabel}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.supplierCardCount,
+                              isActive && styles.supplierCardCountActive,
+                            ]}
+                          >
+                            {supplierProductCountById.get(supplier.id) ?? 0}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })
+                )}
+              </View>
+
+              <View style={styles.surfaceDivider} />
+
+              <View
+                style={[
+                  styles.actionRail,
+                  !isMediumScreen && styles.actionRailStack,
+                ]}
+              >
+                <Pressable
+                  style={[
+                    styles.secondaryButton,
+                    styles.actionButtonFlex,
+                    (!canMoveSelectedSupplierUp || isReorderingSuppliers) &&
+                      styles.buttonDisabled,
+                  ]}
+                  disabled={!canMoveSelectedSupplierUp || isReorderingSuppliers}
+                  onPress={() => {
+                    void onMoveSelectedSupplier(-1);
+                  }}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    {text.supplierManagement.moveSupplierUpButton}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.secondaryButton,
+                    styles.actionButtonFlex,
+                    (!canMoveSelectedSupplierDown || isReorderingSuppliers) &&
+                      styles.buttonDisabled,
+                  ]}
+                  disabled={!canMoveSelectedSupplierDown || isReorderingSuppliers}
+                  onPress={() => {
+                    void onMoveSelectedSupplier(1);
+                  }}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    {text.supplierManagement.moveSupplierDownButton}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.dangerButton,
+                    styles.actionButtonFlex,
+                    (!selectedSupplier ||
+                      deletingSupplierId !== null ||
+                      isReorderingSuppliers) &&
+                      styles.buttonDisabled,
+                  ]}
+                  disabled={
+                    !selectedSupplier ||
+                    deletingSupplierId !== null ||
+                    isReorderingSuppliers
+                  }
+                  onPress={() => {
+                    if (selectedSupplier) {
+                      void onDeleteSupplier(selectedSupplier);
+                    }
+                  }}
+                >
+                  <Text style={styles.dangerButtonText}>
+                    {deletingSupplierId !== null
+                      ? text.supplierManagement.deletingSupplier
+                      : text.supplierManagement.deleteSupplierButton}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {isReorderingSuppliers ? (
+                <Text style={styles.helperText}>
+                  {text.supplierManagement.reorderingSupplier}
+                </Text>
+              ) : null}
+            </View>
+
+            <View style={styles.surfaceCard}>
+              <View style={styles.surfaceHeader}>
+                <View style={styles.surfaceHeaderCopy}>
+                  <Text style={styles.surfaceEyebrow}>
+                    {text.supplierManagement.newProductLabel}
+                  </Text>
+                  <Text style={styles.surfaceTitle}>
+                    {text.supplierManagement.createProductButton}
+                  </Text>
+                  <Text style={styles.surfaceSubtitle}>
+                    {selectedSupplier
+                      ? selectedSupplier.name
+                      : text.supplierManagement.selectSupplierFirst}
+                  </Text>
+                </View>
+                {selectedSupplier ? (
+                  <Text style={styles.surfacePill} numberOfLines={1}>
+                    {selectedSupplier.name}
+                  </Text>
+                ) : null}
+              </View>
+
+              {!selectedSupplierId ? (
+                <View style={styles.emptyCard}>
+                  <Text style={styles.docEmpty}>
+                    {text.supplierManagement.selectSupplierFirst}
+                  </Text>
+                </View>
+              ) : null}
+
+              <View style={[styles.fieldGrid, isMediumScreen && styles.fieldGridWide]}>
+                {renderFieldInput({
+                  label: text.supplierManagement.fields.reference,
+                  value: newProductReference,
+                  onChangeText: setNewProductReference,
+                })}
+                {renderFieldInput({
+                  label: text.supplierManagement.fields.category,
+                  value: newProductCategory,
+                  onChangeText: setNewProductCategory,
+                })}
+                {renderFieldInput({
+                  label: text.supplierManagement.fields.nameZh,
+                  value: newProductNameZh,
+                  onChangeText: setNewProductNameZh,
+                  fullWidth: true,
+                })}
+                {renderFieldInput({
+                  label: text.supplierManagement.fields.nameFr,
+                  value: newProductNameFr,
+                  onChangeText: setNewProductNameFr,
+                  fullWidth: true,
+                })}
+                {renderFieldInput({
+                  label: text.supplierManagement.fields.specification,
+                  value: newProductSpecification,
+                  onChangeText: setNewProductSpecification,
+                  fullWidth: true,
+                })}
+                {renderFieldInput({
+                  label: text.supplierManagement.fields.unit,
+                  value: newProductUnit,
+                  onChangeText: setNewProductUnit,
+                })}
+                {renderFieldInput({
+                  label: text.supplierManagement.fields.priceHt,
+                  value: newProductPriceHt,
+                  onChangeText: setNewProductPriceHt,
+                  keyboardType: 'decimal-pad',
+                })}
+              </View>
+
+              <Pressable
+                style={[
+                  styles.primaryButton,
+                  (!selectedSupplierId || isCreatingProduct) && styles.buttonDisabled,
+                ]}
+                disabled={!selectedSupplierId || isCreatingProduct}
+                onPress={() => {
+                  void onCreateProduct();
+                }}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {isCreatingProduct
+                    ? text.supplierManagement.creatingProduct
+                    : text.supplierManagement.createProductButton}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <View
+            style={[styles.contentColumn, isWideLayout && styles.contentColumnWide]}
+          >
+            <View style={styles.surfaceCard}>
+              <View style={styles.surfaceHeader}>
+                <View style={styles.surfaceHeaderCopy}>
+                  <Text style={styles.surfaceEyebrow}>
+                    {text.supplierManagement.productsLabel}
+                  </Text>
+                  <Text style={styles.surfaceTitle}>
+                    {selectedSupplier?.name ?? text.supplierManagement.productsLabel}
+                  </Text>
+                  <Text style={styles.surfaceSubtitle}>
+                    {selectedSupplier
+                      ? `${filteredSupplierProducts.length}/${selectedSupplierProductCount}`
+                      : text.supplierManagement.selectSupplierFirst}
+                  </Text>
+                </View>
+                <Text style={styles.surfacePill}>{filteredSupplierProducts.length}</Text>
+              </View>
+
+              <View style={styles.searchFieldWrap}>
+                <Text style={styles.fieldLabel}>
+                  {text.supplierManagement.filterProductsPlaceholder}
+                </Text>
+                <View style={styles.searchRow}>
+                  <View style={styles.searchIconWrap}>
+                    <Ionicons name="search-outline" size={16} color="#8d5a5f" />
+                  </View>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder={text.supplierManagement.filterProductsPlaceholder}
+                    placeholderTextColor="#a98a8d"
+                    value={productFilter}
+                    onChangeText={setProductFilter}
+                  />
                 </View>
               </View>
-            );
-          })
-        )}
-      </View>
 
-      {filteredSupplierProducts.length > PRODUCTS_PER_PAGE ? (
-        <View
-          style={[
-            styles.paginationRow,
-            isSmallScreen && styles.paginationRowSmall,
-          ]}
-        >
-          <Pressable
-            style={[
-              styles.secondaryButton,
-              isSmallScreen && styles.paginationButtonSmall,
-              currentPage === 1 && styles.buttonDisabled,
-            ]}
-            disabled={currentPage === 1}
-            onPress={() =>
-              setCurrentPage((previous) => Math.max(1, previous - 1))
-            }
-          >
-            <Text style={styles.secondaryButtonText}>
-              {text.supplierManagement.paginationPrevious}
-            </Text>
-          </Pressable>
+              <View style={[styles.listBlock, styles.productGrid]}>
+                {!selectedSupplierId ? (
+                  <View style={styles.emptyCard}>
+                    <Text style={styles.docEmpty}>
+                      {text.supplierManagement.selectSupplierFirst}
+                    </Text>
+                  </View>
+                ) : supplierProducts.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <Text style={styles.docEmpty}>{text.supplierManagement.noProduct}</Text>
+                  </View>
+                ) : filteredSupplierProducts.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <Text style={styles.docEmpty}>
+                      {text.supplierManagement.noFilteredProduct}
+                    </Text>
+                  </View>
+                ) : (
+                  paginatedProducts.map((product) => {
+                    const infoRowStyle = isSmallScreen
+                      ? styles.productInfoRowSmall
+                      : styles.productInfoRow;
+                    const productGridItemStyle = useSingleColumnProductGrid
+                      ? styles.productGridItemSmall
+                      : styles.productGridItem;
+                    const isSelected = selectedProductId === product.id;
+                    const productLabel = product.nameFr ?? product.nameZh;
 
-          <Text style={styles.paginationInfo}>
-            {text.supplierManagement.paginationPageLabel} {currentPage}/
-            {totalPages}
-          </Text>
+                    return (
+                      <View
+                        key={product.id}
+                        style={[
+                          styles.productCard,
+                          productGridItemStyle,
+                          isSelected && styles.productCardActive,
+                        ]}
+                      >
+                        <View style={styles.productCardHeader}>
+                          <View style={styles.productBadgeRow}>
+                            <View style={styles.productBadge}>
+                              <Text style={styles.productBadgeText} numberOfLines={1}>
+                                {product.category}
+                              </Text>
+                            </View>
+                            {product.reference ? (
+                              <View style={styles.productBadge}>
+                                <Text style={styles.productBadgeText} numberOfLines={1}>
+                                  {product.reference}
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
 
-          <Pressable
-            style={[
-              styles.secondaryButton,
-              isSmallScreen && styles.paginationButtonSmall,
-              currentPage >= totalPages && styles.buttonDisabled,
-            ]}
-            disabled={currentPage >= totalPages}
-            onPress={() =>
-              setCurrentPage((previous) => Math.min(totalPages, previous + 1))
-            }
-          >
-            <Text style={styles.secondaryButtonText}>
-              {text.supplierManagement.paginationNext}
-            </Text>
-          </Pressable>
+                          <Pressable
+                            style={styles.productDeleteIconButton}
+                            disabled={deletingProductId === product.id}
+                            onPress={() => {
+                              void onDeleteProduct(product);
+                            }}
+                          >
+                            {deletingProductId === product.id ? (
+                              <Text style={styles.productDeleteLoading}>…</Text>
+                            ) : (
+                              <View style={styles.trashIcon}>
+                                <View style={styles.trashLid} />
+                                <View style={styles.trashBody}>
+                                  <View style={styles.trashBar} />
+                                  <View style={styles.trashBar} />
+                                </View>
+                              </View>
+                            )}
+                          </Pressable>
+                        </View>
+
+                        <Pressable
+                          style={styles.productCardContentPressable}
+                          onPress={() => {
+                            setSelectedProductId(product.id);
+                            setIsEditorOpen(true);
+                          }}
+                        >
+                          <View style={infoRowStyle}>
+                            {product.image ? (
+                              <View
+                                style={[
+                                  styles.productImageFrame,
+                                  isSmallScreen && styles.productImageFrameSmall,
+                                ]}
+                              >
+                                <Image
+                                  source={{ uri: product.image }}
+                                  style={styles.productImageThumb}
+                                  resizeMode="cover"
+                                />
+                              </View>
+                            ) : (
+                              <View
+                                style={[
+                                  styles.productImagePlaceholder,
+                                  isSmallScreen && styles.productImageFrameSmall,
+                                ]}
+                              >
+                                <Ionicons
+                                  name="image-outline"
+                                  size={26}
+                                  color="#ab1e24"
+                                />
+                              </View>
+                            )}
+
+                            <View
+                              style={[
+                                styles.productInfoColumn,
+                                isSmallScreen && styles.productInfoColumnSmall,
+                              ]}
+                            >
+                              <Text style={styles.productCardTitle} numberOfLines={2}>
+                                {productLabel}
+                              </Text>
+                              {product.nameFr &&
+                              product.nameZh &&
+                              product.nameFr !== product.nameZh ? (
+                                <Text style={styles.productCardSubtitle} numberOfLines={1}>
+                                  {product.nameZh}
+                                </Text>
+                              ) : null}
+                              {product.specification ? (
+                                <Text style={styles.docItemMeta} numberOfLines={1}>
+                                  {text.supplierManagement.fields.specification}:{' '}
+                                  {product.specification}
+                                </Text>
+                              ) : null}
+                              {product.unit ? (
+                                <Text style={styles.docItemMeta} numberOfLines={1}>
+                                  {text.supplierManagement.fields.unit}: {product.unit}
+                                </Text>
+                              ) : null}
+                              <Text style={styles.productPriceLabel}>
+                                {text.supplierManagement.fields.priceHt}:{' '}
+                                {product.priceHt === null ? '—' : product.priceHt.toFixed(2)}
+                              </Text>
+                              <Text style={styles.productEditHint}>
+                                {text.supplierManagement.tapToEdit}
+                              </Text>
+                            </View>
+                          </View>
+                        </Pressable>
+                      </View>
+                    );
+                  })
+                )}
+              </View>
+
+              {filteredSupplierProducts.length > PRODUCTS_PER_PAGE ? (
+                <View
+                  style={[
+                    styles.paginationRow,
+                    isSmallScreen && styles.paginationRowSmall,
+                  ]}
+                >
+                  <Pressable
+                    style={[
+                      styles.secondaryButton,
+                      isSmallScreen && styles.paginationButtonSmall,
+                      currentPage === 1 && styles.buttonDisabled,
+                    ]}
+                    disabled={currentPage === 1}
+                    onPress={() =>
+                      setCurrentPage((previous) => Math.max(1, previous - 1))
+                    }
+                  >
+                    <Text style={styles.secondaryButtonText}>
+                      {text.supplierManagement.paginationPrevious}
+                    </Text>
+                  </Pressable>
+
+                  <Text style={styles.paginationInfo}>
+                    {text.supplierManagement.paginationPageLabel} {currentPage}/
+                    {totalPages}
+                  </Text>
+
+                  <Pressable
+                    style={[
+                      styles.secondaryButton,
+                      isSmallScreen && styles.paginationButtonSmall,
+                      currentPage >= totalPages && styles.buttonDisabled,
+                    ]}
+                    disabled={currentPage >= totalPages}
+                    onPress={() =>
+                      setCurrentPage((previous) =>
+                        Math.min(totalPages, previous + 1),
+                      )
+                    }
+                  >
+                    <Text style={styles.secondaryButtonText}>
+                      {text.supplierManagement.paginationNext}
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : null}
+            </View>
+          </View>
         </View>
-      ) : null}
+      </ScrollView>
 
       <Modal
         visible={isEditorOpen && Boolean(selectedProduct)}
@@ -932,7 +1159,10 @@ export function SupplierManagementPage({
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <ScrollView contentContainerStyle={styles.modalContent}>
+            <ScrollView
+              contentContainerStyle={styles.modalContent}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.modalHeaderRow}>
                 <Text style={styles.docBlockTitle}>
                   {text.supplierManagement.editProductTitle}
@@ -949,91 +1179,138 @@ export function SupplierManagementPage({
 
               {selectedProduct ? (
                 <>
-                  <TextInput
-                    style={styles.input}
-                    placeholder={text.supplierManagement.fields.nameZh}
-                    placeholderTextColor="#a98a8d"
-                    value={editNameZh}
-                    onChangeText={setEditNameZh}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder={text.supplierManagement.fields.nameFr}
-                    placeholderTextColor="#a98a8d"
-                    value={editNameFr}
-                    onChangeText={setEditNameFr}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder={text.supplierManagement.fields.specification}
-                    placeholderTextColor="#a98a8d"
-                    value={editSpecification}
-                    onChangeText={setEditSpecification}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder={text.supplierManagement.fields.category}
-                    placeholderTextColor="#a98a8d"
-                    value={editCategory}
-                    onChangeText={setEditCategory}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder={text.supplierManagement.fields.priceHt}
-                    placeholderTextColor="#a98a8d"
-                    keyboardType="decimal-pad"
-                    value={editPriceHt}
-                    onChangeText={setEditPriceHt}
-                  />
+                  <View
+                    style={[
+                      styles.modalPreviewCard,
+                      isMediumScreen && styles.modalPreviewCardWide,
+                    ]}
+                  >
+                    {editImage ? (
+                      <View style={styles.modalPreviewImageWrap}>
+                        <Image
+                          source={{ uri: editImage }}
+                          style={styles.productImagePreview}
+                          resizeMode="cover"
+                        />
+                      </View>
+                    ) : (
+                      <View style={styles.modalPreviewImagePlaceholder}>
+                        <Ionicons name="image-outline" size={28} color="#ab1e24" />
+                      </View>
+                    )}
 
-                  <Text style={styles.docItemMeta}>
-                    {text.supplierManagement.fields.image}
-                  </Text>
-                  {editImage ? (
-                    <View style={styles.productImageFrame}>
-                      <Image
-                        source={{ uri: editImage }}
-                        style={styles.productImagePreview}
-                        resizeMode="cover"
-                      />
+                    <View style={styles.modalPreviewCopy}>
+                      <Text style={styles.modalPreviewTitle}>
+                        {selectedProduct.nameFr ?? selectedProduct.nameZh}
+                      </Text>
+                      <View style={styles.modalPreviewChipRow}>
+                        <View style={styles.modalPreviewChip}>
+                          <Text style={styles.modalPreviewChipText}>
+                            {selectedSupplier?.name ?? text.supplierManagement.suppliersLabel}
+                          </Text>
+                        </View>
+                        <View style={styles.modalPreviewChip}>
+                          <Text style={styles.modalPreviewChipText}>
+                            {selectedProduct.category}
+                          </Text>
+                        </View>
+                        {selectedProduct.reference ? (
+                          <View style={styles.modalPreviewChip}>
+                            <Text style={styles.modalPreviewChipText}>
+                              {selectedProduct.reference}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
                     </View>
-                  ) : null}
-                  <Text style={styles.docItemLink}>
-                    {editImage || text.supplierManagement.noImage}
-                  </Text>
-                  <Pressable
-                    style={[
-                      styles.secondaryButton,
-                      isUploadingImage && styles.buttonDisabled,
-                    ]}
-                    disabled={isUploadingImage}
-                    onPress={() => {
-                      void onUploadProductImage();
-                    }}
-                  >
-                    <Text style={styles.secondaryButtonText}>
-                      {isUploadingImage
-                        ? text.supplierManagement.uploadingImage
-                        : text.supplierManagement.uploadImageButton}
-                    </Text>
-                  </Pressable>
+                  </View>
 
-                  <Pressable
-                    style={[
-                      styles.primaryButton,
-                      isSavingProduct && styles.buttonDisabled,
-                    ]}
-                    disabled={isSavingProduct}
-                    onPress={() => {
-                      void onSaveProduct();
-                    }}
-                  >
-                    <Text style={styles.primaryButtonText}>
-                      {isSavingProduct
-                        ? text.supplierManagement.savingProduct
-                        : text.supplierManagement.saveProductButton}
+                  <View style={[styles.fieldGrid, isMediumScreen && styles.fieldGridWide]}>
+                    {renderFieldInput({
+                      label: text.supplierManagement.fields.nameZh,
+                      value: editNameZh,
+                      onChangeText: setEditNameZh,
+                      fullWidth: true,
+                    })}
+                    {renderFieldInput({
+                      label: text.supplierManagement.fields.nameFr,
+                      value: editNameFr,
+                      onChangeText: setEditNameFr,
+                      fullWidth: true,
+                    })}
+                    {renderFieldInput({
+                      label: text.supplierManagement.fields.specification,
+                      value: editSpecification,
+                      onChangeText: setEditSpecification,
+                      fullWidth: true,
+                    })}
+                    {renderFieldInput({
+                      label: text.supplierManagement.fields.category,
+                      value: editCategory,
+                      onChangeText: setEditCategory,
+                    })}
+                    {renderFieldInput({
+                      label: text.supplierManagement.fields.priceHt,
+                      value: editPriceHt,
+                      onChangeText: setEditPriceHt,
+                      keyboardType: 'decimal-pad',
+                    })}
+                  </View>
+
+                  <View style={styles.imageManagerCard}>
+                    <Text style={styles.fieldLabel}>
+                      {text.supplierManagement.fields.image}
                     </Text>
-                  </Pressable>
+                    <Text
+                      style={styles.docItemLink}
+                      numberOfLines={1}
+                      ellipsizeMode="middle"
+                    >
+                      {editImage || text.supplierManagement.noImage}
+                    </Text>
+
+                    <View
+                      style={[
+                        styles.actionRail,
+                        !isMediumScreen && styles.actionRailStack,
+                      ]}
+                    >
+                      <Pressable
+                        style={[
+                          styles.secondaryButton,
+                          styles.actionButtonFlex,
+                          isUploadingImage && styles.buttonDisabled,
+                        ]}
+                        disabled={isUploadingImage}
+                        onPress={() => {
+                          void onUploadProductImage();
+                        }}
+                      >
+                        <Text style={styles.secondaryButtonText}>
+                          {isUploadingImage
+                            ? text.supplierManagement.uploadingImage
+                            : text.supplierManagement.uploadImageButton}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={[
+                          styles.primaryButton,
+                          styles.actionButtonFlex,
+                          isSavingProduct && styles.buttonDisabled,
+                        ]}
+                        disabled={isSavingProduct}
+                        onPress={() => {
+                          void onSaveProduct();
+                        }}
+                      >
+                        <Text style={styles.primaryButtonText}>
+                          {isSavingProduct
+                            ? text.supplierManagement.savingProduct
+                            : text.supplierManagement.saveProductButton}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
                 </>
               ) : null}
             </ScrollView>

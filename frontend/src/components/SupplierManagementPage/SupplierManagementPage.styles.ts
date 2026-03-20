@@ -1,148 +1,479 @@
 import { StyleSheet } from 'react-native';
 
+const BORDER = 'rgba(171, 30, 36, 0.12)';
+const SOFT_BORDER = 'rgba(171, 30, 36, 0.08)';
+const CARD = '#fffdfb';
+const PANEL = '#ffffff';
+const BRAND = '#ab1e24';
+const BRAND_SOFT = '#fff3ef';
+const TEXT = '#5f1c21';
+const MUTED = '#8d5a5f';
+
 export const styles = StyleSheet.create({
-  listBlock: {
-    gap: 8,
-    marginTop: 4,
-  },
-  card: {
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#e8c3c4',
-    gap: 12,
-  },
-  uploadFieldTitle: {
-    color: '#7f1b21',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  title: {
-    color: '#7a181d',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 24,
-    lineHeight: 30,
-  },
-  subtitle: {
-    color: '#8d5458',
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 13,
-  },
-  trainingTabRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingVertical: 4,
-  },
-  trainingTab: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#dfb0b2',
-    backgroundColor: '#f9ebec',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  trainingTabActive: {
-    backgroundColor: '#ab1e24',
-    borderColor: '#ab1e24',
-  },
-  trainingTabText: {
-    color: '#7f1b21',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 13,
-  },
-  trainingTabTextActive: {
-    color: '#ffffff',
-  },
-  supplierOrderHint: {
-    color: '#996165',
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 12,
-  },
-  supplierOrderActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  supplierOrderActionsSmall: {
-    flexDirection: 'column',
-  },
-  supplierOrderButton: {
+  pageRoot: {
     flex: 1,
-    paddingHorizontal: 12,
   },
-  docBlockTitle: {
-    color: '#7f1b21',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 14,
+  pageScroll: {
+    flex: 1,
   },
-  docEmpty: {
-    color: '#a06a6f',
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 13,
+  pageContent: {
+    gap: 18,
+    paddingBottom: 24,
   },
-  docItem: {
-    borderRadius: 10,
+  heroCard: {
+    borderRadius: 28,
     borderWidth: 1,
-    borderColor: '#edd4d5',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    gap: 4,
+    borderColor: BORDER,
+    backgroundColor: CARD,
+    padding: 20,
+    gap: 16,
   },
-  docItemTitle: {
-    color: '#7a2328',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 13,
-  },
-  docItemMeta: {
-    color: '#996165',
-    fontFamily: 'Manrope_400Regular',
-    fontSize: 12,
-  },
-  docItemLink: {
-    color: '#ab1e24',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 12,
-  },
-  productInfoRow: {
+  heroHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
   },
-  productInfoRowSmall: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-  },
-  productInfoColumn: {
+  heroCopy: {
     flex: 1,
     minWidth: 0,
     gap: 4,
   },
-  productInfoColumnSmall: {
-    width: '100%',
-    gap: 2,
+  title: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 28,
+    lineHeight: 34,
   },
-  productCardHeaderRow: {
+  subtitle: {
+    color: MUTED,
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  heroBadge: {
+    maxWidth: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: BRAND_SOFT,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  heroBadgeText: {
+    color: BRAND,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  statGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  statCard: {
+    minWidth: 136,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: PANEL,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 3,
+  },
+  statValue: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 24,
+    lineHeight: 28,
+  },
+  statLabel: {
+    color: MUTED,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  mainGrid: {
+    gap: 18,
+  },
+  mainGridWide: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  sidebarColumn: {
+    gap: 18,
+    flexShrink: 0,
+  },
+  sidebarColumnWide: {
+    width: 420,
+  },
+  contentColumn: {
+    flex: 1,
+    minWidth: 0,
+  },
+  contentColumnWide: {
+    flex: 1,
+    minWidth: 0,
+  },
+  surfaceCard: {
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: CARD,
+    padding: 18,
+    gap: 16,
+  },
+  surfaceHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  surfaceHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  surfaceEyebrow: {
+    color: MUTED,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  surfaceTitle: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  surfaceSubtitle: {
+    color: MUTED,
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  surfacePill: {
+    maxWidth: 180,
+    color: BRAND,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: BRAND_SOFT,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  inlineCreateRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 12,
+  },
+  inlineCreateRowStack: {
     flexDirection: 'column',
     alignItems: 'stretch',
+  },
+  inlineInputWrap: {
+    flex: 1,
     gap: 8,
+  },
+  inlineButton: {
+    minWidth: 188,
+  },
+  fieldLabel: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  input: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(171, 30, 36, 0.1)',
+    backgroundColor: '#ffffff',
+    color: TEXT,
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  supplierCards: {
+    gap: 10,
+  },
+  supplierCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: PANEL,
+    padding: 14,
+    gap: 10,
+  },
+  supplierCardActive: {
+    borderColor: BRAND,
+    backgroundColor: BRAND_SOFT,
+  },
+  supplierCardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  supplierCardTitle: {
+    flex: 1,
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 15,
+  },
+  supplierCardTitleActive: {
+    color: BRAND,
+  },
+  supplierCardIndex: {
+    color: MUTED,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  supplierCardIndexActive: {
+    color: BRAND,
+  },
+  supplierCardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  supplierCardMeta: {
+    color: MUTED,
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+  },
+  supplierCardMetaActive: {
+    color: '#874a4f',
+  },
+  supplierCardCount: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 18,
+  },
+  supplierCardCountActive: {
+    color: BRAND,
+  },
+  surfaceDivider: {
+    height: 1,
+    backgroundColor: SOFT_BORDER,
+  },
+  actionRail: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  actionRailStack: {
+    flexDirection: 'column',
+  },
+  actionButtonFlex: {
+    flex: 1,
+    minWidth: 0,
+  },
+  helperText: {
+    color: MUTED,
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  emptyCard: {
+    width: '100%',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: '#fff8f5',
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+  },
+  fieldGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  fieldGridWide: {
+    justifyContent: 'space-between',
+  },
+  fieldGroup: {
+    width: '100%',
+    gap: 8,
+  },
+  fieldGroupHalf: {
+    width: '48.5%',
+  },
+  fieldGroupFull: {
+    width: '100%',
+  },
+  searchFieldWrap: {
+    gap: 8,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 12,
+  },
+  searchIconWrap: {
+    width: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    color: TEXT,
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 14,
+    paddingVertical: 12,
+  },
+  listBlock: {
+    gap: 12,
+  },
+  productGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  productGridItem: {
+    width: '48.8%',
+  },
+  productGridItemSmall: {
+    width: '100%',
+  },
+  productCard: {
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: PANEL,
+    padding: 14,
+    gap: 12,
+  },
+  productCardActive: {
+    borderColor: BRAND,
+    backgroundColor: '#fffdfa',
+  },
+  productCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  productBadgeRow: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  productBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: BRAND_SOFT,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  productBadgeText: {
+    color: BRAND,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
   },
   productCardContentPressable: {
     width: '100%',
   },
+  productInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
+  productInfoRowSmall: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
+  productInfoColumn: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  productInfoColumnSmall: {
+    width: '100%',
+  },
+  productImageFrame: {
+    width: 120,
+    height: 120,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#f3dcdd',
+  },
+  productImageFrameSmall: {
+    width: '100%',
+    height: 190,
+  },
+  productImagePlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: '#fff7f4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  productImageThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  productImagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  productCardTitle: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 17,
+    lineHeight: 23,
+  },
+  productCardSubtitle: {
+    color: MUTED,
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  docItemMeta: {
+    color: MUTED,
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  productPriceLabel: {
+    color: BRAND,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  productEditHint: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
   productDeleteIconButton: {
     width: 34,
     height: 34,
-    borderRadius: 17,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#d7a4a6',
-    backgroundColor: '#fff7f7',
+    borderColor: 'rgba(171, 30, 36, 0.14)',
+    backgroundColor: '#fff9f7',
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-end',
   },
   productDeleteLoading: {
     color: '#8f141b',
@@ -178,90 +509,75 @@ export const styles = StyleSheet.create({
     borderRadius: 1,
     backgroundColor: '#8f141b',
   },
-  productGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+  docBlockTitle: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 18,
   },
-  productGridItem: {
-    width: '48%',
-  },
-  productGridItemSmall: {
-    width: '100%',
-  },
-  productImageFrame: {
-    width: 110,
-    height: 110,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#f3dcdd',
-  },
-  productImageFrameSmall: {
-    width: '100%',
-    height: 180,
-  },
-  productImageThumb: {
-    width: '100%',
-    height: '100%',
-  },
-  productImagePreview: {
-    width: '100%',
-    height: '100%',
-  },
-  input: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#e4bcbf',
-    backgroundColor: '#fff9f9',
-    color: '#4f1c20',
+  docEmpty: {
+    color: MUTED,
     fontFamily: 'Manrope_400Regular',
-    fontSize: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  docItemLink: {
+    color: BRAND,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
   },
   error: {
     color: '#b42318',
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
+    lineHeight: 18,
   },
   primaryButton: {
-    backgroundColor: '#ab1e24',
-    borderRadius: 14,
-    paddingVertical: 13,
     alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.65,
+    justifyContent: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#97161c',
+    backgroundColor: BRAND,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   primaryButtonText: {
-    color: '#f7fffd',
+    color: '#ffffff',
     fontFamily: 'Manrope_700Bold',
-    fontSize: 15,
-  },
-  dangerButton: {
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#d06a70',
-    borderRadius: 14,
-    paddingVertical: 12,
-    backgroundColor: '#fff0f1',
-  },
-  dangerButtonText: {
-    color: '#8f141b',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 14,
+    fontSize: 13,
   },
   secondaryButton: {
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#d39a9d',
+    borderColor: 'rgba(171, 30, 36, 0.14)',
     borderRadius: 14,
+    backgroundColor: '#fff8f5',
+    paddingHorizontal: 14,
     paddingVertical: 12,
   },
   secondaryButtonText: {
     color: '#7f1b21',
     fontFamily: 'Manrope_700Bold',
-    fontSize: 14,
+    fontSize: 13,
+  },
+  dangerButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(176, 41, 47, 0.22)',
+    borderRadius: 14,
+    backgroundColor: '#fff1f2',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  dangerButtonText: {
+    color: '#8f141b',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   paginationRow: {
     flexDirection: 'row',
@@ -277,7 +593,7 @@ export const styles = StyleSheet.create({
     width: '100%',
   },
   paginationInfo: {
-    color: '#7f1b21',
+    color: TEXT,
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
   },
@@ -288,20 +604,86 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalCard: {
-    borderRadius: 16,
+    borderRadius: 28,
     borderWidth: 1,
-    borderColor: '#e4c3c5',
-    backgroundColor: '#fff9f9',
-    maxHeight: '88%',
+    borderColor: BORDER,
+    backgroundColor: CARD,
+    maxHeight: '90%',
   },
   modalContent: {
-    padding: 14,
-    gap: 10,
+    padding: 18,
+    gap: 16,
   },
   modalHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
+  },
+  modalPreviewCard: {
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: '#fff8f5',
+    padding: 14,
+    gap: 14,
+  },
+  modalPreviewCardWide: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalPreviewImageWrap: {
+    width: 132,
+    height: 132,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#f3dcdd',
+  },
+  modalPreviewImagePlaceholder: {
+    width: 132,
+    height: 132,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: '#fff2ef',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalPreviewCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 10,
+  },
+  modalPreviewTitle: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  modalPreviewChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  modalPreviewChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: PANEL,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  modalPreviewChipText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  imageManagerCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: '#fff8f5',
+    padding: 14,
     gap: 10,
   },
 });

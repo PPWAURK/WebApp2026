@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
   Image,
+  Platform,
   Pressable,
   Text,
   TextInput,
@@ -105,10 +106,26 @@ export function AuthForm(props: AuthFormProps) {
   const isSmall = width < 520;
   const isTablet = width >= 520 && width < 960;
   const decorPreset = isSmall ? 'small' : isTablet ? 'tablet' : 'desktop';
+  const nonInteractiveStyle =
+    Platform.OS === 'web' ? ({ pointerEvents: 'none' } as never) : null;
+  const webInputResetStyle =
+    Platform.OS === 'web'
+      ? ({
+          outlineStyle: 'none',
+          outlineWidth: 0,
+          outlineColor: 'transparent',
+          boxShadow: 'none',
+          appearance: 'none',
+          WebkitAppearance: 'none',
+        } as never)
+      : null;
 
   return (
     <View style={styles.card}>
-      <View style={styles.decorLayer} pointerEvents="none">
+      <View
+        style={[styles.decorLayer, nonInteractiveStyle]}
+        pointerEvents={Platform.OS === 'web' ? undefined : 'none'}
+      >
         {DECOR_ITEMS.map((item) => {
           const layout = item[decorPreset];
 
@@ -181,7 +198,7 @@ export function AuthForm(props: AuthFormProps) {
               selectionColor="#ab1e24"
               placeholder={props.text.auth.namePlaceholder}
               placeholderTextColor="#7f8a8a"
-              style={styles.passwordInput}
+              style={[styles.passwordInput, webInputResetStyle]}
               value={props.name}
               onChangeText={props.onNameChange}
             />
@@ -288,7 +305,7 @@ export function AuthForm(props: AuthFormProps) {
           selectionColor="#ab1e24"
           placeholder={props.text.auth.emailPlaceholder}
           placeholderTextColor="#7f8a8a"
-          style={styles.passwordInput}
+          style={[styles.passwordInput, webInputResetStyle]}
           value={props.email}
           onChangeText={props.onEmailChange}
         />
@@ -308,7 +325,7 @@ export function AuthForm(props: AuthFormProps) {
           selectionColor="#ab1e24"
           placeholder={props.text.auth.passwordPlaceholder}
           placeholderTextColor="#7f8a8a"
-          style={styles.passwordInput}
+          style={[styles.passwordInput, webInputResetStyle]}
           value={props.password}
           onChangeText={props.onPasswordChange}
         />

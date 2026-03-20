@@ -1,1 +1,0 @@
-export { LoginSvgLoader } from './LoginSvgLoader';

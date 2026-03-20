@@ -5,15 +5,27 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ab1e24',
   },
+  authenticatedPage: {
+    backgroundColor: '#f6efe8',
+  },
   appFrame: {
     flex: 1,
+  },
+  authenticatedAppFrame: {
+    backgroundColor: '#f6efe8',
   },
   safeArea: {
     flex: 1,
   },
+  authenticatedSafeArea: {
+    backgroundColor: '#f6efe8',
+  },
   keyboardAreaContent: {
     flex: 1,
     zIndex: 1,
+  },
+  authenticatedKeyboardArea: {
+    flex: 1,
   },
   content: {
     flexGrow: 1,
@@ -24,6 +36,11 @@ export const styles = StyleSheet.create({
   },
   contentWithHeader: {
     paddingTop: 12,
+  },
+  authenticatedContent: {
+    flexGrow: 1,
+    paddingHorizontal: 4,
+    paddingBottom: 32,
   },
   pageTransitionLayer: {
     flex: 1,

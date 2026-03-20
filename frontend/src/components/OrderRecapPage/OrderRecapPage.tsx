@@ -1,5 +1,13 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
-import { Image, Pressable, Text, useWindowDimensions, View } from 'react-native';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import type { AppText } from '../../locales/translations';
 import { styles } from './OrderRecapPage.styles';
 import type { Language } from '../../types/language';
@@ -20,6 +28,10 @@ type OrderRecapPageProps = {
   onBack: () => void;
 };
 
+function formatAmount(value: number) {
+  return value.toFixed(2);
+}
+
 export function OrderRecapPage({
   text,
   language,
@@ -36,15 +48,17 @@ export function OrderRecapPage({
 }: OrderRecapPageProps) {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 560;
+  const isWideLayout = width >= 1180;
+  const useSingleColumnGrid = width < 920;
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const dateOptions = useMemo(() => {
     const start = new Date();
     const options: string[] = [];
 
-    for (let i = 0; i < 21; i += 1) {
+    for (let index = 0; index < 21; index += 1) {
       const next = new Date(start);
-      next.setDate(start.getDate() + i);
+      next.setDate(start.getDate() + index);
       const year = next.getFullYear();
       const month = String(next.getMonth() + 1).padStart(2, '0');
       const day = String(next.getDate()).padStart(2, '0');
@@ -55,120 +69,272 @@ export function OrderRecapPage({
   }, []);
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.title}>{text.orders.recapTitle}</Text>
-      <Text style={styles.subtitle}>{text.orders.recapSubtitle}</Text>
+    <View style={styles.pageRoot}>
+      <ScrollView
+        style={styles.pageScroll}
+        contentContainerStyle={styles.pageContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.heroCard}>
+          <View style={styles.heroHeader}>
+            <View style={styles.heroCopy}>
+              <Text style={styles.title}>{text.orders.recapTitle}</Text>
+              <Text style={styles.subtitle}>{text.orders.recapSubtitle}</Text>
+            </View>
 
-      <View style={styles.docBlock}>
-        <Text style={styles.uploadFieldTitle}>{text.orders.deliveryDateLabel}</Text>
-        <Pressable
-          style={styles.restaurantSelectTrigger}
-          onPress={() => setIsDatePickerOpen((currentValue) => !currentValue)}
-        >
-          <Text style={styles.restaurantSelectTriggerText}>{deliveryDate}</Text>
-          <Text style={styles.restaurantSelectChevron}>
-            {isDatePickerOpen ? '▲' : '▼'}
-          </Text>
-        </Pressable>
-
-        {isDatePickerOpen ? (
-          <View style={styles.restaurantSelectList}>
-            {dateOptions.map((dateValue) => (
-              <Pressable
-                key={dateValue}
-                style={[
-                  styles.restaurantSelectItem,
-                  deliveryDate === dateValue && styles.restaurantSelectItemActive,
-                ]}
-                onPress={() => {
-                  onDeliveryDateChange(dateValue);
-                  setIsDatePickerOpen(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.restaurantSelectItemText,
-                    deliveryDate === dateValue && styles.restaurantSelectItemTextActive,
-                  ]}
-                >
-                  {dateValue}
-                </Text>
-              </Pressable>
-            ))}
+            <View style={styles.heroBadge}>
+              <Ionicons name="checkmark-circle-outline" size={16} color="#ab1e24" />
+              <Text style={styles.heroBadgeText}>{text.orders.summaryTitle}</Text>
+            </View>
           </View>
-        ) : null}
 
-        <Text style={styles.uploadFieldTitle}>{text.orders.deliveryAddressLabel}</Text>
-        <Text style={styles.docItemMeta}>
-          {deliveryAddress || text.orders.deliveryAddressMissing}
-        </Text>
-      </View>
-
-      {latestCreatedOrder ? (
-        <View style={styles.docBlock}>
-          <Text style={styles.docBlockTitle}>{text.orders.orderSuccessTitle}</Text>
-          <Text style={styles.docItemMeta}>
-            {text.orders.orderNumberLabel}: {latestCreatedOrder.number}
-          </Text>
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => onDownloadOrderBon(latestCreatedOrder)}
-          >
-            <Text style={styles.secondaryButtonText}>{text.orders.downloadBonButton}</Text>
-          </Pressable>
+          <View style={styles.heroStatsRow}>
+            <View style={styles.heroStatCard}>
+              <Text style={styles.heroStatValue}>{recap.totalItems}</Text>
+              <Text style={styles.heroStatLabel}>{text.orders.summaryItems}</Text>
+            </View>
+            <View style={styles.heroStatCard}>
+              <Text style={styles.heroStatValue}>{formatAmount(recap.totalAmount)}</Text>
+              <Text style={styles.heroStatLabel}>{text.orders.summaryAmount}</Text>
+            </View>
+          </View>
         </View>
-      ) : null}
 
-      <View style={[styles.listBlock, styles.productGrid]}>
-        {recap.items.map((item) => {
-          const productName = language === 'zh' ? item.nameZh : item.nameFr ?? item.nameZh;
-          const infoRowStyle = isSmallScreen
-            ? { flexDirection: 'column' as const, alignItems: 'flex-start' as const }
-            : styles.productInfoRow;
-          const productGridItemStyle = isSmallScreen
-            ? styles.productGridItemSmall
-            : styles.productGridItem;
-          return (
-            <View key={`${item.productId}-${item.quantity}`} style={[styles.docItem, productGridItemStyle]}>
-              <View style={infoRowStyle}>
-                {item.image ? (
-                  <View style={[styles.productImageFrame, isSmallScreen && styles.productImageFrameSmall]}>
-                    <Image source={{ uri: item.image }} style={styles.productImageThumb} resizeMode="cover" />
-                  </View>
-                ) : null}
-                <View style={[styles.productInfoColumn, isSmallScreen && styles.productInfoColumnSmall]}>
-                  <Text style={styles.docItemTitle}>{productName}</Text>
-                  <Text style={styles.docItemMeta}>{text.orders.quantityLabel}: {item.quantity}</Text>
-                  <Text style={styles.docItemMeta}>{text.orders.priceLabel}: {item.priceHt === null ? text.orders.priceNotAvailable : item.priceHt.toFixed(2)}</Text>
-                  <Text style={styles.docItemMeta}>{text.orders.lineTotalLabel}: {item.lineTotal.toFixed(2)}</Text>
+        {submitError ? <Text style={styles.error}>{submitError}</Text> : null}
+
+        <View style={[styles.mainGrid, isWideLayout && styles.mainGridWide]}>
+          <View style={[styles.sidebarColumn, isWideLayout && styles.sidebarColumnWide]}>
+            <View style={styles.surfaceCard}>
+              <View style={styles.surfaceHeader}>
+                <View style={styles.surfaceHeaderCopy}>
+                  <Text style={styles.surfaceEyebrow}>
+                    {text.orders.deliveryDateLabel}
+                  </Text>
+                  <Text style={styles.surfaceTitle}>{deliveryDate}</Text>
+                  <Text style={styles.surfaceSubtitle}>
+                    {text.orders.deliveryAddressLabel}
+                  </Text>
+                </View>
+              </View>
+
+              <Pressable
+                style={styles.selectTrigger}
+                onPress={() => setIsDatePickerOpen((currentValue) => !currentValue)}
+              >
+                <View style={styles.selectTriggerCopy}>
+                  <Text style={styles.selectTriggerLabel}>
+                    {text.orders.deliveryDateLabel}
+                  </Text>
+                  <Text style={styles.selectTriggerText}>{deliveryDate}</Text>
+                </View>
+                <Ionicons
+                  name={isDatePickerOpen ? 'chevron-up-outline' : 'chevron-down-outline'}
+                  size={18}
+                  color="#ab1e24"
+                />
+              </Pressable>
+
+              {isDatePickerOpen ? (
+                <View style={styles.selectList}>
+                  {dateOptions.map((dateValue) => {
+                    const isActive = deliveryDate === dateValue;
+
+                    return (
+                      <Pressable
+                        key={dateValue}
+                        style={[
+                          styles.selectItem,
+                          isActive && styles.selectItemActive,
+                        ]}
+                        onPress={() => {
+                          onDeliveryDateChange(dateValue);
+                          setIsDatePickerOpen(false);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.selectItemText,
+                            isActive && styles.selectItemTextActive,
+                          ]}
+                        >
+                          {dateValue}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
+
+              <View style={styles.addressCard}>
+                <View style={styles.addressIconWrap}>
+                  <Ionicons name="location-outline" size={18} color="#ab1e24" />
+                </View>
+                <View style={styles.addressCopy}>
+                  <Text style={styles.addressLabel}>
+                    {text.orders.deliveryAddressLabel}
+                  </Text>
+                  <Text style={styles.addressText}>
+                    {deliveryAddress || text.orders.deliveryAddressMissing}
+                  </Text>
                 </View>
               </View>
             </View>
-          );
-        })}
-      </View>
 
-      <View style={styles.docBlock}>
-        <Text style={styles.docBlockTitle}>{text.orders.summaryTitle}</Text>
-        <Text style={styles.docItemMeta}>{text.orders.summaryItems}: {recap.totalItems}</Text>
-        <Text style={styles.docItemMeta}>{text.orders.summaryAmount}: {recap.totalAmount.toFixed(2)}</Text>
-      </View>
+            {latestCreatedOrder ? (
+              <View style={styles.successCard}>
+                <View style={styles.successHeader}>
+                  <View style={styles.successIconWrap}>
+                    <Ionicons
+                      name="document-text-outline"
+                      size={18}
+                      color="#ab1e24"
+                    />
+                  </View>
+                  <View style={styles.successCopy}>
+                    <Text style={styles.successTitle}>
+                      {text.orders.orderSuccessTitle}
+                    </Text>
+                    <Text style={styles.successMeta}>
+                      {text.orders.orderNumberLabel}: {latestCreatedOrder.number}
+                    </Text>
+                  </View>
+                </View>
 
-      <Pressable
-        style={[styles.primaryButton, isSubmittingOrder && styles.buttonDisabled]}
-        disabled={isSubmittingOrder}
-        onPress={onSubmitOrder}
-      >
-        <Text style={styles.primaryButtonText}>
-          {isSubmittingOrder ? text.orders.submittingOrder : text.orders.submitOrderButton}
-        </Text>
-      </Pressable>
+                <Pressable
+                  style={styles.secondaryButton}
+                  onPress={() => onDownloadOrderBon(latestCreatedOrder)}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    {text.orders.downloadBonButton}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
 
-      {submitError ? <Text style={styles.error}>{submitError}</Text> : null}
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryTitle}>{text.orders.summaryTitle}</Text>
+              <View style={styles.summaryMetricRow}>
+                <Text style={styles.summaryMetricLabel}>{text.orders.summaryItems}</Text>
+                <Text style={styles.summaryMetricValue}>{recap.totalItems}</Text>
+              </View>
+              <View style={styles.summaryMetricRow}>
+                <Text style={styles.summaryMetricLabel}>
+                  {text.orders.summaryAmount}
+                </Text>
+                <Text style={styles.summaryMetricValue}>
+                  {formatAmount(recap.totalAmount)}
+                </Text>
+              </View>
 
-      <Pressable style={styles.primaryButton} onPress={onBack}>
-        <Text style={styles.primaryButtonText}>{text.orders.backToOrderButton}</Text>
-      </Pressable>
+              <Pressable
+                style={[styles.primaryButton, isSubmittingOrder && styles.buttonDisabled]}
+                disabled={isSubmittingOrder}
+                onPress={onSubmitOrder}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {isSubmittingOrder
+                    ? text.orders.submittingOrder
+                    : text.orders.submitOrderButton}
+                </Text>
+              </Pressable>
+
+              <Pressable style={styles.secondaryButton} onPress={onBack}>
+                <Text style={styles.secondaryButtonText}>
+                  {text.orders.backToOrderButton}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <View style={styles.contentColumn}>
+            <View style={styles.surfaceCard}>
+              <View style={styles.surfaceHeader}>
+                <View style={styles.surfaceHeaderCopy}>
+                  <Text style={styles.surfaceEyebrow}>{text.orders.summaryTitle}</Text>
+                  <Text style={styles.surfaceTitle}>{text.orders.recapTitle}</Text>
+                  <Text style={styles.surfaceSubtitle}>{deliveryDate}</Text>
+                </View>
+                <View style={styles.surfaceCountPill}>
+                  <Text style={styles.surfaceCountText}>{recap.items.length}</Text>
+                </View>
+              </View>
+
+              <View style={[styles.productGrid, styles.listBlock]}>
+                {recap.items.map((item) => {
+                  const productName =
+                    language === 'zh' ? item.nameZh : item.nameFr ?? item.nameZh;
+                  const productGridItemStyle = useSingleColumnGrid
+                    ? styles.productGridItemSmall
+                    : styles.productGridItem;
+
+                  return (
+                    <View
+                      key={`${item.productId}-${item.quantity}`}
+                      style={[styles.productCard, productGridItemStyle]}
+                    >
+                      <View
+                        style={[
+                          styles.productInfoRow,
+                          isSmallScreen && styles.productInfoRowSmall,
+                        ]}
+                      >
+                        {item.image ? (
+                          <View
+                            style={[
+                              styles.productImageFrame,
+                              isSmallScreen && styles.productImageFrameSmall,
+                            ]}
+                          >
+                            <Image
+                              source={{ uri: item.image }}
+                              style={styles.productImageThumb}
+                              resizeMode="cover"
+                            />
+                          </View>
+                        ) : (
+                          <View
+                            style={[
+                              styles.productImagePlaceholder,
+                              isSmallScreen && styles.productImageFrameSmall,
+                            ]}
+                          >
+                            <Ionicons
+                              name="image-outline"
+                              size={24}
+                              color="#ab1e24"
+                            />
+                          </View>
+                        )}
+
+                        <View
+                          style={[
+                            styles.productInfoColumn,
+                            isSmallScreen && styles.productInfoColumnSmall,
+                          ]}
+                        >
+                          <Text style={styles.productTitle}>{productName}</Text>
+                          <Text style={styles.docItemMeta}>
+                            {text.orders.quantityLabel}: {item.quantity}
+                          </Text>
+                          <Text style={styles.docItemMeta}>
+                            {text.orders.priceLabel}:{' '}
+                            {item.priceHt === null
+                              ? text.orders.priceNotAvailable
+                              : formatAmount(item.priceHt)}
+                          </Text>
+                          <Text style={styles.lineTotalText}>
+                            {text.orders.lineTotalLabel}: {formatAmount(item.lineTotal)}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 }

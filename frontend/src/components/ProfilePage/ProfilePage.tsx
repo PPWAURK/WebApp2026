@@ -1,6 +1,7 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useState } from 'react';
-import { Image, Pressable, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Image, Pressable, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import type { AppText } from '../../locales/translations';
 import { updateMyProfile, uploadMyProfilePhoto } from '../../services/usersApi';
 import { styles } from './ProfilePage.styles';
@@ -18,6 +19,24 @@ type ProfilePageProps = {
   onUserUpdate: (user: User) => void;
 };
 
+function getProfileInitials(user: User, fallbackName: string): string {
+  const source = user.name?.trim() || fallbackName || user.email;
+  const parts = source
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return 'U';
+  }
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+}
+
 export function ProfilePage({
   text,
   user,
@@ -29,6 +48,8 @@ export function ProfilePage({
   onUploadError,
   onUserUpdate,
 }: ProfilePageProps) {
+  const { width } = useWindowDimensions();
+  const isWideLayout = width >= 980;
   const [nameDraft, setNameDraft] = useState(user.name ?? '');
   const [nameError, setNameError] = useState<string | null>(null);
   const [isSavingName, setIsSavingName] = useState(false);
@@ -98,128 +119,280 @@ export function ProfilePage({
   const roleLabel = text.dashboard.roleValues[user.role];
   const workplaceLabel = text.dashboard.workplaceValues[user.workplaceRole];
   const canEditName = user.role === 'ADMIN';
+  const probationLabel = user.isOnProbation
+    ? text.dashboard.yes
+    : text.dashboard.no;
+  const restaurantLabel =
+    user.restaurant?.name ?? text.profile.noRestaurant;
+  const addressLabel = user.restaurant?.address ?? text.profile.noAddress;
+  const displayName = user.name ?? text.dashboard.fallbackName;
+  const trainingAccessLabels = user.trainingAccess.map(
+    (section) => text.taxonomy.sections[section],
+  );
+  const overviewItems: Array<{
+    key: string;
+    label: string;
+    value: string;
+    icon: keyof typeof Ionicons.glyphMap;
+  }> = [
+    {
+      key: 'role',
+      label: text.dashboard.role,
+      value: roleLabel,
+      icon: 'shield-outline',
+    },
+    {
+      key: 'workplace',
+      label: text.dashboard.workplace,
+      value: workplaceLabel,
+      icon: 'briefcase-outline',
+    },
+    {
+      key: 'restaurant',
+      label: text.profile.restaurantLabel,
+      value: restaurantLabel,
+      icon: 'business-outline',
+    },
+    {
+      key: 'probation',
+      label: text.dashboard.probation,
+      value: probationLabel,
+      icon: user.isOnProbation
+        ? 'hourglass-outline'
+        : 'checkmark-circle-outline',
+    },
+  ];
+  const detailItems: Array<{
+    key: string;
+    label: string;
+    value: string;
+    icon: keyof typeof Ionicons.glyphMap;
+  }> = [
+    {
+      key: 'id',
+      label: text.profile.userIdLabel,
+      value: String(user.id),
+      icon: 'finger-print-outline',
+    },
+    {
+      key: 'name',
+      label: text.profile.nameLabel,
+      value: displayName,
+      icon: 'person-outline',
+    },
+    {
+      key: 'email',
+      label: text.profile.emailLabel,
+      value: user.email,
+      icon: 'mail-outline',
+    },
+    {
+      key: 'restaurant',
+      label: text.profile.restaurantLabel,
+      value: restaurantLabel,
+      icon: 'business-outline',
+    },
+    {
+      key: 'address',
+      label: text.profile.addressLabel,
+      value: addressLabel,
+      icon: 'location-outline',
+    },
+  ];
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.title}>{text.profile.title}</Text>
-      <Text style={styles.subtitle}>{text.profile.subtitle}</Text>
+    <View style={styles.pageStack}>
+      <View style={[styles.heroCard, isWideLayout && styles.heroCardWide]}>
+        <View style={[styles.heroIdentity, isWideLayout && styles.heroIdentityWide]}>
+          <View style={styles.avatarFrame}>
+            {user.profilePhoto ? (
+              <Image
+                source={{ uri: user.profilePhoto }}
+                style={styles.profileAvatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Text style={styles.profileAvatarFallback}>
+                {getProfileInitials(user, text.dashboard.fallbackName)}
+              </Text>
+            )}
+          </View>
 
-      <View style={styles.profileHeader}>
-        <View style={styles.profileAvatarFrame}>
-          {user.profilePhoto ? (
-            <Image
-              source={{ uri: user.profilePhoto }}
-              style={styles.profileAvatarImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <Text style={styles.profileAvatarFallback}>🙂</Text>
-          )}
+          <View style={styles.heroIdentityText}>
+            <Text style={styles.eyebrow}>{text.profile.title}</Text>
+            <Text style={styles.heroTitle}>{displayName}</Text>
+            <Text style={styles.heroSubtitle}>{text.profile.subtitle}</Text>
+            <Text style={styles.heroMeta}>{user.email}</Text>
+
+            <View style={styles.heroChipRow}>
+              <View style={styles.heroChip}>
+                <Text style={styles.heroChipText}>{roleLabel}</Text>
+              </View>
+              <View style={styles.heroChip}>
+                <Text style={styles.heroChipText}>{workplaceLabel}</Text>
+              </View>
+              <View style={styles.heroChip}>
+                <Text style={styles.heroChipText}>{restaurantLabel}</Text>
+              </View>
+            </View>
+          </View>
         </View>
 
-        <View style={styles.profileHeaderMeta}>
-          <Text style={styles.docItemTitle}>
-            {user.name ?? text.dashboard.fallbackName}
-          </Text>
-          <Text style={styles.docItemMeta}>{user.email}</Text>
+        <View style={[styles.overviewGrid, isWideLayout && styles.overviewGridWide]}>
+          {overviewItems.map((item) => (
+            <View key={item.key} style={styles.overviewCard}>
+              <View style={styles.overviewIconWrap}>
+                <Ionicons name={item.icon} size={16} color="#ab1e24" />
+              </View>
+              <Text style={styles.overviewLabel}>{item.label}</Text>
+              <Text style={styles.overviewValue}>{item.value}</Text>
+            </View>
+          ))}
         </View>
       </View>
 
-      {canEditName ? (
-        <View style={styles.nameEditorBlock}>
-          <Text style={styles.docBlockTitle}>{text.profile.nameLabel}</Text>
-          <TextInput
-            style={styles.nameInput}
-            value={nameDraft}
-            onChangeText={setNameDraft}
-            placeholder={text.profile.nameEditPlaceholder}
-            placeholderTextColor="#aa7a7e"
-            autoCapitalize="words"
-            autoCorrect={false}
-            editable={!isSavingName}
-          />
-          <Pressable
-            style={[
-              styles.primaryButton,
-              isSavingName && styles.buttonDisabled,
-            ]}
-            disabled={isSavingName}
-            onPress={() => {
-              void handleSaveName();
-            }}
-          >
-            <Text style={styles.primaryButtonText}>
-              {isSavingName
-                ? text.profile.savingName
-                : text.profile.saveNameButton}
-            </Text>
-          </Pressable>
-          {nameError ? <Text style={styles.error}>{nameError}</Text> : null}
+      <View style={[styles.contentLayout, isWideLayout && styles.contentLayoutWide]}>
+        <View style={[styles.primaryColumn, isWideLayout && styles.primaryColumnWide]}>
+          <View style={styles.panel}>
+            <View style={styles.panelHeader}>
+              <View style={styles.panelTitleWrap}>
+                <Text style={styles.panelEyebrow}>{text.profile.title}</Text>
+                <Text style={styles.panelTitle}>{text.profile.uploadPhotoButton}</Text>
+              </View>
+              <View style={styles.panelIconBadge}>
+                <Ionicons name="camera-outline" size={18} color="#ab1e24" />
+              </View>
+            </View>
+
+            <Text style={styles.panelDescription}>{text.profile.subtitle}</Text>
+
+            <Pressable
+              style={[
+                styles.primaryButton,
+                isUploadingPhoto && styles.buttonDisabled,
+              ]}
+              disabled={isUploadingPhoto}
+              onPress={() => {
+                void handlePickAndUploadPhoto();
+              }}
+            >
+              <Ionicons name="cloud-upload-outline" size={16} color="#ffffff" />
+              <Text style={styles.primaryButtonText}>
+                {isUploadingPhoto
+                  ? text.profile.uploadingPhoto
+                  : text.profile.uploadPhotoButton}
+              </Text>
+            </Pressable>
+
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+          </View>
+
+          <View style={styles.panel}>
+            <View style={styles.panelHeader}>
+              <View style={styles.panelTitleWrap}>
+                <Text style={styles.panelEyebrow}>{text.profile.nameLabel}</Text>
+                <Text style={styles.panelTitle}>{displayName}</Text>
+              </View>
+              <View style={styles.panelIconBadge}>
+                <Ionicons name="create-outline" size={18} color="#ab1e24" />
+              </View>
+            </View>
+
+            {canEditName ? (
+              <View style={styles.nameEditorBlock}>
+                <TextInput
+                  style={styles.nameInput}
+                  value={nameDraft}
+                  onChangeText={setNameDraft}
+                  placeholder={text.profile.nameEditPlaceholder}
+                  placeholderTextColor="#a08284"
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  editable={!isSavingName}
+                />
+                <Pressable
+                  style={[
+                    styles.secondaryButton,
+                    isSavingName && styles.buttonDisabled,
+                  ]}
+                  disabled={isSavingName}
+                  onPress={() => {
+                    void handleSaveName();
+                  }}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    {isSavingName
+                      ? text.profile.savingName
+                      : text.profile.saveNameButton}
+                  </Text>
+                </Pressable>
+                {nameError ? <Text style={styles.error}>{nameError}</Text> : null}
+              </View>
+            ) : (
+              <View style={styles.infoNotice}>
+                <Text style={styles.infoNoticeTitle}>{text.profile.nameLabel}</Text>
+                <Text style={styles.infoNoticeBody}>{displayName}</Text>
+                <Text style={styles.infoNoticeHint}>
+                  {text.profile.nameEditRestricted}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
-      ) : (
-        <View style={styles.docBlock}>
-          <Text style={styles.docBlockTitle}>{text.profile.nameLabel}</Text>
-          <Text style={styles.docItemMeta}>
-            {user.name ?? text.dashboard.fallbackName}
-          </Text>
-          <Text style={styles.docItemMeta}>
-            {text.profile.nameEditRestricted}
-          </Text>
+
+        <View style={[styles.secondaryColumn, isWideLayout && styles.secondaryColumnWide]}>
+          <View style={styles.panel}>
+            <View style={styles.panelHeader}>
+              <View style={styles.panelTitleWrap}>
+                <Text style={styles.panelEyebrow}>{text.profile.userInfoTitle}</Text>
+                <Text style={styles.panelTitle}>{text.profile.userInfoTitle}</Text>
+              </View>
+              <View style={styles.panelIconBadge}>
+                <Ionicons name="person-outline" size={18} color="#ab1e24" />
+              </View>
+            </View>
+
+            <View style={styles.detailList}>
+              {detailItems.map((item) => (
+                <View key={item.key} style={styles.detailRow}>
+                  <View style={styles.detailIconWrap}>
+                    <Ionicons name={item.icon} size={16} color="#ab1e24" />
+                  </View>
+                  <View style={styles.detailTextWrap}>
+                    <Text style={styles.detailLabel}>{item.label}</Text>
+                    <Text style={styles.detailValue}>{item.value}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.panel}>
+            <View style={styles.panelHeader}>
+              <View style={styles.panelTitleWrap}>
+                <Text style={styles.panelEyebrow}>{text.profile.trainingAccessLabel}</Text>
+                <Text style={styles.panelTitle}>{text.profile.trainingAccessLabel}</Text>
+              </View>
+              <View style={styles.panelIconBadge}>
+                <Ionicons name="school-outline" size={18} color="#ab1e24" />
+              </View>
+            </View>
+
+            {trainingAccessLabels.length > 0 ? (
+              <View style={styles.accessChipRow}>
+                {trainingAccessLabels.map((label) => (
+                  <View key={label} style={styles.accessChip}>
+                    <Text style={styles.accessChipText}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>-</Text>
+              </View>
+            )}
+          </View>
         </View>
-      )}
-
-      <Pressable
-        style={[
-          styles.secondaryButton,
-          isUploadingPhoto && styles.buttonDisabled,
-        ]}
-        disabled={isUploadingPhoto}
-        onPress={() => {
-          void handlePickAndUploadPhoto();
-        }}
-      >
-        <Text style={styles.secondaryButtonText}>
-          {isUploadingPhoto
-            ? text.profile.uploadingPhoto
-            : text.profile.uploadPhotoButton}
-        </Text>
-      </Pressable>
-
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      <View style={styles.docBlock}>
-        <Text style={styles.docBlockTitle}>{text.profile.userInfoTitle}</Text>
-        <Text style={styles.docItemMeta}>
-          {text.profile.userIdLabel}: {user.id}
-        </Text>
-        <Text style={styles.docItemMeta}>
-          {text.profile.nameLabel}: {user.name ?? '-'}
-        </Text>
-        <Text style={styles.docItemMeta}>
-          {text.profile.emailLabel}: {user.email}
-        </Text>
-        <Text style={styles.docItemMeta}>
-          {text.dashboard.role}: {roleLabel}
-        </Text>
-        <Text style={styles.docItemMeta}>
-          {text.dashboard.workplace}: {workplaceLabel}
-        </Text>
-        <Text style={styles.docItemMeta}>
-          {text.dashboard.probation}:{' '}
-          {user.isOnProbation ? text.dashboard.yes : text.dashboard.no}
-        </Text>
-        <Text style={styles.docItemMeta}>
-          {text.profile.restaurantLabel}:{' '}
-          {user.restaurant?.name ?? text.profile.noRestaurant}
-        </Text>
-        <Text style={styles.docItemMeta}>
-          {text.profile.addressLabel}:{' '}
-          {user.restaurant?.address ?? text.profile.noAddress}
-        </Text>
-        <Text style={styles.docItemMeta}>
-          {text.profile.trainingAccessLabel}:{' '}
-          {user.trainingAccess.join(', ') || '-'}
-        </Text>
       </View>
     </View>
   );
