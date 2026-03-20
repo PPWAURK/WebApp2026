@@ -1,20 +1,27 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Role } from '@prisma/client';
+import { UsersApprovalService } from './users-approval.service';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
+import { UsersTrainingAccessService } from './users-training-access.service';
+import { UsersWorkforceService } from './users-workforce.service';
 
 describe('UsersController', () => {
   let controller: UsersController;
-  let usersService: {
-    assignUserRestaurant: jest.Mock;
+  let usersProfileService: {
     updateOwnProfile: jest.Mock;
+  };
+  let usersWorkforceService: {
+    assignUserRestaurant: jest.Mock;
   };
 
   beforeEach(async () => {
-    usersService = {
-      assignUserRestaurant: jest.fn(),
+    usersProfileService = {
       updateOwnProfile: jest.fn(),
+    };
+    usersWorkforceService = {
+      assignUserRestaurant: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -22,7 +29,19 @@ describe('UsersController', () => {
       providers: [
         {
           provide: UsersService,
-          useValue: usersService,
+          useValue: usersProfileService,
+        },
+        {
+          provide: UsersTrainingAccessService,
+          useValue: {},
+        },
+        {
+          provide: UsersWorkforceService,
+          useValue: usersWorkforceService,
+        },
+        {
+          provide: UsersApprovalService,
+          useValue: {},
         },
       ],
     }).compile();
@@ -44,7 +63,7 @@ describe('UsersController', () => {
       ),
     ).toThrow(new ForbiddenException('Only ADMIN can update own profile name'));
 
-    expect(usersService.updateOwnProfile).not.toHaveBeenCalled();
+    expect(usersProfileService.updateOwnProfile).not.toHaveBeenCalled();
   });
 
   it('allows admins to update their own profile name', () => {
@@ -52,7 +71,7 @@ describe('UsersController', () => {
       id: 1,
       name: 'Alice',
     };
-    usersService.updateOwnProfile.mockReturnValue(expected);
+    usersProfileService.updateOwnProfile.mockReturnValue(expected);
 
     const result = controller.updateOwnProfile(
       {
@@ -65,7 +84,7 @@ describe('UsersController', () => {
       '  Alice  ',
     );
 
-    expect(usersService.updateOwnProfile).toHaveBeenCalledWith(1, {
+    expect(usersProfileService.updateOwnProfile).toHaveBeenCalledWith(1, {
       name: 'Alice',
     });
     expect(result).toBe(expected);
@@ -76,7 +95,7 @@ describe('UsersController', () => {
       id: 22,
       restaurantId: 5,
     };
-    usersService.assignUserRestaurant.mockReturnValue(expected);
+    usersWorkforceService.assignUserRestaurant.mockReturnValue(expected);
 
     const result = controller.updateUserRestaurant(
       {
@@ -90,11 +109,15 @@ describe('UsersController', () => {
       5,
     );
 
-    expect(usersService.assignUserRestaurant).toHaveBeenCalledWith(22, 5, {
-      actorId: 8,
-      actorRole: Role.MANAGER,
-      actorRestaurantId: 3,
-    });
+    expect(usersWorkforceService.assignUserRestaurant).toHaveBeenCalledWith(
+      22,
+      5,
+      {
+        actorId: 8,
+        actorRole: Role.MANAGER,
+        actorRestaurantId: 3,
+      },
+    );
     expect(result).toBe(expected);
   });
 
@@ -115,6 +138,6 @@ describe('UsersController', () => {
       new ForbiddenException('Only ADMIN and MANAGER can access this resource'),
     );
 
-    expect(usersService.assignUserRestaurant).not.toHaveBeenCalled();
+    expect(usersWorkforceService.assignUserRestaurant).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ForbiddenException,
   Body,
   Controller,
@@ -14,50 +13,42 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
+import type { AuthenticatedRequest } from '../auth/interfaces/authenticated-request.interface';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateOrderDto } from './dto/create-order.dto';
+import {
+  HistoryAnalyticsQueryDto,
+  SupplierMonthQueryDto,
+  SupplierScopedQueryDto,
+} from './dto/order-query.dto';
 import { OrdersService } from './orders.service';
-
-type AuthenticatedRequest = Request & {
-  user?: {
-    id: number;
-    role: string;
-    restaurantId: number | null;
-  };
-};
 
 @ApiTags('orders')
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
+  private getActor(req: AuthenticatedRequest) {
+    const user = req.user;
+
+    if (!user?.id || !user.role) {
+      throw new ForbiddenException('Unauthenticated request');
+    }
+
+    return {
+      id: user.id,
+      role: user.role,
+      restaurantId: user.restaurantId ?? null,
+    };
+  }
+
   @ApiOperation({ summary: 'Create one supplier-specific purchase order' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post()
-  createOrder(
-    @Req() req: AuthenticatedRequest,
-    @Body()
-    body: {
-      deliveryDate: string;
-      items: Array<{ productId: number; quantity: number }>;
-    },
-  ) {
-    const user = req.user;
-
-    if (!user) {
-      throw new ForbiddenException('Unauthenticated request');
-    }
-
-    return this.ordersService.createOrder(
-      {
-        id: user.id,
-        role: user.role,
-        restaurantId: user.restaurantId,
-      },
-      body,
-      req,
-    );
+  createOrder(@Req() req: AuthenticatedRequest, @Body() body: CreateOrderDto) {
+    return this.ordersService.createOrder(this.getActor(req), body, req);
   }
 
   @ApiOperation({ summary: 'List purchase orders (restaurant scoped)' })
@@ -65,20 +56,7 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard)
   @Get()
   listOrders(@Req() req: AuthenticatedRequest) {
-    const user = req.user;
-
-    if (!user) {
-      throw new ForbiddenException('Unauthenticated request');
-    }
-
-    return this.ordersService.listOrders(
-      {
-        id: user.id,
-        role: user.role,
-        restaurantId: user.restaurantId,
-      },
-      req,
-    );
+    return this.ordersService.listOrders(this.getActor(req), req);
   }
 
   @ApiOperation({
@@ -90,36 +68,12 @@ export class OrdersController {
   @Get('dashboard/top-products')
   topOrderedProducts(
     @Req() req: AuthenticatedRequest,
-    @Query('supplierId') supplierIdRaw?: string,
-    @Query('month') monthRaw?: string,
+    @Query() query: SupplierMonthQueryDto,
   ) {
-    const user = req.user;
-
-    if (!user) {
-      throw new ForbiddenException('Unauthenticated request');
-    }
-
-    if (supplierIdRaw && !/^\d+$/.test(supplierIdRaw)) {
-      throw new BadRequestException('supplierId must be a positive integer');
-    }
-
-    const supplierId = supplierIdRaw ? Number(supplierIdRaw) : undefined;
-    if (supplierId !== undefined && supplierId <= 0) {
-      throw new BadRequestException('supplierId must be a positive integer');
-    }
-
-    if (monthRaw && !/^\d{4}-\d{2}$/.test(monthRaw)) {
-      throw new BadRequestException('month must match YYYY-MM');
-    }
-
     return this.ordersService.getTopOrderedProductsBySupplier(
-      {
-        id: user.id,
-        role: user.role,
-        restaurantId: user.restaurantId,
-      },
-      supplierId,
-      monthRaw,
+      this.getActor(req),
+      query.supplierId,
+      query.month,
     );
   }
 
@@ -129,30 +83,11 @@ export class OrdersController {
   @Get('dashboard/top-product-months')
   topOrderedProductMonths(
     @Req() req: AuthenticatedRequest,
-    @Query('supplierId') supplierIdRaw?: string,
+    @Query() query: SupplierScopedQueryDto,
   ) {
-    const user = req.user;
-
-    if (!user) {
-      throw new ForbiddenException('Unauthenticated request');
-    }
-
-    if (supplierIdRaw && !/^\d+$/.test(supplierIdRaw)) {
-      throw new BadRequestException('supplierId must be a positive integer');
-    }
-
-    const supplierId = supplierIdRaw ? Number(supplierIdRaw) : undefined;
-    if (supplierId !== undefined && supplierId <= 0) {
-      throw new BadRequestException('supplierId must be a positive integer');
-    }
-
     return this.ordersService.getTopOrderedProductMonths(
-      {
-        id: user.id,
-        role: user.role,
-        restaurantId: user.restaurantId,
-      },
-      supplierId,
+      this.getActor(req),
+      query.supplierId,
     );
   }
 
@@ -162,35 +97,12 @@ export class OrdersController {
   @Get('history/analytics')
   historyAnalytics(
     @Req() req: AuthenticatedRequest,
-    @Query('supplierId') supplierIdRaw?: string,
-    @Query('period') periodRaw?: string,
+    @Query() query: HistoryAnalyticsQueryDto,
   ) {
-    const user = req.user;
-
-    if (!user) {
-      throw new ForbiddenException('Unauthenticated request');
-    }
-
-    if (supplierIdRaw && !/^\d+$/.test(supplierIdRaw)) {
-      throw new BadRequestException('supplierId must be a positive integer');
-    }
-
-    const supplierId = supplierIdRaw ? Number(supplierIdRaw) : undefined;
-    if (supplierId !== undefined && supplierId <= 0) {
-      throw new BadRequestException('supplierId must be a positive integer');
-    }
-
-    return this.ordersService.getOrderHistoryAnalytics(
-      {
-        id: user.id,
-        role: user.role,
-        restaurantId: user.restaurantId,
-      },
-      {
-        supplierId,
-        period: periodRaw,
-      },
-    );
+    return this.ordersService.getOrderHistoryAnalytics(this.getActor(req), {
+      supplierId: query.supplierId,
+      period: query.period,
+    });
   }
 
   @ApiOperation({ summary: 'Download order PDF by order id' })
@@ -202,17 +114,10 @@ export class OrdersController {
     @Res() res: Response,
     @Param('id', ParseIntPipe) orderId: number,
   ) {
-    const user = req.user;
-
-    if (!user) {
-      throw new ForbiddenException('Unauthenticated request');
-    }
-
-    const fullPath = await this.ordersService.resolveOrderFilePath(orderId, {
-      id: user.id,
-      role: user.role,
-      restaurantId: user.restaurantId,
-    });
+    const fullPath = await this.ordersService.resolveOrderFilePath(
+      orderId,
+      this.getActor(req),
+    );
 
     return res.download(fullPath);
   }
@@ -237,16 +142,6 @@ export class OrdersController {
     @Req() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) orderId: number,
   ) {
-    const user = req.user;
-
-    if (!user) {
-      throw new ForbiddenException('Unauthenticated request');
-    }
-
-    return this.ordersService.deleteOrder(orderId, {
-      id: user.id,
-      role: user.role,
-      restaurantId: user.restaurantId,
-    });
+    return this.ordersService.deleteOrder(orderId, this.getActor(req));
   }
 }

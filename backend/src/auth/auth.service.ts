@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -12,6 +13,7 @@ import type { StringValue } from 'ms';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RestaurantsService } from '../restaurants/restaurants.service';
+import { UsersTrainingAccessService } from '../users/users-training-access.service';
 import { UsersService } from '../users/users.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
@@ -20,8 +22,11 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersService: UsersService,
+    private readonly usersTrainingAccessService: UsersTrainingAccessService,
     private readonly restaurantsService: RestaurantsService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -171,8 +176,11 @@ export class AuthService {
         resetToken: plainToken,
         language: effectiveLanguage,
       });
-    } catch {
-      // Keep API response stable to avoid leaking account state.
+    } catch (error) {
+      this.logger.warn(
+        `Failed to send password reset email for user ${user.id}`,
+        error instanceof Error ? error.stack : undefined,
+      );
     }
 
     return {
@@ -248,10 +256,11 @@ export class AuthService {
       workplaceRole: user.workplaceRole,
     };
 
-    const trainingAccess = await this.usersService.getTrainingAccessByLevel(
-      user.employeeLevel,
-      user.role,
-    );
+    const trainingAccess =
+      await this.usersTrainingAccessService.getTrainingAccessByLevel(
+        user.employeeLevel,
+        user.role,
+      );
 
     return {
       accessToken: await this.jwtService.signAsync(payload, {
@@ -286,10 +295,11 @@ export class AuthService {
       throw new UnauthorizedException('ACCOUNT_PENDING_APPROVAL');
     }
 
-    const trainingAccess = await this.usersService.getTrainingAccessByLevel(
-      user.employeeLevel,
-      user.role,
-    );
+    const trainingAccess =
+      await this.usersTrainingAccessService.getTrainingAccessByLevel(
+        user.employeeLevel,
+        user.role,
+      );
 
     return {
       ...user,

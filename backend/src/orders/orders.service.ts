@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
@@ -77,6 +78,7 @@ type CommandePdfInput = {
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
   private readonly storageRoot =
     process.env.STORAGE_ROOT_PATH ?? join(process.cwd(), 'uploads');
   private readonly publicApiBaseUrl = process.env.PUBLIC_API_BASE_URL;
@@ -136,6 +138,7 @@ export class OrdersService {
       throw new BadRequestException('User must be assigned to a restaurant');
     }
 
+    const restaurantId = actor.restaurantId;
     const deliveryDate = this.parseDeliveryDate(payload.deliveryDate);
 
     if (!payload.items?.length) {
@@ -224,102 +227,121 @@ export class OrdersService {
       0,
     );
 
-    const createdOrder = await this.prisma.purchaseOrder.create({
-      data: {
-        number: `PO-TMP-${Date.now()}`,
+    const pdfItems = preparedItems.map((item) => {
+      const frRaw = this.recoverUtf8(
+        item.product.designationFr ?? item.product.nomCn,
+      );
+      const nameFr =
+        this.sanitizeLabel(this.makeFrLabel(frRaw)) ||
+        this.sanitizeLabel(frRaw);
+
+      const zhRaw = this.recoverUtf8(item.product.nomCn);
+      const nameZh = this.sanitizeLabel(zhRaw);
+      const specification = this.sanitizeLabel(
+        this.recoverUtf8(item.product.specification),
+      );
+
+      // Unite intentionally avoids recoverUtf8 heuristics.
+      const unit = this.sanitizeLabel(item.product.unite?.trim() || '-');
+
+      return {
+        nameFr,
+        nameZh,
+        specification,
+        unit,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        lineTotal: item.lineTotal,
+      };
+    });
+
+    let generatedOrderFilePath: string | null = null;
+
+    try {
+      const createdOrder = await this.prisma.$transaction(async (tx) => {
+        const draftOrder = await tx.purchaseOrder.create({
+          data: {
+            number: `PO-TMP-${Date.now()}`,
+            supplierId,
+            restaurantId,
+            createdByUserId: actor.id,
+            deliveryDate,
+            deliveryAddress: restaurant.address,
+            totalItems,
+            totalAmount,
+            bonFileName: 'pending.pdf',
+          },
+        });
+
+        const orderNumber = this.buildOrderNumber(
+          draftOrder.id,
+          draftOrder.createdAt,
+        );
+        const orderFileName = `commande-${orderNumber}.pdf`;
+
+        await tx.purchaseOrder.update({
+          where: { id: draftOrder.id },
+          data: {
+            number: orderNumber,
+            bonFileName: orderFileName,
+          },
+        });
+
+        await tx.purchaseOrderItem.createMany({
+          data: preparedItems.map((item) => ({
+            purchaseOrderId: draftOrder.id,
+            productId: item.product.id,
+            supplierId,
+            quantity: item.quantity,
+            unitPriceHt: item.unitPrice,
+            lineTotal: item.lineTotal,
+            nameZh: item.product.nomCn,
+            nameFr: item.product.designationFr,
+            unit: item.product.unite,
+            category: item.product.categorie,
+          })),
+        });
+
+        generatedOrderFilePath = join(this.ordersDir, orderFileName);
+
+        await this.generateCommandePdf({
+          filePath: generatedOrderFilePath,
+          orderNumber,
+          supplierName: supplier.nom,
+          restaurantName: restaurant.name,
+          deliveryDate: payload.deliveryDate,
+          deliveryAddress: restaurant.address,
+          items: pdfItems,
+          totalItems,
+          totalAmount,
+        });
+
+        return {
+          id: draftOrder.id,
+          createdAt: draftOrder.createdAt,
+          number: orderNumber,
+        };
+      });
+
+      const commandeUrl = this.buildOrderUrl(req, createdOrder.id);
+
+      return {
+        id: createdOrder.id,
+        number: createdOrder.number,
         supplierId,
-        restaurantId: actor.restaurantId,
-        createdByUserId: actor.id,
-        deliveryDate,
+        supplierName: supplier.nom,
+        deliveryDate: payload.deliveryDate,
         deliveryAddress: restaurant.address,
         totalItems,
         totalAmount,
-        bonFileName: 'pending.pdf',
-      },
-    });
-
-    const orderNumber = this.buildOrderNumber(
-      createdOrder.id,
-      createdOrder.createdAt,
-    );
-    const orderFileName = `commande-${orderNumber}.pdf`;
-
-    await this.prisma.purchaseOrder.update({
-      where: { id: createdOrder.id },
-      data: {
-        number: orderNumber,
-        bonFileName: orderFileName,
-      },
-    });
-
-    await this.prisma.purchaseOrderItem.createMany({
-      data: preparedItems.map((item) => ({
-        purchaseOrderId: createdOrder.id,
-        productId: item.product.id,
-        supplierId,
-        quantity: item.quantity,
-        unitPriceHt: item.unitPrice,
-        lineTotal: item.lineTotal,
-        nameZh: item.product.nomCn,
-        nameFr: item.product.designationFr,
-        unit: item.product.unite,
-        category: item.product.categorie,
-      })),
-    });
-
-    await this.generateCommandePdf({
-      filePath: join(this.ordersDir, orderFileName),
-      orderNumber,
-      supplierName: supplier.nom,
-      restaurantName: restaurant.name,
-      deliveryDate: payload.deliveryDate,
-      deliveryAddress: restaurant.address,
-      items: preparedItems.map((item) => {
-        const frRaw = this.recoverUtf8(
-          item.product.designationFr ?? item.product.nomCn,
-        );
-        const nameFr =
-          this.sanitizeLabel(this.makeFrLabel(frRaw)) ||
-          this.sanitizeLabel(frRaw);
-
-        const zhRaw = this.recoverUtf8(item.product.nomCn);
-        const nameZh = this.sanitizeLabel(zhRaw);
-        const specification = this.sanitizeLabel(
-          this.recoverUtf8(item.product.specification),
-        );
-
-        // ⚠️ unité: ne passe PAS par recoverUtf8 (on évite les heuristiques)
-        const unit = this.sanitizeLabel(item.product.unite?.trim() || '-');
-
-        return {
-          nameFr,
-          nameZh,
-          specification,
-          unit,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          lineTotal: item.lineTotal,
-        };
-      }),
-      totalItems,
-      totalAmount,
-    });
-
-    const commandeUrl = this.buildOrderUrl(req, createdOrder.id);
-
-    return {
-      id: createdOrder.id,
-      number: orderNumber,
-      supplierId,
-      supplierName: supplier.nom,
-      deliveryDate: payload.deliveryDate,
-      deliveryAddress: restaurant.address,
-      totalItems,
-      totalAmount,
-      bonUrl: commandeUrl,
-      commandeUrl,
-      createdAt: createdOrder.createdAt,
-    };
+        bonUrl: commandeUrl,
+        commandeUrl,
+        createdAt: createdOrder.createdAt,
+      };
+    } catch (error) {
+      this.deleteFileIfExists(generatedOrderFilePath);
+      throw error;
+    }
   }
 
   async listOrders(
@@ -933,14 +955,7 @@ export class OrdersService {
       where: { id: orderId },
     });
 
-    const filePath = join(this.ordersDir, order.bonFileName);
-    if (existsSync(filePath)) {
-      try {
-        unlinkSync(filePath);
-      } catch {
-        // Best-effort cleanup only: order deletion should still succeed.
-      }
-    }
+    this.deleteFileIfExists(join(this.ordersDir, order.bonFileName));
 
     return {
       success: true,
@@ -1189,6 +1204,21 @@ export class OrdersService {
 
     const host = req.get('host');
     return `${req.protocol}://${host}${prefixedOrdersPath}`;
+  }
+
+  private deleteFileIfExists(filePath: string | null) {
+    if (!filePath || !existsSync(filePath)) {
+      return;
+    }
+
+    try {
+      unlinkSync(filePath);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to delete order file during cleanup: ${filePath}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
   }
 
   private async generateCommandePdf(input: CommandePdfInput) {

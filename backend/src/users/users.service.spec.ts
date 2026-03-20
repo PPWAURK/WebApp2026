@@ -1,9 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 import { Role } from '@prisma/client';
-import { UsersService } from './users.service';
+import { UsersWorkforceService } from './users-workforce.service';
 
-describe('UsersService.assignUserRestaurant', () => {
-  let service: UsersService;
+describe('UsersWorkforceService.assignUserRestaurant', () => {
+  let service: UsersWorkforceService;
   let prisma: {
     restaurant: {
       findUnique: jest.Mock;
@@ -25,7 +25,7 @@ describe('UsersService.assignUserRestaurant', () => {
       },
     };
 
-    service = new UsersService(prisma as never, {} as never);
+    service = new UsersWorkforceService(prisma as never);
   });
 
   it('allows a manager to move an employee from their own restaurant', async () => {

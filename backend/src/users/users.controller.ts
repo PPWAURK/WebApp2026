@@ -23,7 +23,10 @@ import { diskStorage } from 'multer';
 import { extname, isAbsolute, join, resolve } from 'path';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UsersApprovalService } from './users-approval.service';
 import { UsersService } from './users.service';
+import { UsersTrainingAccessService } from './users-training-access.service';
+import { UsersWorkforceService } from './users-workforce.service';
 
 const STORAGE_ROOT_PATH =
   process.env.STORAGE_ROOT_PATH && isAbsolute(process.env.STORAGE_ROOT_PATH)
@@ -53,7 +56,12 @@ type AuthenticatedRequest = Request & {
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly usersTrainingAccessService: UsersTrainingAccessService,
+    private readonly usersWorkforceService: UsersWorkforceService,
+    private readonly usersApprovalService: UsersApprovalService,
+  ) {}
 
   @ApiOperation({ summary: 'List users with training access configuration' })
   @ApiBearerAuth()
@@ -80,11 +88,14 @@ export class UsersController {
       throw new BadRequestException('restaurantId must be a positive integer');
     }
 
-    return this.usersService.listUsersTrainingAccess(restaurantId, {
-      actorId: actor.id,
-      actorRole: actor.role,
-      actorRestaurantId: actor.restaurantId,
-    });
+    return this.usersTrainingAccessService.listUsersTrainingAccess(
+      restaurantId,
+      {
+        actorId: actor.id,
+        actorRole: actor.role,
+        actorRestaurantId: actor.restaurantId,
+      },
+    );
   }
 
   @ApiOperation({ summary: 'Update one user training section access' })
@@ -104,11 +115,15 @@ export class UsersController {
       );
     }
 
-    return this.usersService.updateTrainingAccess(userId, sections, {
-      actorId: actor.id,
-      actorRole: actor.role,
-      actorRestaurantId: actor.restaurantId,
-    });
+    return this.usersTrainingAccessService.updateTrainingAccess(
+      userId,
+      sections,
+      {
+        actorId: actor.id,
+        actorRole: actor.role,
+        actorRestaurantId: actor.restaurantId,
+      },
+    );
   }
 
   @ApiOperation({
@@ -124,7 +139,9 @@ export class UsersController {
       throw new ForbiddenException('Admin only');
     }
 
-    return this.usersService.listTrainingAccessByLevel(actor.role);
+    return this.usersTrainingAccessService.listTrainingAccessByLevel(
+      actor.role,
+    );
   }
 
   @ApiOperation({
@@ -149,7 +166,7 @@ export class UsersController {
       throw new BadRequestException('Invalid employee level');
     }
 
-    return this.usersService.updateTrainingAccessByLevel(
+    return this.usersTrainingAccessService.updateTrainingAccessByLevel(
       levelRaw as EmployeeLevel,
       sections,
       {
@@ -170,7 +187,7 @@ export class UsersController {
       throw new ForbiddenException('Unauthorized');
     }
 
-    return this.usersService.listTrainingQuizLinks();
+    return this.usersTrainingAccessService.listTrainingQuizLinks();
   }
 
   @ApiOperation({
@@ -193,7 +210,7 @@ export class UsersController {
       throw new ForbiddenException('Admin only');
     }
 
-    return this.usersService.upsertTrainingQuizLink(
+    return this.usersTrainingAccessService.upsertTrainingQuizLink(
       section,
       language,
       quizUrl,
@@ -212,7 +229,7 @@ export class UsersController {
       throw new ForbiddenException('Admin only');
     }
 
-    return this.usersService.listUnassignedEmployees();
+    return this.usersWorkforceService.listUnassignedEmployees();
   }
 
   @ApiOperation({
@@ -234,11 +251,15 @@ export class UsersController {
       );
     }
 
-    return this.usersService.assignUserRestaurant(userId, restaurantId, {
-      actorId: actor.id,
-      actorRole: actor.role,
-      actorRestaurantId: actor.restaurantId,
-    });
+    return this.usersWorkforceService.assignUserRestaurant(
+      userId,
+      restaurantId,
+      {
+        actorId: actor.id,
+        actorRole: actor.role,
+        actorRestaurantId: actor.restaurantId,
+      },
+    );
   }
 
   @ApiOperation({
@@ -268,7 +289,7 @@ export class UsersController {
       throw new BadRequestException('restaurantId must be a positive integer');
     }
 
-    return this.usersService.updateManagerRole(userId, {
+    return this.usersWorkforceService.updateManagerRole(userId, {
       isManager,
       restaurantId: restaurantIdRaw,
       actorId: req.user.id,
@@ -293,7 +314,7 @@ export class UsersController {
       );
     }
 
-    return this.usersService.confirmEmployeeProbation(userId, {
+    return this.usersApprovalService.confirmEmployeeProbation(userId, {
       actorId: actor.id,
       actorRole: actor.role,
       actorRestaurantId: actor.restaurantId,
@@ -316,7 +337,7 @@ export class UsersController {
       );
     }
 
-    return this.usersService.approveEmployeeAccount(userId, {
+    return this.usersApprovalService.approveEmployeeAccount(userId, {
       actorRole: actor.role,
       actorRestaurantId: actor.restaurantId,
     });
@@ -338,7 +359,7 @@ export class UsersController {
       );
     }
 
-    return this.usersService.deleteEmployeeAccount(userId, {
+    return this.usersApprovalService.deleteEmployeeAccount(userId, {
       actorRole: actor.role,
       actorRestaurantId: actor.restaurantId,
     });
@@ -360,7 +381,7 @@ export class UsersController {
       );
     }
 
-    return this.usersService.rejectAccountRequest(userId, {
+    return this.usersApprovalService.rejectAccountRequest(userId, {
       actorRole: actor.role,
       actorRestaurantId: actor.restaurantId,
     });
@@ -388,7 +409,7 @@ export class UsersController {
       throw new BadRequestException('Invalid employee level');
     }
 
-    return this.usersService.updateEmployeeLevel(
+    return this.usersWorkforceService.updateEmployeeLevel(
       userId,
       levelRaw as EmployeeLevel,
       {
@@ -423,7 +444,7 @@ export class UsersController {
       throw new BadRequestException('Invalid workplace role');
     }
 
-    return this.usersService.updateEmployeeWorkplaceRole(
+    return this.usersWorkforceService.updateEmployeeWorkplaceRole(
       userId,
       workplaceRoleRaw as WorkplaceRole,
       {
