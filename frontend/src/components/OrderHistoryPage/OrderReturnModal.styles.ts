@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 
-const BORDER = 'rgba(171, 30, 36, 0.12)';
-const SOFT_BORDER = 'rgba(171, 30, 36, 0.08)';
+const BORDER = 'rgba(171, 30, 36, 0.18)';
+const SOFT_BORDER = 'rgba(171, 30, 36, 0.14)';
 const PANEL = '#ffffff';
 const PANEL_SOFT = '#fff7f4';
 const BRAND = '#ab1e24';
@@ -216,6 +216,92 @@ export const styles = StyleSheet.create({
   },
   quantityInput: {
     width: 120,
+  },
+  photoSection: {
+    gap: 10,
+  },
+  photoSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  photoSectionMeta: {
+    color: MUTED,
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 11,
+  },
+  photoActionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  photoActionButton: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: PANEL_SOFT,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  photoActionButtonDisabled: {
+    opacity: 0.55,
+  },
+  photoActionButtonText: {
+    color: BRAND,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  photoPreviewCard: {
+    width: 140,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: PANEL,
+    overflow: 'hidden',
+  },
+  photoPreviewImage: {
+    width: '100%',
+    height: 108,
+    backgroundColor: PANEL_SOFT,
+  },
+  photoPreviewFooter: {
+    padding: 10,
+    gap: 8,
+  },
+  photoPreviewName: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  photoRemoveButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: PANEL_SOFT,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  photoRemoveButtonText: {
+    color: BRAND,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
+  },
+  photoEmptyText: {
+    color: MUTED,
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
   },
   emptyState: {
     borderRadius: 16,

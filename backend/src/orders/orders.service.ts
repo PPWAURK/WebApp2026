@@ -5,7 +5,12 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import {
+  UploadMediaType,
+  UploadModule,
+  UploadSection,
+  type Prisma,
+} from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import { createWriteStream, existsSync, mkdirSync, unlinkSync } from 'fs';
 import { join } from 'path';
@@ -26,7 +31,11 @@ type CreateOrderReturnPayload = {
   orderId: number;
   reason: string;
   notes?: string;
-  items: Array<{ purchaseOrderItemId: number; quantity: number }>;
+  items: Array<{
+    purchaseOrderItemId: number;
+    quantity: number;
+    photoDocumentIds?: number[];
+  }>;
 };
 
 type TopProductAggregate = {
@@ -591,6 +600,9 @@ export class OrdersService {
     const normalizedItems = payload.items.map((item) => ({
       purchaseOrderItemId: item.purchaseOrderItemId,
       quantity: item.quantity,
+      photoDocumentIds: Array.isArray(item.photoDocumentIds)
+        ? item.photoDocumentIds
+        : [],
     }));
 
     if (
@@ -599,11 +611,14 @@ export class OrdersService {
           !Number.isInteger(item.purchaseOrderItemId) ||
           item.purchaseOrderItemId <= 0 ||
           !Number.isInteger(item.quantity) ||
-          item.quantity <= 0,
+          item.quantity <= 0 ||
+          item.photoDocumentIds.some(
+            (documentId) => !Number.isInteger(documentId) || documentId <= 0,
+          ),
       )
     ) {
       throw new BadRequestException(
-        'Return items must contain positive integers only',
+        'Return items and photo document ids must contain positive integers only',
       );
     }
 
@@ -612,6 +627,26 @@ export class OrdersService {
     );
     if (distinctOrderItemIds.size !== normalizedItems.length) {
       throw new BadRequestException('Return items must be unique');
+    }
+
+    const distinctPhotoDocumentIds = new Set<number>();
+    for (const item of normalizedItems) {
+      if (
+        new Set(item.photoDocumentIds).size !== item.photoDocumentIds.length
+      ) {
+        throw new BadRequestException(
+          'Photo document ids must be unique per return item',
+        );
+      }
+
+      for (const documentId of item.photoDocumentIds) {
+        if (distinctPhotoDocumentIds.has(documentId)) {
+          throw new BadRequestException(
+            'Photo document ids cannot be reused across return items',
+          );
+        }
+        distinctPhotoDocumentIds.add(documentId);
+      }
     }
 
     const orderItemById = new Map(order.items.map((item) => [item.id, item]));
@@ -640,6 +675,27 @@ export class OrdersService {
     });
 
     const returnedQuantityByItemId = this.sumReturnedQuantities(returnedItems);
+    const returnPhotoDocuments =
+      distinctPhotoDocumentIds.size > 0
+        ? await this.prisma.document.findMany({
+            where: {
+              id: {
+                in: Array.from(distinctPhotoDocumentIds),
+              },
+            },
+            select: {
+              id: true,
+              mediaType: true,
+              module: true,
+              section: true,
+            },
+          })
+        : [];
+
+    this.ensureValidReturnPhotoDocuments(
+      Array.from(distinctPhotoDocumentIds),
+      returnPhotoDocuments,
+    );
 
     const preparedItems = normalizedItems.map((item) => {
       const orderItem = orderItemById.get(item.purchaseOrderItemId);
@@ -667,6 +723,7 @@ export class OrdersService {
       return {
         orderItem,
         quantity: item.quantity,
+        photoDocumentIds: item.photoDocumentIds,
       };
     });
 
@@ -693,18 +750,34 @@ export class OrdersService {
         },
       });
 
-      await tx.purchaseReturnItem.createMany({
-        data: preparedItems.map((item) => ({
-          purchaseReturnId: created.id,
-          purchaseOrderItemId: item.orderItem.id,
-          productId: item.orderItem.productId,
-          quantity: item.quantity,
-          nameZh: item.orderItem.nameZh,
-          nameFr: item.orderItem.nameFr,
-          unit: item.orderItem.unit,
-          category: item.orderItem.category,
-        })),
-      });
+      for (const item of preparedItems) {
+        const createdItem = await tx.purchaseReturnItem.create({
+          data: {
+            purchaseReturnId: created.id,
+            purchaseOrderItemId: item.orderItem.id,
+            productId: item.orderItem.productId,
+            quantity: item.quantity,
+            nameZh: item.orderItem.nameZh,
+            nameFr: item.orderItem.nameFr,
+            unit: item.orderItem.unit,
+            category: item.orderItem.category,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        if (item.photoDocumentIds.length === 0) {
+          continue;
+        }
+
+        await tx.purchaseReturnItemPhoto.createMany({
+          data: item.photoDocumentIds.map((documentId) => ({
+            purchaseReturnItemId: createdItem.id,
+            documentId,
+          })),
+        });
+      }
 
       return created;
     });
@@ -1482,6 +1555,40 @@ export class OrdersService {
     }
 
     return returnedQuantityByItemId;
+  }
+
+  private ensureValidReturnPhotoDocuments(
+    expectedDocumentIds: number[],
+    documents: Array<{
+      id: number;
+      mediaType: UploadMediaType;
+      module: UploadModule;
+      section: UploadSection;
+    }>,
+  ) {
+    if (expectedDocumentIds.length === 0) {
+      return;
+    }
+
+    const foundIds = new Set(documents.map((document) => document.id));
+    const missingDocumentId = expectedDocumentIds.find(
+      (documentId) => !foundIds.has(documentId),
+    );
+    if (missingDocumentId) {
+      throw new BadRequestException('Return photo document not found');
+    }
+
+    const invalidDocument = documents.find(
+      (document) =>
+        document.mediaType !== UploadMediaType.image ||
+        document.module !== UploadModule.MANAGEMENT ||
+        document.section !== UploadSection.ORDER_RETURNS,
+    );
+    if (invalidDocument) {
+      throw new BadRequestException(
+        'Return photos must be uploaded as management return images',
+      );
+    }
   }
 
   private ensureCanManageOrders(actor: Actor) {

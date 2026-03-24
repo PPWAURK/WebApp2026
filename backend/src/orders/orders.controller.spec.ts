@@ -130,7 +130,13 @@ describe('OrdersController', () => {
         orderId: 19,
         reason: 'Produit abime',
         notes: 'Carton humide',
-        items: [{ purchaseOrderItemId: 44, quantity: 2 }],
+        items: [
+          {
+            purchaseOrderItemId: 44,
+            quantity: 2,
+            photoDocumentIds: [91, 92],
+          },
+        ],
       },
     );
 
@@ -144,7 +150,13 @@ describe('OrdersController', () => {
         orderId: 19,
         reason: 'Produit abime',
         notes: 'Carton humide',
-        items: [{ purchaseOrderItemId: 44, quantity: 2 }],
+        items: [
+          {
+            purchaseOrderItemId: 44,
+            quantity: 2,
+            photoDocumentIds: [91, 92],
+          },
+        ],
       },
     );
     expect(result).toBe(expected);

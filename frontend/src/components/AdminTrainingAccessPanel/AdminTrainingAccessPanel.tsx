@@ -1,12 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import {
+  Pressable,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import {
   getTrainingScenarios,
   type TrainingScenario,
   type TrainingScenarioKey,
 } from '../../constants/trainingScenario';
-import { getSectionsByModule, type LibrarySection } from '../../constants/documentTaxonomy';
 import type { AppText } from '../../locales/translations';
 import {
   fetchTrainingAccessByLevel,
@@ -52,15 +57,14 @@ export function AdminTrainingAccessPanel({
 
   const sectionLabelByKey = useMemo(() => {
     const map = new Map<TrainingSection, string>();
-    const grouped = getSectionsByModule(text);
-    for (const sectionList of Object.values(grouped)) {
-      for (const section of sectionList) {
-        map.set(section.key as TrainingSection, section.label);
+    for (const scenario of scenarios) {
+      for (const section of scenario.sections) {
+        map.set(section, text.taxonomy.sections[section]);
       }
     }
 
     return map;
-  }, [text]);
+  }, [scenarios, text]);
 
   const managedSections = useMemo(
     () =>
@@ -75,8 +79,12 @@ export function AdminTrainingAccessPanel({
     [managedSections],
   );
 
-  const [levelProfiles, setLevelProfiles] = useState<TrainingAccessByLevelProfile[]>([]);
-  const [selectedLevel, setSelectedLevel] = useState<EmployeeLevel | null>(null);
+  const [levelProfiles, setLevelProfiles] = useState<
+    TrainingAccessByLevelProfile[]
+  >([]);
+  const [selectedLevel, setSelectedLevel] = useState<EmployeeLevel | null>(
+    null,
+  );
   const [draftSections, setDraftSections] = useState<TrainingSection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -84,9 +92,15 @@ export function AdminTrainingAccessPanel({
 
   const [isQuizLinksLoading, setIsQuizLinksLoading] = useState(false);
   const [quizLinksError, setQuizLinksError] = useState<string | null>(null);
-  const [savingQuizLinkKey, setSavingQuizLinkKey] = useState<string | null>(null);
-  const [savedQuizLinksByKey, setSavedQuizLinksByKey] = useState<Record<string, string>>({});
-  const [quizLinkDraftsByKey, setQuizLinkDraftsByKey] = useState<Record<string, string>>({});
+  const [savingQuizLinkKey, setSavingQuizLinkKey] = useState<string | null>(
+    null,
+  );
+  const [savedQuizLinksByKey, setSavedQuizLinksByKey] = useState<
+    Record<string, string>
+  >({});
+  const [quizLinkDraftsByKey, setQuizLinkDraftsByKey] = useState<
+    Record<string, string>
+  >({});
   const [isLevelListExpanded, setIsLevelListExpanded] = useState(false);
   const [expandedAccessScenarios, setExpandedAccessScenarios] = useState<
     Record<TrainingScenarioKey, boolean>
@@ -160,7 +174,8 @@ export function AdminTrainingAccessPanel({
 
         const nextSavedByKey = quizLinks.reduce<Record<string, string>>(
           (accumulator, item) => {
-            accumulator[getQuizLinkKey(item.section, item.language)] = item.quizUrl ?? '';
+            accumulator[getQuizLinkKey(item.section, item.language)] =
+              item.quizUrl ?? '';
             return accumulator;
           },
           {},
@@ -201,17 +216,20 @@ export function AdminTrainingAccessPanel({
   }, [levelOptions]);
 
   const baseSectionsForLevel = useMemo(
-    () => (selectedLevel ? sectionProfileByLevel.get(selectedLevel) ?? [] : []),
+    () =>
+      selectedLevel ? (sectionProfileByLevel.get(selectedLevel) ?? []) : [],
     [sectionProfileByLevel, selectedLevel],
   );
 
   const baseManagedSectionsForLevel = useMemo(
-    () => baseSectionsForLevel.filter((section) => managedSectionSet.has(section)),
+    () =>
+      baseSectionsForLevel.filter((section) => managedSectionSet.has(section)),
     [baseSectionsForLevel, managedSectionSet],
   );
 
   const hiddenSectionsForLevel = useMemo(
-    () => baseSectionsForLevel.filter((section) => !managedSectionSet.has(section)),
+    () =>
+      baseSectionsForLevel.filter((section) => !managedSectionSet.has(section)),
     [baseSectionsForLevel, managedSectionSet],
   );
 
@@ -220,7 +238,8 @@ export function AdminTrainingAccessPanel({
   }, [baseManagedSectionsForLevel]);
 
   const isDirty = useMemo(
-    () => sortSections(draftSections) !== sortSections(baseManagedSectionsForLevel),
+    () =>
+      sortSections(draftSections) !== sortSections(baseManagedSectionsForLevel),
     [baseManagedSectionsForLevel, draftSections],
   );
 
@@ -229,7 +248,8 @@ export function AdminTrainingAccessPanel({
   const selectedLevelLabel = selectedLevel
     ? text.dashboard.levels[selectedLevel]
     : text.adminTraining.loading;
-  const totalQuizLinkCount = managedSections.length * QUIZ_LINK_LANGUAGES.length;
+  const totalQuizLinkCount =
+    managedSections.length * QUIZ_LINK_LANGUAGES.length;
   const configuredQuizLinkCount = useMemo(
     () =>
       managedSections.reduce((count, section) => {
@@ -237,8 +257,10 @@ export function AdminTrainingAccessPanel({
           count +
           QUIZ_LINK_LANGUAGES.filter((languageValue) =>
             Boolean(
-              (savedQuizLinksByKey[getQuizLinkKey(section, languageValue)] ?? '')
-                .trim(),
+              (
+                savedQuizLinksByKey[getQuizLinkKey(section, languageValue)] ??
+                ''
+              ).trim(),
             ),
           ).length
         );
@@ -366,7 +388,9 @@ export function AdminTrainingAccessPanel({
       );
 
       setLevelProfiles((current) =>
-        current.some((entry) => entry.employeeLevel === updatedProfile.employeeLevel)
+        current.some(
+          (entry) => entry.employeeLevel === updatedProfile.employeeLevel,
+        )
           ? current.map((entry) =>
               entry.employeeLevel === updatedProfile.employeeLevel
                 ? updatedProfile
@@ -383,14 +407,23 @@ export function AdminTrainingAccessPanel({
 
   return (
     <View style={styles.panelStack}>
-      <View style={[styles.panelHeader, isDenseLayout && styles.panelHeaderCompact]}>
+      <View
+        style={[styles.panelHeader, isDenseLayout && styles.panelHeaderCompact]}
+      >
         <View style={styles.panelHeaderCopy}>
           <Text style={styles.panelTitle}>{text.adminTraining.title}</Text>
-          <Text style={styles.panelSubtitle}>{text.adminTraining.subtitle}</Text>
+          <Text style={styles.panelSubtitle}>
+            {text.adminTraining.subtitle}
+          </Text>
         </View>
 
-          <View style={styles.panelStatsRow}>
-          <View style={[styles.panelStatCard, isDenseLayout && styles.panelStatCardCompact]}>
+        <View style={styles.panelStatsRow}>
+          <View
+            style={[
+              styles.panelStatCard,
+              isDenseLayout && styles.panelStatCardCompact,
+            ]}
+          >
             <Text style={styles.panelStatValue}>
               {selectedCount}/{totalCount}
             </Text>
@@ -398,7 +431,12 @@ export function AdminTrainingAccessPanel({
               {text.adminTraining.allowedSections}
             </Text>
           </View>
-          <View style={[styles.panelStatCard, isDenseLayout && styles.panelStatCardCompact]}>
+          <View
+            style={[
+              styles.panelStatCard,
+              isDenseLayout && styles.panelStatCardCompact,
+            ]}
+          >
             <Text style={styles.panelStatValue}>
               {configuredQuizLinkCount}/{totalQuizLinkCount}
             </Text>
@@ -410,7 +448,12 @@ export function AdminTrainingAccessPanel({
       </View>
 
       <View style={[styles.panelGrid, isWideLayout && styles.panelGridWide]}>
-        <View style={[styles.surfaceCard, isDenseLayout && styles.surfaceCardCompact]}>
+        <View
+          style={[
+            styles.surfaceCard,
+            isDenseLayout && styles.surfaceCardCompact,
+          ]}
+        >
           <View
             style={[
               styles.surfaceHeader,
@@ -418,8 +461,12 @@ export function AdminTrainingAccessPanel({
             ]}
           >
             <View style={styles.surfaceHeaderCopy}>
-              <Text style={styles.surfaceEyebrow}>{text.adminTraining.levelLabel}</Text>
-              <Text style={styles.surfaceTitle}>{text.adminTraining.allowedSections}</Text>
+              <Text style={styles.surfaceEyebrow}>
+                {text.adminTraining.levelLabel}
+              </Text>
+              <Text style={styles.surfaceTitle}>
+                {text.adminTraining.allowedSections}
+              </Text>
               <Text style={styles.surfaceSubtitle}>
                 {text.adminTraining.scenarioMatrixSubtitle}
               </Text>
@@ -457,7 +504,11 @@ export function AdminTrainingAccessPanel({
               </Text>
             </View>
             <Ionicons
-              name={isLevelListExpanded ? 'chevron-up-outline' : 'chevron-down-outline'}
+              name={
+                isLevelListExpanded
+                  ? 'chevron-up-outline'
+                  : 'chevron-down-outline'
+              }
               size={18}
               color="#7f1b21"
             />
@@ -481,7 +532,8 @@ export function AdminTrainingAccessPanel({
                     <Text
                       style={[
                         styles.levelListItemText,
-                        selectedLevel === level && styles.levelListItemTextActive,
+                        selectedLevel === level &&
+                          styles.levelListItemTextActive,
                       ]}
                     >
                       {text.dashboard.levels[level]}
@@ -501,9 +553,17 @@ export function AdminTrainingAccessPanel({
             </View>
           ) : null}
 
-          <View style={[styles.actionRail, isPhoneLayout && styles.actionRailCompact]}>
+          <View
+            style={[
+              styles.actionRail,
+              isPhoneLayout && styles.actionRailCompact,
+            ]}
+          >
             <Pressable
-              style={[styles.actionButton, isPhoneLayout && styles.actionButtonCompact]}
+              style={[
+                styles.actionButton,
+                isPhoneLayout && styles.actionButtonCompact,
+              ]}
               onPress={selectAllSections}
             >
               <Text style={styles.actionButtonText}>
@@ -511,7 +571,10 @@ export function AdminTrainingAccessPanel({
               </Text>
             </Pressable>
             <Pressable
-              style={[styles.actionButton, isPhoneLayout && styles.actionButtonCompact]}
+              style={[
+                styles.actionButton,
+                isPhoneLayout && styles.actionButtonCompact,
+              ]}
               onPress={clearAllSections}
             >
               <Text style={styles.actionButtonText}>
@@ -548,7 +611,9 @@ export function AdminTrainingAccessPanel({
                       onPress={() => toggleAccessScenarioExpanded(scenario.key)}
                     >
                       <View style={styles.scenarioHeaderCopy}>
-                        <Text style={styles.scenarioTitle}>{scenario.label}</Text>
+                        <Text style={styles.scenarioTitle}>
+                          {scenario.label}
+                        </Text>
                         <Text style={styles.scenarioMeta}>
                           {selectedInScenario}/{scenario.sections.length}
                         </Text>
@@ -615,12 +680,14 @@ export function AdminTrainingAccessPanel({
                               <Text
                                 style={[
                                   styles.sectionChipText,
-                                  isDenseLayout && styles.sectionChipTextCompact,
-                                  isPhoneLayout && styles.sectionChipTextCompact,
+                                  isDenseLayout &&
+                                    styles.sectionChipTextCompact,
+                                  isPhoneLayout &&
+                                    styles.sectionChipTextCompact,
                                   checked && styles.sectionChipTextActive,
                                 ]}
                               >
-                                {sectionLabelByKey.get(section as LibrarySection) ?? section}
+                                {sectionLabelByKey.get(section) ?? section}
                               </Text>
                             </Pressable>
                           );
@@ -638,7 +705,10 @@ export function AdminTrainingAccessPanel({
           </View>
 
           <Pressable
-            style={[styles.primaryButton, (isSaving || isLoading) && styles.buttonDisabled]}
+            style={[
+              styles.primaryButton,
+              (isSaving || isLoading) && styles.buttonDisabled,
+            ]}
             disabled={isSaving || isLoading || !selectedLevel}
             onPress={() => {
               void saveAccess();
@@ -650,7 +720,12 @@ export function AdminTrainingAccessPanel({
           </Pressable>
         </View>
 
-        <View style={[styles.surfaceCard, isDenseLayout && styles.surfaceCardCompact]}>
+        <View
+          style={[
+            styles.surfaceCard,
+            isDenseLayout && styles.surfaceCardCompact,
+          ]}
+        >
           <View
             style={[
               styles.surfaceHeader,
@@ -658,8 +733,12 @@ export function AdminTrainingAccessPanel({
             ]}
           >
             <View style={styles.surfaceHeaderCopy}>
-              <Text style={styles.surfaceEyebrow}>{text.adminTraining.quizLinksTitle}</Text>
-              <Text style={styles.surfaceTitle}>{text.adminTraining.quizLinksTitle}</Text>
+              <Text style={styles.surfaceEyebrow}>
+                {text.adminTraining.quizLinksTitle}
+              </Text>
+              <Text style={styles.surfaceTitle}>
+                {text.adminTraining.quizLinksTitle}
+              </Text>
               <Text style={styles.surfaceSubtitle}>
                 {text.adminTraining.quizLinksSubtitle}
               </Text>
@@ -674,37 +753,51 @@ export function AdminTrainingAccessPanel({
             </Text>
           </View>
 
-          {quizLinksError ? <Text style={styles.error}>{quizLinksError}</Text> : null}
+          {quizLinksError ? (
+            <Text style={styles.error}>{quizLinksError}</Text>
+          ) : null}
           {isQuizLinksLoading ? (
             <Text style={styles.helperText}>{text.adminTraining.loading}</Text>
           ) : (
             <View style={styles.quizScenarioStack}>
               {scenarios.map((scenario) => {
-                const scenarioConfiguredCount = scenario.sections.reduce((count, section) => {
-                  return (
-                    count +
-                    QUIZ_LINK_LANGUAGES.filter((languageValue) =>
-                      Boolean(
-                        (savedQuizLinksByKey[getQuizLinkKey(section, languageValue)] ?? '')
-                          .trim(),
-                      ),
-                    ).length
-                  );
-                }, 0);
+                const scenarioConfiguredCount = scenario.sections.reduce(
+                  (count, section) => {
+                    return (
+                      count +
+                      QUIZ_LINK_LANGUAGES.filter((languageValue) =>
+                        Boolean(
+                          (
+                            savedQuizLinksByKey[
+                              getQuizLinkKey(section, languageValue)
+                            ] ?? ''
+                          ).trim(),
+                        ),
+                      ).length
+                    );
+                  },
+                  0,
+                );
                 const isScenarioExpanded = expandedQuizScenarios[scenario.key];
 
                 return (
-                  <View key={`quiz-link-${scenario.key}`} style={styles.quizScenarioCard}>
+                  <View
+                    key={`quiz-link-${scenario.key}`}
+                    style={styles.quizScenarioCard}
+                  >
                     <View style={styles.scenarioHeaderRow}>
                       <Pressable
                         style={styles.scenarioToggleButton}
                         onPress={() => toggleQuizScenarioExpanded(scenario.key)}
                       >
                         <View style={styles.scenarioHeaderCopy}>
-                          <Text style={styles.scenarioTitle}>{scenario.label}</Text>
+                          <Text style={styles.scenarioTitle}>
+                            {scenario.label}
+                          </Text>
                           <Text style={styles.scenarioMeta}>
                             {scenarioConfiguredCount}/
-                            {scenario.sections.length * QUIZ_LINK_LANGUAGES.length}
+                            {scenario.sections.length *
+                              QUIZ_LINK_LANGUAGES.length}
                           </Text>
                         </View>
                         <Ionicons
@@ -722,30 +815,42 @@ export function AdminTrainingAccessPanel({
                     {isScenarioExpanded ? (
                       <View style={styles.quizSectionStack}>
                         {scenario.sections.map((section) => (
-                          <View key={`quiz-link-${section}`} style={styles.quizSectionCard}>
+                          <View
+                            key={`quiz-link-${section}`}
+                            style={styles.quizSectionCard}
+                          >
                             <Text style={styles.quizSectionTitle}>
-                              {sectionLabelByKey.get(section as LibrarySection) ?? section}
+                              {sectionLabelByKey.get(section) ?? section}
                             </Text>
 
                             {QUIZ_LINK_LANGUAGES.map((languageValue) => {
-                              const linkKey = getQuizLinkKey(section, languageValue);
-                              const draftValue = quizLinkDraftsByKey[linkKey] ?? '';
-                              const savedValue = savedQuizLinksByKey[linkKey] ?? '';
-                              const isQuizDirty = draftValue.trim() !== savedValue.trim();
-                              const isSavingQuizLink = savingQuizLinkKey === linkKey;
+                              const linkKey = getQuizLinkKey(
+                                section,
+                                languageValue,
+                              );
+                              const draftValue =
+                                quizLinkDraftsByKey[linkKey] ?? '';
+                              const savedValue =
+                                savedQuizLinksByKey[linkKey] ?? '';
+                              const isQuizDirty =
+                                draftValue.trim() !== savedValue.trim();
+                              const isSavingQuizLink =
+                                savingQuizLinkKey === linkKey;
 
                               return (
                                 <View
                                   key={`quiz-link-row-${section}-${languageValue}`}
                                   style={[
                                     styles.quizLinkRow,
-                                    isCompactLayout && styles.quizLinkRowCompact,
+                                    isCompactLayout &&
+                                      styles.quizLinkRowCompact,
                                   ]}
                                 >
                                   <Text
                                     style={[
                                       styles.quizLanguageBadge,
-                                      isCompactLayout && styles.quizLanguageBadgeCompact,
+                                      isCompactLayout &&
+                                        styles.quizLanguageBadgeCompact,
                                     ]}
                                   >
                                     {languageValue === 'fr'
@@ -755,13 +860,20 @@ export function AdminTrainingAccessPanel({
                                   <TextInput
                                     style={[
                                       styles.quizLinkInput,
-                                      isCompactLayout && styles.quizLinkInputCompact,
+                                      isCompactLayout &&
+                                        styles.quizLinkInputCompact,
                                     ]}
                                     value={draftValue}
                                     onChangeText={(value) =>
-                                      updateQuizLinkDraft(section, languageValue, value)
+                                      updateQuizLinkDraft(
+                                        section,
+                                        languageValue,
+                                        value,
+                                      )
                                     }
-                                    placeholder={text.adminTraining.quizLinkPlaceholder}
+                                    placeholder={
+                                      text.adminTraining.quizLinkPlaceholder
+                                    }
                                     placeholderTextColor="#a98a8d"
                                     autoCapitalize="none"
                                     autoCorrect={false}

@@ -8,41 +8,50 @@ import {
   View,
 } from 'react-native';
 import type { AppText } from '../../locales/translations';
+import type { OrderReturnDraft } from '../../services/ordersApi';
+import {
+  OrderReturnItemCard,
+  type EditableReturnItem,
+} from './OrderReturnItemCard';
+import {
+  captureReturnPhoto,
+  selectReturnPhotoFromLibrary,
+} from './orderReturnPhotoPicker';
 import type {
-  CreateOrderReturnPayload,
-  OrderReturnDraft,
-  OrderReturnDraftItem,
-} from '../../services/ordersApi';
+  ReturnPhotoDraft,
+  SubmitOrderReturnPayload,
+} from './orderReturn.types';
 import { styles } from './OrderReturnModal.styles';
-
-type EditableReturnItem = OrderReturnDraftItem & {
-  quantityText: string;
-};
 
 type OrderReturnModalProps = {
   draft: OrderReturnDraft | null;
   onClose: () => void;
-  onSubmit: (payload: CreateOrderReturnPayload) => Promise<void>;
+  onSubmit: (payload: SubmitOrderReturnPayload) => Promise<void>;
   submitting: boolean;
   text: AppText;
   visible: boolean;
 };
 
-function buildItemLabel(item: OrderReturnDraftItem) {
-  const nameFr = item.nameFr.trim();
-  const nameZh = item.nameZh.trim();
-
-  if (nameFr && nameZh && nameFr !== nameZh) {
-    return {
-      title: nameZh,
-      subtitle: nameFr,
-    };
+function resolvePhotoErrorMessage(error: unknown, text: AppText) {
+  if (
+    error instanceof Error &&
+    error.message === 'RETURN_PHOTO_CAMERA_PERMISSION_DENIED'
+  ) {
+    return text.orders.returnPhotoCameraPermissionError;
   }
 
-  return {
-    title: nameZh || nameFr || `${item.productId}`,
-    subtitle: item.category || item.unit,
-  };
+  if (
+    error instanceof Error &&
+    error.message === 'RETURN_PHOTO_LIBRARY_PERMISSION_DENIED'
+  ) {
+    return text.orders.returnPhotoLibraryPermissionError;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return text.orders.returnPhotoPickerError;
 }
 
 export function OrderReturnModal({
@@ -74,6 +83,7 @@ export function OrderReturnModal({
       draft.items.map((item) => ({
         ...item,
         quantityText: String(item.remainingQuantity),
+        photos: [],
       })),
     );
   }, [draft, visible]);
@@ -105,6 +115,55 @@ export function OrderReturnModal({
     );
   }
 
+  function removePhoto(purchaseOrderItemId: number, photoId: string) {
+    setFormError(null);
+    setItems((currentItems) =>
+      currentItems.map((item) =>
+        item.purchaseOrderItemId === purchaseOrderItemId
+          ? {
+              ...item,
+              photos: item.photos.filter((photo) => photo.id !== photoId),
+            }
+          : item,
+      ),
+    );
+  }
+
+  async function addPhoto(
+    purchaseOrderItemId: number,
+    source: 'camera' | 'library',
+  ) {
+    if (submitting) {
+      return;
+    }
+
+    setFormError(null);
+
+    try {
+      const photo =
+        source === 'camera'
+          ? await captureReturnPhoto()
+          : await selectReturnPhotoFromLibrary();
+
+      if (!photo) {
+        return;
+      }
+
+      setItems((currentItems) =>
+        currentItems.map((item) =>
+          item.purchaseOrderItemId === purchaseOrderItemId
+            ? {
+                ...item,
+                photos: [...item.photos, photo],
+              }
+            : item,
+        ),
+      );
+    } catch (error) {
+      setFormError(resolvePhotoErrorMessage(error, text));
+    }
+  }
+
   async function handleSubmit() {
     const trimmedReason = reason.trim();
 
@@ -118,7 +177,7 @@ export function OrderReturnModal({
       return;
     }
 
-    const payloadItems: CreateOrderReturnPayload['items'] = [];
+    const payloadItems: SubmitOrderReturnPayload['items'] = [];
 
     for (const item of items) {
       const quantity = Number.parseInt(item.quantityText, 10);
@@ -135,6 +194,7 @@ export function OrderReturnModal({
       payloadItems.push({
         purchaseOrderItemId: item.purchaseOrderItemId,
         quantity,
+        photos: item.photos,
       });
     }
 
@@ -252,68 +312,18 @@ export function OrderReturnModal({
 
               {items.length > 0 ? (
                 <View style={styles.itemList}>
-                  {items.map((item) => {
-                    const label = buildItemLabel(item);
-
-                    return (
-                      <View
-                        key={`return-item-${item.purchaseOrderItemId}`}
-                        style={styles.itemCard}
-                      >
-                        <View style={styles.itemHeader}>
-                          <View style={styles.itemCopy}>
-                            <Text style={styles.itemTitle}>{label.title}</Text>
-                            <Text style={styles.itemSubtitle}>
-                              {label.subtitle}
-                            </Text>
-                          </View>
-                          <Pressable
-                            style={styles.removeButton}
-                            onPress={() => removeItem(item.purchaseOrderItemId)}
-                          >
-                            <Text style={styles.removeButtonText}>
-                              {text.orders.returnRemoveItemButton}
-                            </Text>
-                          </Pressable>
-                        </View>
-
-                        <View style={styles.itemMetaRow}>
-                          <View style={styles.itemMetaPill}>
-                            <Text style={styles.itemMetaText}>
-                              {text.orders.returnOrderedQuantityLabel}:{' '}
-                              {item.orderedQuantity}
-                            </Text>
-                          </View>
-                          <View style={styles.itemMetaPill}>
-                            <Text style={styles.itemMetaText}>
-                              {text.orders.returnReturnedQuantityLabel}:{' '}
-                              {item.returnedQuantity}
-                            </Text>
-                          </View>
-                          <View style={styles.itemMetaPill}>
-                            <Text style={styles.itemMetaText}>
-                              {text.orders.returnRemainingQuantityLabel}:{' '}
-                              {item.remainingQuantity}
-                            </Text>
-                          </View>
-                        </View>
-
-                        <View style={styles.quantityRow}>
-                          <Text style={styles.fieldLabel}>
-                            {text.orders.quantityLabel}
-                          </Text>
-                          <TextInput
-                            style={[styles.input, styles.quantityInput]}
-                            keyboardType="number-pad"
-                            value={item.quantityText}
-                            onChangeText={(value) =>
-                              updateQuantity(item.purchaseOrderItemId, value)
-                            }
-                          />
-                        </View>
-                      </View>
-                    );
-                  })}
+                  {items.map((item) => (
+                    <OrderReturnItemCard
+                      key={`return-item-${item.purchaseOrderItemId}`}
+                      item={item}
+                      onAddPhoto={addPhoto}
+                      onRemoveItem={removeItem}
+                      onRemovePhoto={removePhoto}
+                      onUpdateQuantity={updateQuantity}
+                      submitting={submitting}
+                      text={text}
+                    />
+                  ))}
                 </View>
               ) : (
                 <View style={styles.emptyState}>

@@ -4,10 +4,11 @@ import type { AppText } from '../../locales/translations';
 import {
   createOrderReturn,
   fetchOrderReturnDraft,
-  type CreateOrderReturnPayload,
   type OrderReturnDraft,
   type OrderSummary,
 } from '../../services/ordersApi';
+import { deleteLibraryFile, uploadSingleFile } from '../../services/uploadsApi';
+import type { SubmitOrderReturnPayload } from './orderReturn.types';
 
 type UseOrderReturnFlowArgs = {
   accessToken: string;
@@ -34,6 +35,62 @@ function showFeedback(title: string, message: string) {
   Alert.alert(title, message);
 }
 
+async function cleanupUploadedReturnPhotos(
+  accessToken: string,
+  documentIds: number[],
+) {
+  if (documentIds.length === 0) {
+    return;
+  }
+
+  await Promise.allSettled(
+    documentIds.map((documentId) => deleteLibraryFile(accessToken, documentId)),
+  );
+}
+
+async function uploadReturnPhotoDocuments(
+  accessToken: string,
+  items: SubmitOrderReturnPayload['items'],
+  text: AppText,
+) {
+  const uploadedDocumentIds: number[] = [];
+  const payloadItems = [];
+
+  for (const item of items) {
+    let photoDocumentIds: number[] = [];
+
+    if (item.photos.length > 0) {
+      try {
+        const uploadedPhotos = await Promise.all(
+          item.photos.map((photo) =>
+            uploadSingleFile(accessToken, photo, {
+              module: 'MANAGEMENT',
+              section: 'ORDER_RETURNS',
+            }),
+          ),
+        );
+        photoDocumentIds = uploadedPhotos.map((photo) => photo.documentId);
+        uploadedDocumentIds.push(...photoDocumentIds);
+      } catch (error) {
+        throw new Error(
+          resolveErrorMessage(error, text.orders.returnPhotoUploadError),
+        );
+      }
+    }
+
+    payloadItems.push({
+      purchaseOrderItemId: item.purchaseOrderItemId,
+      quantity: item.quantity,
+      ...(photoDocumentIds.length > 0 ? { photoDocumentIds } : {}),
+    });
+  }
+
+  return {
+    payloadItems,
+    uploadedDocumentIds,
+  };
+}
+
 export function useOrderReturnFlow({
   accessToken,
   onRefresh,
@@ -45,6 +102,7 @@ export function useOrderReturnFlow({
     number | null
   >(null);
   const [submittingReturn, setSubmittingReturn] = useState(false);
+  const [successDialogVisible, setSuccessDialogVisible] = useState(false);
 
   function resetReturnState() {
     setActiveOrder(null);
@@ -95,18 +153,33 @@ export function useOrderReturnFlow({
     resetReturnState();
   }
 
-  async function submitReturn(payload: CreateOrderReturnPayload) {
+  function closeSuccessDialog() {
+    setSuccessDialogVisible(false);
+  }
+
+  async function submitReturn(payload: SubmitOrderReturnPayload) {
     setSubmittingReturn(true);
+    let uploadedDocumentIds: number[] = [];
 
     try {
-      await createOrderReturn(accessToken, payload);
+      const uploadResult = await uploadReturnPhotoDocuments(
+        accessToken,
+        payload.items,
+        text,
+      );
+      uploadedDocumentIds = uploadResult.uploadedDocumentIds;
+
+      await createOrderReturn(accessToken, {
+        orderId: payload.orderId,
+        reason: payload.reason,
+        notes: payload.notes,
+        items: uploadResult.payloadItems,
+      });
       resetReturnState();
       onRefresh();
-      showFeedback(
-        text.orders.returnSuccessTitle,
-        text.orders.returnSuccessMessage,
-      );
+      setSuccessDialogVisible(true);
     } catch (error) {
+      await cleanupUploadedReturnPhotos(accessToken, uploadedDocumentIds);
       throw new Error(
         resolveErrorMessage(error, text.orders.returnSubmitError),
       );
@@ -118,10 +191,12 @@ export function useOrderReturnFlow({
   return {
     activeOrder,
     closeReturnModal,
+    closeSuccessDialog,
     openReturnDraft,
     returnDraft,
     returnDraftLoadingOrderId,
     returnModalVisible: Boolean(activeOrder && returnDraft),
+    successDialogVisible,
     submitReturn,
     submittingReturn,
   };

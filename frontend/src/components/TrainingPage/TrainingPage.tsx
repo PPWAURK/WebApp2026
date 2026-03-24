@@ -16,10 +16,6 @@ import {
   getTrainingQuizUrlForSectionLanguage,
   type TrainingQuizLinkLanguage,
 } from '../../constants/config';
-import {
-  getSectionsByModule,
-  type LibrarySection,
-} from '../../constants/documentTaxonomy';
 import { getTrainingScenarios } from '../../constants/trainingScenario';
 import type { AppText } from '../../locales/translations';
 import {
@@ -33,7 +29,7 @@ import {
   type LibraryFileItem,
 } from '../../services/uploadsApi';
 import { styles } from './TrainingPage.styles';
-import type { User } from '../../types/auth';
+import type { TrainingSection, User } from '../../types/auth';
 import type { Language } from '../../types/language';
 
 type TrainingPageProps = {
@@ -46,7 +42,7 @@ type TrainingPageProps = {
 type OpenedDocumentState = {
   fileName: string;
   originalName: string;
-  section: LibrarySection;
+  section: TrainingSection;
 };
 
 type WebPdfFrameProps = {
@@ -55,7 +51,7 @@ type WebPdfFrameProps = {
 };
 
 function getQuizLinkKey(
-  section: LibrarySection,
+  section: TrainingSection,
   language: TrainingQuizLinkLanguage,
 ) {
   return `${section}:${language}`;
@@ -63,7 +59,7 @@ function getQuizLinkKey(
 
 function buildQuizUrl(
   baseUrl: string,
-  section: LibrarySection,
+  section: TrainingSection,
   context: OpenedDocumentState | null,
 ): string {
   const params = new URLSearchParams({
@@ -144,13 +140,19 @@ export function TrainingPage({
   currentUser,
   language,
 }: TrainingPageProps) {
-  const [activeScenarioKey, setActiveScenarioKey] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<LibrarySection | null>(null);
+  const [activeScenarioKey, setActiveScenarioKey] = useState<string | null>(
+    null,
+  );
+  const [activeSection, setActiveSection] = useState<TrainingSection | null>(
+    null,
+  );
   const [libraryItems, setLibraryItems] = useState<LibraryFileItem[]>([]);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
   const [libraryError, setLibraryError] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [selectedVideo, setSelectedVideo] = useState<LibraryFileItem | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<LibraryFileItem | null>(
+    null,
+  );
   const [openedDocument, setOpenedDocument] =
     useState<OpenedDocumentState | null>(null);
   const [webPreviewDocument, setWebPreviewDocument] =
@@ -158,11 +160,14 @@ export function TrainingPage({
   const [webPreviewUrl, setWebPreviewUrl] = useState<string | null>(null);
   const [webPreviewLoading, setWebPreviewLoading] = useState(false);
   const [isWebPreviewFullscreen, setIsWebPreviewFullscreen] = useState(false);
-  const [quizLinksByKey, setQuizLinksByKey] = useState<Record<string, string>>({});
+  const [quizLinksByKey, setQuizLinksByKey] = useState<Record<string, string>>(
+    {},
+  );
   const [quizLanguage, setQuizLanguage] = useState<TrainingQuizLinkLanguage>(
     language === 'fr' ? 'fr' : 'bn',
   );
-  const [completionByFile, setCompletionByFile] = useState<TrainingCompletionMap>({});
+  const [completionByFile, setCompletionByFile] =
+    useState<TrainingCompletionMap>({});
   const [shouldAutoFullscreen, setShouldAutoFullscreen] = useState(false);
   const [videoAspectRatio, setVideoAspectRatio] = useState(16 / 9);
 
@@ -173,15 +178,14 @@ export function TrainingPage({
   const userTrainingAccess = currentUser.trainingAccess ?? [];
 
   const sectionLabelByKey = useMemo(() => {
-    const map = new Map<LibrarySection, string>();
-    const grouped = getSectionsByModule(text);
-    for (const sectionList of Object.values(grouped)) {
-      for (const sectionEntry of sectionList) {
-        map.set(sectionEntry.key, sectionEntry.label);
+    const map = new Map<TrainingSection, string>();
+    for (const scenario of scenarios) {
+      for (const section of scenario.sections) {
+        map.set(section, text.taxonomy.sections[section]);
       }
     }
     return map;
-  }, [text]);
+  }, [scenarios, text]);
 
   const availableScenarios = useMemo(
     () =>
@@ -204,7 +208,10 @@ export function TrainingPage({
     }
 
     setActiveScenarioKey((current) => {
-      if (current && availableScenarios.some((scenario) => scenario.key === current)) {
+      if (
+        current &&
+        availableScenarios.some((scenario) => scenario.key === current)
+      ) {
         return current;
       }
       return availableScenarios[0].key;
@@ -213,7 +220,9 @@ export function TrainingPage({
 
   const activeScenario = useMemo(
     () =>
-      availableScenarios.find((scenario) => scenario.key === activeScenarioKey) ??
+      availableScenarios.find(
+        (scenario) => scenario.key === activeScenarioKey,
+      ) ??
       availableScenarios[0] ??
       null,
     [activeScenarioKey, availableScenarios],
@@ -304,7 +313,8 @@ export function TrainingPage({
         const nextQuizLinksByKey = links.reduce<Record<string, string>>(
           (accumulator, item) => {
             if (item.quizUrl) {
-              accumulator[getQuizLinkKey(item.section, item.language)] = item.quizUrl;
+              accumulator[getQuizLinkKey(item.section, item.language)] =
+                item.quizUrl;
             }
             return accumulator;
           },
@@ -349,7 +359,8 @@ export function TrainingPage({
       })
       .sort(
         (left, right) =>
-          new Date(right.uploadedAt).getTime() - new Date(left.uploadedAt).getTime(),
+          new Date(right.uploadedAt).getTime() -
+          new Date(left.uploadedAt).getTime(),
       );
   }, [activeSection, libraryItems, searchKeyword]);
 
@@ -365,7 +376,7 @@ export function TrainingPage({
 
   const selectedSectionKey = activeSection;
   const dbQuizBaseUrl = selectedSectionKey
-    ? quizLinksByKey[getQuizLinkKey(selectedSectionKey, quizLanguage)] ?? ''
+    ? (quizLinksByKey[getQuizLinkKey(selectedSectionKey, quizLanguage)] ?? '')
     : '';
   const fallbackQuizBaseUrl = selectedSectionKey
     ? getTrainingQuizUrlForSectionLanguage(selectedSectionKey, quizLanguage)
@@ -520,10 +531,12 @@ export function TrainingPage({
   }
 
   function openDocument(item: LibraryFileItem) {
+    const documentSection = activeSection ?? (item.section as TrainingSection);
+
     setOpenedDocument({
       fileName: item.fileName,
       originalName: item.originalName,
-      section: item.section,
+      section: documentSection,
     });
 
     if (isWebPlatform) {
@@ -593,13 +606,17 @@ export function TrainingPage({
               {activeScenario ? (
                 <View style={styles.heroBadge}>
                   <Ionicons name="layers-outline" size={16} color="#ab1e24" />
-                  <Text style={styles.heroBadgeText}>{activeScenario.label}</Text>
+                  <Text style={styles.heroBadgeText}>
+                    {activeScenario.label}
+                  </Text>
                 </View>
               ) : null}
               {selectedSectionLabel ? (
                 <View style={styles.heroBadge}>
                   <Ionicons name="book-outline" size={16} color="#ab1e24" />
-                  <Text style={styles.heroBadgeText}>{selectedSectionLabel}</Text>
+                  <Text style={styles.heroBadgeText}>
+                    {selectedSectionLabel}
+                  </Text>
                 </View>
               ) : null}
             </View>
@@ -608,18 +625,28 @@ export function TrainingPage({
           {availableScenarios.length > 0 ? (
             <View style={styles.heroStatsRow}>
               <View style={styles.heroStatCard}>
-                <Text style={styles.heroStatValue}>{selectedSectionDocumentCount}</Text>
+                <Text style={styles.heroStatValue}>
+                  {selectedSectionDocumentCount}
+                </Text>
                 <Text style={styles.heroStatLabel}>
                   {text.training.taskTypeDocument}
                 </Text>
               </View>
               <View style={styles.heroStatCard}>
-                <Text style={styles.heroStatValue}>{selectedSectionVideoCount}</Text>
-                <Text style={styles.heroStatLabel}>{text.training.taskTypeVideo}</Text>
+                <Text style={styles.heroStatValue}>
+                  {selectedSectionVideoCount}
+                </Text>
+                <Text style={styles.heroStatLabel}>
+                  {text.training.taskTypeVideo}
+                </Text>
               </View>
               <View style={styles.heroStatCard}>
-                <Text style={styles.heroStatValue}>{selectedSectionCompletedCount}</Text>
-                <Text style={styles.heroStatLabel}>{text.training.completionDone}</Text>
+                <Text style={styles.heroStatValue}>
+                  {selectedSectionCompletedCount}
+                </Text>
+                <Text style={styles.heroStatLabel}>
+                  {text.training.completionDone}
+                </Text>
               </View>
             </View>
           ) : null}
@@ -629,7 +656,9 @@ export function TrainingPage({
 
         {!availableScenarios.length ? (
           <View style={styles.emptyStateCard}>
-            <Text style={styles.emptyText}>{text.training.noAccessConfigured}</Text>
+            <Text style={styles.emptyText}>
+              {text.training.noAccessConfigured}
+            </Text>
           </View>
         ) : (
           <View
@@ -669,7 +698,8 @@ export function TrainingPage({
                       key={scenario.key}
                       style={[
                         styles.pill,
-                        activeScenario?.key === scenario.key && styles.pillActive,
+                        activeScenario?.key === scenario.key &&
+                          styles.pillActive,
                       ]}
                       onPress={() => setActiveScenarioKey(scenario.key)}
                     >
@@ -732,8 +762,12 @@ export function TrainingPage({
               <View style={styles.quizCard}>
                 <View style={styles.quizHeaderRow}>
                   <View style={styles.quizHeaderCopy}>
-                    <Text style={styles.quizTitle}>{text.training.workflowTitle}</Text>
-                    <Text style={styles.quizHint}>{text.training.workflowHint}</Text>
+                    <Text style={styles.quizTitle}>
+                      {text.training.workflowTitle}
+                    </Text>
+                    <Text style={styles.quizHint}>
+                      {text.training.workflowHint}
+                    </Text>
                   </View>
 
                   <Pressable
@@ -796,12 +830,20 @@ export function TrainingPage({
               <View style={styles.surfaceCard}>
                 <View style={styles.surfaceHeader}>
                   <View style={styles.surfaceHeaderCopy}>
-                    <Text style={styles.surfaceEyebrow}>{selectedSectionLabel}</Text>
-                    <Text style={styles.surfaceTitle}>{selectedSectionLabel}</Text>
-                    <Text style={styles.surfaceSubtitle}>{text.training.previewHint}</Text>
+                    <Text style={styles.surfaceEyebrow}>
+                      {selectedSectionLabel}
+                    </Text>
+                    <Text style={styles.surfaceTitle}>
+                      {selectedSectionLabel}
+                    </Text>
+                    <Text style={styles.surfaceSubtitle}>
+                      {text.training.previewHint}
+                    </Text>
                   </View>
                   <View style={styles.surfaceCountPill}>
-                    <Text style={styles.surfaceCountText}>{sectionItems.length}</Text>
+                    <Text style={styles.surfaceCountText}>
+                      {sectionItems.length}
+                    </Text>
                   </View>
                 </View>
 
@@ -832,7 +874,9 @@ export function TrainingPage({
                       showSidePreview && styles.taskListWrapWide,
                     ]}
                   >
-                    <Text style={styles.taskListTitle}>{selectedSectionLabel}</Text>
+                    <Text style={styles.taskListTitle}>
+                      {selectedSectionLabel}
+                    </Text>
 
                     {!hasSearchResults ? (
                       <View style={styles.emptyStateCardInner}>
@@ -848,7 +892,9 @@ export function TrainingPage({
                       <View style={styles.taskList}>
                         {sectionItems.map((item) => {
                           const isDocument = item.mediaType === 'document';
-                          const isCompleted = Boolean(completionByFile[item.fileName]);
+                          const isCompleted = Boolean(
+                            completionByFile[item.fileName],
+                          );
                           const isActiveTask =
                             openedDocument?.fileName === item.fileName ||
                             webPreviewDocument?.fileName === item.fileName;
@@ -898,7 +944,8 @@ export function TrainingPage({
                                     <Text
                                       style={[
                                         styles.taskStatusText,
-                                        isCompleted && styles.taskStatusTextDone,
+                                        isCompleted &&
+                                          styles.taskStatusTextDone,
                                       ]}
                                     >
                                       {isCompleted
@@ -939,7 +986,8 @@ export function TrainingPage({
                                   style={[
                                     styles.taskActionButton,
                                     styles.taskCompletionButton,
-                                    isCompleted && styles.taskCompletionButtonDone,
+                                    isCompleted &&
+                                      styles.taskCompletionButtonDone,
                                   ]}
                                   onPress={() => {
                                     void toggleCompletion(item.fileName);
@@ -999,7 +1047,10 @@ export function TrainingPage({
                       </View>
 
                       <View
-                        style={[styles.previewFrameShell, { height: previewFrameHeight }]}
+                        style={[
+                          styles.previewFrameShell,
+                          { height: previewFrameHeight },
+                        ]}
                       >
                         {webPreviewDocument ? (
                           webPreviewUrl ? (
@@ -1048,7 +1099,8 @@ export function TrainingPage({
             <View style={styles.previewFullscreenCard}>
               <View style={styles.previewFullscreenHeader}>
                 <Text style={styles.previewFullscreenTitle} numberOfLines={1}>
-                  {webPreviewDocument?.originalName ?? text.training.previewTitle}
+                  {webPreviewDocument?.originalName ??
+                    text.training.previewTitle}
                 </Text>
                 <Pressable
                   style={styles.previewControlButton}
@@ -1102,7 +1154,10 @@ export function TrainingPage({
               <View
                 style={[
                   styles.videoPlayerShell,
-                  { width: videoFrameSize.width, height: videoFrameSize.height },
+                  {
+                    width: videoFrameSize.width,
+                    height: videoFrameSize.height,
+                  },
                 ]}
               >
                 <Video

@@ -13,12 +13,18 @@ describe('OrdersService', () => {
   let service: OrdersService;
   let prisma: {
     $transaction: jest.Mock;
+    document: { findMany: jest.Mock };
     produit: { findMany: jest.Mock };
     fournisseur: { findUnique: jest.Mock };
     restaurant: { findUnique: jest.Mock };
     purchaseOrder: { findUnique: jest.Mock; delete: jest.Mock };
     purchaseReturn: { create: jest.Mock; findMany: jest.Mock };
-    purchaseReturnItem: { createMany: jest.Mock; findMany: jest.Mock };
+    purchaseReturnItem: {
+      create: jest.Mock;
+      createMany: jest.Mock;
+      findMany: jest.Mock;
+    };
+    purchaseReturnItemPhoto: { createMany: jest.Mock };
   };
 
   beforeEach(() => {
@@ -27,6 +33,9 @@ describe('OrdersService', () => {
 
     prisma = {
       $transaction: jest.fn(),
+      document: {
+        findMany: jest.fn(),
+      },
       produit: {
         findMany: jest.fn(),
       },
@@ -45,8 +54,12 @@ describe('OrdersService', () => {
         findMany: jest.fn(),
       },
       purchaseReturnItem: {
+        create: jest.fn(),
         createMany: jest.fn(),
         findMany: jest.fn(),
+      },
+      purchaseReturnItemPhoto: {
+        createMany: jest.fn(),
       },
     };
 
@@ -242,6 +255,118 @@ describe('OrdersService', () => {
     ).rejects.toThrow(
       new BadRequestException('Return quantity exceeds remaining quantity'),
     );
+  });
+
+  it('creates return item photo links for uploaded return evidence', async () => {
+    const tx = {
+      purchaseReturn: {
+        create: jest.fn().mockResolvedValue({
+          id: 27,
+          createdAt: new Date('2026-03-24T14:00:00.000Z'),
+        }),
+      },
+      purchaseReturnItem: {
+        create: jest.fn().mockResolvedValue({
+          id: 301,
+        }),
+      },
+      purchaseReturnItemPhoto: {
+        createMany: jest.fn().mockResolvedValue({ count: 2 }),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
+    );
+    prisma.purchaseOrder.findUnique.mockResolvedValue({
+      id: 19,
+      number: 'PO-20260324-0019',
+      supplierId: 7,
+      restaurantId: 5,
+      supplier: {
+        id: 7,
+        nom: 'Supplier',
+      },
+      items: [
+        {
+          id: 44,
+          productId: BigInt(2),
+          quantity: 5,
+          nameZh: '青菜',
+          nameFr: 'Legume',
+          unit: 'kg',
+          category: 'fresh',
+        },
+      ],
+    });
+    prisma.purchaseReturnItem.findMany.mockResolvedValue([]);
+    prisma.document.findMany.mockResolvedValue([
+      {
+        id: 91,
+        mediaType: 'image',
+        module: 'MANAGEMENT',
+        section: 'ORDER_RETURNS',
+      },
+      {
+        id: 92,
+        mediaType: 'image',
+        module: 'MANAGEMENT',
+        section: 'ORDER_RETURNS',
+      },
+    ]);
+
+    await expect(
+      service.createOrderReturn(
+        {
+          id: 8,
+          role: 'MANAGER',
+          restaurantId: 5,
+        },
+        {
+          orderId: 19,
+          reason: 'Produit abime',
+          notes: 'Carton humide',
+          items: [
+            {
+              purchaseOrderItemId: 44,
+              quantity: 2,
+              photoDocumentIds: [91, 92],
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      id: 27,
+      orderId: 19,
+      orderNumber: 'PO-20260324-0019',
+      totalItems: 2,
+    });
+
+    expect(prisma.document.findMany).toHaveBeenCalledWith({
+      where: {
+        id: {
+          in: [91, 92],
+        },
+      },
+      select: {
+        id: true,
+        mediaType: true,
+        module: true,
+        section: true,
+      },
+    });
+    expect(tx.purchaseReturnItem.create).toHaveBeenCalledTimes(1);
+    expect(tx.purchaseReturnItemPhoto.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          purchaseReturnItemId: 301,
+          documentId: 91,
+        },
+        {
+          purchaseReturnItemId: 301,
+          documentId: 92,
+        },
+      ],
+    });
   });
 
   it('rejects deleting an order that already has returns', async () => {

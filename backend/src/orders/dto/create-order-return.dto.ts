@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
+  ArrayUnique,
   IsArray,
   IsInt,
   IsOptional,
@@ -20,6 +21,14 @@ export class CreateOrderReturnItemDto {
   @IsInt()
   @Min(1)
   quantity!: number;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @Type(() => Number)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  photoDocumentIds?: number[];
 }
 
 export class CreateOrderReturnDto {

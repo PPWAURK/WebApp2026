@@ -64,40 +64,40 @@ model PasswordResetToken {
 }
 
 model Restaurant {
-  id             Int             @id @default(autoincrement())
-  name           String          @unique
-  address        String
-  users          User[]
-  purchaseOrders PurchaseOrder[]
+  id              Int              @id @default(autoincrement())
+  name            String           @unique
+  address         String
+  users           User[]
+  purchaseOrders  PurchaseOrder[]
   purchaseReturns PurchaseReturn[]
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }
 
 model Produit {
-  id                 BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
-  supplierId         Int                 @map("supplier_id")
-  reference          String?             @db.VarChar(100)
-  categorie          String              @db.VarChar(20)
-  nomCn              String              @map("nom_cn") @db.VarChar(255)
-  designationFr      String?             @map("designation_fr") @db.VarChar(255)
-  specification      String?             @db.VarChar(100)
-  unite              String?             @db.VarChar(100)
-  prixUHt            Decimal?            @map("prix_u_ht") @db.Decimal(10, 2)
-  image              String?             @db.Text
-  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt          DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
-  purchaseOrderItems PurchaseOrderItem[]
+  id                  BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  supplierId          Int                  @map("supplier_id")
+  reference           String?              @db.VarChar(100)
+  categorie           String               @db.VarChar(20)
+  nomCn               String               @map("nom_cn") @db.VarChar(255)
+  designationFr       String?              @map("designation_fr") @db.VarChar(255)
+  specification       String?              @db.VarChar(100)
+  unite               String?              @db.VarChar(100)
+  prixUHt             Decimal?             @map("prix_u_ht") @db.Decimal(10, 2)
+  image               String?              @db.Text
+  createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt           DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  purchaseOrderItems  PurchaseOrderItem[]
   purchaseReturnItems PurchaseReturnItem[]
 
   @@map("produits")
 }
 
 model Fournisseur {
-  id             Int             @id @default(autoincrement())
-  nom            String          @db.VarChar(255)
-  sortOrder      Int             @map("sort_order")
-  purchaseOrders PurchaseOrder[]
+  id              Int              @id @default(autoincrement())
+  nom             String           @db.VarChar(255)
+  sortOrder       Int              @map("sort_order")
+  purchaseOrders  PurchaseOrder[]
   purchaseReturns PurchaseReturn[]
 
   @@index([sortOrder])
@@ -128,19 +128,19 @@ model PurchaseOrder {
 }
 
 model PurchaseOrderItem {
-  id              Int           @id @default(autoincrement())
-  purchaseOrderId Int           @map("purchase_order_id")
-  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  productId       BigInt        @map("product_id") @db.UnsignedBigInt
-  product         Produit       @relation(fields: [productId], references: [id], onDelete: Restrict)
-  supplierId      Int           @map("supplier_id")
+  id              Int                  @id @default(autoincrement())
+  purchaseOrderId Int                  @map("purchase_order_id")
+  purchaseOrder   PurchaseOrder        @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       BigInt               @map("product_id") @db.UnsignedBigInt
+  product         Produit              @relation(fields: [productId], references: [id], onDelete: Restrict)
+  supplierId      Int                  @map("supplier_id")
   quantity        Int
-  unitPriceHt     Decimal       @map("unit_price_ht") @db.Decimal(10, 2)
-  lineTotal       Decimal       @map("line_total") @db.Decimal(10, 2)
-  nameZh          String        @map("name_zh") @db.VarChar(255)
-  nameFr          String?       @map("name_fr") @db.VarChar(255)
-  unit            String?       @db.VarChar(100)
-  category        String        @db.VarChar(20)
+  unitPriceHt     Decimal              @map("unit_price_ht") @db.Decimal(10, 2)
+  lineTotal       Decimal              @map("line_total") @db.Decimal(10, 2)
+  nameZh          String               @map("name_zh") @db.VarChar(255)
+  nameFr          String?              @map("name_fr") @db.VarChar(255)
+  unit            String?              @db.VarChar(100)
+  category        String               @db.VarChar(20)
   returnItems     PurchaseReturnItem[]
 
   @@index([purchaseOrderId])
@@ -171,18 +171,19 @@ model PurchaseReturn {
 }
 
 model PurchaseReturnItem {
-  id                  Int             @id @default(autoincrement())
-  purchaseReturnId    Int             @map("purchase_return_id")
-  purchaseReturn      PurchaseReturn  @relation(fields: [purchaseReturnId], references: [id], onDelete: Cascade)
-  purchaseOrderItemId Int             @map("purchase_order_item_id")
-  purchaseOrderItem   PurchaseOrderItem @relation(fields: [purchaseOrderItemId], references: [id], onDelete: Restrict)
-  productId           BigInt          @map("product_id") @db.UnsignedBigInt
-  product             Produit         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  id                  Int                       @id @default(autoincrement())
+  purchaseReturnId    Int                       @map("purchase_return_id")
+  purchaseReturn      PurchaseReturn            @relation(fields: [purchaseReturnId], references: [id], onDelete: Cascade)
+  purchaseOrderItemId Int                       @map("purchase_order_item_id")
+  purchaseOrderItem   PurchaseOrderItem         @relation(fields: [purchaseOrderItemId], references: [id], onDelete: Restrict)
+  productId           BigInt                    @map("product_id") @db.UnsignedBigInt
+  product             Produit                   @relation(fields: [productId], references: [id], onDelete: Restrict)
   quantity            Int
-  nameZh              String          @map("name_zh") @db.VarChar(255)
-  nameFr              String?         @map("name_fr") @db.VarChar(255)
-  unit                String?         @db.VarChar(100)
-  category            String          @db.VarChar(20)
+  nameZh              String                    @map("name_zh") @db.VarChar(255)
+  nameFr              String?                   @map("name_fr") @db.VarChar(255)
+  unit                String?                   @db.VarChar(100)
+  category            String                    @db.VarChar(20)
+  photos              PurchaseReturnItemPhoto[]
 
   @@index([purchaseReturnId])
   @@index([purchaseOrderItemId])
@@ -190,21 +191,35 @@ model PurchaseReturnItem {
   @@map("purchase_return_items")
 }
 
+model PurchaseReturnItemPhoto {
+  id                   Int                @id @default(autoincrement())
+  purchaseReturnItemId Int                @map("purchase_return_item_id")
+  purchaseReturnItem   PurchaseReturnItem @relation(fields: [purchaseReturnItemId], references: [id], onDelete: Cascade)
+  documentId           Int                @map("document_id")
+  document             Document           @relation("PurchaseReturnItemPhotoDocument", fields: [documentId], references: [id], onDelete: Restrict)
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@unique([purchaseReturnItemId, documentId])
+  @@index([documentId])
+  @@map("purchase_return_item_photos")
+}
+
 model Document {
-  id                  Int             @id @default(autoincrement())
-  fileName            String          @unique
-  category            UploadCategory
-  originalName        String
-  customCategory      String?         @map("custom_category") @db.VarChar(80)
-  mimeType            String
-  size                Int
-  mediaType           UploadMediaType
-  module              UploadModule
-  section             UploadSection
-  uploadedAt          DateTime        @default(now())
-  uploadedByUserId    Int?
-  uploadedBy          User?           @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
-  attachedToNewsPosts NewsPost[]      @relation("NewsPostAttachment")
+  id                       Int                       @id @default(autoincrement())
+  fileName                 String                    @unique
+  category                 UploadCategory
+  originalName             String
+  customCategory           String?                   @map("custom_category") @db.VarChar(80)
+  mimeType                 String
+  size                     Int
+  mediaType                UploadMediaType
+  module                   UploadModule
+  section                  UploadSection
+  uploadedAt               DateTime                  @default(now())
+  uploadedByUserId         Int?
+  uploadedBy               User?                     @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  attachedToNewsPosts      NewsPost[]                @relation("NewsPostAttachment")
+  purchaseReturnItemPhotos PurchaseReturnItemPhoto[] @relation("PurchaseReturnItemPhotoDocument")
 
   @@index([module, section, mediaType, uploadedAt])
   @@index([module, section, customCategory, uploadedAt])
@@ -325,6 +340,7 @@ enum UploadSection {
   BLACK_RULES
   SALLE_TOOLS
   CUISINE_TOOLS
+  ORDER_RETURNS
   MEAT_DATE_FORM
   CLEANING_FORM
 }

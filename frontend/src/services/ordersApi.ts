@@ -141,6 +141,7 @@ export type CreateOrderReturnPayload = {
   items: Array<{
     purchaseOrderItemId: number;
     quantity: number;
+    photoDocumentIds?: number[];
   }>;
 };
 

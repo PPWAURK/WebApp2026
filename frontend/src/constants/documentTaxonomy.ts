@@ -10,6 +10,7 @@ export type LibrarySection =
   | 'BLACK_RULES'
   | 'SALLE_TOOLS'
   | 'CUISINE_TOOLS'
+  | 'ORDER_RETURNS'
   | 'MEAT_DATE_FORM'
   | 'CLEANING_FORM';
 
@@ -21,6 +22,7 @@ const LIBRARY_SECTION_KEYS: LibrarySection[] = [
   'BLACK_RULES',
   'SALLE_TOOLS',
   'CUISINE_TOOLS',
+  'ORDER_RETURNS',
   'MEAT_DATE_FORM',
   'CLEANING_FORM',
 ];
@@ -30,7 +32,9 @@ export type TaxonomyOption = {
   label: string;
 };
 
-export function getModuleOptions(text: AppText): Array<{ key: LibraryModule; label: string }> {
+export function getModuleOptions(
+  text: AppText,
+): Array<{ key: LibraryModule; label: string }> {
   return [
     { key: 'TRAINING', label: text.taxonomy.modules.TRAINING },
     { key: 'POLICY', label: text.taxonomy.modules.POLICY },
@@ -46,7 +50,10 @@ export function getSectionsByModule(
     TRAINING: [
       { key: 'RECIPE_TRAINING', label: text.taxonomy.sections.RECIPE_TRAINING },
       { key: 'RECIPE', label: text.taxonomy.sections.RECIPE },
-      { key: 'MISE_EN_PLACE_SOP', label: text.taxonomy.sections.MISE_EN_PLACE_SOP },
+      {
+        key: 'MISE_EN_PLACE_SOP',
+        label: text.taxonomy.sections.MISE_EN_PLACE_SOP,
+      },
     ],
     POLICY: [
       { key: 'RED_RULES', label: text.taxonomy.sections.RED_RULES },
@@ -55,6 +62,7 @@ export function getSectionsByModule(
     MANAGEMENT: [
       { key: 'SALLE_TOOLS', label: text.taxonomy.sections.SALLE_TOOLS },
       { key: 'CUISINE_TOOLS', label: text.taxonomy.sections.CUISINE_TOOLS },
+      { key: 'ORDER_RETURNS', label: text.taxonomy.sections.ORDER_RETURNS },
     ],
     FORMS: [
       { key: 'MEAT_DATE_FORM', label: text.taxonomy.sections.MEAT_DATE_FORM },
