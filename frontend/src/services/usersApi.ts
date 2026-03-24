@@ -17,6 +17,7 @@ export type TrainingAccessUser = {
   workplaceRole: WorkplaceRole;
   employeeLevel: EmployeeLevel;
   isApproved: boolean;
+  isEmailVerified: boolean;
   isOnProbation: boolean;
   trainingAccess: TrainingSection[];
   restaurantId?: number | null;

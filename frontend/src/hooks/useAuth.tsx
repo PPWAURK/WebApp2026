@@ -11,6 +11,7 @@ import {
   requestAuth,
   requestCurrentUser,
   requestForgotPassword,
+  requestResendVerificationEmail,
 } from '../services/authApi';
 import { fetchRestaurants } from '../services/restaurantsApi';
 import {
@@ -40,6 +41,7 @@ type AuthContextValue = {
   error: string | null;
   notice: string | null;
   forgotPasswordCooldownSeconds: number;
+  resendVerificationCooldownSeconds: number;
   session: AuthResponse | null;
   restaurants: Restaurant[];
   selectedRestaurantId: number | null;
@@ -51,6 +53,7 @@ type AuthContextValue = {
   setRememberMe: Dispatch<SetStateAction<boolean>>;
   submitAuth: (currentMode: AuthMode, text: AppText, language: Language) => Promise<void>;
   forgotPassword: (text: AppText, language: Language) => Promise<void>;
+  resendVerificationEmail: (text: AppText, language: Language) => Promise<void>;
   logout: (noticeMessage?: string | null) => Promise<void>;
   toggleMode: () => void;
   updateSessionUser: (user: User) => Promise<void>;
@@ -71,6 +74,10 @@ function mapAuthErrorMessage(rawMessage: string, currentMode: AuthMode, text: Ap
 
   if (rawMessage.includes('ACCOUNT_PENDING_APPROVAL')) {
     return text.auth.pendingApprovalRequired;
+  }
+
+  if (rawMessage.includes('EMAIL_VERIFICATION_REQUIRED')) {
+    return text.auth.emailVerificationRequired;
   }
 
   if (rawMessage.includes('INVALID_EMAIL')) {
@@ -110,6 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [forgotPasswordCooldownSeconds, setForgotPasswordCooldownSeconds] = useState(0);
+  const [resendVerificationCooldownSeconds, setResendVerificationCooldownSeconds] =
+    useState(0);
   const [session, setSession] = useState<AuthResponse | null>(null);
   const [postLoginAnimationPending, setPostLoginAnimationPending] = useState(false);
 
@@ -160,6 +169,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [forgotPasswordCooldownSeconds]);
 
   useEffect(() => {
+    if (resendVerificationCooldownSeconds <= 0) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setResendVerificationCooldownSeconds((currentValue) =>
+        currentValue > 1 ? currentValue - 1 : 0,
+      );
+    }, 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [resendVerificationCooldownSeconds]);
+
+  useEffect(() => {
     let isActive = true;
 
     void fetchRestaurants()
@@ -207,14 +232,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (currentMode === 'register') {
         const registerData = authData as RegisterResponse;
-        if (registerData.pendingApproval) {
+        if (
+          registerData.pendingApproval ||
+          registerData.requiresEmailVerification
+        ) {
           setMode('login');
           setPassword('');
           setRequestManagerRole(false);
+          setResendVerificationCooldownSeconds(30);
           setNotice(
-            registerData.message === 'ACCOUNT_PENDING_ADMIN_APPROVAL'
-              ? text.auth.pendingAdminApprovalSubmitted
-              : text.auth.pendingApprovalSubmitted,
+            requestManagerRole
+              ? text.auth.pendingAdminApprovalAfterEmailVerification
+              : text.auth.pendingApprovalAfterEmailVerification,
           );
           return;
         }
@@ -267,6 +296,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function resendVerificationEmail(text: AppText, language: Language) {
+    if (resendVerificationCooldownSeconds > 0) {
+      return;
+    }
+
+    const normalizedEmail = email.trim();
+
+    if (!normalizedEmail) {
+      setError(text.auth.invalidEmail);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      await requestResendVerificationEmail(normalizedEmail, language);
+      setNotice(text.auth.verificationEmailResent);
+      setResendVerificationCooldownSeconds(30);
+    } catch (requestError) {
+      if (requestError instanceof Error && requestError.message.includes('INVALID_EMAIL')) {
+        setError(text.auth.invalidEmail);
+      } else {
+        setError(text.auth.verificationEmailResendFailed);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function logout(noticeMessage?: string | null) {
     await clearSession();
     setSession(null);
@@ -278,12 +338,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     setNotice(noticeMessage ?? null);
     setForgotPasswordCooldownSeconds(0);
+    setResendVerificationCooldownSeconds(0);
     setPostLoginAnimationPending(false);
   }
 
   function toggleMode() {
     setError(null);
     setNotice(null);
+    setForgotPasswordCooldownSeconds(0);
+    setResendVerificationCooldownSeconds(0);
     setMode((currentMode) => (currentMode === 'login' ? 'register' : 'login'));
     setRequestManagerRole(false);
   }
@@ -322,6 +385,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error,
         notice,
         forgotPasswordCooldownSeconds,
+        resendVerificationCooldownSeconds,
         session,
         restaurants,
         selectedRestaurantId,
@@ -333,6 +397,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRememberMe,
         submitAuth,
         forgotPassword,
+        resendVerificationEmail,
         logout,
         toggleMode,
         updateSessionUser,

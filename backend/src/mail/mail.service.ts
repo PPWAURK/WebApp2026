@@ -199,6 +199,62 @@ export class MailService {
     });
   }
 
+  async sendEmailVerificationEmail(input: {
+    email: string;
+    verificationToken: string;
+    recipientName?: string | null;
+    language?: 'fr' | 'zh';
+  }) {
+    const config = this.getMailConfig();
+    if (!config.enabled) {
+      return;
+    }
+
+    const appUrl = `${config.appWebUrl ?? ''}`.replace(/\/$/, '');
+    const verificationUrl = `${appUrl}/verify-email?token=${encodeURIComponent(input.verificationToken)}`;
+    const greeting = input.recipientName?.trim() || input.email;
+    const language = this.normalizeLanguage(input.language);
+    const brandLabel = language === 'zh' ? 'ZHAO 平台' : 'ZHAO Plateforme';
+    const intro =
+      language === 'zh' ? `你好 ${greeting}，` : `Bonjour ${greeting},`;
+    const body =
+      language === 'zh'
+        ? '请先验证你的邮箱地址。验证完成后，账号才会进入管理员或店长审核流程。\n\n这个链接 24 小时内有效。'
+        : 'Merci de confirmer votre adresse e-mail avant toute validation de compte. ' +
+          'Une fois l’e-mail confirmé, la demande pourra entrer dans le circuit de validation manager ou administrateur.\n\n' +
+          'Ce lien reste valable 24 heures.';
+    const subject =
+      language === 'zh' ? '请先验证你的邮箱' : 'Confirmez votre adresse e-mail';
+    const buttonLabel =
+      language === 'zh' ? '验证邮箱' : 'Vérifier mon e-mail';
+    const footer =
+      language === 'zh'
+        ? '如果这不是你的操作，可以忽略这封邮件。'
+        : 'Si vous n’êtes pas à l’origine de cette inscription, vous pouvez ignorer ce message.';
+    const linkLabel =
+      language === 'zh' ? '验证链接' : 'Lien de vérification';
+
+    await this.sendMail({
+      to: input.email,
+      subject,
+      text:
+        `${intro}\n\n` +
+        `${body}\n\n` +
+        `${linkLabel}: ${verificationUrl}\n\n` +
+        footer,
+      html: this.buildEmailLayout({
+        title: subject,
+        brandLabel,
+        intro,
+        body,
+        buttonLabel,
+        buttonUrl: verificationUrl,
+        logoUrl: config.logoUrl,
+        footer,
+      }),
+    });
+  }
+
   async sendAccountApprovedEmail(input: {
     email: string;
     recipientName?: string | null;

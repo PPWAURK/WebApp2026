@@ -298,6 +298,7 @@ export function useSessionCardSupervisorState({
     return usersFilteredByRestaurant
       .filter(
         (entry) =>
+          entry.isEmailVerified &&
           !entry.isApproved &&
           entry.role === (isAdmin ? 'MANAGER' : 'EMPLOYEE'),
       )

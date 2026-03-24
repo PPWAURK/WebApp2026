@@ -71,6 +71,57 @@ export async function requestForgotPassword(
   };
 }
 
+export async function requestVerifyEmail(
+  token: string,
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/auth/verify-email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token }),
+  });
+
+  const data = (await response.json()) as { message?: string | string[] };
+
+  if (!response.ok) {
+    const message = Array.isArray(data.message)
+      ? data.message.join(', ')
+      : data.message ?? 'Une erreur est survenue';
+    throw new Error(message);
+  }
+
+  return {
+    message: Array.isArray(data.message) ? data.message.join(', ') : data.message ?? 'OK',
+  };
+}
+
+export async function requestResendVerificationEmail(
+  email: string,
+  language: Language,
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/auth/resend-verification-email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, language }),
+  });
+
+  const data = (await response.json()) as { message?: string | string[] };
+
+  if (!response.ok) {
+    const message = Array.isArray(data.message)
+      ? data.message.join(', ')
+      : data.message ?? 'Une erreur est survenue';
+    throw new Error(message);
+  }
+
+  return {
+    message: Array.isArray(data.message) ? data.message.join(', ') : data.message ?? 'OK',
+  };
+}
+
 export async function requestResetPassword(
   token: string,
   password: string,

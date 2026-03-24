@@ -28,6 +28,7 @@ type AuthFormProps = {
   rememberMe: boolean;
   isSubmitting: boolean;
   forgotPasswordCooldownSeconds: number;
+  resendVerificationCooldownSeconds: number;
   error: string | null;
   notice?: string | null;
   onEmailChange: (value: string) => void;
@@ -39,6 +40,7 @@ type AuthFormProps = {
   onSelectLanguage: (language: Language) => void;
   onSubmit: () => void;
   onForgotPassword: () => void;
+  onResendVerification: () => void;
   onToggleMode: () => void;
   onBackToLanding?: () => void;
 };
@@ -97,10 +99,18 @@ export function AuthForm(props: AuthFormProps) {
   const isSubmitDisabled = props.isSubmitting || !isFormValid;
   const isForgotPasswordDisabled =
     props.isSubmitting || props.forgotPasswordCooldownSeconds > 0;
+  const isResendVerificationDisabled =
+    props.isSubmitting ||
+    props.resendVerificationCooldownSeconds > 0 ||
+    !hasEmail;
   const forgotPasswordLabel =
     props.forgotPasswordCooldownSeconds > 0
       ? `${props.text.auth.forgotPassword} (${props.forgotPasswordCooldownSeconds}s)`
       : props.text.auth.forgotPassword;
+  const resendVerificationLabel =
+    props.resendVerificationCooldownSeconds > 0
+      ? `${props.text.auth.resendVerificationEmail} (${props.resendVerificationCooldownSeconds}s)`
+      : props.text.auth.resendVerificationEmail;
 
   const { width } = useWindowDimensions();
   const isSmall = width < 520;
@@ -380,6 +390,23 @@ export function AuthForm(props: AuthFormProps) {
 
       {props.error ? <Text style={styles.error}>{props.error}</Text> : null}
       {props.notice ? <Text style={styles.notice}>{props.notice}</Text> : null}
+
+      {props.mode === 'login' ? (
+        <Pressable
+          disabled={isResendVerificationDisabled}
+          style={styles.linkButton}
+          onPress={props.onResendVerification}
+        >
+          <Text
+            style={[
+              styles.linkText,
+              isResendVerificationDisabled && styles.forgotTextDisabled,
+            ]}
+          >
+            {resendVerificationLabel}
+          </Text>
+        </Pressable>
+      ) : null}
 
       <Pressable
         disabled={isSubmitDisabled}

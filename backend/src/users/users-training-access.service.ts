@@ -60,16 +60,22 @@ export class UsersTrainingAccessService {
         workplaceRole: true,
         employeeLevel: true,
         isApproved: true,
+        emailVerifiedAt: true,
         isOnProbation: true,
       },
     });
 
     const levelAccessMap = await this.getTrainingAccessMapByLevel();
 
-    return users.map((user) => ({
-      ...user,
-      trainingAccess: levelAccessMap.get(user.employeeLevel) ?? [],
-    }));
+    return users.map((user) => {
+      const { emailVerifiedAt, ...restUser } = user;
+
+      return {
+        ...restUser,
+        isEmailVerified: emailVerifiedAt !== null,
+        trainingAccess: levelAccessMap.get(user.employeeLevel) ?? [],
+      };
+    });
   }
 
   async listTrainingAccessByLevel(actorRole: string) {
