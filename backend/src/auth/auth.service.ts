@@ -18,7 +18,9 @@ import { UsersService } from '../users/users.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResendVerificationEmailDto } from './dto/resend-verification-email.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 
 @Injectable()
 export class AuthService {
@@ -36,6 +38,8 @@ export class AuthService {
 
   private readonly resetTokenLifetimeMinutes = 30;
   private readonly resetEmailCooldownMs = 30_000;
+  private readonly emailVerificationTokenLifetimeHours = 24;
+  private readonly emailVerificationCooldownMs = 30_000;
 
   async login(loginDto: LoginDto) {
     const user = await this.usersService.findByEmail(loginDto.email);
@@ -51,6 +55,10 @@ export class AuthService {
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('INCORRECT_PASSWORD');
+    }
+
+    if (!user.emailVerifiedAt) {
+      throw new UnauthorizedException('EMAIL_VERIFICATION_REQUIRED');
     }
 
     if (!user.isApproved) {
@@ -99,18 +107,161 @@ export class AuthService {
         ? EmployeeLevel.L7_D
         : EmployeeLevel.L0_PROBATION,
       isApproved: false,
+      emailVerifiedAt: null,
       preferredLanguage:
         registerDto.language === 'fr' || registerDto.language === 'zh'
           ? registerDto.language
           : 'fr',
     });
 
+    const verificationToken = await this.createEmailVerificationToken(
+      createdUser.id,
+    );
+
+    try {
+      await this.mailService.sendEmailVerificationEmail({
+        email: createdUser.email,
+        recipientName: createdUser.name,
+        verificationToken,
+        language:
+          registerDto.language === 'fr' || registerDto.language === 'zh'
+            ? registerDto.language
+            : 'fr',
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Failed to send verification email for user ${createdUser.id}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
+
     return {
-      pendingApproval: true,
+      pendingApproval: false,
+      requiresEmailVerification: true,
       userId: createdUser.id,
-      message: registerDto.requestManagerRole
-        ? 'ACCOUNT_PENDING_ADMIN_APPROVAL'
-        : 'ACCOUNT_PENDING_APPROVAL',
+      message: 'EMAIL_VERIFICATION_REQUIRED',
+    };
+  }
+
+  async verifyEmail(dto: VerifyEmailDto) {
+    const tokenHash = this.hashEmailVerificationToken(dto.token);
+    const now = new Date();
+
+    const verificationRecord =
+      await this.prisma.emailVerificationToken.findFirst({
+        where: {
+          tokenHash,
+          consumedAt: null,
+          expiresAt: {
+            gt: now,
+          },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              role: true,
+              emailVerifiedAt: true,
+            },
+          },
+        },
+      });
+
+    if (!verificationRecord) {
+      throw new UnauthorizedException(
+        'INVALID_OR_EXPIRED_EMAIL_VERIFICATION_TOKEN',
+      );
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: verificationRecord.user.id },
+        data: {
+          emailVerifiedAt: verificationRecord.user.emailVerifiedAt ?? now,
+        },
+      }),
+      this.prisma.emailVerificationToken.updateMany({
+        where: {
+          userId: verificationRecord.user.id,
+          consumedAt: null,
+        },
+        data: {
+          consumedAt: now,
+        },
+      }),
+    ]);
+
+    return {
+      success: true,
+      message:
+        verificationRecord.user.role === Role.MANAGER
+          ? 'ACCOUNT_PENDING_ADMIN_APPROVAL'
+          : 'ACCOUNT_PENDING_APPROVAL',
+    };
+  }
+
+  async resendVerificationEmail(dto: ResendVerificationEmailDto) {
+    const normalizedEmail = dto.email.trim().toLowerCase();
+    const user = await this.usersService.findByEmail(normalizedEmail);
+
+    if (!user || user.emailVerifiedAt) {
+      return {
+        success: true,
+        message: 'EMAIL_VERIFICATION_EMAIL_SENT_IF_EXISTS',
+      };
+    }
+
+    const lastVerificationRequest =
+      await this.prisma.emailVerificationToken.findFirst({
+        where: {
+          userId: user.id,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        select: {
+          createdAt: true,
+        },
+      });
+
+    if (lastVerificationRequest) {
+      const elapsedSinceLastRequestMs =
+        Date.now() - lastVerificationRequest.createdAt.getTime();
+
+      if (elapsedSinceLastRequestMs < this.emailVerificationCooldownMs) {
+        return {
+          success: true,
+          message: 'EMAIL_VERIFICATION_EMAIL_SENT_IF_EXISTS',
+        };
+      }
+    }
+
+    const verificationToken = await this.createEmailVerificationToken(user.id);
+
+    try {
+      const effectiveLanguage =
+        dto.language === 'fr' || dto.language === 'zh'
+          ? dto.language
+          : user.preferredLanguage === 'zh'
+            ? 'zh'
+            : 'fr';
+
+      await this.mailService.sendEmailVerificationEmail({
+        email: user.email,
+        recipientName: user.name,
+        verificationToken,
+        language: effectiveLanguage,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Failed to resend verification email for user ${user.id}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
+
+    return {
+      success: true,
+      message: 'EMAIL_VERIFICATION_EMAIL_SENT_IF_EXISTS',
     };
   }
 
@@ -244,6 +395,7 @@ export class AuthService {
     profilePhoto: string | null;
     role: string;
     employeeLevel: EmployeeLevel;
+    emailVerifiedAt?: Date | null;
     isOnProbation: boolean;
     workplaceRole: string;
     restaurantId: number | null;
@@ -291,8 +443,16 @@ export class AuthService {
       throw new UnauthorizedException('Invalid token');
     }
 
+    if (!user.emailVerifiedAt) {
+      throw new UnauthorizedException('EMAIL_VERIFICATION_REQUIRED');
+    }
+
     if (!user.isApproved) {
-      throw new UnauthorizedException('ACCOUNT_PENDING_APPROVAL');
+      throw new UnauthorizedException(
+        user.role === Role.MANAGER
+          ? 'ACCOUNT_PENDING_ADMIN_APPROVAL'
+          : 'ACCOUNT_PENDING_APPROVAL',
+      );
     }
 
     const trainingAccess =
@@ -309,5 +469,27 @@ export class AuthService {
 
   private hashResetToken(value: string) {
     return createHash('sha256').update(value).digest('hex');
+  }
+
+  private hashEmailVerificationToken(value: string) {
+    return createHash('sha256').update(value).digest('hex');
+  }
+
+  private async createEmailVerificationToken(userId: number) {
+    const plainToken = randomBytes(32).toString('hex');
+    const tokenHash = this.hashEmailVerificationToken(plainToken);
+    const expiresAt = new Date(
+      Date.now() + this.emailVerificationTokenLifetimeHours * 60 * 60 * 1000,
+    );
+
+    await this.prisma.emailVerificationToken.create({
+      data: {
+        userId,
+        tokenHash,
+        expiresAt,
+      },
+    });
+
+    return plainToken;
   }
 }

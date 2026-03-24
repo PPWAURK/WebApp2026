@@ -88,4 +88,41 @@ describe('UsersTrainingAccessService', () => {
 
     expect(prisma.trainingQuizLink.upsert).not.toHaveBeenCalled();
   });
+
+  it('exposes whether a pending account has verified its email', async () => {
+    prisma.user.findMany.mockResolvedValue([
+      {
+        id: 3,
+        email: 'employee@example.com',
+        name: 'Employee',
+        profilePhoto: null,
+        restaurantId: 2,
+        restaurant: {
+          id: 2,
+          name: 'Paris',
+        },
+        role: Role.EMPLOYEE,
+        workplaceRole: 'BOTH',
+        employeeLevel: 'L0_PROBATION',
+        isApproved: false,
+        emailVerifiedAt: new Date('2026-03-24T10:00:00.000Z'),
+        isOnProbation: true,
+      },
+    ]);
+    prisma.employeeLevelAccessProfile.findMany.mockResolvedValue([]);
+
+    const result = await service.listUsersTrainingAccess(undefined, {
+      actorId: 1,
+      actorRole: Role.ADMIN,
+      actorRestaurantId: null,
+    });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 3,
+        isApproved: false,
+        isEmailVerified: true,
+      }),
+    ]);
+  });
 });

@@ -52,6 +52,7 @@ export type AuthResponse = {
 
 export type RegisterResponse = {
   pendingApproval: boolean;
+  requiresEmailVerification?: boolean;
   userId: number;
   message: string;
 };

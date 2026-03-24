@@ -26,6 +26,7 @@ function parseAdminEmails(value: string | undefined): string[] {
 }
 
 async function main() {
+  const now = new Date();
   const adminEmailsFromEnv = parseAdminEmails(process.env.ADMIN_EMAILS);
   const adminDefaultPassword = process.env.ADMIN_DEFAULT_PASSWORD?.trim() ?? '';
   const seedDemoUsers = process.env.SEED_DEMO_USERS === 'true';
@@ -49,6 +50,7 @@ async function main() {
         data: {
           role: Role.ADMIN,
           isApproved: true,
+          emailVerifiedAt: now,
           isOnProbation: false,
           workplaceRole: WorkplaceRole.BOTH,
         },
@@ -70,6 +72,7 @@ async function main() {
         name: null,
         role: Role.ADMIN,
         isApproved: true,
+        emailVerifiedAt: now,
         isOnProbation: false,
         workplaceRole: WorkplaceRole.BOTH,
         passwordHash,
@@ -88,6 +91,8 @@ async function main() {
       update: {
         name: 'Manager Salle',
         role: Role.MANAGER,
+        isApproved: true,
+        emailVerifiedAt: now,
         isOnProbation: false,
         workplaceRole: WorkplaceRole.SALLE,
       },
@@ -95,6 +100,8 @@ async function main() {
         email: 'manager@webapp2026.local',
         name: 'Manager Salle',
         role: Role.MANAGER,
+        isApproved: true,
+        emailVerifiedAt: now,
         isOnProbation: false,
         workplaceRole: WorkplaceRole.SALLE,
         passwordHash: demoPassword,
@@ -106,6 +113,8 @@ async function main() {
       update: {
         name: 'Employe Cuisine',
         role: Role.EMPLOYEE,
+        isApproved: true,
+        emailVerifiedAt: now,
         isOnProbation: true,
         workplaceRole: WorkplaceRole.CUISINE,
       },
@@ -113,6 +122,8 @@ async function main() {
         email: 'employee@webapp2026.local',
         name: 'Employe Cuisine',
         role: Role.EMPLOYEE,
+        isApproved: true,
+        emailVerifiedAt: now,
         isOnProbation: true,
         workplaceRole: WorkplaceRole.CUISINE,
         passwordHash: demoPassword,

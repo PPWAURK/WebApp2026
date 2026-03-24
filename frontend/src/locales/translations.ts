@@ -42,10 +42,16 @@ export const translations = {
       incorrectPassword: 'Mot de passe incorrect',
       emailAlreadyRegistered: 'Cette adresse e-mail est déjà utilisée',
       passwordTooShort: 'Mot de passe trop court (8 caractères minimum)',
+      pendingApprovalAfterEmailVerification:
+        'Le compte a bien été créé. Vérifiez votre e-mail pour envoyer la demande au manager.',
+      pendingAdminApprovalAfterEmailVerification:
+        'Le compte a bien été créé. Vérifiez votre e-mail pour envoyer la demande à un administrateur.',
       pendingApprovalSubmitted:
         'Le compte a bien été créé. Un manager doit encore le valider avant la première connexion.',
       pendingAdminApprovalSubmitted:
         'Le compte a bien été créé. Un administrateur doit encore valider la demande manager avant la première connexion.',
+      emailVerificationRequired:
+        'Vérifiez d’abord votre e-mail avant de pouvoir vous connecter.',
       pendingApprovalRequired:
         'Ce compte attend encore la validation d’un manager.',
       pendingAdminApprovalRequired:
@@ -58,9 +64,24 @@ export const translations = {
         'Choisissez le restaurant pour lequel ce compte demande un poste de manager.',
       rememberMe: 'Se souvenir de moi',
       forgotPassword: 'Mot de passe oublié ?',
+      resendVerificationEmail: 'Renvoyer l’e-mail de vérification',
       sessionExpired: 'Votre session a expiré. Veuillez vous reconnecter.',
       resetEmailSent:
         'Si ce compte existe, un e-mail de réinitialisation a été envoyé.',
+      verificationEmailResent:
+        'Si ce compte existe et n’est pas encore vérifié, un nouvel e-mail de vérification a été envoyé.',
+      verificationEmailResendFailed:
+        'Impossible de renvoyer l’e-mail de vérification.',
+      verifyEmailTitle: 'Vérification de l’e-mail',
+      verifyEmailPending: 'Validation du lien en cours...',
+      verifyEmailSuccessPendingApproval:
+        'Votre e-mail est confirmé. Un manager doit maintenant valider votre compte.',
+      verifyEmailSuccessPendingAdminApproval:
+        'Votre e-mail est confirmé. Un administrateur doit maintenant valider votre demande manager.',
+      verifyEmailInvalidOrExpired:
+        'Le lien de vérification est invalide ou a expiré.',
+      verifyEmailFailed:
+        'Impossible de vérifier cette adresse e-mail pour le moment.',
       resetEmailFailed: 'Impossible d’envoyer l’e-mail de réinitialisation',
       resetPasswordTitle: 'Réinitialiser le mot de passe',
       resetPasswordSubtitle: 'Entrez simplement votre nouveau mot de passe.',
@@ -520,6 +541,8 @@ export const translations = {
       returnReasonPlaceholder:
         'Ex. produit abîmé, erreur de livraison, marchandise manquante',
       returnNotesLabel: 'Notes complémentaires',
+      returnHistorySectionTitle: 'Retours enregistrés',
+      returnHistoryProductsLabel: 'Produits retournés',
       returnNotesPlaceholder: 'Ajoutez un détail utile pour le suivi interne.',
       returnCancelButton: 'Fermer',
       returnSubmitButton: 'Valider le retour',
@@ -818,9 +841,14 @@ export const translations = {
       incorrectPassword: '密码错误',
       emailAlreadyRegistered: '邮箱已被注册',
       passwordTooShort: '密码太短（至少 8 位）',
+      pendingApprovalAfterEmailVerification:
+        '账号已创建，请先验证邮箱，验证后才会提交给店长审核。',
+      pendingAdminApprovalAfterEmailVerification:
+        '账号已创建，请先验证邮箱，验证后才会提交给管理员审核。',
       pendingApprovalSubmitted: '账号已创建，需经理审核通过后方可首次登录。',
       pendingAdminApprovalSubmitted:
         '账号已创建，需管理员审核通过店长申请后方可首次登录。',
+      emailVerificationRequired: '请先完成邮箱验证，再登录账号。',
       pendingApprovalRequired: '账号待经理审核，暂时无法登录。',
       pendingAdminApprovalRequired: '店长账号申请待管理员审核，暂时无法登录。',
       registerManagerRequestLabel: '申请注册为店长',
@@ -830,8 +858,20 @@ export const translations = {
       managerRestaurantHint: '请选择你想申请成为店长的门店。',
       rememberMe: '记住我',
       forgotPassword: '忘记密码？',
+      resendVerificationEmail: '重新发送验证邮件',
       sessionExpired: '登录已过期，请重新登录。',
       resetEmailSent: '如果该账号存在，我们已经发送了重置密码邮件。',
+      verificationEmailResent:
+        '如果该账号存在且邮箱尚未验证，我们已经重新发送验证邮件。',
+      verificationEmailResendFailed: '重新发送验证邮件失败',
+      verifyEmailTitle: '邮箱验证',
+      verifyEmailPending: '正在验证邮箱链接...',
+      verifyEmailSuccessPendingApproval:
+        '邮箱验证成功，账号已进入店长审核，审核通过后即可登录。',
+      verifyEmailSuccessPendingAdminApproval:
+        '邮箱验证成功，账号已进入管理员审核，审核通过后即可登录。',
+      verifyEmailInvalidOrExpired: '验证链接无效或已过期。',
+      verifyEmailFailed: '当前无法完成邮箱验证，请稍后再试。',
       resetEmailFailed: '发送重置密码邮件失败',
       resetPasswordTitle: '重置密码',
       resetPasswordSubtitle: '请为你的账号设置一个新密码。',
@@ -1258,6 +1298,8 @@ export const translations = {
       returnReasonLabel: '退货原因',
       returnReasonPlaceholder: '例如：商品破损、送错货、少货等',
       returnNotesLabel: '补充说明',
+      returnHistorySectionTitle: '退货记录',
+      returnHistoryProductsLabel: '退货商品',
       returnNotesPlaceholder: '可填写箱体情况、门店备注或处理说明。',
       returnCancelButton: '关闭',
       returnSubmitButton: '提交退货',

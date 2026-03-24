@@ -212,6 +212,7 @@ export default function AuthGroupLayout() {
     const isInteractiveAuthRoute =
       pathname === '/login' ||
       pathname === '/reset-password' ||
+      pathname === '/verify-email' ||
       pathname === '/auth';
 
     if (isInteractiveAuthRoute) {
@@ -280,6 +281,33 @@ export default function AuthGroupLayout() {
       }
 
       router.replace('/reset-password');
+      return;
+    }
+
+    if (
+      normalizedHashPath === '/verify-email' ||
+      normalizedHashPath === '/verifyemail' ||
+      normalizedHashPath === '/email-verification'
+    ) {
+      const hashToken =
+        new URLSearchParams(rawQuery || '').get('token') ?? undefined;
+      const normalizedHashToken =
+        typeof hashToken === 'string' ? hashToken.trim() || null : null;
+
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}${window.location.search}`,
+      );
+
+      if (normalizedHashToken) {
+        router.replace(
+          `/verify-email?token=${encodeURIComponent(normalizedHashToken)}`,
+        );
+        return;
+      }
+
+      router.replace('/verify-email');
     }
   }, [pathname, router]);
 

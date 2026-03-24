@@ -24,6 +24,7 @@ const USER_DETAILS_SELECT = {
   role: true,
   employeeLevel: true,
   isApproved: true,
+  emailVerifiedAt: true,
   isOnProbation: true,
   workplaceRole: true,
   trainingAccess: true,
@@ -78,6 +79,7 @@ export class UsersService {
     role?: Role;
     employeeLevel?: EmployeeLevel;
     isApproved?: boolean;
+    emailVerifiedAt?: Date | null;
     preferredLanguage?: 'fr' | 'zh';
   }) {
     return this.prisma.user.create({
@@ -89,6 +91,7 @@ export class UsersService {
         role: params.role ?? Role.EMPLOYEE,
         employeeLevel: params.employeeLevel ?? EmployeeLevel.L0_PROBATION,
         isApproved: params.isApproved ?? true,
+        emailVerifiedAt: params.emailVerifiedAt,
         isOnProbation: true,
         preferredLanguage: params.preferredLanguage ?? 'fr',
         workplaceRole: WorkplaceRole.BOTH,

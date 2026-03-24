@@ -156,6 +156,9 @@ export default function LoginScreen() {
               rememberMe={auth.rememberMe}
               isSubmitting={auth.isSubmitting}
               forgotPasswordCooldownSeconds={auth.forgotPasswordCooldownSeconds}
+              resendVerificationCooldownSeconds={
+                auth.resendVerificationCooldownSeconds
+              }
               error={auth.error}
               notice={auth.notice}
               onEmailChange={auth.setEmail}
@@ -176,6 +179,12 @@ export default function LoginScreen() {
               }}
               onForgotPassword={() => {
                 void auth.forgotPassword(language.text, language.language);
+              }}
+              onResendVerification={() => {
+                void auth.resendVerificationEmail(
+                  language.text,
+                  language.language,
+                );
               }}
               onToggleMode={auth.toggleMode}
               onBackToLanding={() => {

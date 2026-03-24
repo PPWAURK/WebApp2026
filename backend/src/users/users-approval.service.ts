@@ -84,6 +84,7 @@ export class UsersApprovalService {
         role: true,
         restaurantId: true,
         isApproved: true,
+        emailVerifiedAt: true,
       },
     });
 
@@ -112,6 +113,12 @@ export class UsersApprovalService {
 
     if (user.isApproved) {
       return { id: user.id, isApproved: true };
+    }
+
+    if (!user.emailVerifiedAt) {
+      throw new BadRequestException(
+        'Email must be verified before account review',
+      );
     }
 
     const updated = await this.prisma.user.update({
@@ -160,6 +167,7 @@ export class UsersApprovalService {
         role: true,
         restaurantId: true,
         isApproved: true,
+        emailVerifiedAt: true,
       },
     });
 
@@ -169,6 +177,12 @@ export class UsersApprovalService {
 
     if (user.isApproved) {
       throw new BadRequestException('Only pending accounts can be rejected');
+    }
+
+    if (!user.emailVerifiedAt) {
+      throw new BadRequestException(
+        'Email must be verified before account review',
+      );
     }
 
     if (actor.actorRole === Role.MANAGER && user.role !== Role.EMPLOYEE) {
