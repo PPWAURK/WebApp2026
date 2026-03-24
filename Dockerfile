@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY backend/package*.json ./
 
-RUN npm ci
+RUN npm ci && npm cache clean --force
 
 COPY backend/ ./
 
