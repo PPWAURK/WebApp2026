@@ -16,6 +16,50 @@ type RawOrderSummary = {
   createdAt?: unknown;
 };
 
+type RawOrderReturnDraftItem = {
+  purchaseOrderItemId?: unknown;
+  productId?: unknown;
+  category?: unknown;
+  nameZh?: unknown;
+  nameFr?: unknown;
+  unit?: unknown;
+  orderedQuantity?: unknown;
+  returnedQuantity?: unknown;
+  remainingQuantity?: unknown;
+};
+
+type RawOrderReturnDraft = {
+  orderId?: unknown;
+  orderNumber?: unknown;
+  supplierId?: unknown;
+  supplierName?: unknown;
+  deliveryDate?: unknown;
+  items?: unknown;
+};
+
+type RawOrderReturnSummaryItem = {
+  quantity?: unknown;
+  nameZh?: unknown;
+  nameFr?: unknown;
+  unit?: unknown;
+};
+
+type RawOrderReturnSummary = {
+  id?: unknown;
+  orderId?: unknown;
+  orderNumber?: unknown;
+  supplierId?: unknown;
+  supplierName?: unknown;
+  restaurantId?: unknown;
+  restaurantName?: unknown;
+  deliveryDate?: unknown;
+  reason?: unknown;
+  notes?: unknown;
+  totalItems?: unknown;
+  createdAt?: unknown;
+  items?: unknown;
+};
+
 export type OrderSummary = {
   id: number;
   number: string;
@@ -44,6 +88,72 @@ export type CreatedOrderResult = {
   id: number;
   number: string;
   bonUrl: string;
+};
+
+export type OrderReturnDraftItem = {
+  purchaseOrderItemId: number;
+  productId: number;
+  category: string;
+  nameZh: string;
+  nameFr: string;
+  unit: string;
+  orderedQuantity: number;
+  returnedQuantity: number;
+  remainingQuantity: number;
+};
+
+export type OrderReturnDraft = {
+  orderId: number;
+  orderNumber: string;
+  supplierId: number;
+  supplierName: string;
+  deliveryDate: string;
+  items: OrderReturnDraftItem[];
+};
+
+export type OrderReturnSummaryItem = {
+  quantity: number;
+  nameZh: string;
+  nameFr: string;
+  unit: string;
+};
+
+export type OrderReturnSummary = {
+  id: number;
+  orderId: number;
+  orderNumber: string;
+  supplierId: number;
+  supplierName: string;
+  restaurantId: number;
+  restaurantName: string;
+  deliveryDate: string;
+  reason: string;
+  notes: string;
+  totalItems: number;
+  createdAt: string;
+  items: OrderReturnSummaryItem[];
+};
+
+export type CreateOrderReturnPayload = {
+  orderId: number;
+  reason: string;
+  notes?: string;
+  items: Array<{
+    purchaseOrderItemId: number;
+    quantity: number;
+  }>;
+};
+
+export type CreatedOrderReturnResult = {
+  id: number;
+  orderId: number;
+  orderNumber: string;
+  supplierId: number;
+  supplierName: string;
+  reason: string;
+  notes: string;
+  totalItems: number;
+  createdAt: string;
 };
 
 export type OrderHistoryAnalytics = {
@@ -129,6 +239,77 @@ function normalizeOrderSummary(raw: RawOrderSummary): OrderSummary {
   };
 }
 
+function normalizeOrderReturnDraftItem(
+  raw: RawOrderReturnDraftItem,
+): OrderReturnDraftItem {
+  return {
+    purchaseOrderItemId: toNumber(raw.purchaseOrderItemId, 0),
+    productId: toNumber(raw.productId, 0),
+    category: typeof raw.category === 'string' ? raw.category : '',
+    nameZh: typeof raw.nameZh === 'string' ? raw.nameZh : '',
+    nameFr: typeof raw.nameFr === 'string' ? raw.nameFr : '',
+    unit: typeof raw.unit === 'string' ? raw.unit : '',
+    orderedQuantity: toNumber(raw.orderedQuantity, 0),
+    returnedQuantity: toNumber(raw.returnedQuantity, 0),
+    remainingQuantity: toNumber(raw.remainingQuantity, 0),
+  };
+}
+
+function normalizeOrderReturnDraft(raw: RawOrderReturnDraft): OrderReturnDraft {
+  const items = Array.isArray(raw.items)
+    ? raw.items.map((item) =>
+        normalizeOrderReturnDraftItem(item as RawOrderReturnDraftItem),
+      )
+    : [];
+
+  return {
+    orderId: toNumber(raw.orderId, 0),
+    orderNumber: typeof raw.orderNumber === 'string' ? raw.orderNumber : '',
+    supplierId: toNumber(raw.supplierId, 0),
+    supplierName: typeof raw.supplierName === 'string' ? raw.supplierName : '',
+    deliveryDate: typeof raw.deliveryDate === 'string' ? raw.deliveryDate : '',
+    items,
+  };
+}
+
+function normalizeOrderReturnSummaryItem(
+  raw: RawOrderReturnSummaryItem,
+): OrderReturnSummaryItem {
+  return {
+    quantity: toNumber(raw.quantity, 0),
+    nameZh: typeof raw.nameZh === 'string' ? raw.nameZh : '',
+    nameFr: typeof raw.nameFr === 'string' ? raw.nameFr : '',
+    unit: typeof raw.unit === 'string' ? raw.unit : '',
+  };
+}
+
+function normalizeOrderReturnSummary(
+  raw: RawOrderReturnSummary,
+): OrderReturnSummary {
+  const items = Array.isArray(raw.items)
+    ? raw.items.map((item) =>
+        normalizeOrderReturnSummaryItem(item as RawOrderReturnSummaryItem),
+      )
+    : [];
+
+  return {
+    id: toNumber(raw.id, 0),
+    orderId: toNumber(raw.orderId, 0),
+    orderNumber: typeof raw.orderNumber === 'string' ? raw.orderNumber : '',
+    supplierId: toNumber(raw.supplierId, 0),
+    supplierName: typeof raw.supplierName === 'string' ? raw.supplierName : '',
+    restaurantId: toNumber(raw.restaurantId, 0),
+    restaurantName:
+      typeof raw.restaurantName === 'string' ? raw.restaurantName : '',
+    deliveryDate: typeof raw.deliveryDate === 'string' ? raw.deliveryDate : '',
+    reason: typeof raw.reason === 'string' ? raw.reason : '',
+    notes: typeof raw.notes === 'string' ? raw.notes : '',
+    totalItems: toNumber(raw.totalItems, 0),
+    createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : '',
+    items,
+  };
+}
+
 export async function createOrder(
   token: string,
   payload: {
@@ -161,7 +342,7 @@ export async function createOrder(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'ORDER_CREATE_FAILED';
+      : (errorData.message ?? 'ORDER_CREATE_FAILED');
     throw new Error(message);
   }
 
@@ -189,7 +370,7 @@ export async function fetchOrders(token: string): Promise<OrderSummary[]> {
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'ORDERS_FETCH_FAILED';
+      : (errorData.message ?? 'ORDERS_FETCH_FAILED');
     throw new Error(message);
   }
 
@@ -200,7 +381,10 @@ export async function fetchOrders(token: string): Promise<OrderSummary[]> {
   return data.map((item) => normalizeOrderSummary(item as RawOrderSummary));
 }
 
-export async function deleteOrder(token: string, orderId: number): Promise<void> {
+export async function deleteOrder(
+  token: string,
+  orderId: number,
+): Promise<void> {
   const response = await fetch(`${API_URL}/orders/${orderId}`, {
     method: 'DELETE',
     headers: {
@@ -217,8 +401,107 @@ export async function deleteOrder(token: string, orderId: number): Promise<void>
   const data = (await response.json()) as { message?: string | string[] };
   const message = Array.isArray(data.message)
     ? data.message.join(', ')
-    : data.message ?? 'ORDER_DELETE_FAILED';
+    : (data.message ?? 'ORDER_DELETE_FAILED');
   throw new Error(message);
+}
+
+export async function fetchOrderReturnDraft(
+  token: string,
+  orderId: number,
+): Promise<OrderReturnDraft> {
+  const response = await fetch(`${API_URL}/orders/${orderId}/return-draft`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = (await response.json()) as
+    | RawOrderReturnDraft
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : (errorData.message ?? 'ORDER_RETURN_DRAFT_FAILED');
+    throw new Error(message);
+  }
+
+  return normalizeOrderReturnDraft(data as RawOrderReturnDraft);
+}
+
+export async function createOrderReturn(
+  token: string,
+  payload: CreateOrderReturnPayload,
+): Promise<CreatedOrderReturnResult> {
+  const response = await fetch(`${API_URL}/orders/returns`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await response.json()) as
+    | RawOrderReturnSummary
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : (errorData.message ?? 'ORDER_RETURN_CREATE_FAILED');
+    throw new Error(message);
+  }
+
+  const normalized = normalizeOrderReturnSummary(data as RawOrderReturnSummary);
+
+  return {
+    id: normalized.id,
+    orderId: normalized.orderId,
+    orderNumber: normalized.orderNumber,
+    supplierId: normalized.supplierId,
+    supplierName: normalized.supplierName,
+    reason: normalized.reason,
+    notes: normalized.notes,
+    totalItems: normalized.totalItems,
+    createdAt: normalized.createdAt,
+  };
+}
+
+export async function fetchOrderReturns(
+  token: string,
+): Promise<OrderReturnSummary[]> {
+  const response = await fetch(`${API_URL}/orders/returns`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = (await response.json()) as unknown;
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : (errorData.message ?? 'ORDER_RETURNS_FETCH_FAILED');
+    throw new Error(message);
+  }
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.map((item) =>
+    normalizeOrderReturnSummary(item as RawOrderReturnSummary),
+  );
 }
 
 export async function fetchTopOrderedProductsBySupplier(
@@ -227,7 +510,11 @@ export async function fetchTopOrderedProductsBySupplier(
   month?: string,
 ): Promise<TopOrderedProduct[]> {
   const query = new URLSearchParams();
-  if (typeof supplierId === 'number' && Number.isInteger(supplierId) && supplierId > 0) {
+  if (
+    typeof supplierId === 'number' &&
+    Number.isInteger(supplierId) &&
+    supplierId > 0
+  ) {
     query.set('supplierId', String(supplierId));
   }
   if (typeof month === 'string' && /^\d{4}-\d{2}$/.test(month)) {
@@ -238,9 +525,9 @@ export async function fetchTopOrderedProductsBySupplier(
   const response = await fetch(
     `${API_URL}/orders/dashboard/top-products${queryString ? `?${queryString}` : ''}`,
     {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
   );
 
@@ -254,7 +541,7 @@ export async function fetchTopOrderedProductsBySupplier(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to load top ordered products';
+      : (errorData.message ?? 'Failed to load top ordered products');
     throw new Error(message);
   }
 
@@ -266,7 +553,11 @@ export async function fetchTopOrderedProductMonths(
   supplierId?: number,
 ): Promise<string[]> {
   const query = new URLSearchParams();
-  if (typeof supplierId === 'number' && Number.isInteger(supplierId) && supplierId > 0) {
+  if (
+    typeof supplierId === 'number' &&
+    Number.isInteger(supplierId) &&
+    supplierId > 0
+  ) {
     query.set('supplierId', String(supplierId));
   }
 
@@ -288,7 +579,7 @@ export async function fetchTopOrderedProductMonths(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'Failed to load top ordered months';
+      : (errorData.message ?? 'Failed to load top ordered months');
     throw new Error(message);
   }
 
@@ -332,7 +623,9 @@ export async function fetchOrderHistoryAnalytics(
     },
   );
 
-  const data = (await response.json()) as OrderHistoryAnalytics | { message?: string | string[] };
+  const data = (await response.json()) as
+    | OrderHistoryAnalytics
+    | { message?: string | string[] };
 
   throwIfUnauthorized(response);
 
@@ -340,7 +633,7 @@ export async function fetchOrderHistoryAnalytics(
     const errorData = data as { message?: string | string[] };
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
-      : errorData.message ?? 'ORDER_HISTORY_ANALYTICS_FAILED';
+      : (errorData.message ?? 'ORDER_HISTORY_ANALYTICS_FAILED');
     throw new Error(message);
   }
 

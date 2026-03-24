@@ -22,6 +22,13 @@ type CreateOrderPayload = {
   items: Array<{ productId: number; quantity: number }>;
 };
 
+type CreateOrderReturnPayload = {
+  orderId: number;
+  reason: string;
+  notes?: string;
+  items: Array<{ purchaseOrderItemId: number; quantity: number }>;
+};
+
 type TopProductAggregate = {
   productId: number;
   supplierId: number;
@@ -387,6 +394,332 @@ export class OrdersService {
         createdAt: order.createdAt,
       };
     });
+  }
+
+  async listOrderReturns(actor: Actor) {
+    this.ensureCanManageOrders(actor);
+
+    const returns = await this.prisma.purchaseReturn.findMany({
+      where:
+        actor.role === 'ADMIN'
+          ? actor.restaurantId
+            ? { restaurantId: actor.restaurantId }
+            : undefined
+          : { restaurantId: actor.restaurantId ?? -1 },
+      include: {
+        purchaseOrder: {
+          select: {
+            id: true,
+            number: true,
+            deliveryDate: true,
+          },
+        },
+        supplier: {
+          select: {
+            id: true,
+            nom: true,
+          },
+        },
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        items: {
+          orderBy: {
+            id: 'asc',
+          },
+          select: {
+            quantity: true,
+            nameZh: true,
+            nameFr: true,
+            unit: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 120,
+    });
+
+    return returns.map((entry) => ({
+      id: entry.id,
+      orderId: entry.purchaseOrderId,
+      orderNumber: entry.purchaseOrder.number,
+      supplierId: entry.supplierId,
+      supplierName: entry.supplier.nom,
+      restaurantId: entry.restaurantId,
+      restaurantName: entry.restaurant.name,
+      deliveryDate: entry.purchaseOrder.deliveryDate.toISOString().slice(0, 10),
+      reason: entry.reason,
+      notes: entry.notes ?? '',
+      totalItems: entry.totalItems,
+      createdAt: entry.createdAt,
+      items: entry.items.map((item) => ({
+        quantity: item.quantity,
+        nameZh: this.sanitizeLabel(this.recoverUtf8(item.nameZh)),
+        nameFr: this.sanitizeLabel(this.recoverUtf8(item.nameFr)),
+        unit: this.sanitizeLabel(item.unit?.trim()),
+      })),
+    }));
+  }
+
+  async getOrderReturnDraft(orderId: number, actor: Actor) {
+    this.ensureCanManageOrders(actor);
+
+    const order = await this.prisma.purchaseOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        supplier: {
+          select: {
+            id: true,
+            nom: true,
+          },
+        },
+        items: {
+          orderBy: {
+            id: 'asc',
+          },
+          select: {
+            id: true,
+            productId: true,
+            quantity: true,
+            nameZh: true,
+            nameFr: true,
+            unit: true,
+            category: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (actor.role !== 'ADMIN' && order.restaurantId !== actor.restaurantId) {
+      throw new ForbiddenException('Order does not belong to your restaurant');
+    }
+
+    const returnedItems = await this.prisma.purchaseReturnItem.findMany({
+      where: {
+        purchaseReturn: {
+          purchaseOrderId: orderId,
+        },
+      },
+      select: {
+        purchaseOrderItemId: true,
+        quantity: true,
+      },
+    });
+
+    const returnedQuantityByItemId = this.sumReturnedQuantities(returnedItems);
+
+    return {
+      orderId: order.id,
+      orderNumber: order.number,
+      supplierId: order.supplierId,
+      supplierName: order.supplier.nom,
+      deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
+      items: order.items.map((item) => {
+        const returnedQuantity = returnedQuantityByItemId.get(item.id) ?? 0;
+        const remainingQuantity = Math.max(item.quantity - returnedQuantity, 0);
+
+        return {
+          purchaseOrderItemId: item.id,
+          productId: Number(item.productId),
+          category: item.category,
+          nameZh: this.sanitizeLabel(this.recoverUtf8(item.nameZh)),
+          nameFr: this.sanitizeLabel(this.recoverUtf8(item.nameFr)),
+          unit: this.sanitizeLabel(item.unit?.trim()),
+          orderedQuantity: item.quantity,
+          returnedQuantity,
+          remainingQuantity,
+        };
+      }),
+    };
+  }
+
+  async createOrderReturn(actor: Actor, payload: CreateOrderReturnPayload) {
+    this.ensureCanManageOrders(actor);
+
+    const reason = payload.reason.trim();
+    if (!reason) {
+      throw new BadRequestException('reason is required');
+    }
+
+    if (!payload.items?.length) {
+      throw new BadRequestException('At least one return item is required');
+    }
+
+    const order = await this.prisma.purchaseOrder.findUnique({
+      where: { id: payload.orderId },
+      include: {
+        supplier: {
+          select: {
+            id: true,
+            nom: true,
+          },
+        },
+        items: {
+          orderBy: {
+            id: 'asc',
+          },
+          select: {
+            id: true,
+            productId: true,
+            quantity: true,
+            nameZh: true,
+            nameFr: true,
+            unit: true,
+            category: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (actor.role !== 'ADMIN' && order.restaurantId !== actor.restaurantId) {
+      throw new ForbiddenException('Order does not belong to your restaurant');
+    }
+
+    const normalizedItems = payload.items.map((item) => ({
+      purchaseOrderItemId: item.purchaseOrderItemId,
+      quantity: item.quantity,
+    }));
+
+    if (
+      normalizedItems.some(
+        (item) =>
+          !Number.isInteger(item.purchaseOrderItemId) ||
+          item.purchaseOrderItemId <= 0 ||
+          !Number.isInteger(item.quantity) ||
+          item.quantity <= 0,
+      )
+    ) {
+      throw new BadRequestException(
+        'Return items must contain positive integers only',
+      );
+    }
+
+    const distinctOrderItemIds = new Set(
+      normalizedItems.map((item) => item.purchaseOrderItemId),
+    );
+    if (distinctOrderItemIds.size !== normalizedItems.length) {
+      throw new BadRequestException('Return items must be unique');
+    }
+
+    const orderItemById = new Map(order.items.map((item) => [item.id, item]));
+    const unknownOrderItemId = normalizedItems.find(
+      (item) => !orderItemById.has(item.purchaseOrderItemId),
+    )?.purchaseOrderItemId;
+    if (unknownOrderItemId) {
+      throw new BadRequestException(
+        'Return item does not belong to this order',
+      );
+    }
+
+    const returnedItems = await this.prisma.purchaseReturnItem.findMany({
+      where: {
+        purchaseReturn: {
+          purchaseOrderId: order.id,
+        },
+        purchaseOrderItemId: {
+          in: Array.from(distinctOrderItemIds),
+        },
+      },
+      select: {
+        purchaseOrderItemId: true,
+        quantity: true,
+      },
+    });
+
+    const returnedQuantityByItemId = this.sumReturnedQuantities(returnedItems);
+
+    const preparedItems = normalizedItems.map((item) => {
+      const orderItem = orderItemById.get(item.purchaseOrderItemId);
+      if (!orderItem) {
+        throw new BadRequestException(
+          'Return item does not belong to this order',
+        );
+      }
+
+      const alreadyReturned = returnedQuantityByItemId.get(orderItem.id) ?? 0;
+      const remainingQuantity = orderItem.quantity - alreadyReturned;
+
+      if (remainingQuantity <= 0) {
+        throw new BadRequestException(
+          'Selected item has already been fully returned',
+        );
+      }
+
+      if (item.quantity > remainingQuantity) {
+        throw new BadRequestException(
+          'Return quantity exceeds remaining quantity',
+        );
+      }
+
+      return {
+        orderItem,
+        quantity: item.quantity,
+      };
+    });
+
+    const totalItems = preparedItems.reduce(
+      (sum, item) => sum + item.quantity,
+      0,
+    );
+    const trimmedNotes = payload.notes?.trim() ? payload.notes.trim() : null;
+
+    const createdReturn = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.purchaseReturn.create({
+        data: {
+          purchaseOrderId: order.id,
+          supplierId: order.supplierId,
+          restaurantId: order.restaurantId,
+          createdByUserId: actor.id,
+          reason,
+          notes: trimmedNotes,
+          totalItems,
+        },
+        select: {
+          id: true,
+          createdAt: true,
+        },
+      });
+
+      await tx.purchaseReturnItem.createMany({
+        data: preparedItems.map((item) => ({
+          purchaseReturnId: created.id,
+          purchaseOrderItemId: item.orderItem.id,
+          productId: item.orderItem.productId,
+          quantity: item.quantity,
+          nameZh: item.orderItem.nameZh,
+          nameFr: item.orderItem.nameFr,
+          unit: item.orderItem.unit,
+          category: item.orderItem.category,
+        })),
+      });
+
+      return created;
+    });
+
+    return {
+      id: createdReturn.id,
+      orderId: order.id,
+      orderNumber: order.number,
+      supplierId: order.supplierId,
+      supplierName: order.supplier.nom,
+      reason,
+      notes: trimmedNotes ?? '',
+      totalItems,
+      createdAt: createdReturn.createdAt,
+    };
   }
 
   async resolveOrderFilePath(orderId: number, actor: Actor) {
@@ -951,6 +1284,20 @@ export class OrdersService {
       throw new ForbiddenException('Order does not belong to your restaurant');
     }
 
+    const relatedReturns = await this.prisma.purchaseReturn.findMany({
+      where: {
+        purchaseOrderId: orderId,
+      },
+      select: {
+        id: true,
+      },
+      take: 1,
+    });
+
+    if (relatedReturns.length > 0) {
+      throw new BadRequestException('Order with returns cannot be deleted');
+    }
+
     await this.prisma.purchaseOrder.delete({
       where: { id: orderId },
     });
@@ -1118,6 +1465,23 @@ export class OrdersService {
       avgOrderItems:
         ordersCount > 0 ? Number((totalItems / ordersCount).toFixed(1)) : 0,
     };
+  }
+
+  private sumReturnedQuantities(
+    items: Array<{ purchaseOrderItemId: number; quantity: number }>,
+  ) {
+    const returnedQuantityByItemId = new Map<number, number>();
+
+    for (const item of items) {
+      const current =
+        returnedQuantityByItemId.get(item.purchaseOrderItemId) ?? 0;
+      returnedQuantityByItemId.set(
+        item.purchaseOrderItemId,
+        current + item.quantity,
+      );
+    }
+
+    return returnedQuantityByItemId;
   }
 
   private ensureCanManageOrders(actor: Actor) {

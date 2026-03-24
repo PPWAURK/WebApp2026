@@ -7,13 +7,19 @@ describe('OrdersController', () => {
   let controller: OrdersController;
   let ordersService: {
     createOrder: jest.Mock;
+    createOrderReturn: jest.Mock;
     getOrderHistoryAnalytics: jest.Mock;
+    getOrderReturnDraft: jest.Mock;
+    listOrderReturns: jest.Mock;
   };
 
   beforeEach(async () => {
     ordersService = {
       createOrder: jest.fn(),
+      createOrderReturn: jest.fn(),
       getOrderHistoryAnalytics: jest.fn(),
+      getOrderReturnDraft: jest.fn(),
+      listOrderReturns: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -103,6 +109,42 @@ describe('OrdersController', () => {
       {
         supplierId: 11,
         period: 'this_month',
+      },
+    );
+    expect(result).toBe(expected);
+  });
+
+  it('forwards order return creation to the service with the resolved actor', () => {
+    const expected = { id: 7, orderNumber: 'PO-20260324-0007' };
+    ordersService.createOrderReturn.mockReturnValue(expected);
+
+    const result = controller.createOrderReturn(
+      {
+        user: {
+          id: 5,
+          role: 'MANAGER',
+          restaurantId: 2,
+        },
+      } as never,
+      {
+        orderId: 19,
+        reason: 'Produit abime',
+        notes: 'Carton humide',
+        items: [{ purchaseOrderItemId: 44, quantity: 2 }],
+      },
+    );
+
+    expect(ordersService.createOrderReturn).toHaveBeenCalledWith(
+      {
+        id: 5,
+        role: 'MANAGER',
+        restaurantId: 2,
+      },
+      {
+        orderId: 19,
+        reason: 'Produit abime',
+        notes: 'Carton humide',
+        items: [{ purchaseOrderItemId: 44, quantity: 2 }],
       },
     );
     expect(result).toBe(expected);

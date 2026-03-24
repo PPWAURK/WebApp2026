@@ -17,6 +17,7 @@ import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../auth/interfaces/authenticated-request.interface';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { CreateOrderReturnDto } from './dto/create-order-return.dto';
 import {
   HistoryAnalyticsQueryDto,
   SupplierMonthQueryDto,
@@ -57,6 +58,36 @@ export class OrdersController {
   @Get()
   listOrders(@Req() req: AuthenticatedRequest) {
     return this.ordersService.listOrders(this.getActor(req), req);
+  }
+
+  @ApiOperation({ summary: 'List purchase returns (restaurant scoped)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('returns')
+  listOrderReturns(@Req() req: AuthenticatedRequest) {
+    return this.ordersService.listOrderReturns(this.getActor(req));
+  }
+
+  @ApiOperation({ summary: 'Load one order as a return draft' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/return-draft')
+  getOrderReturnDraft(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) orderId: number,
+  ) {
+    return this.ordersService.getOrderReturnDraft(orderId, this.getActor(req));
+  }
+
+  @ApiOperation({ summary: 'Create one purchase return' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('returns')
+  createOrderReturn(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: CreateOrderReturnDto,
+  ) {
+    return this.ordersService.createOrderReturn(this.getActor(req), body);
   }
 
   @ApiOperation({

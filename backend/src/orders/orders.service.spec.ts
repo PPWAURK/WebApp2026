@@ -17,6 +17,8 @@ describe('OrdersService', () => {
     fournisseur: { findUnique: jest.Mock };
     restaurant: { findUnique: jest.Mock };
     purchaseOrder: { findUnique: jest.Mock; delete: jest.Mock };
+    purchaseReturn: { create: jest.Mock; findMany: jest.Mock };
+    purchaseReturnItem: { createMany: jest.Mock; findMany: jest.Mock };
   };
 
   beforeEach(() => {
@@ -37,6 +39,14 @@ describe('OrdersService', () => {
       purchaseOrder: {
         findUnique: jest.fn(),
         delete: jest.fn(),
+      },
+      purchaseReturn: {
+        create: jest.fn(),
+        findMany: jest.fn(),
+      },
+      purchaseReturnItem: {
+        createMany: jest.fn(),
+        findMany: jest.fn(),
       },
     };
 
@@ -135,5 +145,123 @@ describe('OrdersService', () => {
     );
 
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('builds a return draft with remaining quantities', async () => {
+    prisma.purchaseOrder.findUnique.mockResolvedValue({
+      id: 19,
+      number: 'PO-20260324-0019',
+      supplierId: 7,
+      restaurantId: 5,
+      deliveryDate: new Date('2026-03-24T00:00:00.000Z'),
+      supplier: {
+        id: 7,
+        nom: 'Supplier',
+      },
+      items: [
+        {
+          id: 44,
+          productId: BigInt(2),
+          quantity: 5,
+          nameZh: '青菜',
+          nameFr: 'Legume',
+          unit: 'kg',
+          category: 'fresh',
+        },
+      ],
+    });
+    prisma.purchaseReturnItem.findMany.mockResolvedValue([
+      {
+        purchaseOrderItemId: 44,
+        quantity: 2,
+      },
+    ]);
+
+    await expect(
+      service.getOrderReturnDraft(19, {
+        id: 8,
+        role: 'MANAGER',
+        restaurantId: 5,
+      }),
+    ).resolves.toMatchObject({
+      orderId: 19,
+      orderNumber: 'PO-20260324-0019',
+      items: [
+        expect.objectContaining({
+          purchaseOrderItemId: 44,
+          orderedQuantity: 5,
+          returnedQuantity: 2,
+          remainingQuantity: 3,
+        }),
+      ],
+    });
+  });
+
+  it('rejects a return quantity that exceeds the remaining quantity', async () => {
+    prisma.purchaseOrder.findUnique.mockResolvedValue({
+      id: 19,
+      number: 'PO-20260324-0019',
+      supplierId: 7,
+      restaurantId: 5,
+      supplier: {
+        id: 7,
+        nom: 'Supplier',
+      },
+      items: [
+        {
+          id: 44,
+          productId: BigInt(2),
+          quantity: 5,
+          nameZh: '青菜',
+          nameFr: 'Legume',
+          unit: 'kg',
+          category: 'fresh',
+        },
+      ],
+    });
+    prisma.purchaseReturnItem.findMany.mockResolvedValue([
+      {
+        purchaseOrderItemId: 44,
+        quantity: 4,
+      },
+    ]);
+
+    await expect(
+      service.createOrderReturn(
+        {
+          id: 8,
+          role: 'MANAGER',
+          restaurantId: 5,
+        },
+        {
+          orderId: 19,
+          reason: 'Produit abime',
+          items: [{ purchaseOrderItemId: 44, quantity: 2 }],
+        },
+      ),
+    ).rejects.toThrow(
+      new BadRequestException('Return quantity exceeds remaining quantity'),
+    );
+  });
+
+  it('rejects deleting an order that already has returns', async () => {
+    prisma.purchaseOrder.findUnique.mockResolvedValue({
+      id: 19,
+      restaurantId: 5,
+      bonFileName: 'commande-19.pdf',
+    });
+    prisma.purchaseReturn.findMany.mockResolvedValue([{ id: 3 }]);
+
+    await expect(
+      service.deleteOrder(19, {
+        id: 8,
+        role: 'MANAGER',
+        restaurantId: 5,
+      }),
+    ).rejects.toThrow(
+      new BadRequestException('Order with returns cannot be deleted'),
+    );
+
+    expect(prisma.purchaseOrder.delete).not.toHaveBeenCalled();
   });
 });

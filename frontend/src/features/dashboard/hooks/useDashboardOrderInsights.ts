@@ -4,12 +4,17 @@ import type { AppText } from '../../../locales/translations';
 import {
   buildOrderBonUrl,
   fetchOrders,
+  fetchOrderReturns,
   fetchTopOrderedProductMonths,
   fetchTopOrderedProductsBySupplier,
+  type OrderReturnSummary,
   type OrderSummary,
   type TopOrderedProduct,
 } from '../../../services/ordersApi';
-import { fetchSuppliers, type SupplierItem } from '../../../services/suppliersApi';
+import {
+  fetchSuppliers,
+  type SupplierItem,
+} from '../../../services/suppliersApi';
 import { canEmbedWebDocument } from '../lib/dashboardShared';
 
 type UseDashboardOrderInsightsArgs = {
@@ -29,6 +34,9 @@ export function useDashboardOrderInsights({
   const [topProducts, setTopProducts] = useState<TopOrderedProduct[]>([]);
   const [topProductsLoading, setTopProductsLoading] = useState(false);
   const [topProductsError, setTopProductsError] = useState<string | null>(null);
+  const [recentReturns, setRecentReturns] = useState<OrderReturnSummary[]>([]);
+  const [returnsLoading, setReturnsLoading] = useState(false);
+  const [returnsError, setReturnsError] = useState<string | null>(null);
   const [chartSuppliers, setChartSuppliers] = useState<SupplierItem[]>([]);
   const [selectedChartSupplierId, setSelectedChartSupplierId] = useState<
     number | null
@@ -72,6 +80,38 @@ export function useDashboardOrderInsights({
       isActive = false;
     };
   }, [accessToken, isSupervisor, text.dashboard.quickLoadOrderError]);
+
+  useEffect(() => {
+    if (!isSupervisor) {
+      return;
+    }
+
+    let isActive = true;
+    setReturnsLoading(true);
+    setReturnsError(null);
+
+    void fetchOrderReturns(accessToken)
+      .then((result) => {
+        if (isActive) {
+          setRecentReturns(result);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setReturnsError(text.dashboard.returnSummaryLoadError);
+          setRecentReturns([]);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setReturnsLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accessToken, isSupervisor, text.dashboard.returnSummaryLoadError]);
 
   useEffect(() => {
     if (!isSupervisor) {
@@ -288,6 +328,9 @@ export function useDashboardOrderInsights({
     orderLoading,
     orderPreviewLoading,
     orderPreviewUrl,
+    recentReturns,
+    returnsError,
+    returnsLoading,
     selectedChartMonth,
     selectedChartSupplierId,
     setSelectedChartMonth,

@@ -16,6 +16,17 @@ function canAccessOrders(role: Role) {
   return role === 'ADMIN' || role === 'MANAGER';
 }
 
+function showFeedback(title: string, message: string) {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') {
+      window.alert(message);
+    }
+    return;
+  }
+
+  Alert.alert(title, message);
+}
+
 export default function OrderHistoryScreen() {
   const auth = useAuth();
   const language = useLanguage();
@@ -116,6 +127,12 @@ export default function OrderHistoryScreen() {
       setOrders((currentOrders) =>
         currentOrders.filter((currentOrder) => currentOrder.id !== order.id),
       );
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : language.text.orders.deleteHistoryError;
+      showFeedback(language.text.orders.deleteHistoryButton, message);
     } finally {
       setDeletingOrderId(null);
     }

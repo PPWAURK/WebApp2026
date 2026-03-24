@@ -34,6 +34,7 @@ model User {
   newsPostReads       NewsPostRead[]
   passwordResetTokens PasswordResetToken[]
   purchaseOrders      PurchaseOrder[]             @relation("CreatedByUser")
+  purchaseReturns     PurchaseReturn[]            @relation("CreatedByUserReturns")
   createdAt           DateTime                    @default(now())
   updatedAt           DateTime                    @updatedAt
 }
@@ -68,6 +69,7 @@ model Restaurant {
   address        String
   users          User[]
   purchaseOrders PurchaseOrder[]
+  purchaseReturns PurchaseReturn[]
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 }
@@ -86,6 +88,7 @@ model Produit {
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt          DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
   purchaseOrderItems PurchaseOrderItem[]
+  purchaseReturnItems PurchaseReturnItem[]
 
   @@map("produits")
 }
@@ -95,6 +98,7 @@ model Fournisseur {
   nom            String          @db.VarChar(255)
   sortOrder      Int             @map("sort_order")
   purchaseOrders PurchaseOrder[]
+  purchaseReturns PurchaseReturn[]
 
   @@index([sortOrder])
   @@map("fournisseurs")
@@ -115,6 +119,7 @@ model PurchaseOrder {
   totalAmount     Decimal             @map("total_amount") @db.Decimal(10, 2)
   bonFileName     String              @map("bon_file_name") @db.VarChar(191)
   items           PurchaseOrderItem[]
+  returns         PurchaseReturn[]
   createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamp(0)
 
   @@index([restaurantId, createdAt])
@@ -136,10 +141,53 @@ model PurchaseOrderItem {
   nameFr          String?       @map("name_fr") @db.VarChar(255)
   unit            String?       @db.VarChar(100)
   category        String        @db.VarChar(20)
+  returnItems     PurchaseReturnItem[]
 
   @@index([purchaseOrderId])
   @@index([productId])
   @@map("purchase_order_items")
+}
+
+model PurchaseReturn {
+  id              Int                  @id @default(autoincrement())
+  purchaseOrderId Int                  @map("purchase_order_id")
+  purchaseOrder   PurchaseOrder        @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  supplierId      Int                  @map("supplier_id")
+  supplier        Fournisseur          @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  restaurantId    Int                  @map("restaurant_id")
+  restaurant      Restaurant           @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  createdByUserId Int                  @map("created_by_user_id")
+  createdByUser   User                 @relation("CreatedByUserReturns", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  reason          String               @db.VarChar(255)
+  notes           String?              @db.Text
+  totalItems      Int                  @map("total_items")
+  items           PurchaseReturnItem[]
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([purchaseOrderId])
+  @@index([restaurantId, createdAt])
+  @@index([supplierId, createdAt])
+  @@map("purchase_returns")
+}
+
+model PurchaseReturnItem {
+  id                  Int             @id @default(autoincrement())
+  purchaseReturnId    Int             @map("purchase_return_id")
+  purchaseReturn      PurchaseReturn  @relation(fields: [purchaseReturnId], references: [id], onDelete: Cascade)
+  purchaseOrderItemId Int             @map("purchase_order_item_id")
+  purchaseOrderItem   PurchaseOrderItem @relation(fields: [purchaseOrderItemId], references: [id], onDelete: Restrict)
+  productId           BigInt          @map("product_id") @db.UnsignedBigInt
+  product             Produit         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity            Int
+  nameZh              String          @map("name_zh") @db.VarChar(255)
+  nameFr              String?         @map("name_fr") @db.VarChar(255)
+  unit                String?         @db.VarChar(100)
+  category            String          @db.VarChar(20)
+
+  @@index([purchaseReturnId])
+  @@index([purchaseOrderItemId])
+  @@index([productId])
+  @@map("purchase_return_items")
 }
 
 model Document {

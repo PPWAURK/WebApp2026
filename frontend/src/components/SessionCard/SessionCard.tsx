@@ -7,6 +7,7 @@ import { DashboardHighlights } from '../../features/dashboard/components/Dashboa
 import { DashboardLatestOrderCard } from '../../features/dashboard/components/DashboardLatestOrderCard';
 import { DashboardNewsFeed } from '../../features/dashboard/components/DashboardNewsFeed';
 import { DashboardOrderPreviewModal } from '../../features/dashboard/components/DashboardOrderPreviewModal';
+import { DashboardReturnSummaryCard } from '../../features/dashboard/components/DashboardReturnSummaryCard';
 import { DashboardTopProductsChart } from '../../features/dashboard/components/DashboardTopProductsChart';
 import { useDashboardNewsFeed } from '../../features/dashboard/hooks/useDashboardNewsFeed';
 import { useDashboardOrderInsights } from '../../features/dashboard/hooks/useDashboardOrderInsights';
@@ -62,8 +63,9 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   const addressLabel = user.restaurant?.address ?? text.profile.noAddress;
   const unreadNewsCount = isAdmin
     ? 0
-    : newsFeedState.newsFeed.filter((item) => !newsFeedState.isNewsReadForViewer(item))
-        .length;
+    : newsFeedState.newsFeed.filter(
+        (item) => !newsFeedState.isNewsReadForViewer(item),
+      ).length;
   const latestOrderValue = orderInsights.latestOrder?.number ?? '-';
   const latestOrderMeta = orderInsights.latestOrder
     ? `${orderInsights.latestOrder.totalItems} ${text.orders.summaryItems}`
@@ -73,7 +75,13 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
     label: string;
     value: string;
     meta: string;
-    icon: 'shield-checkmark-outline' | 'business-outline' | 'notifications-outline' | 'receipt-outline' | 'people-outline' | 'school-outline';
+    icon:
+      | 'shield-checkmark-outline'
+      | 'business-outline'
+      | 'notifications-outline'
+      | 'receipt-outline'
+      | 'people-outline'
+      | 'school-outline';
   }> = [
     {
       key: 'role',
@@ -224,26 +232,30 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
                 text={text}
               />
             </View>
-            <View
-              style={[
-                styles.dashboardInsightCard,
-                styles.dashboardInsightCardExpanded,
-              ]}
-            >
-              <DashboardTopProductsChart
-                chartMonths={orderInsights.chartMonths}
-                chartSuppliers={orderInsights.chartSuppliers}
-                isWideLayout={isWideLayout}
-                onSelectMonth={orderInsights.setSelectedChartMonth}
-                onSelectSupplier={orderInsights.setSelectedChartSupplierId}
-                selectedChartMonth={orderInsights.selectedChartMonth}
-                selectedChartSupplierId={orderInsights.selectedChartSupplierId}
+            <View style={styles.dashboardInsightCard}>
+              <DashboardReturnSummaryCard
+                recentReturns={orderInsights.recentReturns}
+                returnsError={orderInsights.returnsError}
+                returnsLoading={orderInsights.returnsLoading}
                 text={text}
-                topProducts={orderInsights.topProducts}
-                topProductsError={orderInsights.topProductsError}
-                topProductsLoading={orderInsights.topProductsLoading}
               />
             </View>
+          </View>
+
+          <View style={styles.dashboardInsightCard}>
+            <DashboardTopProductsChart
+              chartMonths={orderInsights.chartMonths}
+              chartSuppliers={orderInsights.chartSuppliers}
+              isWideLayout={isWideLayout}
+              onSelectMonth={orderInsights.setSelectedChartMonth}
+              onSelectSupplier={orderInsights.setSelectedChartSupplierId}
+              selectedChartMonth={orderInsights.selectedChartMonth}
+              selectedChartSupplierId={orderInsights.selectedChartSupplierId}
+              text={text}
+              topProducts={orderInsights.topProducts}
+              topProductsError={orderInsights.topProductsError}
+              topProductsLoading={orderInsights.topProductsLoading}
+            />
           </View>
 
           <SessionCardManagerToolsGrid
