@@ -366,10 +366,7 @@ export class OrdersService {
     }
   }
 
-  async listOrders(
-    actor: Actor,
-    req: RequestLike,
-  ) {
+  async listOrders(actor: Actor, req: RequestLike) {
     this.ensureCanManageOrders(actor);
 
     const orders = await this.prisma.purchaseOrder.findMany({
