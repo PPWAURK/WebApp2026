@@ -1,4 +1,4 @@
-ALTER TABLE `documents`
+ALTER TABLE `Document`
   MODIFY COLUMN `section` ENUM(
     'RECIPE_TRAINING',
     'RECIPE',
@@ -58,5 +58,5 @@ ALTER TABLE `purchase_return_item_photos`
 
 ALTER TABLE `purchase_return_item_photos`
   ADD CONSTRAINT `purchase_return_item_photos_document_id_fkey`
-  FOREIGN KEY (`document_id`) REFERENCES `documents`(`id`)
+  FOREIGN KEY (`document_id`) REFERENCES `Document`(`id`)
   ON DELETE RESTRICT ON UPDATE CASCADE;
