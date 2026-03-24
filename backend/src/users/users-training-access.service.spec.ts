@@ -75,4 +75,17 @@ describe('UsersTrainingAccessService', () => {
     ]);
     expect(prisma.employeeLevelAccessProfile.findUnique).not.toHaveBeenCalled();
   });
+
+  it('rejects non-training sections when saving quiz links', async () => {
+    await expect(
+      service.upsertTrainingQuizLink(
+        'ORDER_RETURNS',
+        'fr',
+        'https://example.com/quiz',
+        Role.ADMIN,
+      ),
+    ).rejects.toThrow(new BadRequestException('Invalid training section'));
+
+    expect(prisma.trainingQuizLink.upsert).not.toHaveBeenCalled();
+  });
 });

@@ -5,17 +5,15 @@ import {
 } from '@nestjs/common';
 import { EmployeeLevel, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  isUploadSection,
-  type UploadSection,
-} from '../uploads/upload-taxonomy';
 import { ensureAdminOrManagerScope } from './users-scope';
 import {
   ensureAdminRole,
   getAllTrainingSections,
+  isTrainingAccessSection,
   isTrainingQuizLinkLanguage,
   normalizeQuizUrl,
   normalizeTrainingAccess,
+  type TrainingAccessSection,
   TRAINING_QUIZ_LINK_LANGUAGES,
   validateTrainingSections,
 } from './users-training-access.utils';
@@ -163,7 +161,7 @@ export class UsersTrainingAccessService {
   ) {
     ensureAdminRole(actorRole, 'Only ADMIN can manage quiz links');
 
-    if (!isUploadSection(sectionRaw)) {
+    if (!isTrainingAccessSection(sectionRaw)) {
       throw new BadRequestException('Invalid training section');
     }
 
@@ -291,7 +289,7 @@ export class UsersTrainingAccessService {
   async getTrainingAccessByLevel(
     level: EmployeeLevel,
     role?: string,
-  ): Promise<UploadSection[]> {
+  ): Promise<TrainingAccessSection[]> {
     if (role === Role.ADMIN) {
       return getAllTrainingSections();
     }
@@ -309,7 +307,7 @@ export class UsersTrainingAccessService {
   }
 
   private async getTrainingAccessMapByLevel(): Promise<
-    Map<EmployeeLevel, UploadSection[]>
+    Map<EmployeeLevel, TrainingAccessSection[]>
   > {
     const profiles = await this.prisma.employeeLevelAccessProfile.findMany({
       select: {
