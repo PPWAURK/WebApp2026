@@ -36,9 +36,7 @@ export class AuthController {
   resendVerificationEmail(
     @Body() resendVerificationEmailDto: ResendVerificationEmailDto,
   ) {
-    return this.authService.resendVerificationEmail(
-      resendVerificationEmailDto,
-    );
+    return this.authService.resendVerificationEmail(resendVerificationEmailDto);
   }
 
   @Post('forgot-password')

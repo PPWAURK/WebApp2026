@@ -225,14 +225,12 @@ export class MailService {
           'Ce lien reste valable 24 heures.';
     const subject =
       language === 'zh' ? '请先验证你的邮箱' : 'Confirmez votre adresse e-mail';
-    const buttonLabel =
-      language === 'zh' ? '验证邮箱' : 'Vérifier mon e-mail';
+    const buttonLabel = language === 'zh' ? '验证邮箱' : 'Vérifier mon e-mail';
     const footer =
       language === 'zh'
         ? '如果这不是你的操作，可以忽略这封邮件。'
         : 'Si vous n’êtes pas à l’origine de cette inscription, vous pouvez ignorer ce message.';
-    const linkLabel =
-      language === 'zh' ? '验证链接' : 'Lien de vérification';
+    const linkLabel = language === 'zh' ? '验证链接' : 'Lien de vérification';
 
     await this.sendMail({
       to: input.email,

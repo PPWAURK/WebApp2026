@@ -3,6 +3,16 @@ import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 
+type UserEmailVerificationUpdateArgs = {
+  where: { id: number };
+  data: { emailVerifiedAt: Date };
+};
+
+type EmailVerificationTokenUpdateManyArgs = {
+  where: { userId: number; consumedAt: null };
+  data: { consumedAt: Date };
+};
+
 describe('AuthService', () => {
   let service: AuthService;
   let usersService: {
@@ -158,12 +168,13 @@ describe('AuthService', () => {
         password: 'Password123',
         language: 'fr',
       }),
-    ).rejects.toThrow(
-      new UnauthorizedException('EMAIL_VERIFICATION_REQUIRED'),
-    );
+    ).rejects.toThrow(new UnauthorizedException('EMAIL_VERIFICATION_REQUIRED'));
   });
 
   it('marks the email as verified before entering admin approval', async () => {
+    let userUpdateArgs: UserEmailVerificationUpdateArgs | null = null;
+    let tokenUpdateManyArgs: EmailVerificationTokenUpdateManyArgs | null = null;
+
     prisma.emailVerificationToken.findFirst.mockResolvedValue({
       id: 10,
       user: {
@@ -172,27 +183,41 @@ describe('AuthService', () => {
         emailVerifiedAt: null,
       },
     });
-    prisma.user.update.mockResolvedValue({ id: 7 });
-    prisma.emailVerificationToken.updateMany.mockResolvedValue({ count: 1 });
+    prisma.user.update.mockImplementation(
+      (args: UserEmailVerificationUpdateArgs) => {
+        userUpdateArgs = args;
+        return Promise.resolve({ id: 7 });
+      },
+    );
+    prisma.emailVerificationToken.updateMany.mockImplementation(
+      (args: EmailVerificationTokenUpdateManyArgs) => {
+        tokenUpdateManyArgs = args;
+        return Promise.resolve({ count: 1 });
+      },
+    );
     prisma.$transaction.mockResolvedValue(undefined);
 
     const result = await service.verifyEmail({ token: 'plain-token' });
 
-    expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: 7 },
-      data: {
-        emailVerifiedAt: expect.any(Date),
-      },
+    expect(userUpdateArgs).not.toBeNull();
+    expect(tokenUpdateManyArgs).not.toBeNull();
+
+    if (!userUpdateArgs || !tokenUpdateManyArgs) {
+      throw new Error('Expected verification update arguments to be captured');
+    }
+
+    const capturedUserUpdateArgs: UserEmailVerificationUpdateArgs =
+      userUpdateArgs;
+    const capturedTokenUpdateManyArgs: EmailVerificationTokenUpdateManyArgs =
+      tokenUpdateManyArgs;
+
+    expect(capturedUserUpdateArgs.where).toEqual({ id: 7 });
+    expect(capturedUserUpdateArgs.data.emailVerifiedAt).toBeInstanceOf(Date);
+    expect(capturedTokenUpdateManyArgs.where).toEqual({
+      userId: 7,
+      consumedAt: null,
     });
-    expect(prisma.emailVerificationToken.updateMany).toHaveBeenCalledWith({
-      where: {
-        userId: 7,
-        consumedAt: null,
-      },
-      data: {
-        consumedAt: expect.any(Date),
-      },
-    });
+    expect(capturedTokenUpdateManyArgs.data.consumedAt).toBeInstanceOf(Date);
     expect(prisma.$transaction).toHaveBeenCalled();
     expect(result).toEqual({
       success: true,
