@@ -369,6 +369,86 @@ describe('OrdersService', () => {
     });
   });
 
+  it('includes return photo URLs in the return summary response', async () => {
+    prisma.purchaseReturn.findMany.mockResolvedValue([
+      {
+        id: 18,
+        purchaseOrderId: 19,
+        supplierId: 7,
+        restaurantId: 5,
+        reason: 'Produit abime',
+        notes: 'Carton humide',
+        totalItems: 2,
+        createdAt: new Date('2026-03-24T14:00:00.000Z'),
+        purchaseOrder: {
+          id: 19,
+          number: 'PO-20260324-0019',
+          deliveryDate: new Date('2026-03-24T00:00:00.000Z'),
+        },
+        supplier: {
+          id: 7,
+          nom: 'Supplier',
+        },
+        restaurant: {
+          id: 5,
+          name: 'Restaurant',
+        },
+        items: [
+          {
+            quantity: 2,
+            nameZh: '青菜',
+            nameFr: 'Legume',
+            unit: 'kg',
+            photos: [
+              {
+                document: {
+                  id: 91,
+                  fileName: 'return-photo-1.jpg',
+                  originalName: 'return-photo-1.jpg',
+                  category: 'images',
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    await expect(
+      service.listOrderReturns(
+        {
+          id: 8,
+          role: 'MANAGER',
+          restaurantId: 5,
+        },
+        {
+          protocol: 'https',
+          get: jest.fn((name: string) =>
+            name === 'host' ? 'api.example.com' : undefined,
+          ),
+        },
+      ),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        id: 18,
+        orderNumber: 'PO-20260324-0019',
+        items: [
+          expect.objectContaining({
+            quantity: 2,
+            photos: [
+              {
+                documentId: 91,
+                originalName: 'return-photo-1.jpg',
+                fileUrl:
+                  'https://api.example.com/uploads/images/return-photo-1.jpg',
+              },
+            ],
+          }),
+        ],
+      }),
+    ]);
+  });
+
   it('rejects deleting an order that already has returns', async () => {
     prisma.purchaseOrder.findUnique.mockResolvedValue({
       id: 19,

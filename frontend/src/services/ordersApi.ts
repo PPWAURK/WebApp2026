@@ -42,6 +42,13 @@ type RawOrderReturnSummaryItem = {
   nameZh?: unknown;
   nameFr?: unknown;
   unit?: unknown;
+  photos?: unknown;
+};
+
+type RawOrderReturnSummaryPhoto = {
+  documentId?: unknown;
+  originalName?: unknown;
+  fileUrl?: unknown;
 };
 
 type RawOrderReturnSummary = {
@@ -116,6 +123,13 @@ export type OrderReturnSummaryItem = {
   nameZh: string;
   nameFr: string;
   unit: string;
+  photos: OrderReturnSummaryPhoto[];
+};
+
+export type OrderReturnSummaryPhoto = {
+  documentId: number;
+  originalName: string;
+  fileUrl: string;
 };
 
 export type OrderReturnSummary = {
@@ -281,6 +295,21 @@ function normalizeOrderReturnSummaryItem(
     nameZh: typeof raw.nameZh === 'string' ? raw.nameZh : '',
     nameFr: typeof raw.nameFr === 'string' ? raw.nameFr : '',
     unit: typeof raw.unit === 'string' ? raw.unit : '',
+    photos: Array.isArray(raw.photos)
+      ? raw.photos.map((photo) =>
+          normalizeOrderReturnSummaryPhoto(photo as RawOrderReturnSummaryPhoto),
+        )
+      : [],
+  };
+}
+
+function normalizeOrderReturnSummaryPhoto(
+  raw: RawOrderReturnSummaryPhoto,
+): OrderReturnSummaryPhoto {
+  return {
+    documentId: toNumber(raw.documentId, 0),
+    originalName: typeof raw.originalName === 'string' ? raw.originalName : '',
+    fileUrl: typeof raw.fileUrl === 'string' ? raw.fileUrl : '',
   };
 }
 

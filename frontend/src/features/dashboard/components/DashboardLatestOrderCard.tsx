@@ -1,10 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Linking, Platform, Pressable, Text, View } from 'react-native';
 import type { AppText } from '../../../locales/translations';
-import { buildOrderBonUrl, type OrderSummary } from '../../../services/ordersApi';
+import {
+  buildOrderBonUrl,
+  type OrderSummary,
+} from '../../../services/ordersApi';
 import { styles } from '../../../components/SessionCard/SessionCard.styles';
 
 type DashboardLatestOrderCardProps = {
+  isCompactLayout: boolean;
   latestOrder: OrderSummary | null;
   orderError: string | null;
   orderLoading: boolean;
@@ -15,6 +19,7 @@ type DashboardLatestOrderCardProps = {
 };
 
 export function DashboardLatestOrderCard({
+  isCompactLayout,
   latestOrder,
   orderError,
   orderLoading,
@@ -37,52 +42,129 @@ export function DashboardLatestOrderCard({
       ) : null}
       {latestOrder ? (
         <View style={styles.quickRowCard}>
-          <View style={styles.quickMetaInlineRow}>
-            <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
-              {text.orders.orderNumberLabel}
-            </Text>
-            <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
-              {text.orders.deliveryDateLabel}
-            </Text>
-            <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
-              {text.orders.supplierLabel}
-            </Text>
-            <Text style={[styles.quickMetaHeaderText, styles.quickInlineCell]}>
-              {text.orders.summaryItems}
-            </Text>
-            {Platform.OS === 'web' ? (
-              <View style={styles.quickEyeSpacer} />
-            ) : null}
-          </View>
+          {isCompactLayout ? (
+            <>
+              <View style={styles.quickMetaGrid}>
+                <View style={styles.quickMetaGridCell}>
+                  <Text style={styles.quickMetaHeaderText}>
+                    {text.orders.orderNumberLabel}
+                  </Text>
+                  <Text style={styles.quickMetaValueText} numberOfLines={1}>
+                    {latestOrder.number}
+                  </Text>
+                </View>
+                <View style={styles.quickMetaGridCell}>
+                  <Text style={styles.quickMetaHeaderText}>
+                    {text.orders.deliveryDateLabel}
+                  </Text>
+                  <Text style={styles.quickMetaValueText} numberOfLines={1}>
+                    {latestOrder.deliveryDate}
+                  </Text>
+                </View>
+                <View style={styles.quickMetaGridCell}>
+                  <Text style={styles.quickMetaHeaderText}>
+                    {text.orders.supplierLabel}
+                  </Text>
+                  <Text style={styles.quickMetaValueText} numberOfLines={1}>
+                    {latestOrder.supplierName}
+                  </Text>
+                </View>
+                <View style={styles.quickMetaGridCell}>
+                  <Text style={styles.quickMetaHeaderText}>
+                    {text.orders.summaryItems}
+                  </Text>
+                  <Text style={styles.quickMetaValueText} numberOfLines={1}>
+                    {latestOrder.totalItems}
+                  </Text>
+                </View>
+              </View>
 
-          <View style={styles.quickMetaInlineRow}>
-            <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
-              {latestOrder.number}
-            </Text>
-            <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
-              {latestOrder.deliveryDate}
-            </Text>
-            <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
-              {latestOrder.supplierName}
-            </Text>
-            <Text style={[styles.quickMetaValueText, styles.quickInlineCell]}>
-              {latestOrder.totalItems}
-            </Text>
+              {Platform.OS === 'web' ? (
+                <View style={styles.quickMetaCompactActionRow}>
+                  <Pressable
+                    style={[
+                      styles.eyePreviewButton,
+                      (!orderPreviewUrl || orderPreviewLoading) &&
+                        styles.buttonDisabled,
+                    ]}
+                    disabled={!orderPreviewUrl || orderPreviewLoading}
+                    onPress={onOpenPreview}
+                  >
+                    <Ionicons name="eye-outline" size={20} color="#7f1b21" />
+                  </Pressable>
+                </View>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <View style={styles.quickMetaInlineRow}>
+                <Text
+                  style={[styles.quickMetaHeaderText, styles.quickInlineCell]}
+                >
+                  {text.orders.orderNumberLabel}
+                </Text>
+                <Text
+                  style={[styles.quickMetaHeaderText, styles.quickInlineCell]}
+                >
+                  {text.orders.deliveryDateLabel}
+                </Text>
+                <Text
+                  style={[styles.quickMetaHeaderText, styles.quickInlineCell]}
+                >
+                  {text.orders.supplierLabel}
+                </Text>
+                <Text
+                  style={[styles.quickMetaHeaderText, styles.quickInlineCell]}
+                >
+                  {text.orders.summaryItems}
+                </Text>
+                {Platform.OS === 'web' ? (
+                  <View style={styles.quickEyeSpacer} />
+                ) : null}
+              </View>
 
-            {Platform.OS === 'web' ? (
-              <Pressable
-                style={[
-                  styles.eyePreviewButton,
-                  (!orderPreviewUrl || orderPreviewLoading) &&
-                    styles.buttonDisabled,
-                ]}
-                disabled={!orderPreviewUrl || orderPreviewLoading}
-                onPress={onOpenPreview}
-              >
-                <Ionicons name="eye-outline" size={20} color="#7f1b21" />
-              </Pressable>
-            ) : null}
-          </View>
+              <View style={styles.quickMetaInlineRow}>
+                <Text
+                  style={[styles.quickMetaValueText, styles.quickInlineCell]}
+                  numberOfLines={1}
+                >
+                  {latestOrder.number}
+                </Text>
+                <Text
+                  style={[styles.quickMetaValueText, styles.quickInlineCell]}
+                  numberOfLines={1}
+                >
+                  {latestOrder.deliveryDate}
+                </Text>
+                <Text
+                  style={[styles.quickMetaValueText, styles.quickInlineCell]}
+                  numberOfLines={1}
+                >
+                  {latestOrder.supplierName}
+                </Text>
+                <Text
+                  style={[styles.quickMetaValueText, styles.quickInlineCell]}
+                  numberOfLines={1}
+                >
+                  {latestOrder.totalItems}
+                </Text>
+
+                {Platform.OS === 'web' ? (
+                  <Pressable
+                    style={[
+                      styles.eyePreviewButton,
+                      (!orderPreviewUrl || orderPreviewLoading) &&
+                        styles.buttonDisabled,
+                    ]}
+                    disabled={!orderPreviewUrl || orderPreviewLoading}
+                    onPress={onOpenPreview}
+                  >
+                    <Ionicons name="eye-outline" size={20} color="#7f1b21" />
+                  </Pressable>
+                ) : null}
+              </View>
+            </>
+          )}
 
           {Platform.OS === 'web' ? null : (
             <Pressable

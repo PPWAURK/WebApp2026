@@ -65,7 +65,7 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard)
   @Get('returns')
   listOrderReturns(@Req() req: AuthenticatedRequest) {
-    return this.ordersService.listOrderReturns(this.getActor(req));
+    return this.ordersService.listOrderReturns(this.getActor(req), req);
   }
 
   @ApiOperation({ summary: 'Load one order as a return draft' })

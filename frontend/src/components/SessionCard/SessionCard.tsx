@@ -7,6 +7,7 @@ import { DashboardHighlights } from '../../features/dashboard/components/Dashboa
 import { DashboardLatestOrderCard } from '../../features/dashboard/components/DashboardLatestOrderCard';
 import { DashboardNewsFeed } from '../../features/dashboard/components/DashboardNewsFeed';
 import { DashboardOrderPreviewModal } from '../../features/dashboard/components/DashboardOrderPreviewModal';
+import { DashboardReturnPhotosModal } from '../../features/dashboard/components/DashboardReturnPhotosModal';
 import { DashboardReturnSummaryCard } from '../../features/dashboard/components/DashboardReturnSummaryCard';
 import { DashboardTopProductsChart } from '../../features/dashboard/components/DashboardTopProductsChart';
 import { useDashboardNewsFeed } from '../../features/dashboard/hooks/useDashboardNewsFeed';
@@ -25,6 +26,8 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   const { width } = useWindowDimensions();
   const isWideLayout = width >= 1180;
   const isTwoColumnFeatureLayout = width >= 900;
+  const isInsightGridWide = width >= 960;
+  const isCompactDashboardCards = width < 820;
   const isAdmin = user.role === 'ADMIN';
   const isCompactAdminCardLayout = width < 760 || (isAdmin && isWideLayout);
   const isManager = user.role === 'MANAGER';
@@ -183,21 +186,42 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
               isWideLayout && styles.dashboardInsightGridWide,
             ]}
           >
-            <View style={styles.dashboardInsightCard}>
+            <View
+              style={[
+                styles.dashboardInsightCard,
+                isWideLayout
+                  ? styles.dashboardInsightCardFlexible
+                  : styles.dashboardInsightCardStacked,
+              ]}
+            >
               <SessionCardWhatsNewPanel
                 isCompactAdminCardLayout={isCompactAdminCardLayout}
                 text={text}
                 whatsNewState={whatsNewState}
               />
             </View>
-            <View style={styles.dashboardInsightCard}>
+            <View
+              style={[
+                styles.dashboardInsightCard,
+                isWideLayout
+                  ? styles.dashboardInsightCardFlexible
+                  : styles.dashboardInsightCardStacked,
+              ]}
+            >
               <SessionCardAdminQuickPanel
                 isCompactAdminCardLayout={isCompactAdminCardLayout}
                 supervisorState={supervisorState}
                 text={text}
               />
             </View>
-            <View style={styles.dashboardInsightCard}>
+            <View
+              style={[
+                styles.dashboardInsightCard,
+                isWideLayout
+                  ? styles.dashboardInsightCardFlexible
+                  : styles.dashboardInsightCardStacked,
+              ]}
+            >
               <AdminRestaurantPanel accessToken={accessToken} text={text} />
             </View>
           </View>
@@ -218,11 +242,19 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
           <View
             style={[
               styles.dashboardInsightGrid,
-              isTwoColumnFeatureLayout && styles.dashboardInsightGridWide,
+              isInsightGridWide && styles.dashboardInsightGridWide,
             ]}
           >
-            <View style={styles.dashboardInsightCard}>
+            <View
+              style={[
+                styles.dashboardInsightCard,
+                isInsightGridWide
+                  ? styles.dashboardInsightCardFlexible
+                  : styles.dashboardInsightCardStacked,
+              ]}
+            >
               <DashboardLatestOrderCard
+                isCompactLayout={isCompactDashboardCards}
                 latestOrder={orderInsights.latestOrder}
                 onOpenPreview={orderInsights.openOrderPreview}
                 orderError={orderInsights.orderError}
@@ -232,8 +264,17 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
                 text={text}
               />
             </View>
-            <View style={styles.dashboardInsightCard}>
+            <View
+              style={[
+                styles.dashboardInsightCard,
+                isInsightGridWide
+                  ? styles.dashboardInsightCardFlexible
+                  : styles.dashboardInsightCardStacked,
+              ]}
+            >
               <DashboardReturnSummaryCard
+                isCompactLayout={isCompactDashboardCards}
+                onOpenReturnPhotos={orderInsights.openReturnPhotos}
                 recentReturns={orderInsights.recentReturns}
                 returnsError={orderInsights.returnsError}
                 returnsLoading={orderInsights.returnsLoading}
@@ -242,7 +283,12 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
             </View>
           </View>
 
-          <View style={styles.dashboardInsightCard}>
+          <View
+            style={[
+              styles.dashboardInsightCard,
+              styles.dashboardInsightCardStacked,
+            ]}
+          >
             <DashboardTopProductsChart
               chartMonths={orderInsights.chartMonths}
               chartSuppliers={orderInsights.chartSuppliers}
@@ -272,6 +318,13 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
         orderPreviewUrl={orderInsights.orderPreviewUrl}
         text={text}
         visible={orderInsights.isOrderPreviewOpen}
+      />
+
+      <DashboardReturnPhotosModal
+        entry={orderInsights.selectedReturnForPhotos}
+        onClose={orderInsights.closeReturnPhotos}
+        text={text}
+        visible={orderInsights.isReturnPhotosOpen}
       />
 
       <SessionCardLevelEditorModal

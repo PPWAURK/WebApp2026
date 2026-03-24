@@ -114,6 +114,32 @@ describe('OrdersController', () => {
     expect(result).toBe(expected);
   });
 
+  it('forwards return summary listing with actor and request context', () => {
+    const req = {
+      protocol: 'https',
+      get: jest.fn(),
+      user: {
+        id: 4,
+        role: 'ADMIN',
+        restaurantId: null,
+      },
+    } as never;
+    const expected = [{ id: 18, orderNumber: 'PO-20260324-0018' }];
+    ordersService.listOrderReturns.mockReturnValue(expected);
+
+    const result = controller.listOrderReturns(req);
+
+    expect(ordersService.listOrderReturns).toHaveBeenCalledWith(
+      {
+        id: 4,
+        role: 'ADMIN',
+        restaurantId: null,
+      },
+      req,
+    );
+    expect(result).toBe(expected);
+  });
+
   it('forwards order return creation to the service with the resolved actor', () => {
     const expected = { id: 7, orderNumber: 'PO-20260324-0007' };
     ordersService.createOrderReturn.mockReturnValue(expected);

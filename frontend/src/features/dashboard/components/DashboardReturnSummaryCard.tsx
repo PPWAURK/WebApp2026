@@ -1,9 +1,12 @@
-import { Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Pressable, Text, View } from 'react-native';
 import type { AppText } from '../../../locales/translations';
 import type { OrderReturnSummary } from '../../../services/ordersApi';
 import { styles } from '../../../components/SessionCard/SessionCard.styles';
 
 type DashboardReturnSummaryCardProps = {
+  isCompactLayout: boolean;
+  onOpenReturnPhotos: (entry: OrderReturnSummary) => void;
   recentReturns: OrderReturnSummary[];
   returnsError: string | null;
   returnsLoading: boolean;
@@ -25,7 +28,13 @@ function buildProductsLabel(entry: OrderReturnSummary) {
   return label || '-';
 }
 
+function hasReturnPhotos(entry: OrderReturnSummary) {
+  return entry.items.some((item) => item.photos.length > 0);
+}
+
 export function DashboardReturnSummaryCard({
+  isCompactLayout,
+  onOpenReturnPhotos,
   recentReturns,
   returnsError,
   returnsLoading,
@@ -35,7 +44,7 @@ export function DashboardReturnSummaryCard({
     (sum, entry) => sum + entry.totalItems,
     0,
   );
-  const visibleReturns = recentReturns.slice(0, 4);
+  const visibleReturns = recentReturns.slice(0, isCompactLayout ? 2 : 4);
 
   return (
     <View style={[styles.quickBlock, styles.returnsSummaryPanel]}>
@@ -90,16 +99,29 @@ export function DashboardReturnSummaryCard({
               key={`dashboard-return-${entry.id}`}
               style={styles.returnsSummaryCard}
             >
-              <View style={styles.returnsSummaryTopRow}>
+              <View
+                style={[
+                  styles.returnsSummaryTopRow,
+                  isCompactLayout && styles.returnsSummaryTopRowCompact,
+                ]}
+              >
                 <View style={styles.returnsSummaryCopy}>
-                  <Text style={styles.returnsSummaryOrderNumber}>
+                  <Text
+                    style={styles.returnsSummaryOrderNumber}
+                    numberOfLines={1}
+                  >
                     {entry.orderNumber}
                   </Text>
-                  <Text style={styles.returnsSummaryMeta}>
+                  <Text style={styles.returnsSummaryMeta} numberOfLines={1}>
                     {entry.supplierName} • {formatReturnDate(entry.createdAt)}
                   </Text>
                 </View>
-                <View style={styles.returnsSummaryCountPill}>
+                <View
+                  style={[
+                    styles.returnsSummaryCountPill,
+                    isCompactLayout && styles.returnsSummaryCountPillCompact,
+                  ]}
+                >
                   <Text style={styles.returnsSummaryCountText}>
                     {entry.totalItems}
                   </Text>
@@ -132,6 +154,20 @@ export function DashboardReturnSummaryCard({
                   <Text style={styles.returnsSummaryFieldValue}>
                     {entry.notes}
                   </Text>
+                </View>
+              ) : null}
+
+              {hasReturnPhotos(entry) ? (
+                <View style={styles.returnsSummaryActionRow}>
+                  <Pressable
+                    style={styles.returnsSummaryActionButton}
+                    onPress={() => onOpenReturnPhotos(entry)}
+                  >
+                    <Ionicons name="images-outline" size={15} color="#7f1b21" />
+                    <Text style={styles.returnsSummaryActionButtonText}>
+                      {text.dashboard.returnSummaryViewPhotosButton}
+                    </Text>
+                  </Pressable>
                 </View>
               ) : null}
             </View>

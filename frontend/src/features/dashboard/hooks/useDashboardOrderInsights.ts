@@ -48,6 +48,8 @@ export function useDashboardOrderInsights({
   const [orderPreviewUrl, setOrderPreviewUrl] = useState<string | null>(null);
   const [orderPreviewLoading, setOrderPreviewLoading] = useState(false);
   const [isOrderPreviewOpen, setIsOrderPreviewOpen] = useState(false);
+  const [selectedReturnForPhotos, setSelectedReturnForPhotos] =
+    useState<OrderReturnSummary | null>(null);
 
   useEffect(() => {
     if (!isSupervisor) {
@@ -317,12 +319,28 @@ export function useDashboardOrderInsights({
     setIsOrderPreviewOpen(false);
   }
 
+  function openReturnPhotos(entry: OrderReturnSummary) {
+    const hasPhotos = entry.items.some((item) => item.photos.length > 0);
+    if (!hasPhotos) {
+      return;
+    }
+
+    setSelectedReturnForPhotos(entry);
+  }
+
+  function closeReturnPhotos() {
+    setSelectedReturnForPhotos(null);
+  }
+
   return {
     chartMonths,
     chartSuppliers,
     closeOrderPreview,
+    closeReturnPhotos,
     isOrderPreviewOpen,
+    isReturnPhotosOpen: selectedReturnForPhotos !== null,
     latestOrder,
+    openReturnPhotos,
     openOrderPreview,
     orderError,
     orderLoading,
@@ -331,6 +349,7 @@ export function useDashboardOrderInsights({
     recentReturns,
     returnsError,
     returnsLoading,
+    selectedReturnForPhotos,
     selectedChartMonth,
     selectedChartSupplierId,
     setSelectedChartMonth,

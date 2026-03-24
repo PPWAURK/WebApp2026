@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  UploadCategory,
   UploadMediaType,
   UploadModule,
   UploadSection,
@@ -68,6 +69,11 @@ type HistoryAnalyticsTotals = {
   uniqueProducts: number;
   avgOrderAmount: number;
   avgOrderItems: number;
+};
+
+type RequestLike = {
+  protocol: string;
+  get: (name: string) => string | undefined;
 };
 
 type PdfDoc = InstanceType<typeof PDFDocument>;
@@ -146,7 +152,7 @@ export class OrdersService {
   async createOrder(
     actor: Actor,
     payload: CreateOrderPayload,
-    req: { protocol: string; get: (name: string) => string | undefined },
+    req: RequestLike,
   ) {
     this.ensureCanManageOrders(actor);
 
@@ -362,7 +368,7 @@ export class OrdersService {
 
   async listOrders(
     actor: Actor,
-    req: { protocol: string; get: (name: string) => string | undefined },
+    req: RequestLike,
   ) {
     this.ensureCanManageOrders(actor);
 
@@ -405,7 +411,7 @@ export class OrdersService {
     });
   }
 
-  async listOrderReturns(actor: Actor) {
+  async listOrderReturns(actor: Actor, req: RequestLike) {
     this.ensureCanManageOrders(actor);
 
     const returns = await this.prisma.purchaseReturn.findMany({
@@ -444,6 +450,21 @@ export class OrdersService {
             nameZh: true,
             nameFr: true,
             unit: true,
+            photos: {
+              orderBy: {
+                id: 'asc',
+              },
+              select: {
+                document: {
+                  select: {
+                    id: true,
+                    fileName: true,
+                    originalName: true,
+                    category: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -471,6 +492,15 @@ export class OrdersService {
         nameZh: this.sanitizeLabel(this.recoverUtf8(item.nameZh)),
         nameFr: this.sanitizeLabel(this.recoverUtf8(item.nameFr)),
         unit: this.sanitizeLabel(item.unit?.trim()),
+        photos: item.photos.map((photo) => ({
+          documentId: photo.document.id,
+          originalName: this.sanitizeLabel(photo.document.originalName),
+          fileUrl: this.buildUploadFileUrl(
+            req,
+            photo.document.category,
+            photo.document.fileName,
+          ),
+        })),
       })),
     }));
   }
@@ -1642,10 +1672,7 @@ export class OrdersService {
     return `PO-${year}${month}${day}-${paddedId}`;
   }
 
-  private buildOrderUrl(
-    req: { protocol: string; get: (name: string) => string | undefined },
-    orderId: number,
-  ) {
+  private buildApiUrl(req: RequestLike, path: string) {
     const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(
       /^\/+|\/+$/g,
       '',
@@ -1666,15 +1693,28 @@ export class OrdersService {
           ? `${normalizedBaseUrl}/${normalizedPrefix}`
           : normalizedBaseUrl;
 
-      return `${baseUrlWithPrefix}/orders/${orderId}/commande`;
+      return `${baseUrlWithPrefix}${path}`;
     }
 
-    const prefixedOrdersPath = normalizedPrefix
-      ? `/${normalizedPrefix}/orders/${orderId}/commande`
-      : `/orders/${orderId}/commande`;
+    const normalizedPath = path.replace(/^\/+/, '');
+    const prefixedPath = normalizedPrefix
+      ? `/${normalizedPrefix}/${normalizedPath}`
+      : `/${normalizedPath}`;
 
     const host = req.get('host');
-    return `${req.protocol}://${host}${prefixedOrdersPath}`;
+    return `${req.protocol}://${host}${prefixedPath}`;
+  }
+
+  private buildOrderUrl(req: RequestLike, orderId: number) {
+    return this.buildApiUrl(req, `/orders/${orderId}/commande`);
+  }
+
+  private buildUploadFileUrl(
+    req: RequestLike,
+    category: UploadCategory,
+    fileName: string,
+  ) {
+    return this.buildApiUrl(req, `/uploads/${category}/${fileName}`);
   }
 
   private deleteFileIfExists(filePath: string | null) {

@@ -1,5 +1,10 @@
 import { StyleSheet } from 'react-native';
 
+const DASHBOARD_BORDER = 'rgba(142, 34, 40, 0.18)';
+const DASHBOARD_BORDER_SOFT = 'rgba(171, 30, 36, 0.16)';
+const DASHBOARD_CARD_BORDER = 'rgba(142, 34, 40, 0.14)';
+const DASHBOARD_CARD_BORDER_SOFT = 'rgba(171, 30, 36, 0.14)';
+
 export const styles = StyleSheet.create({
   card: {
     backgroundColor: 'rgba(255,255,255,0.92)',
@@ -15,7 +20,7 @@ export const styles = StyleSheet.create({
   dashboardHeader: {
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.12)',
+    borderColor: DASHBOARD_BORDER,
     backgroundColor: 'rgba(255, 251, 247, 0.94)',
     paddingHorizontal: 22,
     paddingVertical: 18,
@@ -59,7 +64,7 @@ export const styles = StyleSheet.create({
   dashboardHeaderMetaPill: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.12)',
+    borderColor: DASHBOARD_BORDER_SOFT,
     backgroundColor: '#fff5f2',
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -85,7 +90,7 @@ export const styles = StyleSheet.create({
     minWidth: 160,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.1)',
+    borderColor: DASHBOARD_BORDER,
     backgroundColor: '#ffffff',
     padding: 14,
     gap: 6,
@@ -172,9 +177,14 @@ export const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   dashboardInsightCard: {
-    flex: 1,
     minWidth: 0,
     alignSelf: 'stretch',
+  },
+  dashboardInsightCardFlexible: {
+    flex: 1,
+  },
+  dashboardInsightCardStacked: {
+    width: '100%',
   },
   dashboardInsightCardExpanded: {
     flex: 1.2,
@@ -224,12 +234,12 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 251, 247, 0.94)',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.12)',
+    borderColor: DASHBOARD_BORDER,
     padding: 18,
     gap: 12,
   },
   whatsNewHighlightBlock: {
-    borderColor: 'rgba(171, 30, 36, 0.12)',
+    borderColor: DASHBOARD_CARD_BORDER_SOFT,
     borderWidth: 1,
     backgroundColor: '#fffdfb',
     elevation: 0,
@@ -468,10 +478,26 @@ export const styles = StyleSheet.create({
   quickRowCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: DASHBOARD_BORDER_SOFT,
     backgroundColor: '#ffffff',
     padding: 14,
     gap: 8,
+  },
+  quickMetaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  quickMetaGridCell: {
+    flexBasis: 140,
+    flexGrow: 1,
+    minWidth: 120,
+    gap: 4,
+  },
+  quickMetaCompactActionRow: {
+    paddingTop: 4,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
   quickLevelRow: {
     flexDirection: 'row',
@@ -655,7 +681,7 @@ export const styles = StyleSheet.create({
   managerApprovalEmptyState: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER_SOFT,
     backgroundColor: '#fffaf8',
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -672,7 +698,7 @@ export const styles = StyleSheet.create({
   managerApprovalPendingCard: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER,
     backgroundColor: '#ffffff',
     padding: 12,
     gap: 10,
@@ -733,7 +759,7 @@ export const styles = StyleSheet.create({
     minWidth: 120,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER_SOFT,
     backgroundColor: '#fffaf8',
     paddingHorizontal: 10,
     paddingVertical: 9,
@@ -760,7 +786,7 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 251, 247, 0.94)',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.12)',
+    borderColor: DASHBOARD_BORDER,
     padding: 18,
     gap: 12,
     minHeight: 100,
@@ -864,7 +890,7 @@ export const styles = StyleSheet.create({
   employeeModuleItemCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER,
     backgroundColor: '#ffffff',
     padding: 14,
     gap: 12,
@@ -926,7 +952,7 @@ export const styles = StyleSheet.create({
     minWidth: 140,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER_SOFT,
     backgroundColor: '#fff8f5',
     paddingHorizontal: 11,
     paddingVertical: 9,
@@ -1042,7 +1068,7 @@ export const styles = StyleSheet.create({
   employeeModuleSelectionCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER,
     backgroundColor: '#ffffff',
     padding: 14,
     gap: 10,
@@ -1065,7 +1091,7 @@ export const styles = StyleSheet.create({
   employeeCompactRow: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER,
     backgroundColor: '#ffffff',
     padding: 12,
     gap: 10,
@@ -1073,7 +1099,7 @@ export const styles = StyleSheet.create({
   employeeCompactSelectableRow: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER,
     backgroundColor: '#ffffff',
     padding: 12,
   },
@@ -1163,7 +1189,7 @@ export const styles = StyleSheet.create({
   transferPanelCard: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER,
     backgroundColor: '#ffffff',
     padding: 14,
     gap: 12,
@@ -1210,7 +1236,7 @@ export const styles = StyleSheet.create({
     minWidth: 120,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER_SOFT,
     backgroundColor: '#fff8f5',
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1298,7 +1324,7 @@ export const styles = StyleSheet.create({
     gap: 4,
   },
   newsFeedHighlightBlock: {
-    borderColor: 'rgba(171, 30, 36, 0.1)',
+    borderColor: DASHBOARD_CARD_BORDER_SOFT,
     borderWidth: 1,
     backgroundColor: '#fffdfb',
     elevation: 0,
@@ -1319,7 +1345,7 @@ export const styles = StyleSheet.create({
     minWidth: 104,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER_SOFT,
     backgroundColor: '#ffffff',
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -1374,7 +1400,7 @@ export const styles = StyleSheet.create({
     minWidth: 220,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER,
     backgroundColor: '#ffffff',
     overflow: 'hidden',
   },
@@ -1384,7 +1410,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(142, 34, 40, 0.08)',
+    borderBottomColor: DASHBOARD_CARD_BORDER,
     backgroundColor: '#fffaf7',
     paddingHorizontal: 12,
     paddingVertical: 9,
@@ -1429,7 +1455,7 @@ export const styles = StyleSheet.create({
   newsPostCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER,
     backgroundColor: '#ffffff',
     padding: 10,
     gap: 6,
@@ -1555,7 +1581,7 @@ export const styles = StyleSheet.create({
   newsTrackingCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER_SOFT,
     backgroundColor: '#fffaf7',
     padding: 10,
     gap: 8,
@@ -1563,7 +1589,7 @@ export const styles = StyleSheet.create({
   newsTrackingRestaurantGroup: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: DASHBOARD_CARD_BORDER,
     backgroundColor: '#ffffff',
     padding: 10,
     gap: 4,
@@ -1604,7 +1630,7 @@ export const styles = StyleSheet.create({
   whatsNewAttachmentCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.12)',
+    borderColor: DASHBOARD_CARD_BORDER_SOFT,
     backgroundColor: '#fff3ef',
     padding: 12,
     gap: 6,
@@ -1688,7 +1714,7 @@ export const styles = StyleSheet.create({
   },
   chartSupplierBlock: {
     borderWidth: 1,
-    borderColor: '#edd3d5',
+    borderColor: '#ddb4b6',
     backgroundColor: '#fffdfd',
     borderRadius: 12,
     padding: 10,
@@ -1784,7 +1810,7 @@ export const styles = StyleSheet.create({
     minWidth: 96,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.1)',
+    borderColor: DASHBOARD_BORDER_SOFT,
     backgroundColor: '#fffaf7',
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1810,7 +1836,7 @@ export const styles = StyleSheet.create({
   returnsSummaryCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: DASHBOARD_BORDER_SOFT,
     backgroundColor: '#ffffff',
     padding: 14,
     gap: 10,
@@ -1820,6 +1846,10 @@ export const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 10,
+  },
+  returnsSummaryTopRowCompact: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
   },
   returnsSummaryCopy: {
     flex: 1,
@@ -1849,6 +1879,9 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
+  returnsSummaryCountPillCompact: {
+    alignSelf: 'flex-start',
+  },
   returnsSummaryCountText: {
     color: '#ab1e24',
     fontFamily: 'Manrope_700Bold',
@@ -1868,6 +1901,27 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_400Regular',
     fontSize: 13,
     lineHeight: 18,
+  },
+  returnsSummaryActionRow: {
+    marginTop: 2,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+  },
+  returnsSummaryActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(171, 30, 36, 0.18)',
+    borderRadius: 999,
+    backgroundColor: '#fff3ef',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  returnsSummaryActionButtonText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
   },
   topProductsFilterStack: {
     gap: 10,
@@ -1890,7 +1944,7 @@ export const styles = StyleSheet.create({
   topProductsLeadCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.1)',
+    borderColor: DASHBOARD_CARD_BORDER_SOFT,
     backgroundColor: '#fff8f4',
     padding: 14,
     gap: 12,
@@ -2200,11 +2254,66 @@ export const styles = StyleSheet.create({
     padding: 14,
     gap: 12,
   },
+  returnPhotoModalCard: {
+    width: '94%',
+    maxWidth: 920,
+    maxHeight: '82%',
+    backgroundColor: '#fff9f9',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#e2b9bb',
+    padding: 14,
+    gap: 12,
+  },
   previewModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 10,
+  },
+  returnPhotoModalHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  returnPhotoModalScrollContent: {
+    paddingBottom: 4,
+  },
+  returnPhotoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  returnPhotoCard: {
+    width: 220,
+    maxWidth: '100%',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2b9bb',
+    backgroundColor: '#ffffff',
+    overflow: 'hidden',
+  },
+  returnPhotoImage: {
+    width: '100%',
+    height: 180,
+    backgroundColor: '#f4ecec',
+  },
+  returnPhotoCardCopy: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 4,
+  },
+  returnPhotoCardTitle: {
+    color: '#5f1c21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  returnPhotoCardMeta: {
+    color: '#8d5a5f',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
   },
   title: {
     color: '#7a181d',
