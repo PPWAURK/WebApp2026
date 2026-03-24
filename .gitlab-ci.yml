@@ -118,6 +118,24 @@ deploy:
           printf '%s\n' "$port_holders"
         fi
 
+        used_repo_image_ids="$(
+          docker ps -a --format '{{.Image}}' \
+            | awk -v image="$IMAGE" 'index($0, image ":") == 1 { print $0 }' \
+            | xargs -r docker image inspect --format '{{.Id}}' 2>/dev/null \
+            | sort -u
+        )"
+        repo_image_ids="$(docker images "$IMAGE" --format '{{.ID}}' | sort -u)"
+        if [ -n "$repo_image_ids" ]; then
+          printf '%s\n' "$repo_image_ids" | while IFS= read -r image_id; do
+            [ -n "$image_id" ] || continue
+            if printf '%s\n' "$used_repo_image_ids" | grep -qx "$image_id"; then
+              continue
+            fi
+            docker rmi "$image_id" >/dev/null 2>&1 || true
+          done
+        fi
+        docker image prune -f >/dev/null 2>&1 || true
+
         docker compose -f "$DEPLOY_COMPOSE_FILE" pull "$BACKEND_SERVICE"
         docker compose -f "$DEPLOY_COMPOSE_FILE" run --rm "$BACKEND_SERVICE" node scripts/recover-return-photo-migration.js
         docker compose -f "$DEPLOY_COMPOSE_FILE" run --rm "$BACKEND_SERVICE" npm run prisma:migrate:deploy
