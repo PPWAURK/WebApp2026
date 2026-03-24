@@ -1,11 +1,11 @@
-import 'dotenv/config';
-import { PrismaClient, Role, WorkplaceRole } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+require('dotenv/config');
+const { PrismaClient, Role, WorkplaceRole } = require('@prisma/client');
+const bcrypt = require('bcrypt');
 
 const prisma = new PrismaClient();
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function parseAdminEmails(value: string | undefined): string[] {
+function parseAdminEmails(value) {
   if (!value) {
     return [];
   }
@@ -140,7 +140,7 @@ main()
   .then(async () => {
     await prisma.$disconnect();
   })
-  .catch(async (error: unknown) => {
+  .catch(async (error) => {
     await prisma.$disconnect();
     throw error;
   });
