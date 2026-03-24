@@ -199,7 +199,7 @@ model PurchaseReturnItemPhoto {
   document             Document           @relation("PurchaseReturnItemPhotoDocument", fields: [documentId], references: [id], onDelete: Restrict)
   createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamp(0)
 
-  @@unique([purchaseReturnItemId, documentId])
+  @@unique([purchaseReturnItemId, documentId], map: "purchase_return_item_photos_item_doc_key")
   @@index([documentId])
   @@map("purchase_return_item_photos")
 }

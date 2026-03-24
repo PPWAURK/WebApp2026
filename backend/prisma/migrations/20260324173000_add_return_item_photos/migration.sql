@@ -46,7 +46,7 @@ CREATE TABLE `purchase_return_item_photos` (
   `document_id` INT NOT NULL,
   `created_at` TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
 
-  UNIQUE INDEX `purchase_return_item_photos_purchase_return_item_id_document_id_key`(`purchase_return_item_id`, `document_id`),
+  UNIQUE INDEX `purchase_return_item_photos_item_doc_key`(`purchase_return_item_id`, `document_id`),
   INDEX `purchase_return_item_photos_document_id_idx`(`document_id`),
   PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
