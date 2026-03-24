@@ -122,7 +122,7 @@ export default function VerifyEmailScreen() {
         <View style={styles.content}>
           <View style={authFormStyles.card}>
             <Image
-              source={require('../../../assets/ZHAO-元素element/logo/1.png')}
+              source={require('../../assets/ZHAO-元素element/logo/1.png')}
               style={authFormStyles.logo}
               resizeMode="contain"
             />
