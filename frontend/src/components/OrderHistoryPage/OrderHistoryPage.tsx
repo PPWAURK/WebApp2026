@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { COLORS } from '../../constants/colors';
 import type { AppText } from '../../locales/translations';
 import {
   fetchOrderHistoryAnalytics,
@@ -349,7 +350,7 @@ export function OrderHistoryPage({
                   <Ionicons
                     name="storefront-outline"
                     size={14}
-                    color="#ab1e24"
+                    color={COLORS.brandPrimary}
                   />
                   <Text style={styles.heroBadgeText} numberOfLines={1}>
                     {selectedSupplierGroup.supplierName}
@@ -357,7 +358,11 @@ export function OrderHistoryPage({
                 </View>
               ) : null}
               <Pressable style={styles.heroActionButton} onPress={onRefresh}>
-                <Ionicons name="refresh-outline" size={16} color="#ab1e24" />
+                <Ionicons
+                  name="refresh-outline"
+                  size={16}
+                  color={COLORS.brandPrimary}
+                />
                 <Text style={styles.heroActionButtonText}>
                   {text.orders.refreshHistoryButton}
                 </Text>
@@ -367,17 +372,29 @@ export function OrderHistoryPage({
 
           <View style={styles.heroMetaRow}>
             <View style={styles.metaPill}>
-              <Ionicons name="calendar-outline" size={14} color="#ab1e24" />
+              <Ionicons
+                name="calendar-outline"
+                size={14}
+                color={COLORS.brandPrimary}
+              />
               <Text style={styles.metaPillText}>{activePeriodLabel}</Text>
             </View>
             <View style={styles.metaPill}>
-              <Ionicons name="albums-outline" size={14} color="#ab1e24" />
+              <Ionicons
+                name="albums-outline"
+                size={14}
+                color={COLORS.brandPrimary}
+              />
               <Text style={styles.metaPillText}>
                 {filteredSortedOrders.length}
               </Text>
             </View>
             <View style={styles.metaPill}>
-              <Ionicons name="layers-outline" size={14} color="#ab1e24" />
+              <Ionicons
+                name="layers-outline"
+                size={14}
+                color={COLORS.brandPrimary}
+              />
               <Text style={styles.metaPillText}>{ordersByDate.length}</Text>
             </View>
           </View>
@@ -484,11 +501,15 @@ export function OrderHistoryPage({
             >
               <View style={[styles.toolSection, styles.searchSection]}>
                 <View style={styles.searchShell}>
-                  <Ionicons name="search-outline" size={18} color="#8d5a5f" />
+                  <Ionicons
+                    name="search-outline"
+                    size={18}
+                    color={COLORS.textMuted}
+                  />
                   <TextInput
                     style={styles.searchInput}
                     placeholder={text.orders.searchHistoryPlaceholder}
-                    placeholderTextColor="#aa777b"
+                    placeholderTextColor={COLORS.textMuted}
                     value={search}
                     onChangeText={setSearch}
                   />
@@ -560,14 +581,22 @@ export function OrderHistoryPage({
 
         {analyticsLoading ? (
           <View style={styles.statusCard}>
-            <Ionicons name="analytics-outline" size={18} color="#ab1e24" />
+            <Ionicons
+              name="analytics-outline"
+              size={18}
+              color={COLORS.brandPrimary}
+            />
             <Text style={styles.statusText}>{text.orders.loading}</Text>
           </View>
         ) : null}
 
         {analyticsError ? (
           <View style={styles.statusCard}>
-            <Ionicons name="alert-circle-outline" size={18} color="#ab1e24" />
+            <Ionicons
+              name="alert-circle-outline"
+              size={18}
+              color={COLORS.brandPrimary}
+            />
             <Text style={styles.statusText}>{analyticsError}</Text>
           </View>
         ) : null}
@@ -706,7 +735,11 @@ export function OrderHistoryPage({
                   {text.orders.insightsTitle}
                 </Text>
                 <View style={styles.insightRow}>
-                  <Ionicons name="pricetag-outline" size={16} color="#ab1e24" />
+                  <Ionicons
+                    name="pricetag-outline"
+                    size={16}
+                    color={COLORS.brandPrimary}
+                  />
                   <Text style={styles.insightText}>
                     {text.orders.topProductLabel}:{' '}
                     {analytics.topProducts[0]
@@ -719,7 +752,7 @@ export function OrderHistoryPage({
                   <Ionicons
                     name="calendar-clear-outline"
                     size={16}
-                    color="#ab1e24"
+                    color={COLORS.brandPrimary}
                   />
                   <Text style={styles.insightText}>
                     {text.orders.busiestDayLabel}:{' '}
@@ -729,7 +762,11 @@ export function OrderHistoryPage({
                   </Text>
                 </View>
                 <View style={styles.insightRow}>
-                  <Ionicons name="cube-outline" size={16} color="#ab1e24" />
+                  <Ionicons
+                    name="cube-outline"
+                    size={16}
+                    color={COLORS.brandPrimary}
+                  />
                   <Text style={styles.insightText}>
                     {text.orders.avgOrderItemsLabel}:{' '}
                     {formatAverage(analytics.current.avgOrderItems)}
@@ -786,14 +823,22 @@ export function OrderHistoryPage({
 
           {isLoading ? (
             <View style={styles.emptyState}>
-              <Ionicons name="time-outline" size={20} color="#ab1e24" />
+              <Ionicons
+                name="time-outline"
+                size={20}
+                color={COLORS.brandPrimary}
+              />
               <Text style={styles.emptyStateText}>{text.orders.loading}</Text>
             </View>
           ) : null}
 
           {!isLoading && orders.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="receipt-outline" size={20} color="#ab1e24" />
+              <Ionicons
+                name="receipt-outline"
+                size={20}
+                color={COLORS.brandPrimary}
+              />
               <Text style={styles.emptyStateText}>
                 {text.orders.historyEmpty}
               </Text>
@@ -804,7 +849,11 @@ export function OrderHistoryPage({
           orders.length > 0 &&
           filteredSortedOrders.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="search-outline" size={20} color="#ab1e24" />
+              <Ionicons
+                name="search-outline"
+                size={20}
+                color={COLORS.brandPrimary}
+              />
               <Text style={styles.emptyStateText}>
                 {text.orders.historyEmpty}
               </Text>
@@ -846,7 +895,7 @@ export function OrderHistoryPage({
                           <Ionicons
                             name="calendar-outline"
                             size={16}
-                            color="#ab1e24"
+                            color={COLORS.brandPrimary}
                           />
                         </View>
                         <View style={styles.dateInfo}>
@@ -856,7 +905,7 @@ export function OrderHistoryPage({
                               <Ionicons
                                 name="receipt-outline"
                                 size={13}
-                                color="#ab1e24"
+                                color={COLORS.brandPrimary}
                               />
                               <Text style={styles.dateMetaText}>
                                 {dateOrders.length}
@@ -866,7 +915,7 @@ export function OrderHistoryPage({
                               <Ionicons
                                 name="cube-outline"
                                 size={13}
-                                color="#ab1e24"
+                                color={COLORS.brandPrimary}
                               />
                               <Text style={styles.dateMetaText}>
                                 {totalItems}
@@ -876,7 +925,7 @@ export function OrderHistoryPage({
                               <Ionicons
                                 name="cash-outline"
                                 size={13}
-                                color="#ab1e24"
+                                color={COLORS.brandPrimary}
                               />
                               <Text style={styles.dateMetaText}>
                                 {formatAmount(totalAmount)}
@@ -890,7 +939,7 @@ export function OrderHistoryPage({
                           isOpen ? 'chevron-up-outline' : 'chevron-down-outline'
                         }
                         size={18}
-                        color="#8d5a5f"
+                        color={COLORS.textMuted}
                       />
                     </Pressable>
 
@@ -902,205 +951,214 @@ export function OrderHistoryPage({
 
                           return (
                             <View key={order.id} style={styles.orderCard}>
-                            <View style={styles.orderCardHeader}>
-                              <View style={styles.orderCardCopy}>
-                                <Text style={styles.orderNumber}>
-                                  {order.number}
-                                </Text>
-                                <Text
-                                  style={styles.orderAddress}
-                                  numberOfLines={2}
-                                >
-                                  {order.deliveryAddress}
-                                </Text>
-                              </View>
-                              <View style={styles.orderAmountPill}>
-                                <Text style={styles.orderAmountLabel}>
-                                  {text.orders.summaryAmount}
-                                </Text>
-                                <Text style={styles.orderAmountValue}>
-                                  {formatAmount(order.totalAmount)}
-                                </Text>
-                              </View>
-                            </View>
-
-                            <View style={styles.orderMetaGrid}>
-                              <View style={styles.orderMetaItem}>
-                                <Text style={styles.orderMetaLabel}>
-                                  {text.orders.deliveryAddressLabel}
-                                </Text>
-                                <Text
-                                  style={styles.orderMetaValue}
-                                  numberOfLines={2}
-                                >
-                                  {order.deliveryAddress}
-                                </Text>
-                              </View>
-                              <View style={styles.orderMetaItemSmall}>
-                                <Text style={styles.orderMetaLabel}>
-                                  {text.orders.summaryItems}
-                                </Text>
-                                <Text style={styles.orderMetaValue}>
-                                  {order.totalItems}
-                                </Text>
-                              </View>
-                              <View style={styles.orderMetaItemSmall}>
-                                <Text style={styles.orderMetaLabel}>
-                                  {text.orders.deliveryDateLabel}
-                                </Text>
-                                <Text style={styles.orderMetaValue}>
-                                  {order.deliveryDate}
-                                </Text>
-                              </View>
-                            </View>
-
-                            {returnsForOrder.length > 0 ? (
-                              <View style={styles.returnHistorySection}>
-                                <View style={styles.returnHistoryHeader}>
-                                  <Text style={styles.returnHistoryTitle}>
-                                    {text.orders.returnHistorySectionTitle}
+                              <View style={styles.orderCardHeader}>
+                                <View style={styles.orderCardCopy}>
+                                  <Text style={styles.orderNumber}>
+                                    {order.number}
                                   </Text>
-                                  <View style={styles.returnHistoryCountPill}>
-                                    <Text
-                                      style={styles.returnHistoryCountText}
-                                    >
-                                      {returnsForOrder.length}
-                                    </Text>
-                                  </View>
-                                </View>
-
-                                {returnsForOrder.map((orderReturn) => (
-                                  <View
-                                    key={`order-return-${orderReturn.id}`}
-                                    style={styles.returnHistoryCard}
+                                  <Text
+                                    style={styles.orderAddress}
+                                    numberOfLines={2}
                                   >
-                                    <View style={styles.returnHistoryMetaRow}>
-                                      <Text style={styles.returnHistoryMeta}>
-                                        {formatReturnTimestamp(
-                                          orderReturn.createdAt,
-                                        )}
-                                      </Text>
-                                      <View
-                                        style={styles.returnHistoryItemsPill}
+                                    {order.deliveryAddress}
+                                  </Text>
+                                </View>
+                                <View style={styles.orderAmountPill}>
+                                  <Text style={styles.orderAmountLabel}>
+                                    {text.orders.summaryAmount}
+                                  </Text>
+                                  <Text style={styles.orderAmountValue}>
+                                    {formatAmount(order.totalAmount)}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              <View style={styles.orderMetaGrid}>
+                                <View style={styles.orderMetaItem}>
+                                  <Text style={styles.orderMetaLabel}>
+                                    {text.orders.deliveryAddressLabel}
+                                  </Text>
+                                  <Text
+                                    style={styles.orderMetaValue}
+                                    numberOfLines={2}
+                                  >
+                                    {order.deliveryAddress}
+                                  </Text>
+                                </View>
+                                <View style={styles.orderMetaItemSmall}>
+                                  <Text style={styles.orderMetaLabel}>
+                                    {text.orders.summaryItems}
+                                  </Text>
+                                  <Text style={styles.orderMetaValue}>
+                                    {order.totalItems}
+                                  </Text>
+                                </View>
+                                <View style={styles.orderMetaItemSmall}>
+                                  <Text style={styles.orderMetaLabel}>
+                                    {text.orders.deliveryDateLabel}
+                                  </Text>
+                                  <Text style={styles.orderMetaValue}>
+                                    {order.deliveryDate}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {returnsForOrder.length > 0 ? (
+                                <View style={styles.returnHistorySection}>
+                                  <View style={styles.returnHistoryHeader}>
+                                    <Text style={styles.returnHistoryTitle}>
+                                      {text.orders.returnHistorySectionTitle}
+                                    </Text>
+                                    <View style={styles.returnHistoryCountPill}>
+                                      <Text
+                                        style={styles.returnHistoryCountText}
                                       >
-                                        <Text
-                                          style={
-                                            styles.returnHistoryItemsPillText
-                                          }
-                                        >
-                                          {orderReturn.totalItems}
+                                        {returnsForOrder.length}
+                                      </Text>
+                                    </View>
+                                  </View>
+
+                                  {returnsForOrder.map((orderReturn) => (
+                                    <View
+                                      key={`order-return-${orderReturn.id}`}
+                                      style={styles.returnHistoryCard}
+                                    >
+                                      <View style={styles.returnHistoryMetaRow}>
+                                        <Text style={styles.returnHistoryMeta}>
+                                          {formatReturnTimestamp(
+                                            orderReturn.createdAt,
+                                          )}
                                         </Text>
+                                        <View
+                                          style={styles.returnHistoryItemsPill}
+                                        >
+                                          <Text
+                                            style={
+                                              styles.returnHistoryItemsPillText
+                                            }
+                                          >
+                                            {orderReturn.totalItems}
+                                          </Text>
+                                        </View>
                                       </View>
-                                    </View>
 
-                                    <View style={styles.returnHistoryField}>
-                                      <Text
-                                        style={styles.returnHistoryFieldLabel}
-                                      >
-                                        {text.orders.returnReasonLabel}
-                                      </Text>
-                                      <Text
-                                        style={styles.returnHistoryFieldValue}
-                                      >
-                                        {orderReturn.reason}
-                                      </Text>
-                                    </View>
-
-                                    <View style={styles.returnHistoryField}>
-                                      <Text
-                                        style={styles.returnHistoryFieldLabel}
-                                      >
-                                        {text.orders.returnHistoryProductsLabel}
-                                      </Text>
-                                      <Text
-                                        style={styles.returnHistoryFieldValue}
-                                      >
-                                        {buildReturnProductsLabel(orderReturn)}
-                                      </Text>
-                                    </View>
-
-                                    {orderReturn.notes ? (
                                       <View style={styles.returnHistoryField}>
                                         <Text
                                           style={styles.returnHistoryFieldLabel}
                                         >
-                                          {text.orders.returnNotesLabel}
+                                          {text.orders.returnReasonLabel}
                                         </Text>
                                         <Text
                                           style={styles.returnHistoryFieldValue}
                                         >
-                                          {orderReturn.notes}
+                                          {orderReturn.reason}
                                         </Text>
                                       </View>
-                                    ) : null}
-                                  </View>
-                                ))}
+
+                                      <View style={styles.returnHistoryField}>
+                                        <Text
+                                          style={styles.returnHistoryFieldLabel}
+                                        >
+                                          {
+                                            text.orders
+                                              .returnHistoryProductsLabel
+                                          }
+                                        </Text>
+                                        <Text
+                                          style={styles.returnHistoryFieldValue}
+                                        >
+                                          {buildReturnProductsLabel(
+                                            orderReturn,
+                                          )}
+                                        </Text>
+                                      </View>
+
+                                      {orderReturn.notes ? (
+                                        <View style={styles.returnHistoryField}>
+                                          <Text
+                                            style={
+                                              styles.returnHistoryFieldLabel
+                                            }
+                                          >
+                                            {text.orders.returnNotesLabel}
+                                          </Text>
+                                          <Text
+                                            style={
+                                              styles.returnHistoryFieldValue
+                                            }
+                                          >
+                                            {orderReturn.notes}
+                                          </Text>
+                                        </View>
+                                      ) : null}
+                                    </View>
+                                  ))}
+                                </View>
+                              ) : null}
+
+                              <View style={styles.orderActionsRow}>
+                                <Pressable
+                                  style={styles.primaryButton}
+                                  onPress={() => onDownloadOrderBon(order)}
+                                >
+                                  <Ionicons
+                                    name="download-outline"
+                                    size={16}
+                                    color={COLORS.textOnDark}
+                                  />
+                                  <Text style={styles.primaryButtonText}>
+                                    {text.orders.downloadBonButton}
+                                  </Text>
+                                </Pressable>
+
+                                <Pressable
+                                  style={[
+                                    styles.secondaryButton,
+                                    orderReturnFlow.returnDraftLoadingOrderId !==
+                                      null && styles.disabledButton,
+                                  ]}
+                                  onPress={() => {
+                                    void orderReturnFlow.openReturnDraft(order);
+                                  }}
+                                  disabled={
+                                    orderReturnFlow.returnDraftLoadingOrderId !==
+                                    null
+                                  }
+                                >
+                                  <Ionicons
+                                    name="return-up-back-outline"
+                                    size={16}
+                                    color={COLORS.brandPrimary}
+                                  />
+                                  <Text style={styles.secondaryButtonText}>
+                                    {orderReturnFlow.returnDraftLoadingOrderId ===
+                                    order.id
+                                      ? text.orders.creatingReturnDraft
+                                      : text.orders.createReturnButton}
+                                  </Text>
+                                </Pressable>
+
+                                <Pressable
+                                  style={[
+                                    styles.secondaryButton,
+                                    deletingOrderId === order.id &&
+                                      styles.disabledButton,
+                                  ]}
+                                  onPress={() => onDeleteOrder(order)}
+                                  disabled={deletingOrderId === order.id}
+                                >
+                                  <Ionicons
+                                    name="trash-outline"
+                                    size={16}
+                                    color={COLORS.brandPrimary}
+                                  />
+                                  <Text style={styles.secondaryButtonText}>
+                                    {deletingOrderId === order.id
+                                      ? text.orders.deletingHistoryButton
+                                      : text.orders.deleteHistoryButton}
+                                  </Text>
+                                </Pressable>
                               </View>
-                            ) : null}
-
-                            <View style={styles.orderActionsRow}>
-                              <Pressable
-                                style={styles.primaryButton}
-                                onPress={() => onDownloadOrderBon(order)}
-                              >
-                                <Ionicons
-                                  name="download-outline"
-                                  size={16}
-                                  color="#ffffff"
-                                />
-                                <Text style={styles.primaryButtonText}>
-                                  {text.orders.downloadBonButton}
-                                </Text>
-                              </Pressable>
-
-                              <Pressable
-                                style={[
-                                  styles.secondaryButton,
-                                  orderReturnFlow.returnDraftLoadingOrderId !==
-                                    null && styles.disabledButton,
-                                ]}
-                                onPress={() => {
-                                  void orderReturnFlow.openReturnDraft(order);
-                                }}
-                                disabled={
-                                  orderReturnFlow.returnDraftLoadingOrderId !==
-                                  null
-                                }
-                              >
-                                <Ionicons
-                                  name="return-up-back-outline"
-                                  size={16}
-                                  color="#ab1e24"
-                                />
-                                <Text style={styles.secondaryButtonText}>
-                                  {orderReturnFlow.returnDraftLoadingOrderId ===
-                                  order.id
-                                    ? text.orders.creatingReturnDraft
-                                    : text.orders.createReturnButton}
-                                </Text>
-                              </Pressable>
-
-                              <Pressable
-                                style={[
-                                  styles.secondaryButton,
-                                  deletingOrderId === order.id &&
-                                    styles.disabledButton,
-                                ]}
-                                onPress={() => onDeleteOrder(order)}
-                                disabled={deletingOrderId === order.id}
-                              >
-                                <Ionicons
-                                  name="trash-outline"
-                                  size={16}
-                                  color="#ab1e24"
-                                />
-                                <Text style={styles.secondaryButtonText}>
-                                  {deletingOrderId === order.id
-                                    ? text.orders.deletingHistoryButton
-                                    : text.orders.deleteHistoryButton}
-                                </Text>
-                              </Pressable>
-                            </View>
                             </View>
                           );
                         })}
