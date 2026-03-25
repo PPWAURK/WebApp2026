@@ -2265,6 +2265,12 @@ export const styles = StyleSheet.create({
     padding: 14,
     gap: 12,
   },
+  returnPhotoModalCardMedium: {
+    maxWidth: 540,
+  },
+  returnPhotoModalCardCompact: {
+    maxWidth: 320,
+  },
   previewModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2295,7 +2301,7 @@ export const styles = StyleSheet.create({
   },
   returnPhotoImage: {
     width: '100%',
-    height: 180,
+    height: 220,
     backgroundColor: '#f4ecec',
   },
   returnPhotoCardCopy: {

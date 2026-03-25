@@ -1,12 +1,15 @@
 import { StyleSheet } from 'react-native';
 
+const CARD_BORDER = '#d9afb1';
+const CARD_BORDER_SOFT = '#ddb8ba';
+
 export const styles = StyleSheet.create({
   uploadCard: {
     backgroundColor: 'rgba(255,255,255,0.92)',
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e8c3c4',
+    borderColor: CARD_BORDER,
     gap: 10,
   },
   uploadTitle: {
@@ -89,7 +92,7 @@ export const styles = StyleSheet.create({
   uploadResultBox: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#edd3d5',
+    borderColor: CARD_BORDER_SOFT,
     backgroundColor: '#fffdfd',
     padding: 10,
     gap: 6,
@@ -112,7 +115,7 @@ export const styles = StyleSheet.create({
   mediaItemCard: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#e7c8ca',
+    borderColor: CARD_BORDER,
     backgroundColor: '#fff8f8',
     padding: 8,
     gap: 6,

@@ -1,5 +1,10 @@
 import { StyleSheet } from 'react-native';
 
+const CARD_BORDER = 'rgba(171, 30, 36, 0.18)';
+const CARD_BORDER_SOFT = 'rgba(171, 30, 36, 0.14)';
+const EARTH_BORDER = 'rgba(113, 72, 67, 0.18)';
+const EARTH_BORDER_SOFT = 'rgba(113, 72, 67, 0.14)';
+
 export const styles = StyleSheet.create({
   page: {
     flex: 1,
@@ -26,7 +31,7 @@ export const styles = StyleSheet.create({
   heroCard: {
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.1)',
+    borderColor: CARD_BORDER,
     backgroundColor: '#fffdfb',
     paddingHorizontal: 24,
     paddingVertical: 22,
@@ -68,7 +73,7 @@ export const styles = StyleSheet.create({
     minWidth: 220,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.1)',
+    borderColor: CARD_BORDER,
     backgroundColor: '#fff8f5',
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -92,7 +97,7 @@ export const styles = StyleSheet.create({
   metricCard: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.1)',
+    borderColor: CARD_BORDER,
     backgroundColor: '#ffffff',
     paddingHorizontal: 18,
     paddingVertical: 18,
@@ -120,7 +125,7 @@ export const styles = StyleSheet.create({
   emptyCard: {
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.1)',
+    borderColor: CARD_BORDER,
     backgroundColor: '#fffdfb',
     paddingHorizontal: 24,
     paddingVertical: 32,
@@ -144,7 +149,7 @@ export const styles = StyleSheet.create({
   sectionCard: {
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.1)',
+    borderColor: CARD_BORDER,
     backgroundColor: '#fffdfb',
     paddingHorizontal: 20,
     paddingVertical: 20,
@@ -177,7 +182,7 @@ export const styles = StyleSheet.create({
   storeCard: {
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.1)',
+    borderColor: CARD_BORDER,
     backgroundColor: '#ffffff',
     paddingHorizontal: 18,
     paddingVertical: 18,
@@ -227,7 +232,7 @@ export const styles = StyleSheet.create({
   storeStatChip: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: CARD_BORDER_SOFT,
     backgroundColor: '#fff8f5',
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -253,7 +258,7 @@ export const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: '#fff7f4',
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: CARD_BORDER_SOFT,
     paddingHorizontal: 12,
     paddingVertical: 8,
     flexDirection: 'row',
@@ -274,7 +279,7 @@ export const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: '#fff8f5',
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: CARD_BORDER_SOFT,
     paddingHorizontal: 14,
     paddingVertical: 12,
     gap: 6,
@@ -339,7 +344,7 @@ export const styles = StyleSheet.create({
     minWidth: 140,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: CARD_BORDER_SOFT,
     backgroundColor: '#ffffff',
     paddingHorizontal: 16,
     paddingVertical: 18,
@@ -416,7 +421,7 @@ export const styles = StyleSheet.create({
   rosterSectionCard: {
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.1)',
+    borderColor: CARD_BORDER,
     backgroundColor: '#ffffff',
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -430,7 +435,7 @@ export const styles = StyleSheet.create({
     gap: 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(171, 30, 36, 0.08)',
+    borderBottomColor: CARD_BORDER_SOFT,
   },
   rosterSectionHeading: {
     flex: 1,
@@ -458,7 +463,7 @@ export const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#fff8f5',
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: CARD_BORDER_SOFT,
     paddingHorizontal: 10,
     paddingVertical: 8,
     alignItems: 'center',
@@ -475,16 +480,59 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 10,
   },
-  rosterList: {
+  rosterPaginationBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  rosterPaginationText: {
+    color: '#8d5a5f',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  rosterPaginationControls: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  rosterPaginationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(171, 30, 36, 0.1)',
+    backgroundColor: '#fff8f5',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  rosterPaginationButtonDisabled: {
+    borderColor: 'rgba(171, 30, 36, 0.06)',
+    backgroundColor: '#f8f1ee',
+  },
+  rosterPaginationButtonText: {
+    color: '#ab1e24',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  rosterPaginationButtonTextDisabled: {
+    color: '#c9acab',
+  },
+  rosterColumnsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 12,
+  },
+  rosterColumn: {
     gap: 12,
   },
   rosterEmptyState: {
     borderRadius: 16,
     backgroundColor: '#fff8f5',
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: CARD_BORDER_SOFT,
     paddingHorizontal: 14,
     paddingVertical: 18,
   },
@@ -494,40 +542,41 @@ export const styles = StyleSheet.create({
     fontSize: 12,
   },
   rosterCompactCard: {
-    borderRadius: 18,
-    backgroundColor: '#fff8f5',
+    borderRadius: 12,
+    backgroundColor: '#fffdfc',
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    borderColor: EARTH_BORDER,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     gap: 10,
-    minWidth: 160,
   },
-  rosterCardTop: {
+  rosterCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: 10,
+    minWidth: 0,
   },
   rosterOrderBadge: {
-    minWidth: 28,
-    height: 28,
+    minWidth: 24,
+    height: 24,
     borderRadius: 999,
-    backgroundColor: '#ab1e24',
+    borderWidth: 1,
+    borderColor: 'rgba(171, 30, 36, 0.16)',
+    backgroundColor: '#fff7f5',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
   },
   rosterOrderBadgeText: {
-    color: '#ffffff',
+    color: '#8b363b',
     fontFamily: 'Manrope_700Bold',
-    fontSize: 11,
+    fontSize: 10,
   },
   avatarWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
-    backgroundColor: '#f7e8e0',
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#f4ebe8',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -539,42 +588,69 @@ export const styles = StyleSheet.create({
   avatarText: {
     color: '#ab1e24',
     fontFamily: 'Manrope_700Bold',
-    fontSize: 16,
+    fontSize: 14,
   },
   rosterBody: {
-    gap: 3,
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   rosterName: {
     color: '#5f1c21',
     fontFamily: 'Manrope_700Bold',
-    fontSize: 13,
+    fontSize: 12,
   },
   rosterEmail: {
-    color: '#8d5a5f',
+    color: '#8e6b67',
     fontFamily: 'Manrope_400Regular',
-    fontSize: 10,
+    fontSize: 9,
   },
-  rosterMetaStack: {
+  rosterInfoPanel: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: EARTH_BORDER_SOFT,
+    backgroundColor: '#faf7f5',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  rosterInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
   },
-  rosterMetaLine: {
-    borderRadius: 12,
-    backgroundColor: '#fffdfb',
-    borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+  rosterInfoItem: {
+    flexGrow: 1,
+    flexBasis: 92,
     gap: 2,
   },
-  rosterFactLabel: {
-    color: '#8d5a5f',
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 10,
+  rosterInfoItemWide: {
+    flexBasis: 100,
   },
-  rosterFactValue: {
+  rosterInfoLabel: {
+    color: '#9b7e79',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 9,
+    textTransform: 'uppercase',
+  },
+  rosterInfoValue: {
     color: '#5f1c21',
     fontFamily: 'Manrope_700Bold',
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 10,
+    lineHeight: 14,
+  },
+  rosterStatusBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(171, 30, 36, 0.14)',
+    backgroundColor: '#fff7f5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  rosterStatusBadgeText: {
+    color: '#8b363b',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 9,
   },
 });

@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 
-const BORDER = 'rgba(171, 30, 36, 0.12)';
-const SOFT_BORDER = 'rgba(171, 30, 36, 0.08)';
+const BORDER = 'rgba(171, 30, 36, 0.18)';
+const SOFT_BORDER = 'rgba(171, 30, 36, 0.14)';
 const CARD = '#fffdfb';
 const PANEL = '#ffffff';
 const BRAND = '#ab1e24';

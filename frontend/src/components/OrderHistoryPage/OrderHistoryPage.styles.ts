@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 
-const BORDER = 'rgba(171, 30, 36, 0.12)';
-const SOFT_BORDER = 'rgba(171, 30, 36, 0.08)';
+const BORDER = 'rgba(171, 30, 36, 0.18)';
+const SOFT_BORDER = 'rgba(171, 30, 36, 0.14)';
 const CARD = '#fffdfb';
 const PANEL = '#ffffff';
 const PANEL_SOFT = '#fff7f4';
@@ -658,6 +658,86 @@ export const styles = StyleSheet.create({
     fontSize: 10,
   },
   orderMetaValue: {
+    color: TEXT,
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  returnHistorySection: {
+    gap: 10,
+  },
+  returnHistoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  returnHistoryTitle: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  returnHistoryCountPill: {
+    minWidth: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: BRAND_SOFT,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  returnHistoryCountText: {
+    color: BRAND,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  returnHistoryCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: PANEL_SOFT,
+    padding: 12,
+    gap: 8,
+  },
+  returnHistoryMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  returnHistoryMeta: {
+    color: MUTED,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  returnHistoryItemsPill: {
+    minWidth: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  returnHistoryItemsPillText: {
+    color: BRAND,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  returnHistoryField: {
+    gap: 4,
+  },
+  returnHistoryFieldLabel: {
+    color: MUTED,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
+    textTransform: 'uppercase',
+  },
+  returnHistoryFieldValue: {
     color: TEXT,
     fontFamily: 'Manrope_400Regular',
     fontSize: 12,

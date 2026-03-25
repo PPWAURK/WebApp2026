@@ -221,6 +221,9 @@ export const translations = {
       quickApplicantRestaurantLabel: 'Restaurant demande',
       quickApplicantLevelLabel: 'Niveau demande',
       quickManagerListTitle: 'Managers et établissements',
+      quickPendingEmailVerificationTitle: 'En attente de verification e-mail',
+      quickPendingEmailVerificationHint:
+        'Le collaborateur doit confirmer son e-mail avant de pouvoir etre valide ici.',
       quickNoManager: 'Aucun manager validé pour le moment.',
       quickNoPendingAccount: 'Aucun compte en attente de validation.',
       quickNoEmployee: 'Aucun employé ne correspond à ce filtre.',
@@ -716,6 +719,7 @@ export const translations = {
       accountStatusLabel: 'Compte',
       accountStatusValues: {
         approved: 'Validé',
+        emailVerificationPending: 'E-mail a verifier',
         pending: 'En attente',
       },
       approveAccountButton: 'Valider le compte',
@@ -1006,6 +1010,9 @@ export const translations = {
       quickApplicantRestaurantLabel: '申请门店',
       quickApplicantLevelLabel: '申请等级',
       quickManagerListTitle: '店长与所属门店',
+      quickPendingEmailVerificationTitle: '待邮箱验证',
+      quickPendingEmailVerificationHint:
+        '员工需要先完成邮箱验证，之后才会进入这里的审核流程。',
       quickNoManager: '当前还没有已生效的店长账号。',
       quickNoPendingAccount: '暂无待审核账号。',
       quickNoEmployee: '没有符合条件的员工。',
@@ -1460,6 +1467,7 @@ export const translations = {
       accountStatusLabel: '账号',
       accountStatusValues: {
         approved: '已审核',
+        emailVerificationPending: '待邮箱验证',
         pending: '待审核',
       },
       approveAccountButton: '审核账号',

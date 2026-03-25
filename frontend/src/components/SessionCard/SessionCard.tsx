@@ -125,12 +125,16 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   ];
 
   if (isSupervisor) {
+    const pendingAccountCount =
+      supervisorState.accountApprovalUsers.length +
+      supervisorState.emailVerificationUsers.length;
+
     dashboardHighlights.push({
       key: 'approval',
       label: isAdmin
         ? text.dashboard.quickApproveManagerTitle
         : text.dashboard.quickApproveTitle,
-      value: `${supervisorState.accountApprovalUsers.length}`,
+      value: `${pendingAccountCount}`,
       meta: `${supervisorState.users.length}`,
       icon: 'people-outline',
     });

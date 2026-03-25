@@ -49,6 +49,7 @@ export type SessionCardSupervisorState = {
   deleteSearch: string;
   deletionUsers: TrainingAccessUser[];
   employeeRestaurantOptions: RestaurantOption[];
+  emailVerificationUsers: TrainingAccessUser[];
   handleApproveAccount: (entry: TrainingAccessUser) => Promise<void>;
   handleDeleteUser: (entry: TrainingAccessUser) => Promise<void>;
   handleRejectAccount: (entry: TrainingAccessUser) => Promise<void>;
@@ -299,6 +300,19 @@ export function useSessionCardSupervisorState({
       .filter(
         (entry) =>
           entry.isEmailVerified &&
+          !entry.isApproved &&
+          entry.role === (isAdmin ? 'MANAGER' : 'EMPLOYEE'),
+      )
+      .filter((entry) => matchesUserQuery(entry, query));
+  }, [approvalSearch, isAdmin, usersFilteredByRestaurant]);
+
+  const emailVerificationUsers = useMemo(() => {
+    const query = approvalSearch.trim().toLowerCase();
+
+    return usersFilteredByRestaurant
+      .filter(
+        (entry) =>
+          !entry.isEmailVerified &&
           !entry.isApproved &&
           entry.role === (isAdmin ? 'MANAGER' : 'EMPLOYEE'),
       )
@@ -648,6 +662,7 @@ export function useSessionCardSupervisorState({
     deleteSearch,
     deletionUsers,
     employeeRestaurantOptions,
+    emailVerificationUsers,
     handleApproveAccount,
     handleDeleteUser,
     handleRejectAccount,
