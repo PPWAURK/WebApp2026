@@ -17,6 +17,10 @@ export function SessionCardAdminQuickPanel({
   text,
 }: SessionCardAdminQuickPanelProps) {
   const pendingApprovalCount = supervisorState.accountApprovalUsers.length;
+  const pendingEmailVerificationCount =
+    supervisorState.emailVerificationUsers.length;
+  const totalPendingCount =
+    pendingApprovalCount + pendingEmailVerificationCount;
 
   return (
     <View
@@ -60,7 +64,7 @@ export function SessionCardAdminQuickPanel({
           ]}
         >
           <Text style={styles.dashboardTopCardStatusText}>
-            {pendingApprovalCount}
+            {totalPendingCount}
           </Text>
         </View>
       </View>
@@ -103,6 +107,64 @@ export function SessionCardAdminQuickPanel({
         />
       </View>
 
+      {pendingEmailVerificationCount > 0 ? (
+        <View style={styles.managerApprovalSection}>
+          <View style={styles.managerApprovalSectionHeader}>
+            <Text style={styles.quickSectionTitle}>
+              {text.dashboard.quickPendingEmailVerificationTitle}
+            </Text>
+            <Text style={styles.managerApprovalSectionCount}>
+              {pendingEmailVerificationCount}
+            </Text>
+          </View>
+
+          {supervisorState.emailVerificationUsers.slice(0, 4).map((entry) => (
+            <View
+              key={`verify-${entry.id}`}
+              style={styles.managerApprovalPendingCard}
+            >
+              <View style={styles.managerApprovalPendingTopRow}>
+                <View style={styles.quickLevelInfo}>
+                  <Text style={styles.quickRowTitle}>
+                    {entry.name ?? entry.email}
+                  </Text>
+                  <Text style={styles.subtitle} numberOfLines={1}>
+                    {entry.email}
+                  </Text>
+                </View>
+
+                <View style={styles.employeeModuleStatusPill}>
+                  <Text style={styles.employeeModuleStatusText}>
+                    {
+                      text.adminTraining.accountStatusValues
+                        .emailVerificationPending
+                    }
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.managerApprovalMetaRow}>
+                <View style={styles.managerApprovalMetaPill}>
+                  <Text style={styles.managerApprovalMetaPillText}>
+                    {entry.restaurant?.name ??
+                      text.dashboard.quickRestaurantFilterUnassigned}
+                  </Text>
+                </View>
+                <View style={styles.managerApprovalMetaPill}>
+                  <Text style={styles.managerApprovalMetaPillText}>
+                    {text.dashboard.levels.L7_D}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.subtitle}>
+                {text.dashboard.quickPendingEmailVerificationHint}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       <View style={styles.managerApprovalSection}>
         <View style={styles.managerApprovalSectionHeader}>
           <Text style={styles.quickSectionTitle}>
@@ -122,7 +184,7 @@ export function SessionCardAdminQuickPanel({
 
         {!supervisorState.usersLoading &&
         !supervisorState.usersError &&
-        pendingApprovalCount === 0 ? (
+        totalPendingCount === 0 ? (
           <View style={styles.managerApprovalEmptyState}>
             <Ionicons
               name="checkmark-circle-outline"

@@ -14,6 +14,10 @@ export function SessionCardManagerApprovalModule({
   text,
 }: SessionCardManagerApprovalModuleProps) {
   const pendingApprovalCount = supervisorState.accountApprovalUsers.length;
+  const pendingEmailVerificationCount =
+    supervisorState.emailVerificationUsers.length;
+  const totalPendingCount =
+    pendingApprovalCount + pendingEmailVerificationCount;
 
   return (
     <View style={styles.employeeModuleCard}>
@@ -27,7 +31,7 @@ export function SessionCardManagerApprovalModule({
               {text.dashboard.quickApproveTitle}
             </Text>
             <Text style={styles.employeeModuleHeaderHint}>
-              {pendingApprovalCount === 0
+              {totalPendingCount === 0
                 ? text.dashboard.quickNoPendingAccount
                 : text.dashboard.quickSearchPlaceholder}
             </Text>
@@ -35,7 +39,7 @@ export function SessionCardManagerApprovalModule({
         </View>
         <View style={styles.employeeModuleCountBadge}>
           <Text style={styles.employeeModuleCountValue}>
-            {pendingApprovalCount}
+            {totalPendingCount}
           </Text>
         </View>
       </View>
@@ -60,7 +64,7 @@ export function SessionCardManagerApprovalModule({
 
       {!supervisorState.usersLoading &&
       !supervisorState.usersError &&
-      pendingApprovalCount === 0 ? (
+      totalPendingCount === 0 ? (
         <View style={styles.employeeModuleEmptyState}>
           <Ionicons
             name="checkmark-circle-outline"
@@ -79,122 +83,223 @@ export function SessionCardManagerApprovalModule({
         style={styles.employeeModuleScrollableList}
         contentContainerStyle={styles.employeeModuleScrollableListContent}
       >
-        {supervisorState.accountApprovalUsers.map((entry) => {
-          const displayName = (entry.name ?? entry.email).trim();
-
-          return (
-            <View
-              key={`manager-approve-${entry.id}`}
-              style={styles.employeeCompactRow}
-            >
-              <View style={styles.employeeCompactTopRow}>
-                <View style={styles.employeeModuleAvatar}>
-                  <Text style={styles.employeeModuleAvatarText}>
-                    {displayName.slice(0, 1).toUpperCase()}
-                  </Text>
-                </View>
-                <View style={styles.employeeCompactIdentity}>
-                  <Text style={styles.employeeModuleName} numberOfLines={1}>
-                    {displayName}
-                  </Text>
-                  <Text style={styles.employeeModuleEmail} numberOfLines={1}>
-                    {entry.email}
-                  </Text>
-                  <View style={styles.employeeCompactMetaRail}>
-                    <View style={styles.employeeCompactMetaPill}>
-                      <Text
-                        style={styles.employeeCompactMetaPillText}
-                        numberOfLines={1}
-                      >
-                        {entry.restaurant?.name ??
-                          text.dashboard.quickRestaurantFilterUnassigned}
-                      </Text>
-                    </View>
-                    <View style={styles.employeeCompactMetaPill}>
-                      <Text
-                        style={styles.employeeCompactMetaPillText}
-                        numberOfLines={1}
-                      >
-                        {text.dashboard.levels[entry.employeeLevel]}
-                      </Text>
-                    </View>
-                    <View style={styles.employeeCompactMetaPill}>
-                      <Text
-                        style={styles.employeeCompactMetaPillText}
-                        numberOfLines={1}
-                      >
-                        {text.dashboard.workplaceValues[entry.workplaceRole]}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.employeeCompactActionColumn}>
-                  <View style={styles.employeeModuleStatusPill}>
-                    <Text style={styles.employeeModuleStatusText}>
-                      {text.adminTraining.accountStatusValues.pending}
-                    </Text>
-                  </View>
-                  <View style={styles.employeeCompactActionRow}>
-                    <Pressable
-                      style={[
-                        styles.employeeCompactIconButton,
-                        styles.employeeCompactDangerButton,
-                        supervisorState.isRejectingUserId === entry.id &&
-                          styles.buttonDisabled,
-                      ]}
-                      accessibilityLabel={text.adminTraining.rejectAccountButton}
-                      disabled={
-                        supervisorState.isApprovingUserId === entry.id ||
-                        supervisorState.isRejectingUserId === entry.id
-                      }
-                      onPress={() => {
-                        void supervisorState.handleRejectAccount(entry);
-                      }}
-                    >
-                      <Ionicons
-                        name={
-                          supervisorState.isRejectingUserId === entry.id
-                            ? 'hourglass-outline'
-                            : 'close-outline'
-                        }
-                        size={16}
-                        color="#ab1e24"
-                      />
-                    </Pressable>
-
-                    <Pressable
-                      style={[
-                        styles.employeeCompactIconButton,
-                        styles.employeeCompactApproveButton,
-                        supervisorState.isApprovingUserId === entry.id &&
-                          styles.buttonDisabled,
-                      ]}
-                      accessibilityLabel={text.adminTraining.approveAccountButton}
-                      disabled={
-                        supervisorState.isApprovingUserId === entry.id ||
-                        supervisorState.isRejectingUserId === entry.id
-                      }
-                      onPress={() => {
-                        void supervisorState.handleApproveAccount(entry);
-                      }}
-                    >
-                      <Ionicons
-                        name={
-                          supervisorState.isApprovingUserId === entry.id
-                            ? 'hourglass-outline'
-                            : 'checkmark-outline'
-                        }
-                        size={16}
-                        color="#ffffff"
-                      />
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
+        {pendingEmailVerificationCount > 0 ? (
+          <View style={styles.managerApprovalSection}>
+            <View style={styles.managerApprovalSectionHeader}>
+              <Text style={styles.quickSectionTitle}>
+                {text.dashboard.quickPendingEmailVerificationTitle}
+              </Text>
+              <Text style={styles.managerApprovalSectionCount}>
+                {pendingEmailVerificationCount}
+              </Text>
             </View>
-          );
-        })}
+
+            {supervisorState.emailVerificationUsers.map((entry) => {
+              const displayName = (entry.name ?? entry.email).trim();
+
+              return (
+                <View
+                  key={`manager-verify-${entry.id}`}
+                  style={styles.employeeCompactRow}
+                >
+                  <View style={styles.employeeCompactTopRow}>
+                    <View style={styles.employeeModuleAvatar}>
+                      <Text style={styles.employeeModuleAvatarText}>
+                        {displayName.slice(0, 1).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={styles.employeeCompactIdentity}>
+                      <Text style={styles.employeeModuleName} numberOfLines={1}>
+                        {displayName}
+                      </Text>
+                      <Text style={styles.employeeModuleEmail} numberOfLines={1}>
+                        {entry.email}
+                      </Text>
+                      <View style={styles.employeeCompactMetaRail}>
+                        <View style={styles.employeeCompactMetaPill}>
+                          <Text
+                            style={styles.employeeCompactMetaPillText}
+                            numberOfLines={1}
+                          >
+                            {entry.restaurant?.name ??
+                              text.dashboard.quickRestaurantFilterUnassigned}
+                          </Text>
+                        </View>
+                        <View style={styles.employeeCompactMetaPill}>
+                          <Text
+                            style={styles.employeeCompactMetaPillText}
+                            numberOfLines={1}
+                          >
+                            {text.dashboard.levels[entry.employeeLevel]}
+                          </Text>
+                        </View>
+                        <View style={styles.employeeCompactMetaPill}>
+                          <Text
+                            style={styles.employeeCompactMetaPillText}
+                            numberOfLines={1}
+                          >
+                            {text.dashboard.workplaceValues[entry.workplaceRole]}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.subtitle}>
+                        {text.dashboard.quickPendingEmailVerificationHint}
+                      </Text>
+                    </View>
+
+                    <View style={styles.employeeCompactActionColumn}>
+                      <View style={styles.employeeModuleStatusPill}>
+                        <Text style={styles.employeeModuleStatusText}>
+                          {
+                            text.adminTraining.accountStatusValues
+                              .emailVerificationPending
+                          }
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+
+        {pendingApprovalCount > 0 ? (
+          <View style={styles.managerApprovalSection}>
+            <View style={styles.managerApprovalSectionHeader}>
+              <Text style={styles.quickSectionTitle}>
+                {text.dashboard.quickApproveTitle}
+              </Text>
+              <Text style={styles.managerApprovalSectionCount}>
+                {pendingApprovalCount}
+              </Text>
+            </View>
+
+            {supervisorState.accountApprovalUsers.map((entry) => {
+              const displayName = (entry.name ?? entry.email).trim();
+
+              return (
+                <View
+                  key={`manager-approve-${entry.id}`}
+                  style={styles.employeeCompactRow}
+                >
+                  <View style={styles.employeeCompactTopRow}>
+                    <View style={styles.employeeModuleAvatar}>
+                      <Text style={styles.employeeModuleAvatarText}>
+                        {displayName.slice(0, 1).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={styles.employeeCompactIdentity}>
+                      <Text style={styles.employeeModuleName} numberOfLines={1}>
+                        {displayName}
+                      </Text>
+                      <Text
+                        style={styles.employeeModuleEmail}
+                        numberOfLines={1}
+                      >
+                        {entry.email}
+                      </Text>
+                      <View style={styles.employeeCompactMetaRail}>
+                        <View style={styles.employeeCompactMetaPill}>
+                          <Text
+                            style={styles.employeeCompactMetaPillText}
+                            numberOfLines={1}
+                          >
+                            {entry.restaurant?.name ??
+                              text.dashboard.quickRestaurantFilterUnassigned}
+                          </Text>
+                        </View>
+                        <View style={styles.employeeCompactMetaPill}>
+                          <Text
+                            style={styles.employeeCompactMetaPillText}
+                            numberOfLines={1}
+                          >
+                            {text.dashboard.levels[entry.employeeLevel]}
+                          </Text>
+                        </View>
+                        <View style={styles.employeeCompactMetaPill}>
+                          <Text
+                            style={styles.employeeCompactMetaPillText}
+                            numberOfLines={1}
+                          >
+                            {text.dashboard.workplaceValues[entry.workplaceRole]}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={styles.employeeCompactActionColumn}>
+                      <View style={styles.employeeModuleStatusPill}>
+                        <Text style={styles.employeeModuleStatusText}>
+                          {text.adminTraining.accountStatusValues.pending}
+                        </Text>
+                      </View>
+                      <View style={styles.employeeCompactActionRow}>
+                        <Pressable
+                          style={[
+                            styles.employeeCompactIconButton,
+                            styles.employeeCompactDangerButton,
+                            supervisorState.isRejectingUserId === entry.id &&
+                              styles.buttonDisabled,
+                          ]}
+                          accessibilityLabel={
+                            text.adminTraining.rejectAccountButton
+                          }
+                          disabled={
+                            supervisorState.isApprovingUserId === entry.id ||
+                            supervisorState.isRejectingUserId === entry.id
+                          }
+                          onPress={() => {
+                            void supervisorState.handleRejectAccount(entry);
+                          }}
+                        >
+                          <Ionicons
+                            name={
+                              supervisorState.isRejectingUserId === entry.id
+                                ? 'hourglass-outline'
+                                : 'close-outline'
+                            }
+                            size={16}
+                            color="#ab1e24"
+                          />
+                        </Pressable>
+
+                        <Pressable
+                          style={[
+                            styles.employeeCompactIconButton,
+                            styles.employeeCompactApproveButton,
+                            supervisorState.isApprovingUserId === entry.id &&
+                              styles.buttonDisabled,
+                          ]}
+                          accessibilityLabel={
+                            text.adminTraining.approveAccountButton
+                          }
+                          disabled={
+                            supervisorState.isApprovingUserId === entry.id ||
+                            supervisorState.isRejectingUserId === entry.id
+                          }
+                          onPress={() => {
+                            void supervisorState.handleApproveAccount(entry);
+                          }}
+                        >
+                          <Ionicons
+                            name={
+                              supervisorState.isApprovingUserId === entry.id
+                                ? 'hourglass-outline'
+                                : 'checkmark-outline'
+                            }
+                            size={16}
+                            color="#ffffff"
+                          />
+                        </Pressable>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
       </ScrollView>
     </View>
   );
