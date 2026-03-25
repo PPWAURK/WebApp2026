@@ -2,20 +2,17 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
-  UploadCategory,
   UploadMediaType,
   UploadModule,
   UploadSection,
   type Prisma,
 } from '@prisma/client';
-import PDFDocument from 'pdfkit';
-import { createWriteStream, existsSync, mkdirSync, unlinkSync } from 'fs';
-import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
+import { OrdersDocumentService } from './orders-document.service';
+import type { OrdersRequestContext } from './orders.types';
 
 type Actor = {
   id: number;
@@ -71,88 +68,17 @@ type HistoryAnalyticsTotals = {
   avgOrderItems: number;
 };
 
-type RequestLike = {
-  protocol: string;
-  get: (name: string) => string | undefined;
-};
-
-type PdfDoc = InstanceType<typeof PDFDocument>;
-
-type CommandePdfInput = {
-  filePath: string;
-  orderNumber: string;
-  supplierName: string;
-  restaurantName: string;
-  deliveryDate: string;
-  deliveryAddress: string;
-  items: Array<{
-    nameFr: string;
-    nameZh: string;
-    specification: string;
-    unit: string;
-    quantity: number;
-    unitPrice: number;
-    lineTotal: number;
-  }>;
-  totalItems: number;
-  totalAmount: number;
-};
-
 @Injectable()
 export class OrdersService {
-  private readonly logger = new Logger(OrdersService.name);
-  private readonly storageRoot =
-    process.env.STORAGE_ROOT_PATH ?? join(process.cwd(), 'uploads');
-  private readonly publicApiBaseUrl = process.env.PUBLIC_API_BASE_URL;
-  private readonly ordersDir = join(this.storageRoot, 'orders');
-  private readonly logoCandidatePaths = [
-    join(process.cwd(), 'assets', 'ZHAO', '2-01.png'),
-    join(this.storageRoot, 'assets', 'ZHAO-元素element', 'logo', '1.png'),
-  ];
-  private readonly pdfBackgroundPath = join(
-    process.cwd(),
-    'assets',
-    'ZHAO',
-    'img.png',
-  );
-  private readonly cjkFontCandidatePaths = [
-    join(
-      process.cwd(),
-      'assets',
-      'fonts',
-      'Noto_Sans_SC',
-      'static',
-      'NotoSansSC-Regular.ttf',
-    ),
-    join(process.cwd(), 'assets', 'fonts', 'NotoSansSC-Regular.ttf'),
-    join(this.storageRoot, 'assets', 'fonts', 'NotoSansSC-Regular.ttf'),
-    '/System/Library/Fonts/Hiragino Sans GB.ttc',
-    '/System/Library/Fonts/STHeiti Medium.ttc',
-  ];
-  private readonly cjkFontPath = this.cjkFontCandidatePaths.find((path) =>
-    existsSync(path),
-  );
-
-  private readonly pdfColors = {
-    primary: '#ab1e24',
-    primaryDark: '#7f1b21',
-    text: '#1f1f1f',
-    muted: '#6b6b6b',
-    border: '#e4c3c5',
-    rowAlt: '#fdf4f5',
-    white: '#ffffff',
-  };
-
-  constructor(private readonly prisma: PrismaService) {
-    if (!existsSync(this.ordersDir)) {
-      mkdirSync(this.ordersDir, { recursive: true });
-    }
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ordersDocumentService: OrdersDocumentService,
+  ) {}
 
   async createOrder(
     actor: Actor,
     payload: CreateOrderPayload,
-    req: RequestLike,
+    req: OrdersRequestContext,
   ) {
     this.ensureCanManageOrders(actor);
 
@@ -250,21 +176,23 @@ export class OrdersService {
     );
 
     const pdfItems = preparedItems.map((item) => {
-      const frRaw = this.recoverUtf8(
+      const frRaw = this.ordersDocumentService.recoverUtf8(
         item.product.designationFr ?? item.product.nomCn,
       );
       const nameFr =
-        this.sanitizeLabel(this.makeFrLabel(frRaw)) ||
-        this.sanitizeLabel(frRaw);
+        this.ordersDocumentService.sanitizeLabel(
+          this.ordersDocumentService.makeFrLabel(frRaw),
+        ) || this.ordersDocumentService.sanitizeLabel(frRaw);
 
-      const zhRaw = this.recoverUtf8(item.product.nomCn);
-      const nameZh = this.sanitizeLabel(zhRaw);
-      const specification = this.sanitizeLabel(
-        this.recoverUtf8(item.product.specification),
+      const zhRaw = this.ordersDocumentService.recoverUtf8(item.product.nomCn);
+      const nameZh = this.ordersDocumentService.sanitizeLabel(zhRaw);
+      const specification = this.ordersDocumentService.sanitizeLabel(
+        this.ordersDocumentService.recoverUtf8(item.product.specification),
       );
 
-      // Unite intentionally avoids recoverUtf8 heuristics.
-      const unit = this.sanitizeLabel(item.product.unite?.trim() || '-');
+      const unit = this.ordersDocumentService.sanitizeLabel(
+        item.product.unite?.trim() || '-',
+      );
 
       return {
         nameFr,
@@ -324,9 +252,10 @@ export class OrdersService {
           })),
         });
 
-        generatedOrderFilePath = join(this.ordersDir, orderFileName);
+        generatedOrderFilePath =
+          this.ordersDocumentService.buildOrderFilePath(orderFileName);
 
-        await this.generateCommandePdf({
+        await this.ordersDocumentService.generateCommandePdf({
           filePath: generatedOrderFilePath,
           orderNumber,
           supplierName: supplier.nom,
@@ -345,7 +274,10 @@ export class OrdersService {
         };
       });
 
-      const commandeUrl = this.buildOrderUrl(req, createdOrder.id);
+      const commandeUrl = this.ordersDocumentService.buildOrderUrl(
+        req,
+        createdOrder.id,
+      );
 
       return {
         id: createdOrder.id,
@@ -361,12 +293,12 @@ export class OrdersService {
         createdAt: createdOrder.createdAt,
       };
     } catch (error) {
-      this.deleteFileIfExists(generatedOrderFilePath);
+      this.ordersDocumentService.deleteFileIfExists(generatedOrderFilePath);
       throw error;
     }
   }
 
-  async listOrders(actor: Actor, req: RequestLike) {
+  async listOrders(actor: Actor, req: OrdersRequestContext) {
     this.ensureCanManageOrders(actor);
 
     const orders = await this.prisma.purchaseOrder.findMany({
@@ -390,7 +322,10 @@ export class OrdersService {
     });
 
     return orders.map((order) => {
-      const commandeUrl = this.buildOrderUrl(req, order.id);
+      const commandeUrl = this.ordersDocumentService.buildOrderUrl(
+        req,
+        order.id,
+      );
 
       return {
         id: order.id,
@@ -408,7 +343,7 @@ export class OrdersService {
     });
   }
 
-  async listOrderReturns(actor: Actor, req: RequestLike) {
+  async listOrderReturns(actor: Actor, req: OrdersRequestContext) {
     this.ensureCanManageOrders(actor);
 
     const returns = await this.prisma.purchaseReturn.findMany({
@@ -486,13 +421,19 @@ export class OrdersService {
       createdAt: entry.createdAt,
       items: entry.items.map((item) => ({
         quantity: item.quantity,
-        nameZh: this.sanitizeLabel(this.recoverUtf8(item.nameZh)),
-        nameFr: this.sanitizeLabel(this.recoverUtf8(item.nameFr)),
-        unit: this.sanitizeLabel(item.unit?.trim()),
+        nameZh: this.ordersDocumentService.sanitizeLabel(
+          this.ordersDocumentService.recoverUtf8(item.nameZh),
+        ),
+        nameFr: this.ordersDocumentService.sanitizeLabel(
+          this.ordersDocumentService.recoverUtf8(item.nameFr),
+        ),
+        unit: this.ordersDocumentService.sanitizeLabel(item.unit?.trim()),
         photos: item.photos.map((photo) => ({
           documentId: photo.document.id,
-          originalName: this.sanitizeLabel(photo.document.originalName),
-          fileUrl: this.buildUploadFileUrl(
+          originalName: this.ordersDocumentService.sanitizeLabel(
+            photo.document.originalName,
+          ),
+          fileUrl: this.ordersDocumentService.buildUploadFileUrl(
             req,
             photo.document.category,
             photo.document.fileName,
@@ -567,9 +508,13 @@ export class OrdersService {
           purchaseOrderItemId: item.id,
           productId: Number(item.productId),
           category: item.category,
-          nameZh: this.sanitizeLabel(this.recoverUtf8(item.nameZh)),
-          nameFr: this.sanitizeLabel(this.recoverUtf8(item.nameFr)),
-          unit: this.sanitizeLabel(item.unit?.trim()),
+          nameZh: this.ordersDocumentService.sanitizeLabel(
+            this.ordersDocumentService.recoverUtf8(item.nameZh),
+          ),
+          nameFr: this.ordersDocumentService.sanitizeLabel(
+            this.ordersDocumentService.recoverUtf8(item.nameFr),
+          ),
+          unit: this.ordersDocumentService.sanitizeLabel(item.unit?.trim()),
           orderedQuantity: item.quantity,
           returnedQuantity,
           remainingQuantity,
@@ -869,9 +814,11 @@ export class OrdersService {
       throw new ForbiddenException('Order does not belong to your restaurant');
     }
 
-    const fullPath = join(this.ordersDir, order.bonFileName);
+    const fullPath = this.ordersDocumentService.buildOrderFilePath(
+      order.bonFileName,
+    );
 
-    await this.generateCommandePdf({
+    await this.ordersDocumentService.generateCommandePdf({
       filePath: fullPath,
       orderNumber: order.number,
       supplierName: order.supplier.nom,
@@ -879,25 +826,27 @@ export class OrdersService {
       deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
       deliveryAddress: order.deliveryAddress,
       items: order.items.map((item) => {
-        const frRaw = this.recoverUtf8(
+        const frRaw = this.ordersDocumentService.recoverUtf8(
           item.product.designationFr ?? item.nameZh,
         );
         const nameFr =
-          this.sanitizeLabel(this.makeFrLabel(frRaw)) ||
-          this.sanitizeLabel(frRaw);
+          this.ordersDocumentService.sanitizeLabel(
+            this.ordersDocumentService.makeFrLabel(frRaw),
+          ) || this.ordersDocumentService.sanitizeLabel(frRaw);
 
-        const nameZh = this.sanitizeLabel(
-          this.resolveZhName(item.nameZh, item.product.nomCn),
+        const nameZh = this.ordersDocumentService.sanitizeLabel(
+          this.ordersDocumentService.resolveZhName(
+            item.nameZh,
+            item.product.nomCn,
+          ),
         );
-        const specification = this.sanitizeLabel(
-          this.recoverUtf8(item.product.specification),
+        const specification = this.ordersDocumentService.sanitizeLabel(
+          this.ordersDocumentService.recoverUtf8(item.product.specification),
         );
 
-        // unité: priorité à product.unite puis snapshot item.unit
-        // et surtout: pas de recoverUtf8 ici
         const unitCandidate =
           (item.product.unite ?? '').trim() || (item.unit ?? '').trim() || '-';
-        const unit = this.sanitizeLabel(unitCandidate);
+        const unit = this.ordersDocumentService.sanitizeLabel(unitCandidate);
 
         return {
           nameFr,
@@ -913,7 +862,7 @@ export class OrdersService {
       totalAmount: Number(order.totalAmount),
     });
 
-    if (!existsSync(fullPath)) {
+    if (!this.ordersDocumentService.hasOrderFile(fullPath)) {
       throw new NotFoundException('Order file not found');
     }
 
@@ -1017,10 +966,12 @@ export class OrdersService {
           supplierId: itemSupplierId,
           supplierName: item.purchaseOrder.supplier.nom,
           month,
-          nameFr: this.sanitizeLabel(
-            this.recoverUtf8(item.product.designationFr),
+          nameFr: this.ordersDocumentService.sanitizeLabel(
+            this.ordersDocumentService.recoverUtf8(item.product.designationFr),
           ),
-          nameZh: this.sanitizeLabel(this.recoverUtf8(item.product.nomCn)),
+          nameZh: this.ordersDocumentService.sanitizeLabel(
+            this.ordersDocumentService.recoverUtf8(item.product.nomCn),
+          ),
           totalQuantity: 0,
           orderCount: 0,
         };
@@ -1068,10 +1019,12 @@ export class OrdersService {
         supplierId,
         supplierName: item.purchaseOrder.supplier.nom,
         month,
-        nameFr: this.sanitizeLabel(
-          this.recoverUtf8(item.product.designationFr),
+        nameFr: this.ordersDocumentService.sanitizeLabel(
+          this.ordersDocumentService.recoverUtf8(item.product.designationFr),
         ),
-        nameZh: this.sanitizeLabel(this.recoverUtf8(item.product.nomCn)),
+        nameZh: this.ordersDocumentService.sanitizeLabel(
+          this.ordersDocumentService.recoverUtf8(item.product.nomCn),
+        ),
         totalQuantity: 0,
         orderCount: 0,
       };
@@ -1279,10 +1232,12 @@ export class OrdersService {
       const entry = topProductsMap.get(productId) ?? {
         productId,
         totalQuantity: 0,
-        nameFr: this.sanitizeLabel(
-          this.recoverUtf8(item.product.designationFr),
+        nameFr: this.ordersDocumentService.sanitizeLabel(
+          this.ordersDocumentService.recoverUtf8(item.product.designationFr),
         ),
-        nameZh: this.sanitizeLabel(this.recoverUtf8(item.product.nomCn)),
+        nameZh: this.ordersDocumentService.sanitizeLabel(
+          this.ordersDocumentService.recoverUtf8(item.product.nomCn),
+        ),
       };
 
       entry.totalQuantity += item.quantity;
@@ -1402,7 +1357,9 @@ export class OrdersService {
       where: { id: orderId },
     });
 
-    this.deleteFileIfExists(join(this.ordersDir, order.bonFileName));
+    this.ordersDocumentService.deleteFileIfExists(
+      this.ordersDocumentService.buildOrderFilePath(order.bonFileName),
+    );
 
     return {
       success: true,
@@ -1667,508 +1624,5 @@ export class OrdersService {
     const day = String(createdAt.getDate()).padStart(2, '0');
     const paddedId = String(orderId).padStart(4, '0');
     return `PO-${year}${month}${day}-${paddedId}`;
-  }
-
-  private buildApiUrl(req: RequestLike, path: string) {
-    const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(
-      /^\/+|\/+$/g,
-      '',
-    );
-
-    if (this.publicApiBaseUrl) {
-      const normalizedBaseUrl = this.publicApiBaseUrl.replace(/\/$/, '');
-      const normalizedPrefixEscaped = normalizedPrefix.replace(
-        /[.*+?^${}()|[\]\\]/g,
-        '\\$&',
-      );
-      const hasPrefixAlready =
-        normalizedPrefix.length > 0 &&
-        new RegExp(`/${normalizedPrefixEscaped}$`).test(normalizedBaseUrl);
-
-      const baseUrlWithPrefix =
-        normalizedPrefix.length > 0 && !hasPrefixAlready
-          ? `${normalizedBaseUrl}/${normalizedPrefix}`
-          : normalizedBaseUrl;
-
-      return `${baseUrlWithPrefix}${path}`;
-    }
-
-    const normalizedPath = path.replace(/^\/+/, '');
-    const prefixedPath = normalizedPrefix
-      ? `/${normalizedPrefix}/${normalizedPath}`
-      : `/${normalizedPath}`;
-
-    const host = req.get('host');
-    return `${req.protocol}://${host}${prefixedPath}`;
-  }
-
-  private buildOrderUrl(req: RequestLike, orderId: number) {
-    return this.buildApiUrl(req, `/orders/${orderId}/commande`);
-  }
-
-  private buildUploadFileUrl(
-    req: RequestLike,
-    category: UploadCategory,
-    fileName: string,
-  ) {
-    return this.buildApiUrl(req, `/uploads/${category}/${fileName}`);
-  }
-
-  private deleteFileIfExists(filePath: string | null) {
-    if (!filePath || !existsSync(filePath)) {
-      return;
-    }
-
-    try {
-      unlinkSync(filePath);
-    } catch (error) {
-      this.logger.warn(
-        `Failed to delete order file during cleanup: ${filePath}`,
-        error instanceof Error ? error.stack : undefined,
-      );
-    }
-  }
-
-  private async generateCommandePdf(input: CommandePdfInput) {
-    await new Promise<void>((resolvePromise, rejectPromise) => {
-      const doc = new PDFDocument({ margin: 36 });
-      const stream = createWriteStream(input.filePath);
-
-      doc.pipe(stream);
-
-      this.drawBackground(doc);
-      this.drawHeader(doc, input);
-      this.drawOrderMeta(doc, input);
-      this.drawItemsTable(doc, input);
-      this.drawTotals(doc, input);
-      this.drawFooter(doc);
-
-      doc.end();
-
-      stream.on('finish', () => resolvePromise());
-      stream.on('error', (error) => rejectPromise(error));
-    });
-  }
-
-  private drawHeader(doc: PdfDoc, input: CommandePdfInput) {
-    const pageWidth = doc.page.width;
-    const left = doc.page.margins.left;
-    const right = pageWidth - doc.page.margins.right;
-    const titleY = doc.y;
-
-    doc
-      .rect(left, titleY, right - left, 46)
-      .fillColor(this.pdfColors.primary)
-      .fill();
-
-    doc
-      .fillColor(this.pdfColors.white)
-      .fontSize(18)
-      .text('Commande', left, titleY + 13, {
-        width: right - left,
-        align: 'center',
-      });
-
-    const logoPath = this.logoCandidatePaths.find((path) => existsSync(path));
-    if (logoPath) {
-      doc.image(logoPath, left + 8, titleY + 6, {
-        fit: [80, 34],
-      });
-    }
-
-    doc
-      .fontSize(10)
-      .text(`Numero: ${input.orderNumber}`, right - 170, titleY + 6, {
-        width: 160,
-        align: 'right',
-      })
-      .text(
-        `Emission: ${new Date().toISOString().slice(0, 10)}`,
-        right - 170,
-        titleY + 20,
-        {
-          width: 160,
-          align: 'right',
-        },
-      );
-
-    doc.moveDown(2.8);
-    doc.fillColor(this.pdfColors.text);
-  }
-
-  private drawOrderMeta(doc: PdfDoc, input: CommandePdfInput) {
-    const left = doc.page.margins.left;
-    const contentWidth =
-      doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const blockY = doc.y;
-
-    doc
-      .roundedRect(left, blockY, contentWidth, 74, 8)
-      .lineWidth(1)
-      .strokeColor(this.pdfColors.border)
-      .stroke();
-
-    doc
-      .fillColor(this.pdfColors.primaryDark)
-      .fontSize(11)
-      .text(`Fournisseur: ${input.supplierName}`, left + 12, blockY + 10)
-      .text(`Etablissement: ${input.restaurantName}`, left + 12, blockY + 27)
-      .text(`Date de livraison: ${input.deliveryDate}`, left + 12, blockY + 44);
-
-    doc
-      .fillColor(this.pdfColors.text)
-      .fontSize(10)
-      .text(
-        `Adresse: ${input.deliveryAddress}`,
-        left + contentWidth / 2,
-        blockY + 27,
-        {
-          width: contentWidth / 2 - 12,
-        },
-      );
-
-    doc.y = blockY + 86;
-  }
-
-  private drawItemsTable(doc: PdfDoc, input: CommandePdfInput) {
-    const left = doc.page.margins.left;
-    const contentWidth =
-      doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const colProduct = Math.floor(contentWidth * 0.38);
-    const colSpecification = Math.floor(contentWidth * 0.18);
-    const colOrderUnit = Math.floor(contentWidth * 0.12);
-    const colQty = Math.floor(contentWidth * 0.1);
-    const colUnitPrice =
-      contentWidth - colProduct - colSpecification - colOrderUnit - colQty;
-    const rowHeight = 38;
-
-    const drawHeaderRow = () => {
-      const y = doc.y;
-      doc
-        .rect(left, y, contentWidth, rowHeight)
-        .fillColor(this.pdfColors.primary)
-        .fill();
-      doc
-        .fillColor(this.pdfColors.white)
-        .fontSize(10)
-        .text('Produit FR / ZH', left + 8, y + 7, { width: colProduct - 12 })
-        .text('Specification', left + colProduct + 4, y + 7, {
-          width: colSpecification - 8,
-          align: 'center',
-        })
-        .text('Unite', left + colProduct + colSpecification + 4, y + 7, {
-          width: colOrderUnit - 8,
-          align: 'center',
-        })
-        .text(
-          'Qte',
-          left + colProduct + colSpecification + colOrderUnit + 4,
-          y + 7,
-          {
-            width: colQty - 8,
-            align: 'center',
-          },
-        )
-        .text(
-          'PU HT',
-          left + colProduct + colSpecification + colOrderUnit + colQty + 4,
-          y + 7,
-          {
-            width: colUnitPrice - 8,
-            align: 'right',
-          },
-        );
-      doc.y = y + rowHeight;
-    };
-
-    const ensureSpace = (requiredHeight: number) => {
-      const bottomLimit = doc.page.height - doc.page.margins.bottom - 90;
-      if (doc.y + requiredHeight > bottomLimit) {
-        doc.addPage();
-        this.drawBackground(doc);
-        drawHeaderRow();
-      }
-    };
-
-    drawHeaderRow();
-
-    input.items.forEach((item, index) => {
-      ensureSpace(rowHeight);
-      const y = doc.y;
-
-      const productNameFr = this.truncateText(
-        this.sanitizeLabel(item.nameFr),
-        44,
-      );
-      const productNameZh = this.truncateText(
-        this.sanitizeLabel(item.nameZh),
-        44,
-      );
-      const productSpecification = this.truncateText(
-        this.sanitizeLabel(item.specification),
-        26,
-      );
-      const orderUnit = this.sanitizeLabel(item.unit?.trim() || '-');
-
-      if (index % 2 === 1) {
-        doc
-          .rect(left, y, contentWidth, rowHeight)
-          .fillColor(this.pdfColors.rowAlt)
-          .fill();
-      }
-
-      // FR
-      doc
-        .fillColor(this.pdfColors.text)
-        .font('Helvetica')
-        .fontSize(10)
-        .text(productNameFr, left + 8, y + 6, {
-          width: colProduct - 12,
-        });
-
-      // ZH (police CJK)
-      if (this.cjkFontPath) {
-        doc.font(this.cjkFontPath);
-      }
-      doc
-        .fontSize(9)
-        .fillColor(this.pdfColors.muted)
-        .text(productNameZh, left + 8, y + 20, {
-          width: colProduct - 12,
-        });
-
-      if (this.cjkFontPath && this.containsCjk(productSpecification)) {
-        doc.font(this.cjkFontPath);
-      } else {
-        doc.font('Helvetica');
-      }
-
-      doc
-        .fillColor(this.pdfColors.text)
-        .fontSize(9)
-        .text(productSpecification, left + colProduct + 4, y + 13, {
-          width: colSpecification - 8,
-          align: 'center',
-        });
-
-      // Unité: police selon contenu (sinon "箱" ne s'affiche pas)
-      if (this.cjkFontPath && this.containsCjk(orderUnit)) {
-        doc.font(this.cjkFontPath);
-      } else {
-        doc.font('Helvetica');
-      }
-
-      doc
-        .fillColor(this.pdfColors.text)
-        .fontSize(10)
-        .text(orderUnit, left + colProduct + colSpecification + 4, y + 13, {
-          width: colOrderUnit - 8,
-          align: 'center',
-        });
-
-      // Le reste en Helvetica
-      doc
-        .font('Helvetica')
-        .fillColor(this.pdfColors.text)
-        .fontSize(10)
-        .text(
-          String(item.quantity),
-          left + colProduct + colSpecification + colOrderUnit + 4,
-          y + 13,
-          {
-            width: colQty - 8,
-            align: 'center',
-          },
-        )
-        .text(
-          item.unitPrice.toFixed(2),
-          left + colProduct + colSpecification + colOrderUnit + colQty + 4,
-          y + 13,
-          {
-            width: colUnitPrice - 8,
-            align: 'right',
-          },
-        );
-
-      doc
-        .moveTo(left, y + rowHeight)
-        .lineTo(left + contentWidth, y + rowHeight)
-        .strokeColor(this.pdfColors.border)
-        .lineWidth(0.6)
-        .stroke();
-
-      doc.y = y + rowHeight;
-    });
-
-    doc.moveDown(0.8);
-  }
-
-  private drawTotals(doc: PdfDoc, input: CommandePdfInput) {
-    const cardWidth = 220;
-    const x = doc.page.width - doc.page.margins.right - cardWidth;
-    const y = doc.y;
-
-    doc
-      .roundedRect(x, y, cardWidth, 36, 8)
-      .lineWidth(1)
-      .strokeColor(this.pdfColors.primary)
-      .stroke();
-
-    doc
-      .fillColor(this.pdfColors.primaryDark)
-      .fontSize(11)
-      .text(`Articles total: ${input.totalItems}`, x + 10, y + 12, {
-        width: cardWidth - 20,
-      });
-
-    doc.y = y + 50;
-  }
-
-  private drawFooter(doc: PdfDoc) {
-    const footerY = doc.page.height - doc.page.margins.bottom - 20;
-    doc
-      .fontSize(9)
-      .fillColor(this.pdfColors.muted)
-      .text(
-        'Document genere automatiquement par la plateforme.',
-        doc.page.margins.left,
-        footerY,
-        {
-          width:
-            doc.page.width - doc.page.margins.left - doc.page.margins.right,
-          align: 'center',
-        },
-      );
-  }
-
-  private truncateText(value: string, maxLength: number) {
-    if (value.length <= maxLength) {
-      return value;
-    }
-    return `${value.slice(0, maxLength - 1)}...`;
-  }
-
-  private drawBackground(doc: PdfDoc) {
-    if (!existsSync(this.pdfBackgroundPath)) {
-      return;
-    }
-
-    doc.save();
-    doc.opacity(0.12);
-    doc.image(this.pdfBackgroundPath, 0, 0, {
-      width: doc.page.width,
-      height: doc.page.height,
-    });
-    doc.restore();
-  }
-
-  // ✅ Nouveau: fabrique un vrai libellé FR depuis un champ parfois "mixé"
-  private makeFrLabel(value: string) {
-    const withoutCjk = value.replace(/[\u3400-\u9FFF]/g, '');
-    // enlève les tokens d'unité/poids en fin (ex: "箱*8KG", "*8KG", "8KG", "10L", etc.)
-    const withoutTrailingPack = withoutCjk.replace(
-      /(\s*[xX×]?\s*\*?\s*\d+(\.\d+)?\s*(KG|G|L|ML|PCS|PC|CTN|BOT|BIDON|SAC))\s*$/i,
-      '',
-    );
-    return withoutTrailingPack.replace(/\s+/g, ' ').trim();
-  }
-
-  // ✅ Corrigé: ne tente plus utf16 sur de l'ASCII
-  private recoverUtf8(value: string | null | undefined) {
-    const safeValue = (value ?? '').trim();
-    if (!safeValue) return '';
-
-    if (this.containsCjk(safeValue)) return safeValue;
-
-    // ASCII pur => on ne touche pas
-    if (!/[\u0080-\u00FF]/.test(safeValue)) {
-      return safeValue;
-    }
-
-    const binaryBuffer = Buffer.from(safeValue, 'latin1');
-
-    const decodedUtf8 = binaryBuffer.toString('utf8').trim();
-    if (this.containsCjk(decodedUtf8)) return decodedUtf8;
-
-    const decodedUtf16Be = this.decodeUtf16Be(binaryBuffer).trim();
-    if (
-      this.containsCjk(decodedUtf16Be) &&
-      !this.hasControlChars(decodedUtf16Be)
-    ) {
-      return decodedUtf16Be;
-    }
-
-    const decodedUtf16Le = binaryBuffer.toString('utf16le').trim();
-    if (
-      this.containsCjk(decodedUtf16Le) &&
-      !this.hasControlChars(decodedUtf16Le)
-    ) {
-      return decodedUtf16Le;
-    }
-
-    return safeValue;
-  }
-
-  private resolveZhName(
-    snapshotZh: string | null | undefined,
-    productZh: string | null | undefined,
-  ) {
-    const snapshot = this.recoverUtf8(snapshotZh);
-    if (this.containsCjk(snapshot)) {
-      return snapshot;
-    }
-
-    const current = this.recoverUtf8(productZh);
-    if (this.containsCjk(current)) {
-      return current;
-    }
-
-    return snapshot || current || '-';
-  }
-
-  private sanitizeLabel(value: string | null | undefined) {
-    // ici on garde recoverUtf8 pour les champs "texte", mais pas utilisé pour unit
-    const safeValue = this.recoverUtf8(value);
-    if (!safeValue) return '-';
-
-    return this.replaceControlCharsWithSpaces(safeValue)
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  private decodeUtf16Be(value: Buffer) {
-    if (value.length < 2) {
-      return '';
-    }
-
-    const evenLength = value.length - (value.length % 2);
-    const swapped = Buffer.allocUnsafe(evenLength);
-
-    for (let index = 0; index < evenLength; index += 2) {
-      swapped[index] = value[index + 1];
-      swapped[index + 1] = value[index];
-    }
-
-    return swapped.toString('utf16le');
-  }
-
-  private hasControlChars(value: string) {
-    return Array.from(value).some((character) =>
-      this.isAsciiControlCharacter(character.codePointAt(0)),
-    );
-  }
-
-  private containsCjk(value: string) {
-    return /[\u3400-\u9FFF]/.test(value);
-  }
-
-  private replaceControlCharsWithSpaces(value: string) {
-    return Array.from(value, (character) =>
-      this.isAsciiControlCharacter(character.codePointAt(0)) ? ' ' : character,
-    ).join('');
-  }
-
-  private isAsciiControlCharacter(codePoint: number | undefined) {
-    return codePoint !== undefined && (codePoint <= 0x1f || codePoint === 0x7f);
   }
 }

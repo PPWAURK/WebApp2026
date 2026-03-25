@@ -1,13 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
-import { existsSync, mkdirSync, unlinkSync } from 'fs';
+import { UploadCategory } from '@prisma/client';
+import { OrdersDocumentService } from './orders-document.service';
 import { OrdersService } from './orders.service';
-
-jest.mock('fs', () => ({
-  createWriteStream: jest.fn(),
-  existsSync: jest.fn(),
-  mkdirSync: jest.fn(),
-  unlinkSync: jest.fn(),
-}));
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -26,10 +20,21 @@ describe('OrdersService', () => {
     };
     purchaseReturnItemPhoto: { createMany: jest.Mock };
   };
+  let ordersDocumentService: {
+    buildOrderFilePath: jest.Mock;
+    generateCommandePdf: jest.Mock;
+    buildOrderUrl: jest.Mock;
+    buildUploadFileUrl: jest.Mock;
+    deleteFileIfExists: jest.Mock;
+    recoverUtf8: jest.Mock;
+    sanitizeLabel: jest.Mock;
+    makeFrLabel: jest.Mock;
+    resolveZhName: jest.Mock;
+    hasOrderFile: jest.Mock;
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (existsSync as jest.Mock).mockReturnValue(true);
 
     prisma = {
       $transaction: jest.fn(),
@@ -63,7 +68,45 @@ describe('OrdersService', () => {
       },
     };
 
-    service = new OrdersService(prisma as never);
+    ordersDocumentService = {
+      buildOrderFilePath: jest.fn(
+        (fileName: string) => `/tmp/orders/${fileName}`,
+      ),
+      generateCommandePdf: jest.fn().mockResolvedValue(undefined),
+      buildOrderUrl: jest.fn(
+        (
+          req: { protocol: string; get: (name: string) => string | undefined },
+          orderId: number,
+        ) => `${req.protocol}://${req.get('host')}/orders/${orderId}/commande`,
+      ),
+      buildUploadFileUrl: jest.fn(
+        (
+          req: { protocol: string; get: (name: string) => string | undefined },
+          category: UploadCategory,
+          fileName: string,
+        ) =>
+          `${req.protocol}://${req.get('host')}/uploads/${category}/${fileName}`,
+      ),
+      deleteFileIfExists: jest.fn(),
+      recoverUtf8: jest.fn((value: string | null | undefined) => value ?? ''),
+      sanitizeLabel: jest.fn((value: string | null | undefined) => {
+        const safeValue = (value ?? '').trim();
+        return safeValue || '-';
+      }),
+      makeFrLabel: jest.fn((value: string) => value),
+      resolveZhName: jest.fn(
+        (
+          snapshotZh: string | null | undefined,
+          productZh: string | null | undefined,
+        ) => snapshotZh ?? productZh ?? '-',
+      ),
+      hasOrderFile: jest.fn().mockReturnValue(true),
+    };
+
+    service = new OrdersService(
+      prisma as never,
+      ordersDocumentService as unknown as OrdersDocumentService,
+    );
   });
 
   it('rolls back order creation when PDF generation fails and cleans up the file', async () => {
@@ -104,9 +147,9 @@ describe('OrdersService', () => {
       address: '12 Rue Exemple',
     });
 
-    jest
-      .spyOn(service as never, 'generateCommandePdf')
-      .mockRejectedValue(new Error('PDF failed'));
+    ordersDocumentService.generateCommandePdf.mockRejectedValue(
+      new Error('PDF failed'),
+    );
 
     await expect(
       service.createOrder(
@@ -130,10 +173,9 @@ describe('OrdersService', () => {
     expect(tx.purchaseOrder.create).toHaveBeenCalledTimes(1);
     expect(tx.purchaseOrder.update).toHaveBeenCalledTimes(1);
     expect(tx.purchaseOrderItem.createMany).toHaveBeenCalledTimes(1);
-    expect(unlinkSync).toHaveBeenCalledWith(
+    expect(ordersDocumentService.deleteFileIfExists).toHaveBeenCalledWith(
       expect.stringContaining('commande-'),
     );
-    expect(mkdirSync).not.toHaveBeenCalled();
   });
 
   it('rejects actors without restaurant assignment before opening a transaction', async () => {
