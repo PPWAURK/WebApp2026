@@ -1,4 +1,5 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { COLORS } from '../../constants/colors';
 
 type ConfirmDialogProps = {
   visible: boolean;
@@ -81,18 +82,18 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e3c0c3',
-    backgroundColor: '#fffdfd',
+    borderColor: COLORS.borderSoft,
+    backgroundColor: COLORS.surfaceCard,
     padding: 14,
     gap: 10,
   },
   title: {
-    color: '#7f1b21',
+    color: COLORS.brandPrimaryDark,
     fontFamily: 'Manrope_700Bold',
     fontSize: 16,
   },
   message: {
-    color: '#8b5a5e',
+    color: COLORS.textMutedSoft,
     fontFamily: 'Manrope_400Regular',
     fontSize: 13,
     lineHeight: 18,
@@ -105,8 +106,8 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#dfb0b2',
-    backgroundColor: '#fffafa',
+    borderColor: COLORS.borderSoftStrong,
+    backgroundColor: COLORS.surfaceSubtle,
     paddingVertical: 10,
     alignItems: 'center',
   },
@@ -118,15 +119,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmButtonPrimary: {
-    borderColor: '#d39a9d',
-    backgroundColor: '#f9eaeb',
+    borderColor: COLORS.borderPrimarySoft,
+    backgroundColor: COLORS.surfacePrimarySoft,
   },
   confirmButtonDanger: {
-    borderColor: '#d88084',
-    backgroundColor: '#fff1f2',
+    borderColor: COLORS.borderDangerSoft,
+    backgroundColor: COLORS.surfaceDangerSoft,
   },
   cancelText: {
-    color: '#7f1b21',
+    color: COLORS.brandPrimaryDark,
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
   },
@@ -135,9 +136,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   confirmTextPrimary: {
-    color: '#7f1b21',
+    color: COLORS.brandPrimaryDark,
   },
   confirmTextDanger: {
-    color: '#ab1e24',
+    color: COLORS.brandPrimary,
   },
 });
