@@ -65,10 +65,15 @@ export function DashboardNewsFeed({
   selectedNewsTag,
   text,
 }: DashboardNewsFeedProps) {
+  const effectiveNewsFeed = Array.isArray(newsFeed) ? newsFeed : [];
+  const effectiveNewsFeedMonths = Array.isArray(newsFeedMonths)
+    ? newsFeedMonths
+    : [];
+  const effectiveNewsFeedTags = Array.isArray(newsFeedTags) ? newsFeedTags : [];
   const unreadCount = isAdmin
     ? 0
-    : newsFeed.filter((item) => !isNewsReadForViewer(item)).length;
-  const totalCount = newsFeed.length;
+    : effectiveNewsFeed.filter((item) => !isNewsReadForViewer(item)).length;
+  const totalCount = effectiveNewsFeed.length;
   const laneConfigs: Array<{
     key: NewsLane;
     label: string;
@@ -99,7 +104,7 @@ export function DashboardNewsFeed({
     },
   ];
 
-  const lanePosts = newsFeed
+  const lanePosts = effectiveNewsFeed
     .slice(0, 24)
     .reduce<Record<NewsLane, NewsPostItem[]>>(
       (accumulator, post) => {
@@ -189,7 +194,7 @@ export function DashboardNewsFeed({
               </Text>
             </Pressable>
 
-            {newsFeedMonths.map((month) => {
+            {effectiveNewsFeedMonths.map((month) => {
               const isActive = selectedNewsMonth === month;
               return (
                 <Pressable
@@ -247,7 +252,7 @@ export function DashboardNewsFeed({
               </Text>
             </Pressable>
 
-            {newsFeedTags.map((tag) => {
+            {effectiveNewsFeedTags.map((tag) => {
               const isActive =
                 normalizeNewsTagKey(selectedNewsTag) ===
                 normalizeNewsTagKey(tag);
@@ -280,15 +285,17 @@ export function DashboardNewsFeed({
           {text.adminTraining.loading}
         </Text>
       ) : null}
-      {newsFeedError ? <Text style={styles.errorText}>{newsFeedError}</Text> : null}
+      {newsFeedError ? (
+        <Text style={styles.errorText}>{newsFeedError}</Text>
+      ) : null}
 
-      {!newsFeedLoading && !newsFeedError && newsFeed.length === 0 ? (
+      {!newsFeedLoading && !newsFeedError && effectiveNewsFeed.length === 0 ? (
         <Text style={styles.panelSubtitleOnDark}>
           {text.dashboard.newsFeedEmpty}
         </Text>
       ) : null}
 
-      {!newsFeedLoading && !newsFeedError && newsFeed.length > 0 ? (
+      {!newsFeedLoading && !newsFeedError && effectiveNewsFeed.length > 0 ? (
         <View style={styles.newsBoard}>
           {laneConfigs.map((laneConfig) => (
             <View

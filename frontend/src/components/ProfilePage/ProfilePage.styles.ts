@@ -1,5 +1,8 @@
 import { StyleSheet } from 'react-native';
 
+const CARD_BORDER = 'rgba(142, 34, 40, 0.18)';
+const CARD_BORDER_SOFT = 'rgba(171, 30, 36, 0.14)';
+
 export const styles = StyleSheet.create({
   pageStack: {
     gap: 18,
@@ -9,7 +12,7 @@ export const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 22,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.12)',
+    borderColor: CARD_BORDER,
     gap: 18,
   },
   heroCardWide: {
@@ -102,7 +105,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.1)',
+    borderColor: CARD_BORDER,
     backgroundColor: '#ffffff',
     padding: 14,
   },
@@ -150,7 +153,7 @@ export const styles = StyleSheet.create({
   panel: {
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.12)',
+    borderColor: CARD_BORDER,
     backgroundColor: 'rgba(255, 251, 247, 0.94)',
     padding: 20,
     gap: 16,
@@ -238,7 +241,7 @@ export const styles = StyleSheet.create({
   infoNotice: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.1)',
+    borderColor: CARD_BORDER_SOFT,
     backgroundColor: '#ffffff',
     padding: 14,
     gap: 6,
@@ -270,7 +273,7 @@ export const styles = StyleSheet.create({
     gap: 12,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: CARD_BORDER_SOFT,
     backgroundColor: '#ffffff',
     padding: 14,
   },
@@ -318,7 +321,7 @@ export const styles = StyleSheet.create({
   emptyState: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: CARD_BORDER_SOFT,
     backgroundColor: '#ffffff',
     padding: 18,
     alignItems: 'center',

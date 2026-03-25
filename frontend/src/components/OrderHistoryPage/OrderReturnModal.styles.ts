@@ -271,7 +271,7 @@ export const styles = StyleSheet.create({
   },
   photoPreviewImage: {
     width: '100%',
-    height: 108,
+    height: 140,
     backgroundColor: PANEL_SOFT,
   },
   photoPreviewFooter: {

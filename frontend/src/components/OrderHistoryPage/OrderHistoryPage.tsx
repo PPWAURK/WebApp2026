@@ -12,8 +12,10 @@ import type { AppText } from '../../locales/translations';
 import {
   fetchOrderHistoryAnalytics,
   type OrderHistoryAnalytics,
+  type OrderReturnSummary,
   type OrderSummary,
 } from '../../services/ordersApi';
+import { ConfirmDialog } from '../ConfirmDialog';
 import { OrderReturnModal } from './OrderReturnModal';
 import { styles } from './OrderHistoryPage.styles';
 import { useOrderReturnFlow } from './useOrderReturnFlow';
@@ -22,6 +24,7 @@ type OrderHistoryPageProps = {
   text: AppText;
   accessToken: string;
   orders: OrderSummary[];
+  orderReturns: OrderReturnSummary[];
   isLoading: boolean;
   deletingOrderId: number | null;
   onRefresh: () => void;
@@ -73,6 +76,21 @@ function formatAverage(value: number) {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
 
+function formatReturnTimestamp(value: string) {
+  return value.replace('T', ' ').slice(0, 16);
+}
+
+function buildReturnProductsLabel(entry: OrderReturnSummary) {
+  const label = entry.items
+    .map((item) => {
+      const productLabel = item.nameFr.trim() || item.nameZh.trim() || '-';
+      return `${productLabel} x${item.quantity}`;
+    })
+    .join(' / ');
+
+  return label || '-';
+}
+
 function getPeriodLabel(text: AppText, period: PeriodKey) {
   const option = PERIODS.find((entry) => entry.key === period);
   return option ? text.orders[option.textKey] : text.orders.periodAll;
@@ -82,6 +100,7 @@ export function OrderHistoryPage({
   text,
   accessToken,
   orders,
+  orderReturns,
   isLoading,
   deletingOrderId,
   onRefresh,
@@ -257,6 +276,18 @@ export function OrderHistoryPage({
       (left, right) => toDateTime(right[0]) - toDateTime(left[0]),
     );
   }, [filteredSortedOrders]);
+
+  const returnsByOrderId = useMemo(() => {
+    const map = new Map<number, OrderReturnSummary[]>();
+
+    for (const orderReturn of orderReturns) {
+      const existing = map.get(orderReturn.orderId) ?? [];
+      existing.push(orderReturn);
+      map.set(orderReturn.orderId, existing);
+    }
+
+    return map;
+  }, [orderReturns]);
 
   useEffect(() => {
     if (ordersByDate.length === 0) {
@@ -865,8 +896,12 @@ export function OrderHistoryPage({
 
                     {isOpen ? (
                       <View style={styles.ordersGrid}>
-                        {dateOrders.map((order) => (
-                          <View key={order.id} style={styles.orderCard}>
+                        {dateOrders.map((order) => {
+                          const returnsForOrder =
+                            returnsByOrderId.get(order.id) ?? [];
+
+                          return (
+                            <View key={order.id} style={styles.orderCard}>
                             <View style={styles.orderCardHeader}>
                               <View style={styles.orderCardCopy}>
                                 <Text style={styles.orderNumber}>
@@ -918,6 +953,90 @@ export function OrderHistoryPage({
                                 </Text>
                               </View>
                             </View>
+
+                            {returnsForOrder.length > 0 ? (
+                              <View style={styles.returnHistorySection}>
+                                <View style={styles.returnHistoryHeader}>
+                                  <Text style={styles.returnHistoryTitle}>
+                                    {text.orders.returnHistorySectionTitle}
+                                  </Text>
+                                  <View style={styles.returnHistoryCountPill}>
+                                    <Text
+                                      style={styles.returnHistoryCountText}
+                                    >
+                                      {returnsForOrder.length}
+                                    </Text>
+                                  </View>
+                                </View>
+
+                                {returnsForOrder.map((orderReturn) => (
+                                  <View
+                                    key={`order-return-${orderReturn.id}`}
+                                    style={styles.returnHistoryCard}
+                                  >
+                                    <View style={styles.returnHistoryMetaRow}>
+                                      <Text style={styles.returnHistoryMeta}>
+                                        {formatReturnTimestamp(
+                                          orderReturn.createdAt,
+                                        )}
+                                      </Text>
+                                      <View
+                                        style={styles.returnHistoryItemsPill}
+                                      >
+                                        <Text
+                                          style={
+                                            styles.returnHistoryItemsPillText
+                                          }
+                                        >
+                                          {orderReturn.totalItems}
+                                        </Text>
+                                      </View>
+                                    </View>
+
+                                    <View style={styles.returnHistoryField}>
+                                      <Text
+                                        style={styles.returnHistoryFieldLabel}
+                                      >
+                                        {text.orders.returnReasonLabel}
+                                      </Text>
+                                      <Text
+                                        style={styles.returnHistoryFieldValue}
+                                      >
+                                        {orderReturn.reason}
+                                      </Text>
+                                    </View>
+
+                                    <View style={styles.returnHistoryField}>
+                                      <Text
+                                        style={styles.returnHistoryFieldLabel}
+                                      >
+                                        {text.orders.returnHistoryProductsLabel}
+                                      </Text>
+                                      <Text
+                                        style={styles.returnHistoryFieldValue}
+                                      >
+                                        {buildReturnProductsLabel(orderReturn)}
+                                      </Text>
+                                    </View>
+
+                                    {orderReturn.notes ? (
+                                      <View style={styles.returnHistoryField}>
+                                        <Text
+                                          style={styles.returnHistoryFieldLabel}
+                                        >
+                                          {text.orders.returnNotesLabel}
+                                        </Text>
+                                        <Text
+                                          style={styles.returnHistoryFieldValue}
+                                        >
+                                          {orderReturn.notes}
+                                        </Text>
+                                      </View>
+                                    ) : null}
+                                  </View>
+                                ))}
+                              </View>
+                            ) : null}
 
                             <View style={styles.orderActionsRow}>
                               <Pressable
@@ -982,8 +1101,9 @@ export function OrderHistoryPage({
                                 </Text>
                               </Pressable>
                             </View>
-                          </View>
-                        ))}
+                            </View>
+                          );
+                        })}
                       </View>
                     ) : null}
                   </View>
@@ -1001,6 +1121,17 @@ export function OrderHistoryPage({
         submitting={orderReturnFlow.submittingReturn}
         text={text}
         visible={orderReturnFlow.returnModalVisible}
+      />
+
+      <ConfirmDialog
+        visible={orderReturnFlow.successDialogVisible}
+        title={text.orders.returnSuccessTitle}
+        message={text.orders.returnSuccessMessage}
+        cancelLabel={text.orders.returnCancelButton}
+        confirmLabel={text.orders.returnCancelButton}
+        singleAction
+        onCancel={orderReturnFlow.closeSuccessDialog}
+        onConfirm={orderReturnFlow.closeSuccessDialog}
       />
     </View>
   );

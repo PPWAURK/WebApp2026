@@ -7,6 +7,7 @@ type ConfirmDialogProps = {
   cancelLabel: string;
   confirmLabel: string;
   destructive?: boolean;
+  singleAction?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 };
@@ -18,6 +19,7 @@ export function ConfirmDialog({
   cancelLabel,
   confirmLabel,
   destructive,
+  singleAction,
   onCancel,
   onConfirm,
 }: ConfirmDialogProps) {
@@ -26,7 +28,7 @@ export function ConfirmDialog({
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onCancel}
+      onRequestClose={singleAction ? onConfirm : onCancel}
     >
       <View style={styles.backdrop}>
         <View style={styles.card}>
@@ -34,20 +36,26 @@ export function ConfirmDialog({
           <Text style={styles.message}>{message}</Text>
 
           <View style={styles.actions}>
-            <Pressable style={styles.cancelButton} onPress={onCancel}>
-              <Text style={styles.cancelText}>{cancelLabel}</Text>
-            </Pressable>
+            {singleAction ? null : (
+              <Pressable style={styles.cancelButton} onPress={onCancel}>
+                <Text style={styles.cancelText}>{cancelLabel}</Text>
+              </Pressable>
+            )}
             <Pressable
               style={[
                 styles.confirmButton,
-                destructive ? styles.confirmButtonDanger : styles.confirmButtonPrimary,
+                destructive
+                  ? styles.confirmButtonDanger
+                  : styles.confirmButtonPrimary,
               ]}
               onPress={onConfirm}
             >
               <Text
                 style={[
                   styles.confirmText,
-                  destructive ? styles.confirmTextDanger : styles.confirmTextPrimary,
+                  destructive
+                    ? styles.confirmTextDanger
+                    : styles.confirmTextPrimary,
                 ]}
               >
                 {confirmLabel}

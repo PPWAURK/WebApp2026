@@ -108,21 +108,16 @@ export function TeamOverviewPage({
   const isWideLayout = width >= 1280;
   const isMediumLayout = width >= 860;
   const isCompactLayout = width < 720;
-  const rosterCardWidth =
-    width >= 1760
-      ? '19.2%'
-      : width >= 1480
-        ? '24%'
-        : width >= 1180
-          ? '32%'
-          : width >= 820
-            ? '48.5%'
-            : '100%';
+  const rosterColumnCount = width >= 1100 ? 2 : 1;
+  const rosterRowsPerColumn = 5;
+  const rosterItemsPerPage = rosterColumnCount * rosterRowsPerColumn;
+  const rosterColumnWidth = rosterColumnCount === 2 ? '48.8%' : '100%';
   const [users, setUsers] = useState<TrainingAccessUser[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRosterKey, setSelectedRosterKey] = useState<string | null>(null);
+  const [selectedRosterPage, setSelectedRosterPage] = useState(1);
 
   useEffect(() => {
     let isActive = true;
@@ -373,6 +368,35 @@ export function TeamOverviewPage({
       null,
     [selectedRosterKey, storeSummaries],
   );
+  const rosterPageCount = useMemo(
+    () =>
+      Math.max(
+        1,
+        Math.ceil((selectedRosterSummary?.roster.length ?? 0) / rosterItemsPerPage),
+      ),
+    [rosterItemsPerPage, selectedRosterSummary?.roster.length],
+  );
+  const paginatedRoster = useMemo(() => {
+    if (!selectedRosterSummary) {
+      return [];
+    }
+
+    const startIndex = (selectedRosterPage - 1) * rosterItemsPerPage;
+    return selectedRosterSummary.roster.slice(
+      startIndex,
+      startIndex + rosterItemsPerPage,
+    );
+  }, [rosterItemsPerPage, selectedRosterPage, selectedRosterSummary]);
+  const paginatedRosterColumns = useMemo(
+    () =>
+      Array.from({ length: rosterColumnCount }, (_, columnIndex) =>
+        paginatedRoster.slice(
+          columnIndex * rosterRowsPerColumn,
+          (columnIndex + 1) * rosterRowsPerColumn,
+        ),
+      ).filter((column) => column.length > 0),
+    [paginatedRoster, rosterColumnCount],
+  );
 
   useEffect(() => {
     if (storeSummaries.length === 0) {
@@ -394,6 +418,16 @@ export function TeamOverviewPage({
 
     setSelectedRosterKey(preferredSummary.key);
   }, [selectedRosterKey, storeSummaries]);
+
+  useEffect(() => {
+    setSelectedRosterPage(1);
+  }, [rosterItemsPerPage, selectedRosterKey]);
+
+  useEffect(() => {
+    if (selectedRosterPage > rosterPageCount) {
+      setSelectedRosterPage(rosterPageCount);
+    }
+  }, [rosterPageCount, selectedRosterPage]);
 
   if (isLoading) {
     return (
@@ -733,6 +767,79 @@ export function TeamOverviewPage({
                   </View>
                 </View>
 
+                {selectedRosterSummary.roster.length > 0 ? (
+                  <View style={styles.rosterPaginationBar}>
+                    <Text style={styles.rosterPaginationText}>
+                      {`${text.teamOverview.paginationPage} ${selectedRosterPage}/${rosterPageCount}`}
+                    </Text>
+                    {rosterPageCount > 1 ? (
+                      <View style={styles.rosterPaginationControls}>
+                        <Pressable
+                          style={[
+                            styles.rosterPaginationButton,
+                            selectedRosterPage === 1 &&
+                              styles.rosterPaginationButtonDisabled,
+                          ]}
+                          onPress={() =>
+                            setSelectedRosterPage((currentPage) =>
+                              Math.max(1, currentPage - 1),
+                            )
+                          }
+                          disabled={selectedRosterPage === 1}
+                        >
+                          <Ionicons
+                            name="chevron-back-outline"
+                            size={14}
+                            color={selectedRosterPage === 1 ? '#c9acab' : '#ab1e24'}
+                          />
+                          <Text
+                            style={[
+                              styles.rosterPaginationButtonText,
+                              selectedRosterPage === 1 &&
+                                styles.rosterPaginationButtonTextDisabled,
+                            ]}
+                          >
+                            {text.teamOverview.paginationPrev}
+                          </Text>
+                        </Pressable>
+
+                        <Pressable
+                          style={[
+                            styles.rosterPaginationButton,
+                            selectedRosterPage === rosterPageCount &&
+                              styles.rosterPaginationButtonDisabled,
+                          ]}
+                          onPress={() =>
+                            setSelectedRosterPage((currentPage) =>
+                              Math.min(rosterPageCount, currentPage + 1),
+                            )
+                          }
+                          disabled={selectedRosterPage === rosterPageCount}
+                        >
+                          <Text
+                            style={[
+                              styles.rosterPaginationButtonText,
+                              selectedRosterPage === rosterPageCount &&
+                                styles.rosterPaginationButtonTextDisabled,
+                            ]}
+                          >
+                            {text.teamOverview.paginationNext}
+                          </Text>
+                          <Ionicons
+                            name="chevron-forward-outline"
+                            size={14}
+                            color={
+                              selectedRosterPage === rosterPageCount
+                                ? '#c9acab'
+                                : '#ab1e24'
+                            }
+                          />
+                        </Pressable>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+
                 {selectedRosterSummary.roster.length === 0 ? (
                   <View style={styles.rosterEmptyState}>
                     <Text style={styles.rosterEmptyText}>
@@ -740,88 +847,101 @@ export function TeamOverviewPage({
                     </Text>
                   </View>
                 ) : (
-                  <View style={styles.rosterList}>
-                    {selectedRosterSummary.roster.map((entry, index) => {
-                      const displayName = getDisplayName(
-                        entry,
-                        text.dashboard.fallbackName,
-                      );
+                  <View style={styles.rosterColumnsWrap}>
+                    {paginatedRosterColumns.map((columnEntries, columnIndex) => (
+                      <View
+                        key={`roster-column-${columnIndex + 1}`}
+                        style={[
+                          styles.rosterColumn,
+                          { width: rosterColumnWidth },
+                        ]}
+                      >
+                        {columnEntries.map((entry, index) => {
+                          const displayName = getDisplayName(
+                            entry,
+                            text.dashboard.fallbackName,
+                          );
+                          const rosterOrder =
+                            (selectedRosterPage - 1) * rosterItemsPerPage +
+                            columnIndex * rosterRowsPerColumn +
+                            index +
+                            1;
 
-                      return (
-                        <View
-                          key={entry.id}
-                          style={[
-                            styles.rosterCompactCard,
-                            { width: rosterCardWidth },
-                          ]}
-                        >
-                          <View style={styles.rosterCardTop}>
-                            <View style={styles.rosterOrderBadge}>
-                              <Text style={styles.rosterOrderBadgeText}>
-                                {index + 1}
-                              </Text>
-                            </View>
-                            <View style={styles.avatarWrap}>
-                              {entry.profilePhoto ? (
-                                <Image
-                                  source={{ uri: entry.profilePhoto }}
-                                  style={styles.avatarImage}
-                                />
-                              ) : (
-                                <Text style={styles.avatarText}>
-                                  {getInitial(displayName)}
-                                </Text>
-                              )}
-                            </View>
-                          </View>
+                          return (
+                            <View key={entry.id} style={styles.rosterCompactCard}>
+                              <View style={styles.rosterCardHeader}>
+                                <View style={styles.avatarWrap}>
+                                  {entry.profilePhoto ? (
+                                    <Image
+                                      source={{ uri: entry.profilePhoto }}
+                                      style={styles.avatarImage}
+                                    />
+                                  ) : (
+                                    <Text style={styles.avatarText}>
+                                      {getInitial(displayName)}
+                                    </Text>
+                                  )}
+                                </View>
+                                <View style={styles.rosterBody}>
+                                  <Text style={styles.rosterName} numberOfLines={1}>
+                                    {displayName}
+                                  </Text>
+                                  <Text style={styles.rosterEmail} numberOfLines={1}>
+                                    {entry.email}
+                                  </Text>
+                                </View>
+                                <View style={styles.rosterOrderBadge}>
+                                  <Text style={styles.rosterOrderBadgeText}>
+                                    {rosterOrder}
+                                  </Text>
+                                </View>
+                              </View>
 
-                          <View style={styles.rosterBody}>
-                            <Text style={styles.rosterName} numberOfLines={1}>
-                              {displayName}
-                            </Text>
-                            <Text style={styles.rosterEmail} numberOfLines={1}>
-                              {entry.email}
-                            </Text>
-                          </View>
-
-                          <View style={styles.rosterMetaStack}>
-                            <View style={styles.rosterMetaLine}>
-                              <Text style={styles.rosterFactLabel}>
-                                {text.dashboard.role}
-                              </Text>
-                              <Text
-                                style={styles.rosterFactValue}
-                                numberOfLines={1}
-                              >
-                                {text.dashboard.roleValues[entry.role]}
-                              </Text>
+                              <View style={styles.rosterInfoPanel}>
+                                <View style={styles.rosterInfoGrid}>
+                                  <View style={styles.rosterInfoItem}>
+                                    <Text style={styles.rosterInfoLabel}>
+                                      {text.dashboard.role}
+                                    </Text>
+                                    <Text style={styles.rosterInfoValue} numberOfLines={1}>
+                                      {text.dashboard.roleValues[entry.role]}
+                                    </Text>
+                                  </View>
+                                  <View style={styles.rosterInfoItem}>
+                                    <Text style={styles.rosterInfoLabel}>
+                                      {text.dashboard.workplace}
+                                    </Text>
+                                    <Text style={styles.rosterInfoValue} numberOfLines={1}>
+                                      {text.dashboard.workplaceValues[entry.workplaceRole]}
+                                    </Text>
+                                  </View>
+                                  <View
+                                    style={[
+                                      styles.rosterInfoItem,
+                                      styles.rosterInfoItemWide,
+                                    ]}
+                                  >
+                                    <Text style={styles.rosterInfoLabel}>
+                                      {text.dashboard.employeeLevelLabel}
+                                    </Text>
+                                    <Text style={styles.rosterInfoValue} numberOfLines={1}>
+                                      {text.dashboard.levels[entry.employeeLevel]}
+                                    </Text>
+                                  </View>
+                                </View>
+                                {entry.isOnProbation ? (
+                                  <View style={styles.rosterStatusBadge}>
+                                    <Text style={styles.rosterStatusBadgeText}>
+                                      {text.dashboard.probation}
+                                    </Text>
+                                  </View>
+                                ) : null}
+                              </View>
                             </View>
-                            <View style={styles.rosterMetaLine}>
-                              <Text style={styles.rosterFactLabel}>
-                                {text.dashboard.workplace}
-                              </Text>
-                              <Text
-                                style={styles.rosterFactValue}
-                                numberOfLines={1}
-                              >
-                                {text.dashboard.workplaceValues[entry.workplaceRole]}
-                              </Text>
-                            </View>
-                            <View style={styles.rosterMetaLine}>
-                              <Text style={styles.rosterFactLabel}>
-                                {text.dashboard.employeeLevelLabel}
-                              </Text>
-                              <Text
-                                style={styles.rosterFactValue}
-                                numberOfLines={1}
-                              >
-                                {text.dashboard.levels[entry.employeeLevel]}
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-                      );
-                    })}
+                          );
+                        })}
+                      </View>
+                    ))}
                   </View>
                 )}
               </View>

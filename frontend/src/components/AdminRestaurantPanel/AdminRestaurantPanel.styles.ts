@@ -1,12 +1,15 @@
 import { StyleSheet } from 'react-native';
 
+const CARD_BORDER = 'rgba(171, 30, 36, 0.18)';
+const CARD_BORDER_SOFT = 'rgba(171, 30, 36, 0.14)';
+
 export const styles = StyleSheet.create({
   uploadCard: {
     backgroundColor: '#fffdfb',
     borderRadius: 24,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.12)',
+    borderColor: CARD_BORDER,
     gap: 12,
     flex: 1,
   },
@@ -46,7 +49,7 @@ export const styles = StyleSheet.create({
   introStrip: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: CARD_BORDER_SOFT,
     backgroundColor: '#fff5f2',
     paddingHorizontal: 12,
     paddingVertical: 10,

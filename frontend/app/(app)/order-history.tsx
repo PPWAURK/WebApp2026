@@ -8,6 +8,8 @@ import { useOrderBonDownloader } from '../../src/hooks/useOrderBonDownloader';
 import {
   deleteOrder,
   fetchOrders,
+  fetchOrderReturns,
+  type OrderReturnSummary,
   type OrderSummary,
 } from '../../src/services/ordersApi';
 import type { Role } from '../../src/types/auth';
@@ -32,12 +34,27 @@ export default function OrderHistoryScreen() {
   const language = useLanguage();
   const downloadOrderBon = useOrderBonDownloader(auth.session?.accessToken);
   const [orders, setOrders] = useState<OrderSummary[]>([]);
+  const [orderReturns, setOrderReturns] = useState<OrderReturnSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
+
+  async function loadHistoryData(accessToken: string) {
+    const [ordersResult, returnsResult] = await Promise.allSettled([
+      fetchOrders(accessToken),
+      fetchOrderReturns(accessToken),
+    ]);
+
+    return {
+      orders: ordersResult.status === 'fulfilled' ? ordersResult.value : [],
+      orderReturns:
+        returnsResult.status === 'fulfilled' ? returnsResult.value : [],
+    };
+  }
 
   useEffect(() => {
     if (!auth.session || !canAccessOrders(auth.session.user.role)) {
       setOrders([]);
+      setOrderReturns([]);
       setIsLoading(false);
       setDeletingOrderId(null);
       return;
@@ -46,15 +63,17 @@ export default function OrderHistoryScreen() {
     let isActive = true;
     setIsLoading(true);
 
-    void fetchOrders(auth.session.accessToken)
+    void loadHistoryData(auth.session.accessToken)
       .then((result) => {
         if (isActive) {
-          setOrders(result);
+          setOrders(result.orders);
+          setOrderReturns(result.orderReturns);
         }
       })
       .catch(() => {
         if (isActive) {
           setOrders([]);
+          setOrderReturns([]);
         }
       })
       .finally(() => {
@@ -82,10 +101,12 @@ export default function OrderHistoryScreen() {
     setIsLoading(true);
 
     try {
-      const result = await fetchOrders(session.accessToken);
-      setOrders(result);
+      const result = await loadHistoryData(session.accessToken);
+      setOrders(result.orders);
+      setOrderReturns(result.orderReturns);
     } catch {
       setOrders([]);
+      setOrderReturns([]);
     } finally {
       setIsLoading(false);
     }
@@ -143,6 +164,7 @@ export default function OrderHistoryScreen() {
       text={language.text}
       accessToken={session.accessToken}
       orders={orders}
+      orderReturns={orderReturns}
       isLoading={isLoading}
       deletingOrderId={deletingOrderId}
       onRefresh={() => {

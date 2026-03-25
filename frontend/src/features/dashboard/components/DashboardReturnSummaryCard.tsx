@@ -44,7 +44,7 @@ export function DashboardReturnSummaryCard({
     (sum, entry) => sum + entry.totalItems,
     0,
   );
-  const visibleReturns = recentReturns.slice(0, isCompactLayout ? 2 : 4);
+  const latestReturn = recentReturns[0] ?? null;
 
   return (
     <View style={[styles.quickBlock, styles.returnsSummaryPanel]}>
@@ -92,86 +92,82 @@ export function DashboardReturnSummaryCard({
         <Text style={styles.subtitle}>{text.dashboard.returnSummaryEmpty}</Text>
       ) : null}
 
-      {visibleReturns.length > 0 ? (
+      {latestReturn ? (
         <View style={styles.returnsSummaryList}>
-          {visibleReturns.map((entry) => (
+          <View
+            key={`dashboard-return-${latestReturn.id}`}
+            style={styles.returnsSummaryCard}
+          >
             <View
-              key={`dashboard-return-${entry.id}`}
-              style={styles.returnsSummaryCard}
+              style={[
+                styles.returnsSummaryTopRow,
+                isCompactLayout && styles.returnsSummaryTopRowCompact,
+              ]}
             >
+              <View style={styles.returnsSummaryCopy}>
+                <Text style={styles.returnsSummaryOrderNumber} numberOfLines={1}>
+                  {latestReturn.orderNumber}
+                </Text>
+                <Text style={styles.returnsSummaryMeta} numberOfLines={1}>
+                  {latestReturn.supplierName} •{' '}
+                  {formatReturnDate(latestReturn.createdAt)}
+                </Text>
+              </View>
               <View
                 style={[
-                  styles.returnsSummaryTopRow,
-                  isCompactLayout && styles.returnsSummaryTopRowCompact,
+                  styles.returnsSummaryCountPill,
+                  isCompactLayout && styles.returnsSummaryCountPillCompact,
                 ]}
               >
-                <View style={styles.returnsSummaryCopy}>
-                  <Text
-                    style={styles.returnsSummaryOrderNumber}
-                    numberOfLines={1}
-                  >
-                    {entry.orderNumber}
-                  </Text>
-                  <Text style={styles.returnsSummaryMeta} numberOfLines={1}>
-                    {entry.supplierName} • {formatReturnDate(entry.createdAt)}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.returnsSummaryCountPill,
-                    isCompactLayout && styles.returnsSummaryCountPillCompact,
-                  ]}
-                >
-                  <Text style={styles.returnsSummaryCountText}>
-                    {entry.totalItems}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.returnsSummaryField}>
-                <Text style={styles.returnsSummaryFieldLabel}>
-                  {text.dashboard.returnSummaryReasonLabel}
-                </Text>
-                <Text style={styles.returnsSummaryFieldValue}>
-                  {entry.reason}
+                <Text style={styles.returnsSummaryCountText}>
+                  {latestReturn.totalItems}
                 </Text>
               </View>
-
-              <View style={styles.returnsSummaryField}>
-                <Text style={styles.returnsSummaryFieldLabel}>
-                  {text.dashboard.returnSummaryProductsLabel}
-                </Text>
-                <Text style={styles.returnsSummaryFieldValue}>
-                  {buildProductsLabel(entry)}
-                </Text>
-              </View>
-
-              {entry.notes ? (
-                <View style={styles.returnsSummaryField}>
-                  <Text style={styles.returnsSummaryFieldLabel}>
-                    {text.dashboard.returnSummaryNotesLabel}
-                  </Text>
-                  <Text style={styles.returnsSummaryFieldValue}>
-                    {entry.notes}
-                  </Text>
-                </View>
-              ) : null}
-
-              {hasReturnPhotos(entry) ? (
-                <View style={styles.returnsSummaryActionRow}>
-                  <Pressable
-                    style={styles.returnsSummaryActionButton}
-                    onPress={() => onOpenReturnPhotos(entry)}
-                  >
-                    <Ionicons name="images-outline" size={15} color="#7f1b21" />
-                    <Text style={styles.returnsSummaryActionButtonText}>
-                      {text.dashboard.returnSummaryViewPhotosButton}
-                    </Text>
-                  </Pressable>
-                </View>
-              ) : null}
             </View>
-          ))}
+
+            <View style={styles.returnsSummaryField}>
+              <Text style={styles.returnsSummaryFieldLabel}>
+                {text.dashboard.returnSummaryReasonLabel}
+              </Text>
+              <Text style={styles.returnsSummaryFieldValue}>
+                {latestReturn.reason}
+              </Text>
+            </View>
+
+            <View style={styles.returnsSummaryField}>
+              <Text style={styles.returnsSummaryFieldLabel}>
+                {text.dashboard.returnSummaryProductsLabel}
+              </Text>
+              <Text style={styles.returnsSummaryFieldValue}>
+                {buildProductsLabel(latestReturn)}
+              </Text>
+            </View>
+
+            {latestReturn.notes ? (
+              <View style={styles.returnsSummaryField}>
+                <Text style={styles.returnsSummaryFieldLabel}>
+                  {text.dashboard.returnSummaryNotesLabel}
+                </Text>
+                <Text style={styles.returnsSummaryFieldValue}>
+                  {latestReturn.notes}
+                </Text>
+              </View>
+            ) : null}
+
+            {hasReturnPhotos(latestReturn) ? (
+              <View style={styles.returnsSummaryActionRow}>
+                <Pressable
+                  style={styles.returnsSummaryActionButton}
+                  onPress={() => onOpenReturnPhotos(latestReturn)}
+                >
+                  <Ionicons name="images-outline" size={15} color="#7f1b21" />
+                  <Text style={styles.returnsSummaryActionButtonText}>
+                    {text.dashboard.returnSummaryViewPhotosButton}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
         </View>
       ) : null}
     </View>

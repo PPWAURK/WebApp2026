@@ -72,6 +72,24 @@ export type NewsReadTrackingResponse = {
   byRestaurant: NewsReadTrackingRestaurantGroup[];
 };
 
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((entry): entry is string => typeof entry === 'string');
+}
+
+function normalizeNewsPostItemArrays(post: NewsPostItem): NewsPostItem {
+  return {
+    ...post,
+    tags: normalizeStringArray(post.tags),
+    visibleEmployeeLevels: normalizeStringArray(
+      post.visibleEmployeeLevels,
+    ) as EmployeeLevel[],
+  };
+}
+
 export async function fetchNewsFeed(
   token: string,
   options?: {
@@ -114,7 +132,15 @@ export async function fetchNewsFeed(
     throw new Error(message);
   }
 
-  return data as NewsFeedResponse;
+  const payload = data as Partial<NewsFeedResponse>;
+
+  return {
+    items: Array.isArray(payload.items)
+      ? payload.items.map((item) => normalizeNewsPostItemArrays(item))
+      : [],
+    availableMonths: normalizeStringArray(payload.availableMonths),
+    availableTags: normalizeStringArray(payload.availableTags),
+  };
 }
 
 export async function createNewsPost(
@@ -153,7 +179,7 @@ export async function createNewsPost(
     throw new Error(message);
   }
 
-  return data as NewsPostItem;
+  return normalizeNewsPostItemArrays(data as NewsPostItem);
 }
 
 export async function markNewsAsRead(

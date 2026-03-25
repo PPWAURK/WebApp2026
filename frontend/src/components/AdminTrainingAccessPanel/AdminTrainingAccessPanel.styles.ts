@@ -1,5 +1,8 @@
 import { StyleSheet } from 'react-native';
 
+const CARD_BORDER = 'rgba(171, 30, 36, 0.18)';
+const CARD_BORDER_SOFT = 'rgba(171, 30, 36, 0.14)';
+
 export const styles = StyleSheet.create({
   panelStack: {
     gap: 18,
@@ -7,7 +10,7 @@ export const styles = StyleSheet.create({
   panelHeader: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.12)',
+    borderColor: CARD_BORDER,
     backgroundColor: '#fffdfb',
     padding: 18,
     gap: 14,
@@ -38,7 +41,7 @@ export const styles = StyleSheet.create({
     minWidth: 120,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: CARD_BORDER_SOFT,
     backgroundColor: '#ffffff',
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -70,7 +73,7 @@ export const styles = StyleSheet.create({
     minWidth: 0,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.12)',
+    borderColor: CARD_BORDER,
     backgroundColor: '#fffdfb',
     padding: 18,
     gap: 14,
@@ -261,7 +264,7 @@ export const styles = StyleSheet.create({
   scenarioCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: CARD_BORDER_SOFT,
     backgroundColor: '#ffffff',
     padding: 12,
     gap: 10,
@@ -368,7 +371,7 @@ export const styles = StyleSheet.create({
   quizScenarioCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(142, 34, 40, 0.08)',
+    borderColor: CARD_BORDER_SOFT,
     backgroundColor: '#ffffff',
     padding: 12,
     gap: 10,
@@ -379,7 +382,7 @@ export const styles = StyleSheet.create({
   quizSectionCard: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.08)',
+    borderColor: CARD_BORDER_SOFT,
     backgroundColor: '#fffaf8',
     padding: 10,
     gap: 8,

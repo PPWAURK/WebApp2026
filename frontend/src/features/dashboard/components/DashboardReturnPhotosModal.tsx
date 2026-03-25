@@ -36,6 +36,18 @@ function collectPhotos(entry: OrderReturnSummary | null) {
   );
 }
 
+function buildModalCardStyle(photoCount: number) {
+  if (photoCount <= 1) {
+    return styles.returnPhotoModalCardCompact;
+  }
+
+  if (photoCount === 2) {
+    return styles.returnPhotoModalCardMedium;
+  }
+
+  return null;
+}
+
 export function DashboardReturnPhotosModal({
   entry,
   onClose,
@@ -52,7 +64,12 @@ export function DashboardReturnPhotosModal({
       onRequestClose={onClose}
     >
       <View style={styles.previewModalBackdrop}>
-        <View style={styles.returnPhotoModalCard}>
+        <View
+          style={[
+            styles.returnPhotoModalCard,
+            buildModalCardStyle(photos.length),
+          ]}
+        >
           <View style={styles.previewModalHeader}>
             <View style={styles.returnPhotoModalHeaderCopy}>
               <Text style={styles.quickBlockTitle}>
