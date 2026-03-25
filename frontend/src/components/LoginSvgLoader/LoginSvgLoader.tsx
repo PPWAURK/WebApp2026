@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, View, useWindowDimensions } from 'react-native';
+import { COLORS } from '../../constants/colors';
 import Svg, {
   Circle,
   ClipPath,
@@ -83,12 +84,16 @@ export function LoginSvgLoader() {
           },
         ]}
       >
-        <Svg width={pendulumWidth} height={pendulumHeight} viewBox="0 0 234 258">
+        <Svg
+          width={pendulumWidth}
+          height={pendulumHeight}
+          viewBox="0 0 234 258"
+        >
           {/* Palette visuelle de la lanterne. */}
           <Defs>
             <LinearGradient id="lanternBody" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0%" stopColor="#ffffff" />
-              <Stop offset="100%" stopColor="#f5f5f5" />
+              <Stop offset="0%" stopColor={COLORS.surfaceBase} />
+              <Stop offset="100%" stopColor={COLORS.svgLanternBottom} />
             </LinearGradient>
             <ClipPath id="lanternImageClip">
               <Rect x="45" y="75" width="155" height="155" rx="42" />
@@ -98,7 +103,7 @@ export function LoginSvgLoader() {
           {/* Corde suspendue: ajuste tirets/epaisseur/couleur pour changer le style. */}
           <Path
             d="M117 2 L117 76"
-            stroke="#f6d6d6"
+            stroke={COLORS.svgLanternRope}
             strokeWidth="4"
             strokeLinecap="round"
           />
@@ -111,7 +116,7 @@ export function LoginSvgLoader() {
             height="150"
             rx="74"
             fill="url(#lanternBody)"
-            stroke="#d39fa2"
+            stroke={COLORS.svgLanternBorder}
             strokeWidth="3"
           />
 
@@ -130,7 +135,7 @@ export function LoginSvgLoader() {
           {/* Nervures fines et courbees, style lanterne traditionnelle. */}
           <Path
             d="M57 84 Q49 146 57 208"
-            stroke="#c99a9d"
+            stroke={COLORS.svgLanternRib}
             strokeWidth="1.6"
             strokeLinecap="round"
             fill="none"
@@ -138,7 +143,7 @@ export function LoginSvgLoader() {
           />
           <Path
             d="M79 80 Q73 146 79 212"
-            stroke="#c99a9d"
+            stroke={COLORS.svgLanternRib}
             strokeWidth="1.4"
             strokeLinecap="round"
             fill="none"
@@ -146,7 +151,7 @@ export function LoginSvgLoader() {
           />
           <Path
             d="M117 78 Q117 146 117 214"
-            stroke="#c99a9d"
+            stroke={COLORS.svgLanternRib}
             strokeWidth="1.2"
             strokeLinecap="round"
             fill="none"
@@ -154,7 +159,7 @@ export function LoginSvgLoader() {
           />
           <Path
             d="M155 80 Q161 146 155 212"
-            stroke="#c99a9d"
+            stroke={COLORS.svgLanternRib}
             strokeWidth="1.4"
             strokeLinecap="round"
             fill="none"
@@ -162,7 +167,7 @@ export function LoginSvgLoader() {
           />
           <Path
             d="M177 84 Q185 146 177 208"
-            stroke="#c99a9d"
+            stroke={COLORS.svgLanternRib}
             strokeWidth="1.6"
             strokeLinecap="round"
             fill="none"
@@ -170,8 +175,15 @@ export function LoginSvgLoader() {
           />
 
           {/* Base basse et pompon. */}
-          <Rect x="82" y="222" width="70" height="18" rx="3" fill="#d9a4a7" />
-          <Circle cx="117" cy="243" r="8" fill="#bb262d" />
+          <Rect
+            x="82"
+            y="222"
+            width="70"
+            height="18"
+            rx="3"
+            fill={COLORS.svgLanternBase}
+          />
+          <Circle cx="117" cy="243" r="8" fill={COLORS.svgLanternAccent} />
         </Svg>
       </AnimatedView>
     </View>
