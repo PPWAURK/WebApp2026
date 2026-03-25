@@ -1,7 +1,15 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Pressable, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import {
+  Image,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import { COLORS } from '../../constants/colors';
 import type { AppText } from '../../locales/translations';
 import { updateMyProfile, uploadMyProfilePhoto } from '../../services/usersApi';
 import { styles } from './ProfilePage.styles';
@@ -122,8 +130,7 @@ export function ProfilePage({
   const probationLabel = user.isOnProbation
     ? text.dashboard.yes
     : text.dashboard.no;
-  const restaurantLabel =
-    user.restaurant?.name ?? text.profile.noRestaurant;
+  const restaurantLabel = user.restaurant?.name ?? text.profile.noRestaurant;
   const addressLabel = user.restaurant?.address ?? text.profile.noAddress;
   const displayName = user.name ?? text.dashboard.fallbackName;
   const trainingAccessLabels = user.trainingAccess.map(
@@ -203,7 +210,9 @@ export function ProfilePage({
   return (
     <View style={styles.pageStack}>
       <View style={[styles.heroCard, isWideLayout && styles.heroCardWide]}>
-        <View style={[styles.heroIdentity, isWideLayout && styles.heroIdentityWide]}>
+        <View
+          style={[styles.heroIdentity, isWideLayout && styles.heroIdentityWide]}
+        >
           <View style={styles.avatarFrame}>
             {user.profilePhoto ? (
               <Image
@@ -238,11 +247,17 @@ export function ProfilePage({
           </View>
         </View>
 
-        <View style={[styles.overviewGrid, isWideLayout && styles.overviewGridWide]}>
+        <View
+          style={[styles.overviewGrid, isWideLayout && styles.overviewGridWide]}
+        >
           {overviewItems.map((item) => (
             <View key={item.key} style={styles.overviewCard}>
               <View style={styles.overviewIconWrap}>
-                <Ionicons name={item.icon} size={16} color="#ab1e24" />
+                <Ionicons
+                  name={item.icon}
+                  size={16}
+                  color={COLORS.brandPrimary}
+                />
               </View>
               <Text style={styles.overviewLabel}>{item.label}</Text>
               <Text style={styles.overviewValue}>{item.value}</Text>
@@ -251,16 +266,29 @@ export function ProfilePage({
         </View>
       </View>
 
-      <View style={[styles.contentLayout, isWideLayout && styles.contentLayoutWide]}>
-        <View style={[styles.primaryColumn, isWideLayout && styles.primaryColumnWide]}>
+      <View
+        style={[styles.contentLayout, isWideLayout && styles.contentLayoutWide]}
+      >
+        <View
+          style={[
+            styles.primaryColumn,
+            isWideLayout && styles.primaryColumnWide,
+          ]}
+        >
           <View style={styles.panel}>
             <View style={styles.panelHeader}>
               <View style={styles.panelTitleWrap}>
                 <Text style={styles.panelEyebrow}>{text.profile.title}</Text>
-                <Text style={styles.panelTitle}>{text.profile.uploadPhotoButton}</Text>
+                <Text style={styles.panelTitle}>
+                  {text.profile.uploadPhotoButton}
+                </Text>
               </View>
               <View style={styles.panelIconBadge}>
-                <Ionicons name="camera-outline" size={18} color="#ab1e24" />
+                <Ionicons
+                  name="camera-outline"
+                  size={18}
+                  color={COLORS.brandPrimary}
+                />
               </View>
             </View>
 
@@ -276,7 +304,11 @@ export function ProfilePage({
                 void handlePickAndUploadPhoto();
               }}
             >
-              <Ionicons name="cloud-upload-outline" size={16} color="#ffffff" />
+              <Ionicons
+                name="cloud-upload-outline"
+                size={16}
+                color={COLORS.textOnDark}
+              />
               <Text style={styles.primaryButtonText}>
                 {isUploadingPhoto
                   ? text.profile.uploadingPhoto
@@ -290,11 +322,17 @@ export function ProfilePage({
           <View style={styles.panel}>
             <View style={styles.panelHeader}>
               <View style={styles.panelTitleWrap}>
-                <Text style={styles.panelEyebrow}>{text.profile.nameLabel}</Text>
+                <Text style={styles.panelEyebrow}>
+                  {text.profile.nameLabel}
+                </Text>
                 <Text style={styles.panelTitle}>{displayName}</Text>
               </View>
               <View style={styles.panelIconBadge}>
-                <Ionicons name="create-outline" size={18} color="#ab1e24" />
+                <Ionicons
+                  name="create-outline"
+                  size={18}
+                  color={COLORS.brandPrimary}
+                />
               </View>
             </View>
 
@@ -305,7 +343,7 @@ export function ProfilePage({
                   value={nameDraft}
                   onChangeText={setNameDraft}
                   placeholder={text.profile.nameEditPlaceholder}
-                  placeholderTextColor="#a08284"
+                  placeholderTextColor={COLORS.placeholderAlt}
                   autoCapitalize="words"
                   autoCorrect={false}
                   editable={!isSavingName}
@@ -326,11 +364,15 @@ export function ProfilePage({
                       : text.profile.saveNameButton}
                   </Text>
                 </Pressable>
-                {nameError ? <Text style={styles.error}>{nameError}</Text> : null}
+                {nameError ? (
+                  <Text style={styles.error}>{nameError}</Text>
+                ) : null}
               </View>
             ) : (
               <View style={styles.infoNotice}>
-                <Text style={styles.infoNoticeTitle}>{text.profile.nameLabel}</Text>
+                <Text style={styles.infoNoticeTitle}>
+                  {text.profile.nameLabel}
+                </Text>
                 <Text style={styles.infoNoticeBody}>{displayName}</Text>
                 <Text style={styles.infoNoticeHint}>
                   {text.profile.nameEditRestricted}
@@ -340,15 +382,28 @@ export function ProfilePage({
           </View>
         </View>
 
-        <View style={[styles.secondaryColumn, isWideLayout && styles.secondaryColumnWide]}>
+        <View
+          style={[
+            styles.secondaryColumn,
+            isWideLayout && styles.secondaryColumnWide,
+          ]}
+        >
           <View style={styles.panel}>
             <View style={styles.panelHeader}>
               <View style={styles.panelTitleWrap}>
-                <Text style={styles.panelEyebrow}>{text.profile.userInfoTitle}</Text>
-                <Text style={styles.panelTitle}>{text.profile.userInfoTitle}</Text>
+                <Text style={styles.panelEyebrow}>
+                  {text.profile.userInfoTitle}
+                </Text>
+                <Text style={styles.panelTitle}>
+                  {text.profile.userInfoTitle}
+                </Text>
               </View>
               <View style={styles.panelIconBadge}>
-                <Ionicons name="person-outline" size={18} color="#ab1e24" />
+                <Ionicons
+                  name="person-outline"
+                  size={18}
+                  color={COLORS.brandPrimary}
+                />
               </View>
             </View>
 
@@ -356,7 +411,11 @@ export function ProfilePage({
               {detailItems.map((item) => (
                 <View key={item.key} style={styles.detailRow}>
                   <View style={styles.detailIconWrap}>
-                    <Ionicons name={item.icon} size={16} color="#ab1e24" />
+                    <Ionicons
+                      name={item.icon}
+                      size={16}
+                      color={COLORS.brandPrimary}
+                    />
                   </View>
                   <View style={styles.detailTextWrap}>
                     <Text style={styles.detailLabel}>{item.label}</Text>
@@ -370,11 +429,19 @@ export function ProfilePage({
           <View style={styles.panel}>
             <View style={styles.panelHeader}>
               <View style={styles.panelTitleWrap}>
-                <Text style={styles.panelEyebrow}>{text.profile.trainingAccessLabel}</Text>
-                <Text style={styles.panelTitle}>{text.profile.trainingAccessLabel}</Text>
+                <Text style={styles.panelEyebrow}>
+                  {text.profile.trainingAccessLabel}
+                </Text>
+                <Text style={styles.panelTitle}>
+                  {text.profile.trainingAccessLabel}
+                </Text>
               </View>
               <View style={styles.panelIconBadge}>
-                <Ionicons name="school-outline" size={18} color="#ab1e24" />
+                <Ionicons
+                  name="school-outline"
+                  size={18}
+                  color={COLORS.brandPrimary}
+                />
               </View>
             </View>
 
