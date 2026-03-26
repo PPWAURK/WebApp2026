@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { COLORS } from '../../constants/colors';
 import {
   EMPLOYEE_LEVELS,
   formatNewsTag,
@@ -39,7 +40,11 @@ export function SessionCardWhatsNewPanel({
       >
         <View style={styles.whatsNewHeaderMain}>
           <View style={styles.whatsNewHeaderIconWrap}>
-            <Ionicons name="megaphone-outline" size={18} color="#ffffff" />
+            <Ionicons
+              name="megaphone-outline"
+              size={18}
+              color={COLORS.textOnDark}
+            />
           </View>
           <View style={styles.whatsNewHeaderTitleWrap}>
             <Text
@@ -150,7 +155,7 @@ export function SessionCardWhatsNewPanel({
           value={whatsNewState.whatsNewTitle}
           onChangeText={(value) => whatsNewState.setWhatsNewTitle(value)}
           placeholder={text.dashboard.whatsNewTitlePlaceholder}
-          placeholderTextColor="#a98a8d"
+          placeholderTextColor={COLORS.placeholder}
         />
       </View>
 
@@ -163,7 +168,7 @@ export function SessionCardWhatsNewPanel({
           value={whatsNewState.whatsNewMessage}
           onChangeText={(value) => whatsNewState.setWhatsNewMessage(value)}
           placeholder={text.dashboard.whatsNewMessagePlaceholder}
-          placeholderTextColor="#a98a8d"
+          placeholderTextColor={COLORS.placeholder}
           multiline
           textAlignVertical="top"
         />
@@ -178,7 +183,7 @@ export function SessionCardWhatsNewPanel({
           value={whatsNewState.whatsNewTagsInput}
           onChangeText={(value) => whatsNewState.setWhatsNewTagsInput(value)}
           placeholder={text.dashboard.whatsNewTagsPlaceholder}
-          placeholderTextColor="#a98a8d"
+          placeholderTextColor={COLORS.placeholder}
         />
         <Text style={styles.panelSubtitleOnDark}>
           {text.dashboard.whatsNewTagsHint}
@@ -187,10 +192,7 @@ export function SessionCardWhatsNewPanel({
         {whatsNewState.parsedWhatsNewTags.length > 0 ? (
           <View style={styles.newsTagRow}>
             {whatsNewState.parsedWhatsNewTags.map((tag) => (
-              <View
-                key={`whats-new-tag-${tag}`}
-                style={styles.newsIndexedTag}
-              >
+              <View key={`whats-new-tag-${tag}`} style={styles.newsIndexedTag}>
                 <Text style={styles.newsIndexedTagText}>
                   {formatNewsTag(tag)}
                 </Text>
@@ -234,7 +236,7 @@ export function SessionCardWhatsNewPanel({
                 : 'chevron-down-outline'
             }
             size={18}
-            color="#7f1b21"
+            color={COLORS.brandPrimaryDark}
           />
         </Pressable>
 
