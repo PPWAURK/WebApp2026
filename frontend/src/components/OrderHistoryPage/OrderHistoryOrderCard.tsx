@@ -18,6 +18,7 @@ type OrderHistoryOrderCardProps = {
   order: OrderSummary;
   returnsForOrder: OrderReturnSummary[];
   deletingOrderId: number | null;
+  deletingReturnId: number | null;
   returnDraftLoadingOrderId: number | null;
   onDownloadOrderBon: (order: {
     id: number;
@@ -26,6 +27,7 @@ type OrderHistoryOrderCardProps = {
   }) => void;
   onOpenReturnDraft: (order: OrderSummary) => void;
   onDeleteOrder: (order: OrderSummary) => void;
+  onDeleteReturn: (orderReturn: OrderReturnSummary) => void;
 };
 
 export function OrderHistoryOrderCard({
@@ -33,10 +35,12 @@ export function OrderHistoryOrderCard({
   order,
   returnsForOrder,
   deletingOrderId,
+  deletingReturnId,
   returnDraftLoadingOrderId,
   onDownloadOrderBon,
   onOpenReturnDraft,
   onDeleteOrder,
+  onDeleteReturn,
 }: OrderHistoryOrderCardProps) {
   return (
     <View style={styles.orderCard}>
@@ -135,6 +139,29 @@ export function OrderHistoryOrderCard({
                   </Text>
                 </View>
               ) : null}
+
+              <View style={styles.returnHistoryActionsRow}>
+                <Pressable
+                  style={[
+                    styles.returnHistoryActionButton,
+                    deletingReturnId === orderReturn.id &&
+                      styles.disabledButton,
+                  ]}
+                  onPress={() => onDeleteReturn(orderReturn)}
+                  disabled={deletingReturnId === orderReturn.id}
+                >
+                  <Ionicons
+                    name="trash-outline"
+                    size={14}
+                    color={COLORS.brandPrimary}
+                  />
+                  <Text style={styles.returnHistoryActionText}>
+                    {deletingReturnId === orderReturn.id
+                      ? text.orders.deletingReturnButton
+                      : text.orders.deleteReturnButton}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           ))}
         </View>

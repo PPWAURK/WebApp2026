@@ -743,6 +743,26 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
+  returnHistoryActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  returnHistoryActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  returnHistoryActionText: {
+    color: BRAND,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
   orderActionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

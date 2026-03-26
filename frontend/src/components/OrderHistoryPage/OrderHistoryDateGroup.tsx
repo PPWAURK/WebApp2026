@@ -17,6 +17,7 @@ type OrderHistoryDateGroupProps = {
   isOpen: boolean;
   returnsByOrderId: Map<number, OrderReturnSummary[]>;
   deletingOrderId: number | null;
+  deletingReturnId: number | null;
   returnDraftLoadingOrderId: number | null;
   onToggle: (date: string) => void;
   onDownloadOrderBon: (order: {
@@ -26,6 +27,7 @@ type OrderHistoryDateGroupProps = {
   }) => void;
   onOpenReturnDraft: (order: OrderSummary) => void;
   onDeleteOrder: (order: OrderSummary) => void;
+  onDeleteReturn: (orderReturn: OrderReturnSummary) => void;
 };
 
 export function OrderHistoryDateGroup({
@@ -35,11 +37,13 @@ export function OrderHistoryDateGroup({
   isOpen,
   returnsByOrderId,
   deletingOrderId,
+  deletingReturnId,
   returnDraftLoadingOrderId,
   onToggle,
   onDownloadOrderBon,
   onOpenReturnDraft,
   onDeleteOrder,
+  onDeleteReturn,
 }: OrderHistoryDateGroupProps) {
   const totalItems = dateOrders.reduce(
     (sum, order) => sum + order.totalItems,
@@ -109,10 +113,12 @@ export function OrderHistoryDateGroup({
               order={order}
               returnsForOrder={returnsByOrderId.get(order.id) ?? []}
               deletingOrderId={deletingOrderId}
+              deletingReturnId={deletingReturnId}
               returnDraftLoadingOrderId={returnDraftLoadingOrderId}
               onDownloadOrderBon={onDownloadOrderBon}
               onOpenReturnDraft={onOpenReturnDraft}
               onDeleteOrder={onDeleteOrder}
+              onDeleteReturn={onDeleteReturn}
             />
           ))}
         </View>

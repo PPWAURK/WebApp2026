@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import type { AppText } from '../../locales/translations';
 import type {
   OrderReturnSummary,
   OrderSummary,
 } from '../../services/ordersApi';
+import { deleteOrderReturn } from '../../services/ordersApi';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { OrderHistoryAnalytics } from './OrderHistoryAnalytics';
 import { OrderHistoryDateGroup } from './OrderHistoryDateGroup';
@@ -43,6 +45,12 @@ export function OrderHistoryPage({
   const { width } = useWindowDimensions();
   const isMediumScreen = width >= 820;
   const isWideLayout = width >= 1180;
+  const [pendingDeleteReturn, setPendingDeleteReturn] =
+    useState<OrderReturnSummary | null>(null);
+  const [deletingReturnId, setDeletingReturnId] = useState<number | null>(null);
+  const [deleteReturnError, setDeleteReturnError] = useState<string | null>(
+    null,
+  );
 
   const orderReturnFlow = useOrderReturnFlow({
     accessToken,
@@ -56,6 +64,29 @@ export function OrderHistoryPage({
     orderReturns,
     text,
   });
+
+  async function handleConfirmDeleteReturn() {
+    if (!pendingDeleteReturn) {
+      return;
+    }
+
+    setDeleteReturnError(null);
+    setDeletingReturnId(pendingDeleteReturn.id);
+
+    try {
+      await deleteOrderReturn(accessToken, pendingDeleteReturn.id);
+      setPendingDeleteReturn(null);
+      onRefresh();
+    } catch (error) {
+      setDeleteReturnError(
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : text.orders.deleteReturnError,
+      );
+    } finally {
+      setDeletingReturnId(null);
+    }
+  }
 
   return (
     <View style={styles.pageRoot}>
@@ -116,6 +147,12 @@ export function OrderHistoryPage({
             </View>
           </View>
 
+          {deleteReturnError ? (
+            <View style={styles.statusCard}>
+              <Text style={styles.statusText}>{deleteReturnError}</Text>
+            </View>
+          ) : null}
+
           {isLoading ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>{text.orders.loading}</Text>
@@ -151,6 +188,7 @@ export function OrderHistoryPage({
                   isOpen={history.expandedDates[date] ?? false}
                   returnsByOrderId={history.returnsByOrderId}
                   deletingOrderId={deletingOrderId}
+                  deletingReturnId={deletingReturnId}
                   returnDraftLoadingOrderId={
                     orderReturnFlow.returnDraftLoadingOrderId
                   }
@@ -158,6 +196,7 @@ export function OrderHistoryPage({
                   onDownloadOrderBon={onDownloadOrderBon}
                   onOpenReturnDraft={orderReturnFlow.openReturnDraft}
                   onDeleteOrder={onDeleteOrder}
+                  onDeleteReturn={setPendingDeleteReturn}
                 />
               ))}
             </View>
@@ -183,6 +222,19 @@ export function OrderHistoryPage({
         singleAction
         onCancel={orderReturnFlow.closeSuccessDialog}
         onConfirm={orderReturnFlow.closeSuccessDialog}
+      />
+
+      <ConfirmDialog
+        visible={Boolean(pendingDeleteReturn)}
+        title={text.orders.deleteReturnButton}
+        message={text.orders.deleteReturnConfirm}
+        cancelLabel={text.orders.deleteReturnCancel}
+        confirmLabel={text.orders.deleteReturnConfirmButton}
+        destructive
+        onCancel={() => setPendingDeleteReturn(null)}
+        onConfirm={() => {
+          void handleConfirmDeleteReturn();
+        }}
       />
     </View>
   );
