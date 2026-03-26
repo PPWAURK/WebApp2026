@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { COLORS } from '../../constants/colors';
 import type { AppText } from '../../locales/translations';
 import { styles } from './SessionCard.styles';
 import type { SessionCardSupervisorState } from './useSessionCardSupervisorState';
@@ -24,7 +25,11 @@ export function SessionCardManagerApprovalModule({
       <View style={styles.employeeModuleHeader}>
         <View style={styles.employeeModuleHeaderMain}>
           <View style={styles.employeeModuleHeaderIconWrap}>
-            <Ionicons name="person-add-outline" size={18} color="#ffffff" />
+            <Ionicons
+              name="person-add-outline"
+              size={18}
+              color={COLORS.textOnDark}
+            />
           </View>
           <View style={styles.employeeModuleHeaderCopy}>
             <Text style={styles.quickBlockTitle}>
@@ -45,11 +50,11 @@ export function SessionCardManagerApprovalModule({
       </View>
 
       <View style={styles.employeeModuleSearchShell}>
-        <Ionicons name="search-outline" size={18} color="#8d5a5f" />
+        <Ionicons name="search-outline" size={18} color={COLORS.textMuted} />
         <TextInput
           style={styles.employeeModuleSearchInput}
           placeholder={text.dashboard.quickSearchPlaceholder}
-          placeholderTextColor="#a98a8d"
+          placeholderTextColor={COLORS.placeholder}
           value={supervisorState.approvalSearch}
           onChangeText={(value) => supervisorState.setApprovalSearch(value)}
         />
@@ -69,7 +74,7 @@ export function SessionCardManagerApprovalModule({
           <Ionicons
             name="checkmark-circle-outline"
             size={18}
-            color="#ab1e24"
+            color={COLORS.brandPrimary}
           />
           <Text style={styles.employeeModuleEmptyText}>
             {text.dashboard.quickNoPendingAccount}
@@ -112,7 +117,10 @@ export function SessionCardManagerApprovalModule({
                       <Text style={styles.employeeModuleName} numberOfLines={1}>
                         {displayName}
                       </Text>
-                      <Text style={styles.employeeModuleEmail} numberOfLines={1}>
+                      <Text
+                        style={styles.employeeModuleEmail}
+                        numberOfLines={1}
+                      >
                         {entry.email}
                       </Text>
                       <View style={styles.employeeCompactMetaRail}>
@@ -138,7 +146,11 @@ export function SessionCardManagerApprovalModule({
                             style={styles.employeeCompactMetaPillText}
                             numberOfLines={1}
                           >
-                            {text.dashboard.workplaceValues[entry.workplaceRole]}
+                            {
+                              text.dashboard.workplaceValues[
+                                entry.workplaceRole
+                              ]
+                            }
                           </Text>
                         </View>
                       </View>
@@ -222,7 +234,11 @@ export function SessionCardManagerApprovalModule({
                             style={styles.employeeCompactMetaPillText}
                             numberOfLines={1}
                           >
-                            {text.dashboard.workplaceValues[entry.workplaceRole]}
+                            {
+                              text.dashboard.workplaceValues[
+                                entry.workplaceRole
+                              ]
+                            }
                           </Text>
                         </View>
                       </View>
@@ -260,7 +276,7 @@ export function SessionCardManagerApprovalModule({
                                 : 'close-outline'
                             }
                             size={16}
-                            color="#ab1e24"
+                            color={COLORS.brandPrimary}
                           />
                         </Pressable>
 
@@ -289,7 +305,7 @@ export function SessionCardManagerApprovalModule({
                                 : 'checkmark-outline'
                             }
                             size={16}
-                            color="#ffffff"
+                            color={COLORS.textOnDark}
                           />
                         </Pressable>
                       </View>
