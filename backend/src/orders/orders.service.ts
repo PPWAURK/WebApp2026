@@ -6,10 +6,12 @@ import {
 } from '@nestjs/common';
 import {
   UploadMediaType,
+  UploadCategory,
   UploadModule,
   UploadSection,
   type Prisma,
 } from '@prisma/client';
+import { basename, join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersDocumentService } from './orders-document.service';
 import type { OrdersRequestContext } from './orders.types';
@@ -764,6 +766,82 @@ export class OrdersService {
       notes: trimmedNotes ?? '',
       totalItems,
       createdAt: createdReturn.createdAt,
+    };
+  }
+
+  async deleteOrderReturn(returnId: number, actor: Actor) {
+    this.ensureCanManageOrders(actor);
+
+    const existingReturn = await this.prisma.purchaseReturn.findUnique({
+      where: { id: returnId },
+      select: {
+        id: true,
+        restaurantId: true,
+        items: {
+          select: {
+            photos: {
+              select: {
+                document: {
+                  select: {
+                    id: true,
+                    fileName: true,
+                    category: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!existingReturn) {
+      throw new NotFoundException('Order return not found');
+    }
+
+    if (
+      actor.role !== 'ADMIN' &&
+      existingReturn.restaurantId !== actor.restaurantId
+    ) {
+      throw new ForbiddenException(
+        'Order return does not belong to your restaurant',
+      );
+    }
+
+    const attachedDocuments = existingReturn.items.flatMap((item) =>
+      item.photos.map((photo) => photo.document),
+    );
+    const uniqueDocuments = Array.from(
+      new Map(
+        attachedDocuments.map((document) => [document.id, document]),
+      ).values(),
+    );
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.purchaseReturn.delete({
+        where: { id: returnId },
+      });
+
+      if (uniqueDocuments.length > 0) {
+        await tx.document.deleteMany({
+          where: {
+            id: {
+              in: uniqueDocuments.map((document) => document.id),
+            },
+          },
+        });
+      }
+    });
+
+    for (const document of uniqueDocuments) {
+      this.ordersDocumentService.deleteFileIfExists(
+        this.buildUploadFilePath(document.category, document.fileName),
+      );
+    }
+
+    return {
+      success: true,
+      id: returnId,
     };
   }
 
@@ -1624,5 +1702,18 @@ export class OrdersService {
     const day = String(createdAt.getDate()).padStart(2, '0');
     const paddedId = String(orderId).padStart(4, '0');
     return `PO-${year}${month}${day}-${paddedId}`;
+  }
+
+  private buildUploadFilePath(category: UploadCategory, fileName: string) {
+    const storageRoot =
+      process.env.STORAGE_ROOT_PATH ?? join(process.cwd(), 'uploads');
+    const categoryDir =
+      category === UploadCategory.images
+        ? 'images'
+        : category === UploadCategory.videos
+          ? 'videos'
+          : 'documents';
+
+    return join(storageRoot, categoryDir, basename(fileName));
   }
 }

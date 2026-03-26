@@ -90,6 +90,17 @@ export class OrdersController {
     return this.ordersService.createOrderReturn(this.getActor(req), body);
   }
 
+  @ApiOperation({ summary: 'Delete one purchase return' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete('returns/:id')
+  deleteOrderReturn(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) returnId: number,
+  ) {
+    return this.ordersService.deleteOrderReturn(returnId, this.getActor(req));
+  }
+
   @ApiOperation({
     summary:
       'Top 5 ordered products for dashboard (optionally filtered by supplier)',

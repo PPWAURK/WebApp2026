@@ -171,6 +171,11 @@ export type CreatedOrderReturnResult = {
   createdAt: string;
 };
 
+export type DeletedOrderReturnResult = {
+  success: boolean;
+  id: number;
+};
+
 export type OrderHistoryAnalytics = {
   period: '7d' | '30d' | 'this_month' | 'last_month' | 'all';
   current: {
@@ -501,6 +506,38 @@ export async function createOrderReturn(
     notes: normalized.notes,
     totalItems: normalized.totalItems,
     createdAt: normalized.createdAt,
+  };
+}
+
+export async function deleteOrderReturn(
+  token: string,
+  returnId: number,
+): Promise<DeletedOrderReturnResult> {
+  const response = await fetch(`${API_URL}/orders/returns/${returnId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = (await response.json()) as {
+    success?: unknown;
+    id?: unknown;
+    message?: string | string[];
+  };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const message = Array.isArray(data.message)
+      ? data.message.join(', ')
+      : (data.message ?? 'ORDER_RETURN_DELETE_FAILED');
+    throw new Error(message);
+  }
+
+  return {
+    success: Boolean(data.success),
+    id: toNumber(data.id, returnId),
   };
 }
 
