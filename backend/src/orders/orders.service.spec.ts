@@ -7,12 +7,17 @@ describe('OrdersService', () => {
   let service: OrdersService;
   let prisma: {
     $transaction: jest.Mock;
-    document: { findMany: jest.Mock };
+    document: { findMany: jest.Mock; deleteMany: jest.Mock };
     produit: { findMany: jest.Mock };
     fournisseur: { findUnique: jest.Mock };
     restaurant: { findUnique: jest.Mock };
     purchaseOrder: { findUnique: jest.Mock; delete: jest.Mock };
-    purchaseReturn: { create: jest.Mock; findMany: jest.Mock };
+    purchaseReturn: {
+      create: jest.Mock;
+      findMany: jest.Mock;
+      findUnique: jest.Mock;
+      delete: jest.Mock;
+    };
     purchaseReturnItem: {
       create: jest.Mock;
       createMany: jest.Mock;
@@ -40,6 +45,7 @@ describe('OrdersService', () => {
       $transaction: jest.fn(),
       document: {
         findMany: jest.fn(),
+        deleteMany: jest.fn(),
       },
       produit: {
         findMany: jest.fn(),
@@ -57,6 +63,8 @@ describe('OrdersService', () => {
       purchaseReturn: {
         create: jest.fn(),
         findMany: jest.fn(),
+        findUnique: jest.fn(),
+        delete: jest.fn(),
       },
       purchaseReturnItem: {
         create: jest.fn(),
@@ -510,5 +518,58 @@ describe('OrdersService', () => {
     );
 
     expect(prisma.purchaseOrder.delete).not.toHaveBeenCalled();
+  });
+
+  it('deletes a purchase return and cleans up attached photo documents', async () => {
+    prisma.purchaseReturn.findUnique.mockResolvedValue({
+      id: 18,
+      restaurantId: 5,
+      items: [
+        {
+          photos: [
+            {
+              document: {
+                id: 91,
+                fileName: 'return-photo-1.jpg',
+                category: 'images',
+              },
+            },
+            {
+              document: {
+                id: 92,
+                fileName: 'return-photo-2.jpg',
+                category: 'images',
+              },
+            },
+          ],
+        },
+      ],
+    });
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof prisma) => Promise<unknown>) =>
+        callback(prisma as never),
+    );
+    prisma.purchaseReturn.delete.mockResolvedValue({ id: 18 });
+    prisma.document.deleteMany.mockResolvedValue({ count: 2 });
+
+    await expect(
+      service.deleteOrderReturn(18, {
+        id: 8,
+        role: 'MANAGER',
+        restaurantId: 5,
+      }),
+    ).resolves.toEqual({ success: true, id: 18 });
+
+    expect(prisma.purchaseReturn.delete).toHaveBeenCalledWith({
+      where: { id: 18 },
+    });
+    expect(prisma.document.deleteMany).toHaveBeenCalledWith({
+      where: {
+        id: {
+          in: [91, 92],
+        },
+      },
+    });
+    expect(ordersDocumentService.deleteFileIfExists).toHaveBeenCalledTimes(2);
   });
 });
