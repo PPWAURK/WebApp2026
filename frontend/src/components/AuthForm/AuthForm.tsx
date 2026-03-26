@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { styles } from './AuthForm.styles';
+import { COLORS } from '../../constants/colors';
 import type { AuthMode, Restaurant } from '../../types/auth';
 import type { AppText } from '../../locales/translations';
 import type { Language } from '../../types/language';
@@ -205,9 +206,9 @@ export function AuthForm(props: AuthFormProps) {
               autoCorrect={false}
               spellCheck={false}
               importantForAutofill="no"
-              selectionColor="#ab1e24"
+              selectionColor={COLORS.brandPrimary}
               placeholder={props.text.auth.namePlaceholder}
-              placeholderTextColor="#7f8a8a"
+              placeholderTextColor={COLORS.textMutedCool}
               style={[styles.passwordInput, webInputResetStyle]}
               value={props.name}
               onChangeText={props.onNameChange}
@@ -312,9 +313,9 @@ export function AuthForm(props: AuthFormProps) {
           spellCheck={false}
           importantForAutofill="no"
           keyboardType="email-address"
-          selectionColor="#ab1e24"
+          selectionColor={COLORS.brandPrimary}
           placeholder={props.text.auth.emailPlaceholder}
-          placeholderTextColor="#7f8a8a"
+          placeholderTextColor={COLORS.textMutedCool}
           style={[styles.passwordInput, webInputResetStyle]}
           value={props.email}
           onChangeText={props.onEmailChange}
@@ -332,9 +333,9 @@ export function AuthForm(props: AuthFormProps) {
           spellCheck={false}
           importantForAutofill="no"
           secureTextEntry={!passwordVisible}
-          selectionColor="#ab1e24"
+          selectionColor={COLORS.brandPrimary}
           placeholder={props.text.auth.passwordPlaceholder}
-          placeholderTextColor="#7f8a8a"
+          placeholderTextColor={COLORS.textMutedCool}
           style={[styles.passwordInput, webInputResetStyle]}
           value={props.password}
           onChangeText={props.onPasswordChange}
@@ -346,7 +347,7 @@ export function AuthForm(props: AuthFormProps) {
           <Ionicons
             name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
             size={18}
-            color="#ab1e24"
+            color={COLORS.brandPrimary}
           />
         </Pressable>
       </View>

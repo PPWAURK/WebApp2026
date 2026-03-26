@@ -7,6 +7,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { COLORS } from '../../constants/colors';
 import type { AppText } from '../../locales/translations';
 import type { OrderReturnDraft } from '../../services/ordersApi';
 import {
@@ -266,7 +267,7 @@ export function OrderReturnModal({
                   <TextInput
                     style={styles.input}
                     placeholder={text.orders.returnReasonPlaceholder}
-                    placeholderTextColor="#aa777b"
+                    placeholderTextColor={COLORS.textMuted}
                     value={reason}
                     onChangeText={(value) => {
                       setFormError(null);
@@ -282,7 +283,7 @@ export function OrderReturnModal({
                   <TextInput
                     style={[styles.input, styles.notesInput]}
                     placeholder={text.orders.returnNotesPlaceholder}
-                    placeholderTextColor="#aa777b"
+                    placeholderTextColor={COLORS.textMuted}
                     multiline
                     value={notes}
                     onChangeText={(value) => {

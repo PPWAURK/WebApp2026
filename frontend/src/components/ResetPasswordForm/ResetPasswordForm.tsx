@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import { COLORS } from '../../constants/colors';
 import type { AppText } from '../../locales/translations';
 import { styles } from './ResetPasswordForm.styles';
 
@@ -49,9 +50,9 @@ export function ResetPasswordForm({
           spellCheck={false}
           importantForAutofill="no"
           secureTextEntry={!passwordVisible}
-          selectionColor="#ab1e24"
+          selectionColor={COLORS.brandPrimary}
           placeholder={text.auth.newPasswordPlaceholder}
-          placeholderTextColor="#7f8a8a"
+          placeholderTextColor={COLORS.textMutedCool}
           style={styles.input}
           value={password}
           onChangeText={onPasswordChange}
@@ -63,7 +64,7 @@ export function ResetPasswordForm({
           <Ionicons
             name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
             size={18}
-            color="#ab1e24"
+            color={COLORS.brandPrimary}
           />
         </Pressable>
       </View>
