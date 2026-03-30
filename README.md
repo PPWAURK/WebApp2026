@@ -89,6 +89,7 @@ cp .env.example .env
 - `JWT_SECRET`: JWT 密钥
 - `CORS_ORIGIN`: 允许的前端来源
 - `STORAGE_ROOT_PATH`: 上传文件物理目录
+- `HOST_STORAGE_ROOT_PATH`: 生产 Docker 挂载到容器 `/data/storage` 的宿主机目录
 - `PUBLIC_API_BASE_URL`: 生成公开文件地址时使用
 - `APP_WEB_URL`: 前端地址
 - `MAIL_*`: 密码找回邮件配置
@@ -202,13 +203,16 @@ npm --prefix frontend run typecheck
 
 说明：
 
-- 文件保存路径由 `STORAGE_ROOT_PATH` 控制
+- 应用在容器内保存文件的路径由 `STORAGE_ROOT_PATH` 控制
+- 生产 Docker 宿主机的持久化目录由 `HOST_STORAGE_ROOT_PATH` 控制，并挂载到容器内的 `/data/storage`
 - 对外生成的完整 URL 由 `PUBLIC_API_BASE_URL` 控制
 - 如果反向代理保留了前缀路径，例如 `/backend2`，需要同步设置 `API_PREFIX` 和 `PUBLIC_API_BASE_URL`
 
 示例：
 
 - `API_PREFIX="backend2"`
+- `HOST_STORAGE_ROOT_PATH="/data/storage"`
+- `STORAGE_ROOT_PATH="/data/storage"`
 - `PUBLIC_API_BASE_URL="https://api.example.com/backend2"`
 
 这样后端会暴露为：
