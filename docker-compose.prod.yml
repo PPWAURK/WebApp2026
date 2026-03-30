@@ -4,7 +4,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env.production
+    environment:
+      STORAGE_ROOT_PATH: /data/storage
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     volumes:
-      - "${STORAGE_ROOT_PATH:-/data/storage}:/data/storage"
+      - "${HOST_STORAGE_ROOT_PATH:-/data/storage}:/data/storage"

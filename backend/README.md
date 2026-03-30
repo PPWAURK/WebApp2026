@@ -68,7 +68,8 @@ Rules:
 
 - Accepted MIME types: `image/*`, `video/*` and common documents (pdf, doc, docx, xls, xlsx, txt)
 - Max file size: `800MB` per file
-- `STORAGE_ROOT_PATH` controls where files are physically stored
+- `STORAGE_ROOT_PATH` controls where files are physically stored inside the app/container
+- In Docker production, mount the host directory defined by `HOST_STORAGE_ROOT_PATH` to `/data/storage`
 - `PUBLIC_API_BASE_URL` controls generated public URLs (useful behind reverse proxy path like `/backend2`)
 - With `STORAGE_ROOT_PATH="/data/storage"`, uploads are saved in:
   - `/data/storage/images`

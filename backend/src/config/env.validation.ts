@@ -5,6 +5,7 @@ import {
   parseCorsOrigins,
   parsePositiveInt,
 } from './env.utils';
+import { isAbsolute } from 'path';
 
 type RawEnv = Record<string, unknown>;
 
@@ -78,6 +79,10 @@ export function validateEnvironment(config: RawEnv) {
 
   if (!storageRootPath) {
     errors.push('STORAGE_ROOT_PATH is required');
+  }
+
+  if (nodeEnv === 'production' && !isAbsolute(storageRootPath)) {
+    errors.push('STORAGE_ROOT_PATH must be an absolute path in production');
   }
 
   if (publicApiBaseUrl && !isHttpUrl(publicApiBaseUrl)) {
