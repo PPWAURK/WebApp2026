@@ -572,4 +572,20 @@ describe('OrdersService', () => {
     });
     expect(ordersDocumentService.deleteFileIfExists).toHaveBeenCalledTimes(2);
   });
+
+  it('treats deleting a missing purchase return as a successful no-op', async () => {
+    prisma.purchaseReturn.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.deleteOrderReturn(4, {
+        id: 8,
+        role: 'MANAGER',
+        restaurantId: 5,
+      }),
+    ).resolves.toEqual({ success: true, id: 4 });
+
+    expect(prisma.purchaseReturn.delete).not.toHaveBeenCalled();
+    expect(prisma.document.deleteMany).not.toHaveBeenCalled();
+    expect(ordersDocumentService.deleteFileIfExists).not.toHaveBeenCalled();
+  });
 });

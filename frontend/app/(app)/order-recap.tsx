@@ -3,7 +3,10 @@ import { useState } from 'react';
 import { OrderRecapPage } from '../../src/components/OrderRecapPage';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useLanguage } from '../../src/hooks/useLanguage';
-import { useOrderBonDownloader } from '../../src/hooks/useOrderBonDownloader';
+import {
+  openPendingOrderBonWindow,
+  useOrderBonDownloader,
+} from '../../src/hooks/useOrderBonDownloader';
 import { useOrderFlow } from '../../src/hooks/useOrderFlow';
 import { createOrder } from '../../src/services/ordersApi';
 import type { Role } from '../../src/types/auth';
@@ -44,6 +47,8 @@ export default function OrderRecapScreen() {
   const recap = orderRecap;
 
   async function handleSubmitOrder() {
+    const pendingWindow = openPendingOrderBonWindow();
+
     setIsSubmittingOrder(true);
     setSubmitError(null);
 
@@ -54,10 +59,14 @@ export default function OrderRecapScreen() {
       });
 
       setLatestCreatedOrder(created);
-      void downloadOrderBon(created);
+      await downloadOrderBon(created, { pendingWindow });
       resetOrderDraft();
       router.replace('/order-history');
     } catch (error) {
+      if (pendingWindow && !pendingWindow.closed) {
+        pendingWindow.close();
+      }
+
       if (error instanceof Error && error.message.trim()) {
         setSubmitError(error.message);
       } else {

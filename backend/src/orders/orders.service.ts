@@ -796,7 +796,10 @@ export class OrdersService {
     });
 
     if (!existingReturn) {
-      throw new NotFoundException('Order return not found');
+      return {
+        success: true,
+        id: returnId,
+      };
     }
 
     if (

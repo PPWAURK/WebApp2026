@@ -1,5 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, View, useWindowDimensions } from 'react-native';
+import {
+  Animated,
+  Easing,
+  Platform,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { COLORS } from '../../constants/colors';
 import Svg, {
   Circle,
@@ -17,6 +23,7 @@ const AnimatedView = Animated.createAnimatedComponent(View);
 
 export function LoginSvgLoader() {
   const { width } = useWindowDimensions();
+  const canUseNativeDriver = Platform.OS !== 'web';
 
   // Moteurs d'animation du pendule et de la lueur.
   const swing = useRef(new Animated.Value(0)).current;
@@ -36,13 +43,13 @@ export function LoginSvgLoader() {
           // Vitesse du balancement par demi-cycle (gauche -> droite, puis droite -> gauche).
           duration: 1480,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
+          useNativeDriver: canUseNativeDriver,
         }),
         Animated.timing(swing, {
           toValue: 0,
           duration: 1480,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
+          useNativeDriver: canUseNativeDriver,
         }),
       ]),
     );
@@ -52,7 +59,7 @@ export function LoginSvgLoader() {
     return () => {
       swingLoop.stop();
     };
-  }, [swing]);
+  }, [canUseNativeDriver, swing]);
 
   const swingRotation = swing.interpolate({
     inputRange: [0, 0.5, 1],

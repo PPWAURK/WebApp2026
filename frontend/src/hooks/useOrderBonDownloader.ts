@@ -11,10 +11,51 @@ type OrderBonDownloadTarget = {
   number?: string;
 };
 
+type OrderBonDownloadOptions = {
+  pendingWindow?: Window | null;
+};
+
+function isIosWebBrowser(): boolean {
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined') {
+    return false;
+  }
+
+  const userAgent = navigator.userAgent;
+  const isTouchMac =
+    navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+
+  return /iPad|iPhone|iPod/i.test(userAgent) || isTouchMac;
+}
+
+export function openPendingOrderBonWindow(): Window | null {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') {
+    return null;
+  }
+
+  if (!isIosWebBrowser()) {
+    return null;
+  }
+
+  return window.open('about:blank', '_blank');
+}
+
+function scheduleObjectUrlRevoke(objectUrl: string, delayMs: number) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.setTimeout(() => {
+    window.URL.revokeObjectURL(objectUrl);
+  }, delayMs);
+}
+
 export function useOrderBonDownloader(accessToken: string | null | undefined) {
   const language = useLanguage();
 
-  return async function downloadOrderBon(order: OrderBonDownloadTarget) {
+  return async function downloadOrderBon(
+    order: OrderBonDownloadTarget,
+    options?: OrderBonDownloadOptions,
+  ) {
     const url = buildOrderBonUrl(order.id);
     const fileName = `${order.number ?? `order-${order.id}`}.pdf`;
 
@@ -31,6 +72,9 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
     }
 
     if (Platform.OS === 'web') {
+      const pendingWindow =
+        options?.pendingWindow ?? openPendingOrderBonWindow();
+
       try {
         const response = await fetch(url, {
           headers: {
@@ -45,16 +89,31 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
 
         const blob = await response.blob();
         const objectUrl = window.URL.createObjectURL(blob);
+
+        if (pendingWindow && !pendingWindow.closed) {
+          pendingWindow.location.href = objectUrl;
+          scheduleObjectUrlRevoke(objectUrl, 60000);
+          return;
+        }
+
+        if (isIosWebBrowser()) {
+          window.location.assign(objectUrl);
+          scheduleObjectUrlRevoke(objectUrl, 60000);
+          return;
+        }
+
         const anchor = window.document.createElement('a');
         anchor.href = objectUrl;
         anchor.setAttribute('download', '');
         window.document.body.append(anchor);
         anchor.click();
         anchor.remove();
-        window.setTimeout(() => {
-          window.URL.revokeObjectURL(objectUrl);
-        }, 1000);
+        scheduleObjectUrlRevoke(objectUrl, 1000);
       } catch {
+        if (pendingWindow && !pendingWindow.closed) {
+          pendingWindow.close();
+        }
+
         if (
           typeof window !== 'undefined' &&
           typeof window.alert === 'function'

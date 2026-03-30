@@ -9,6 +9,8 @@ type ConfirmDialogProps = {
   confirmLabel: string;
   destructive?: boolean;
   singleAction?: boolean;
+  cancelDisabled?: boolean;
+  confirmDisabled?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 };
@@ -21,6 +23,8 @@ export function ConfirmDialog({
   confirmLabel,
   destructive,
   singleAction,
+  cancelDisabled,
+  confirmDisabled,
   onCancel,
   onConfirm,
 }: ConfirmDialogProps) {
@@ -39,8 +43,12 @@ export function ConfirmDialog({
           <View style={styles.actions}>
             {singleAction ? null : (
               <Pressable
-                style={styles.cancelButton}
+                style={[
+                  styles.cancelButton,
+                  cancelDisabled && styles.buttonDisabled,
+                ]}
                 onPress={onCancel}
+                disabled={cancelDisabled}
                 accessibilityRole="button"
                 accessibilityLabel={cancelLabel}
               >
@@ -53,8 +61,10 @@ export function ConfirmDialog({
                 destructive
                   ? styles.confirmButtonDanger
                   : styles.confirmButtonPrimary,
+                confirmDisabled && styles.buttonDisabled,
               ]}
               onPress={onConfirm}
+              disabled={confirmDisabled}
               accessibilityRole="button"
               accessibilityLabel={confirmLabel}
             >
@@ -147,5 +157,8 @@ const styles = StyleSheet.create({
   },
   confirmTextDanger: {
     color: COLORS.brandPrimary,
+  },
+  buttonDisabled: {
+    opacity: 0.55,
   },
 });

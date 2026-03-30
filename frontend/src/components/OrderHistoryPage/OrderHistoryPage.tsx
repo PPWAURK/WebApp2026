@@ -22,7 +22,8 @@ type OrderHistoryPageProps = {
   orderReturns: OrderReturnSummary[];
   isLoading: boolean;
   deletingOrderId: number | null;
-  onRefresh: () => void;
+  onRefresh: () => Promise<void>;
+  onDeleteReturnSuccess: (returnId: number) => void;
   onDownloadOrderBon: (order: {
     id: number;
     bonUrl: string;
@@ -39,6 +40,7 @@ export function OrderHistoryPage({
   isLoading,
   deletingOrderId,
   onRefresh,
+  onDeleteReturnSuccess,
   onDownloadOrderBon,
   onDeleteOrder,
 }: OrderHistoryPageProps) {
@@ -66,7 +68,7 @@ export function OrderHistoryPage({
   });
 
   async function handleConfirmDeleteReturn() {
-    if (!pendingDeleteReturn) {
+    if (!pendingDeleteReturn || deletingReturnId !== null) {
       return;
     }
 
@@ -75,9 +77,20 @@ export function OrderHistoryPage({
 
     try {
       await deleteOrderReturn(accessToken, pendingDeleteReturn.id);
+      onDeleteReturnSuccess(pendingDeleteReturn.id);
       setPendingDeleteReturn(null);
-      onRefresh();
+      await onRefresh();
     } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === 'Order return not found'
+      ) {
+        onDeleteReturnSuccess(pendingDeleteReturn.id);
+        setPendingDeleteReturn(null);
+        await onRefresh();
+        return;
+      }
+
       setDeleteReturnError(
         error instanceof Error && error.message.trim()
           ? error.message
@@ -231,6 +244,8 @@ export function OrderHistoryPage({
         cancelLabel={text.orders.deleteReturnCancel}
         confirmLabel={text.orders.deleteReturnConfirmButton}
         destructive
+        cancelDisabled={deletingReturnId !== null}
+        confirmDisabled={deletingReturnId !== null}
         onCancel={() => setPendingDeleteReturn(null)}
         onConfirm={() => {
           void handleConfirmDeleteReturn();

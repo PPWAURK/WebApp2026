@@ -112,6 +112,12 @@ export default function OrderHistoryScreen() {
     }
   }
 
+  function handleDeleteReturnSuccess(returnId: number) {
+    setOrderReturns((currentReturns) =>
+      currentReturns.filter((orderReturn) => orderReturn.id !== returnId),
+    );
+  }
+
   async function handleDeleteOrder(order: OrderSummary) {
     const confirmationMessage = language.text.orders.deleteHistoryConfirm;
     const confirmed =
@@ -167,9 +173,8 @@ export default function OrderHistoryScreen() {
       orderReturns={orderReturns}
       isLoading={isLoading}
       deletingOrderId={deletingOrderId}
-      onRefresh={() => {
-        void loadOrderHistory();
-      }}
+      onRefresh={loadOrderHistory}
+      onDeleteReturnSuccess={handleDeleteReturnSuccess}
       onDownloadOrderBon={(order) => {
         void downloadOrderBon(order);
       }}

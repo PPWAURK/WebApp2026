@@ -22,6 +22,7 @@ import { useLanguage } from '../../src/hooks/useLanguage';
 import { styles } from '../../src/styles/App.styles';
 
 const LOGIN_ANIMATION_DURATION_MS = 2000;
+const CAN_USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -58,13 +59,13 @@ export default function LoginScreen() {
         toValue: 1,
         duration: 360,
         easing: Easing.out(Easing.exp),
-        useNativeDriver: true,
+        useNativeDriver: CAN_USE_NATIVE_DRIVER,
       }),
       Animated.timing(loaderScale, {
         toValue: 1,
         duration: 420,
         easing: Easing.out(Easing.exp),
-        useNativeDriver: true,
+        useNativeDriver: CAN_USE_NATIVE_DRIVER,
       }),
     ]).start();
 
@@ -74,13 +75,13 @@ export default function LoginScreen() {
           toValue: 0,
           duration: 280,
           easing: Easing.inOut(Easing.cubic),
-          useNativeDriver: true,
+          useNativeDriver: CAN_USE_NATIVE_DRIVER,
         }),
         Animated.timing(loaderScale, {
           toValue: 1.04,
           duration: 280,
           easing: Easing.inOut(Easing.cubic),
-          useNativeDriver: true,
+          useNativeDriver: CAN_USE_NATIVE_DRIVER,
         }),
       ]).start(() => {
         timeoutRef.current = null;
