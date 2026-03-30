@@ -38,7 +38,12 @@ export function ConfirmDialog({
 
           <View style={styles.actions}>
             {singleAction ? null : (
-              <Pressable style={styles.cancelButton} onPress={onCancel}>
+              <Pressable
+                style={styles.cancelButton}
+                onPress={onCancel}
+                accessibilityRole="button"
+                accessibilityLabel={cancelLabel}
+              >
                 <Text style={styles.cancelText}>{cancelLabel}</Text>
               </Pressable>
             )}
@@ -50,6 +55,8 @@ export function ConfirmDialog({
                   : styles.confirmButtonPrimary,
               ]}
               onPress={onConfirm}
+              accessibilityRole="button"
+              accessibilityLabel={confirmLabel}
             >
               <Text
                 style={[

@@ -7,7 +7,8 @@ export function useAuthFormState() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<
     number | null
@@ -72,7 +73,8 @@ export function useAuthFormState() {
     mode,
     email,
     password,
-    name,
+    firstName,
+    lastName,
     restaurants,
     selectedRestaurantId,
     requestManagerRole,
@@ -84,7 +86,8 @@ export function useAuthFormState() {
     setMode,
     setEmail,
     setPassword,
-    setName,
+    setFirstName,
+    setLastName,
     setRestaurants,
     setSelectedRestaurantId,
     setRequestManagerRole,

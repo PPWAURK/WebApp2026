@@ -1,9 +1,20 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 const DASHBOARD_BORDER = 'rgba(142, 34, 40, 0.18)';
 const DASHBOARD_BORDER_SOFT = 'rgba(171, 30, 36, 0.16)';
 const DASHBOARD_CARD_BORDER = 'rgba(142, 34, 40, 0.14)';
 const DASHBOARD_CARD_BORDER_SOFT = 'rgba(171, 30, 36, 0.14)';
+const WEB_INPUT_RESET = Platform.select({
+  web: {
+    outlineStyle: 'none',
+    outlineWidth: 0,
+    outlineColor: 'transparent',
+    boxShadow: 'none',
+    appearance: 'none',
+    WebkitAppearance: 'none',
+  } as never,
+  default: {},
+});
 
 export const styles = StyleSheet.create({
   card: {
@@ -435,6 +446,7 @@ export const styles = StyleSheet.create({
     fontSize: 13,
   },
   quickSearchInput: {
+    ...WEB_INPUT_RESET,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: 'rgba(171, 30, 36, 0.12)',
@@ -850,6 +862,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   employeeModuleSearchInput: {
+    ...WEB_INPUT_RESET,
     flex: 1,
     minWidth: 0,
     color: '#5f1c21',
@@ -1335,6 +1348,50 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  newsFeedStateCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: DASHBOARD_CARD_BORDER,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  newsFeedStateCardError: {
+    borderColor: 'rgba(171, 30, 36, 0.22)',
+    backgroundColor: '#fff6f4',
+  },
+  newsFeedStateIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(171, 30, 36, 0.08)',
+    backgroundColor: '#fff6f2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newsFeedStateIconWrapError: {
+    borderColor: 'rgba(171, 30, 36, 0.16)',
+    backgroundColor: '#fff0ed',
+  },
+  newsFeedStateCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  newsFeedStateTitle: {
+    color: '#5f1c21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  newsFeedStateDescription: {
+    color: '#8d5a5f',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+  },
   newsFeedSummaryRail: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1421,6 +1478,18 @@ export const styles = StyleSheet.create({
     gap: 8,
     flex: 1,
   },
+  newsLaneIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newsLaneTitleCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
   newsLaneDot: {
     width: 10,
     height: 10,
@@ -1431,6 +1500,12 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 12,
     flexShrink: 1,
+  },
+  newsLaneHint: {
+    color: '#8d5a5f',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 10,
+    lineHeight: 14,
   },
   newsLaneCount: {
     color: '#8d5a5f',
@@ -1451,19 +1526,39 @@ export const styles = StyleSheet.create({
     padding: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
+  },
+  newsLaneEmptyTitle: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  newsLaneEmptyDescription: {
+    color: '#8d5a5f',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 11,
+    lineHeight: 16,
+    textAlign: 'center',
   },
   newsPostCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: DASHBOARD_CARD_BORDER,
     backgroundColor: '#ffffff',
-    padding: 10,
-    gap: 6,
+    padding: 12,
+    gap: 10,
   },
   newsPostCardUnread: {
-    borderColor: 'rgba(171, 30, 36, 0.14)',
-    borderLeftWidth: 3,
-    borderLeftColor: '#ab1e24',
+    borderColor: 'rgba(171, 30, 36, 0.32)',
+    backgroundColor: '#fff9f7',
+    shadowColor: '#ab1e24',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 1,
   },
   newsPostMetaRow: {
     flexDirection: 'row',
@@ -1471,11 +1566,36 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
+  newsPostMetaLead: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
   newsPostMetaText: {
     color: '#9a6a6e',
     fontFamily: 'Manrope_400Regular',
     fontSize: 11,
     flex: 1,
+  },
+  newsPostMetaTextUnread: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    flexGrow: 0,
+  },
+  newsUnreadBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(171, 30, 36, 0.22)',
+    backgroundColor: '#ab1e24',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  newsUnreadBadgeText: {
+    color: '#ffffff',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
   },
   newsPostTag: {
     color: '#7a181d',
@@ -1490,6 +1610,46 @@ export const styles = StyleSheet.create({
     color: '#7f1b21',
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
+    flex: 1,
+  },
+  newsPostTitleUnread: {
+    color: '#6d1218',
+  },
+  newsPostHeaderBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  newsPostAuthorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  newsPostFieldsParallel: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  newsPostFieldColumn: {
+    flex: 1,
+    minWidth: 120,
+  },
+  newsPostFieldRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    rowGap: 4,
+  },
+  newsPostFieldLabel: {
+    color: '#8d5a5f',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  newsPostAuthorText: {
+    color: '#8d5a5f',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
     flex: 1,
   },
   newsTagRow: {
@@ -1529,7 +1689,44 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
   },
+  newsPostBodyTextUnread: {
+    color: '#6f3438',
+  },
+  newsPostBodyBox: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(171, 30, 36, 0.1)',
+    backgroundColor: '#fffaf8',
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
   newsPostFooterBlock: {
+    gap: 6,
+  },
+  newsPostDivider: {
+    height: 1,
+    backgroundColor: 'rgba(171, 30, 36, 0.08)',
+  },
+  newsVisibilityRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  newsVisibilityText: {
+    flex: 1,
+    color: '#8d5a5f',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  newsPostStatusText: {
+    color: '#8d5a5f',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  newsAttachmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
   newsPostActionButton: {
@@ -1579,12 +1776,41 @@ export const styles = StyleSheet.create({
     backgroundColor: '#f8e2e4',
   },
   newsTrackingCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: DASHBOARD_CARD_BORDER_SOFT,
     backgroundColor: '#fffaf7',
-    padding: 10,
-    gap: 8,
+    padding: 12,
+    gap: 10,
+  },
+  newsTrackingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  newsTrackingHeaderMain: {
+    flex: 1,
+    gap: 2,
+  },
+  newsTrackingSummaryPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(171, 30, 36, 0.12)',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  newsTrackingSummaryPillText: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  newsTrackingRestaurantMeta: {
+    color: '#8d5a5f',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 11,
+    lineHeight: 16,
   },
   newsTrackingRestaurantGroup: {
     borderRadius: 10,

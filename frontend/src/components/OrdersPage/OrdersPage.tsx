@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
   Pressable,
@@ -35,6 +35,140 @@ function formatAmount(value: number) {
   return value.toFixed(2);
 }
 
+type ProductCardProps = {
+  isSmallScreen: boolean;
+  language: Language;
+  product: ProductItem;
+  quantity: number;
+  text: AppText;
+  useSingleColumnGrid: boolean;
+  onChangeQuantity: (productId: number, delta: number) => void;
+};
+
+const ProductCard = memo(function ProductCard({
+  isSmallScreen,
+  language,
+  product,
+  quantity,
+  text,
+  useSingleColumnGrid,
+  onChangeQuantity,
+}: ProductCardProps) {
+  const productName =
+    language === 'zh' ? product.nameZh : (product.nameFr ?? product.nameZh);
+  const productGridItemStyle = useSingleColumnGrid
+    ? styles.productGridItemSmall
+    : styles.productGridItem;
+
+  return (
+    <View style={[styles.productCard, productGridItemStyle]}>
+      <View style={styles.productCardHeader}>
+        <View style={styles.productBadgeRow}>
+          <View style={styles.productBadge}>
+            <Text style={styles.productBadgeText}>{product.category}</Text>
+          </View>
+          {product.reference ? (
+            <View style={styles.productBadge}>
+              <Text style={styles.productBadgeText}>{product.reference}</Text>
+            </View>
+          ) : null}
+        </View>
+      </View>
+
+      <View
+        style={[
+          styles.productInfoRow,
+          isSmallScreen && styles.productInfoRowSmall,
+        ]}
+      >
+        {product.image ? (
+          <View
+            style={[
+              styles.productImageFrame,
+              isSmallScreen && styles.productImageFrameSmall,
+            ]}
+          >
+            <Image
+              source={{ uri: product.image }}
+              style={styles.productImageThumb}
+              resizeMode="cover"
+            />
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.productImagePlaceholder,
+              isSmallScreen && styles.productImageFrameSmall,
+            ]}
+          >
+            <Ionicons name="image-outline" size={24} color="#ab1e24" />
+          </View>
+        )}
+
+        <View
+          style={[
+            styles.productInfoColumn,
+            isSmallScreen && styles.productInfoColumnSmall,
+          ]}
+        >
+          <Text style={styles.productTitle}>{productName}</Text>
+          {product.specification ? (
+            <Text style={styles.docItemMeta}>
+              {text.orders.specificationLabel}: {product.specification}
+            </Text>
+          ) : null}
+          {product.unit ? (
+            <Text style={styles.docItemMeta}>
+              {text.orders.unitLabel}: {product.unit}
+            </Text>
+          ) : null}
+          <Text style={styles.priceText}>
+            {text.orders.priceLabel}:{' '}
+            {product.priceHt === null
+              ? text.orders.priceNotAvailable
+              : formatAmount(product.priceHt)}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.quantityBar}>
+        <Pressable
+          style={styles.quantityButton}
+          onPress={() => onChangeQuantity(product.id, -1)}
+          accessibilityRole="button"
+          accessibilityLabel={
+            language === 'zh'
+              ? `减少${productName}数量`
+              : `Réduire la quantité de ${productName}`
+          }
+        >
+          <Text style={styles.quantityButtonText}>-</Text>
+        </Pressable>
+
+        <View style={styles.quantityValuePill}>
+          <Text style={styles.quantityValueLabel}>
+            {text.orders.quantityLabel}
+          </Text>
+          <Text style={styles.quantityValueText}>{quantity}</Text>
+        </View>
+
+        <Pressable
+          style={styles.quantityButton}
+          onPress={() => onChangeQuantity(product.id, 1)}
+          accessibilityRole="button"
+          accessibilityLabel={
+            language === 'zh'
+              ? `增加${productName}数量`
+              : `Augmenter la quantité de ${productName}`
+          }
+        >
+          <Text style={styles.quantityButtonText}>+</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+});
+
 export function OrdersPage({
   text,
   accessToken,
@@ -57,12 +191,12 @@ export function OrdersPage({
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [hasLoadError, setHasLoadError] = useState(false);
 
   useEffect(() => {
     let isActive = true;
     setLoading(true);
-    setError(null);
+    setHasLoadError(false);
 
     void Promise.all([fetchProducts(accessToken), fetchSuppliers(accessToken)])
       .then(([productResult, supplierResult]) => {
@@ -77,7 +211,7 @@ export function OrdersPage({
         if (isActive) {
           setProducts([]);
           setSuppliers([]);
-          setError(text.orders.loadError);
+          setHasLoadError(true);
         }
       })
       .finally(() => {
@@ -89,7 +223,7 @@ export function OrdersPage({
     return () => {
       isActive = false;
     };
-  }, [accessToken, text.orders.loadError]);
+  }, [accessToken]);
 
   useEffect(() => {
     if (suppliers.length === 0) {
@@ -125,21 +259,34 @@ export function OrdersPage({
     suppliers,
   ]);
 
-  function changeQuantity(productId: number, delta: number) {
-    const next = (quantities[productId] ?? 0) + delta;
-    const clamped = Math.max(0, next);
-    onQuantitiesChange({
-      ...quantities,
-      [productId]: clamped,
-    });
-  }
+  const changeQuantity = useCallback(
+    (productId: number, delta: number) => {
+      const next = (quantities[productId] ?? 0) + delta;
+      const clamped = Math.max(0, next);
+      onQuantitiesChange({
+        ...quantities,
+        [productId]: clamped,
+      });
+    },
+    [onQuantitiesChange, quantities],
+  );
+
+  const handleSelectSupplier = useCallback(
+    (supplierId: number) => {
+      onSelectedSupplierIdChange(supplierId);
+      onSelectedCategoryChange('ALL');
+    },
+    [onSelectedCategoryChange, onSelectedSupplierIdChange],
+  );
 
   const supplierProducts = useMemo(() => {
     if (selectedSupplierId === 'ALL') {
       return products;
     }
 
-    return products.filter((product) => product.supplierId === selectedSupplierId);
+    return products.filter(
+      (product) => product.supplierId === selectedSupplierId,
+    );
   }, [products, selectedSupplierId]);
 
   useEffect(() => {
@@ -147,7 +294,9 @@ export function OrdersPage({
       return;
     }
 
-    if (!supplierProducts.some((product) => product.category === selectedCategory)) {
+    if (
+      !supplierProducts.some((product) => product.category === selectedCategory)
+    ) {
       onSelectedCategoryChange('ALL');
     }
   }, [onSelectedCategoryChange, selectedCategory, supplierProducts]);
@@ -230,11 +379,24 @@ export function OrdersPage({
     });
   }, [productSearch, selectedCategory, supplierProducts]);
 
-  const selectedSupplierName =
-    selectedSupplierId === 'ALL'
-      ? text.orders.supplierLabel
-      : suppliers.find((supplier) => supplier.id === selectedSupplierId)?.name ??
-        text.orders.supplierLabel;
+  const selectedSupplierName = useMemo(() => {
+    if (selectedSupplierId === 'ALL') {
+      return text.orders.supplierLabel;
+    }
+
+    return (
+      suppliers.find((supplier) => supplier.id === selectedSupplierId)?.name ??
+      text.orders.supplierLabel
+    );
+  }, [selectedSupplierId, suppliers, text.orders.supplierLabel]);
+
+  const handleSubmitOrder = useCallback(() => {
+    onSubmitOrder({
+      items: selectedItems,
+      totalItems: summary.totalItems,
+      totalAmount: summary.totalAmount,
+    });
+  }, [onSubmitOrder, selectedItems, summary.totalAmount, summary.totalItems]);
 
   const supplierProductCountById = useMemo(() => {
     const next = new Map<number, number>();
@@ -271,30 +433,49 @@ export function OrdersPage({
           <View style={styles.heroStatsRow}>
             <View style={styles.heroStatCard}>
               <Text style={styles.heroStatValue}>{summary.totalItems}</Text>
-              <Text style={styles.heroStatLabel}>{text.orders.summaryItems}</Text>
+              <Text style={styles.heroStatLabel}>
+                {text.orders.summaryItems}
+              </Text>
             </View>
             <View style={styles.heroStatCard}>
               <Text style={styles.heroStatValue}>
                 {formatAmount(summary.totalAmount)}
               </Text>
-              <Text style={styles.heroStatLabel}>{text.orders.summaryAmount}</Text>
+              <Text style={styles.heroStatLabel}>
+                {text.orders.summaryAmount}
+              </Text>
             </View>
             <View style={styles.heroStatCard}>
-              <Text style={styles.heroStatValue}>{filteredProducts.length}</Text>
-              <Text style={styles.heroStatLabel}>{text.orders.filterLabel}</Text>
+              <Text style={styles.heroStatValue}>
+                {filteredProducts.length}
+              </Text>
+              <Text style={styles.heroStatLabel}>
+                {text.orders.filterLabel}
+              </Text>
             </View>
           </View>
         </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {hasLoadError ? (
+          <Text style={styles.error}>{text.orders.loadError}</Text>
+        ) : null}
 
         <View style={[styles.mainGrid, isWideLayout && styles.mainGridWide]}>
-          <View style={[styles.sidebarColumn, isWideLayout && styles.sidebarColumnWide]}>
+          <View
+            style={[
+              styles.sidebarColumn,
+              isWideLayout && styles.sidebarColumnWide,
+            ]}
+          >
             <View style={styles.surfaceCard}>
               <View style={styles.surfaceHeader}>
                 <View style={styles.surfaceHeaderCopy}>
-                  <Text style={styles.surfaceEyebrow}>{text.orders.supplierLabel}</Text>
-                  <Text style={styles.surfaceTitle}>{selectedSupplierName}</Text>
+                  <Text style={styles.surfaceEyebrow}>
+                    {text.orders.supplierLabel}
+                  </Text>
+                  <Text style={styles.surfaceTitle}>
+                    {selectedSupplierName}
+                  </Text>
                   <Text style={styles.surfaceSubtitle}>
                     {suppliers.length > 0
                       ? `${suppliers.length} ${text.orders.supplierLabel.toLowerCase()}`
@@ -323,10 +504,10 @@ export function OrdersPage({
                           styles.supplierCard,
                           isActive && styles.supplierCardActive,
                         ]}
-                        onPress={() => {
-                          onSelectedSupplierIdChange(supplier.id);
-                          onSelectedCategoryChange('ALL');
-                        }}
+                        onPress={() => handleSelectSupplier(supplier.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel={supplier.name}
+                        accessibilityState={{ selected: isActive }}
                       >
                         <View style={styles.supplierCardTitleRow}>
                           <Text
@@ -355,10 +536,16 @@ export function OrdersPage({
             </View>
 
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>{text.orders.summaryTitle}</Text>
+              <Text style={styles.summaryTitle}>
+                {text.orders.summaryTitle}
+              </Text>
               <View style={styles.summaryMetricRow}>
-                <Text style={styles.summaryMetricLabel}>{text.orders.summaryItems}</Text>
-                <Text style={styles.summaryMetricValue}>{summary.totalItems}</Text>
+                <Text style={styles.summaryMetricLabel}>
+                  {text.orders.summaryItems}
+                </Text>
+                <Text style={styles.summaryMetricValue}>
+                  {summary.totalItems}
+                </Text>
               </View>
               <View style={styles.summaryMetricRow}>
                 <Text style={styles.summaryMetricLabel}>
@@ -375,15 +562,14 @@ export function OrdersPage({
                   summary.totalItems === 0 && styles.buttonDisabled,
                 ]}
                 disabled={summary.totalItems === 0}
-                onPress={() => {
-                  onSubmitOrder({
-                    items: selectedItems,
-                    totalItems: summary.totalItems,
-                    totalAmount: summary.totalAmount,
-                  });
-                }}
+                onPress={handleSubmitOrder}
+                accessibilityRole="button"
+                accessibilityLabel={text.orders.submitButton}
+                accessibilityState={{ disabled: summary.totalItems === 0 }}
               >
-                <Text style={styles.primaryButtonText}>{text.orders.submitButton}</Text>
+                <Text style={styles.primaryButtonText}>
+                  {text.orders.submitButton}
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -392,8 +578,12 @@ export function OrdersPage({
             <View style={styles.surfaceCard}>
               <View style={styles.surfaceHeader}>
                 <View style={styles.surfaceHeaderCopy}>
-                  <Text style={styles.surfaceEyebrow}>{text.orders.filterLabel}</Text>
-                  <Text style={styles.surfaceTitle}>{text.orders.filterLabel}</Text>
+                  <Text style={styles.surfaceEyebrow}>
+                    {text.orders.filterLabel}
+                  </Text>
+                  <Text style={styles.surfaceTitle}>
+                    {text.orders.filterLabel}
+                  </Text>
                   <Text style={styles.surfaceSubtitle}>
                     {text.orders.searchProductsPlaceholder}
                   </Text>
@@ -422,11 +612,15 @@ export function OrdersPage({
                     selectedCategory === 'ALL' && styles.categoryChipActive,
                   ]}
                   onPress={() => onSelectedCategoryChange('ALL')}
+                  accessibilityRole="button"
+                  accessibilityLabel={text.orders.allTypes}
+                  accessibilityState={{ selected: selectedCategory === 'ALL' }}
                 >
                   <Text
                     style={[
                       styles.categoryChipText,
-                      selectedCategory === 'ALL' && styles.categoryChipTextActive,
+                      selectedCategory === 'ALL' &&
+                        styles.categoryChipTextActive,
                     ]}
                   >
                     {text.orders.allTypes}
@@ -438,9 +632,15 @@ export function OrdersPage({
                     key={category}
                     style={[
                       styles.categoryChip,
-                      selectedCategory === category && styles.categoryChipActive,
+                      selectedCategory === category &&
+                        styles.categoryChipActive,
                     ]}
                     onPress={() => onSelectedCategoryChange(category)}
+                    accessibilityRole="button"
+                    accessibilityLabel={category}
+                    accessibilityState={{
+                      selected: selectedCategory === category,
+                    }}
                   >
                     <Text
                       style={[
@@ -459,8 +659,12 @@ export function OrdersPage({
             <View style={styles.surfaceCard}>
               <View style={styles.surfaceHeader}>
                 <View style={styles.surfaceHeaderCopy}>
-                  <Text style={styles.surfaceEyebrow}>{selectedSupplierName}</Text>
-                  <Text style={styles.surfaceTitle}>{selectedSupplierName}</Text>
+                  <Text style={styles.surfaceEyebrow}>
+                    {selectedSupplierName}
+                  </Text>
+                  <Text style={styles.surfaceTitle}>
+                    {selectedSupplierName}
+                  </Text>
                   <Text style={styles.surfaceSubtitle}>
                     {selectedCategory === 'ALL'
                       ? text.orders.allTypes
@@ -468,7 +672,9 @@ export function OrdersPage({
                   </Text>
                 </View>
                 <View style={styles.surfaceCountPill}>
-                  <Text style={styles.surfaceCountText}>{filteredProducts.length}</Text>
+                  <Text style={styles.surfaceCountText}>
+                    {filteredProducts.length}
+                  </Text>
                 </View>
               </View>
 
@@ -478,9 +684,13 @@ export function OrdersPage({
                 </View>
               ) : null}
 
-              {!loading && supplierProducts.length > 0 && filteredProducts.length === 0 ? (
+              {!loading &&
+              supplierProducts.length > 0 &&
+              filteredProducts.length === 0 ? (
                 <View style={styles.emptyCard}>
-                  <Text style={styles.docEmpty}>{text.orders.emptyForType}</Text>
+                  <Text style={styles.docEmpty}>
+                    {text.orders.emptyForType}
+                  </Text>
                 </View>
               ) : null}
 
@@ -493,119 +703,18 @@ export function OrdersPage({
               <View style={[styles.productGrid, styles.listBlock]}>
                 {filteredProducts.map((product) => {
                   const qty = quantities[product.id] ?? 0;
-                  const productName =
-                    language === 'zh'
-                      ? product.nameZh
-                      : product.nameFr ?? product.nameZh;
-                  const productGridItemStyle = useSingleColumnGrid
-                    ? styles.productGridItemSmall
-                    : styles.productGridItem;
 
                   return (
-                    <View
+                    <ProductCard
                       key={product.id}
-                      style={[styles.productCard, productGridItemStyle]}
-                    >
-                      <View style={styles.productCardHeader}>
-                        <View style={styles.productBadgeRow}>
-                          <View style={styles.productBadge}>
-                            <Text style={styles.productBadgeText}>
-                              {product.category}
-                            </Text>
-                          </View>
-                          {product.reference ? (
-                            <View style={styles.productBadge}>
-                              <Text style={styles.productBadgeText}>
-                                {product.reference}
-                              </Text>
-                            </View>
-                          ) : null}
-                        </View>
-                      </View>
-
-                      <View
-                        style={[
-                          styles.productInfoRow,
-                          isSmallScreen && styles.productInfoRowSmall,
-                        ]}
-                      >
-                        {product.image ? (
-                          <View
-                            style={[
-                              styles.productImageFrame,
-                              isSmallScreen && styles.productImageFrameSmall,
-                            ]}
-                          >
-                            <Image
-                              source={{ uri: product.image }}
-                              style={styles.productImageThumb}
-                              resizeMode="cover"
-                            />
-                          </View>
-                        ) : (
-                          <View
-                            style={[
-                              styles.productImagePlaceholder,
-                              isSmallScreen && styles.productImageFrameSmall,
-                            ]}
-                          >
-                            <Ionicons
-                              name="image-outline"
-                              size={24}
-                              color="#ab1e24"
-                            />
-                          </View>
-                        )}
-
-                        <View
-                          style={[
-                            styles.productInfoColumn,
-                            isSmallScreen && styles.productInfoColumnSmall,
-                          ]}
-                        >
-                          <Text style={styles.productTitle}>{productName}</Text>
-                          {product.specification ? (
-                            <Text style={styles.docItemMeta}>
-                              {text.orders.specificationLabel}: {product.specification}
-                            </Text>
-                          ) : null}
-                          {product.unit ? (
-                            <Text style={styles.docItemMeta}>
-                              {text.orders.unitLabel}: {product.unit}
-                            </Text>
-                          ) : null}
-                          <Text style={styles.priceText}>
-                            {text.orders.priceLabel}:{' '}
-                            {product.priceHt === null
-                              ? text.orders.priceNotAvailable
-                              : formatAmount(product.priceHt)}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.quantityBar}>
-                        <Pressable
-                          style={styles.quantityButton}
-                          onPress={() => changeQuantity(product.id, -1)}
-                        >
-                          <Text style={styles.quantityButtonText}>-</Text>
-                        </Pressable>
-
-                        <View style={styles.quantityValuePill}>
-                          <Text style={styles.quantityValueLabel}>
-                            {text.orders.quantityLabel}
-                          </Text>
-                          <Text style={styles.quantityValueText}>{qty}</Text>
-                        </View>
-
-                        <Pressable
-                          style={styles.quantityButton}
-                          onPress={() => changeQuantity(product.id, 1)}
-                        >
-                          <Text style={styles.quantityButtonText}>+</Text>
-                        </Pressable>
-                      </View>
-                    </View>
+                      product={product}
+                      quantity={qty}
+                      language={language}
+                      text={text}
+                      isSmallScreen={isSmallScreen}
+                      useSingleColumnGrid={useSingleColumnGrid}
+                      onChangeQuantity={changeQuantity}
+                    />
                   );
                 })}
               </View>

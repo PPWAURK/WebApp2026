@@ -211,13 +211,20 @@ export const styles = StyleSheet.create({
     lineHeight: 18,
   },
   storeCountBadge: {
-    minWidth: 42,
-    height: 42,
+    minWidth: 54,
     borderRadius: 16,
     backgroundColor: '#fff1ef',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 2,
+  },
+  storeCountLabel: {
+    color: '#8d5a5f',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 9,
+    textTransform: 'uppercase',
   },
   storeCountValue: {
     color: '#ab1e24',

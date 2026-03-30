@@ -21,12 +21,17 @@ import {
   View,
 } from 'react-native';
 import { AuthenticatedShell } from '../../src/components/AuthenticatedShell';
+import { UnreadNewsPopup } from '../../src/features/dashboard/components/UnreadNewsPopup';
+import { useUnreadNewsPopup } from '../../src/features/dashboard/hooks/useUnreadNewsPopup';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useLanguage } from '../../src/hooks/useLanguage';
 import { OrderFlowProvider } from '../../src/hooks/useOrderFlow';
 import { useTheme } from '../../src/hooks/useTheme';
 import { styles } from '../../src/styles/App.styles';
-import { menuPageToPath, pathnameToMenuPage } from '../../src/utils/menuNavigation';
+import {
+  menuPageToPath,
+  pathnameToMenuPage,
+} from '../../src/utils/menuNavigation';
 
 export default function AppGroupLayout() {
   const auth = useAuth();
@@ -42,6 +47,12 @@ export default function AppGroupLayout() {
     Manrope_700Bold,
   });
   const activePage = pathnameToMenuPage(pathname) ?? 'dashboard';
+  const unreadNewsPopup = useUnreadNewsPopup({
+    accessToken: auth.session?.accessToken ?? null,
+    isAdmin: auth.session?.user.role === 'ADMIN',
+    sessionKey: auth.session?.accessToken ?? null,
+    text: language.text,
+  });
 
   useEffect(() => {
     confirmedExitRef.current = false;
@@ -143,6 +154,17 @@ export default function AppGroupLayout() {
     return <Redirect href="/login" />;
   }
 
+  const activeUnreadNews = unreadNewsPopup.activeUnreadNews;
+  const unreadSender =
+    activeUnreadNews?.createdBy.name?.trim() ||
+    activeUnreadNews?.createdBy.email ||
+    '-';
+  const unreadPopupMessage = language.text.dashboard.unreadPopupMessage.replace(
+    '{sender}',
+    unreadSender,
+  );
+  const unreadPreviewTitle = activeUnreadNews?.title?.trim() || null;
+
   const isDarkMode = theme.theme === 'dark';
   const authenticatedBackground = isDarkMode ? '#101214' : '#f6efe8';
 
@@ -207,6 +229,20 @@ export default function AppGroupLayout() {
                 <Slot />
               </KeyboardAvoidingView>
             </AuthenticatedShell>
+
+            <UnreadNewsPopup
+              visible={Boolean(activeUnreadNews)}
+              title={language.text.dashboard.unreadPopupTitle}
+              message={unreadPopupMessage}
+              sender={unreadSender}
+              previewTitle={unreadPreviewTitle}
+              closeLabel={language.text.dashboard.unreadPopupCloseButton}
+              viewLabel={language.text.dashboard.unreadPopupViewButton}
+              onClose={unreadNewsPopup.closePopup}
+              onView={() => {
+                void unreadNewsPopup.openUnreadNews();
+              }}
+            />
           </OrderFlowProvider>
         </View>
       </SafeAreaView>

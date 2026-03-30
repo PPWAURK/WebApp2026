@@ -1,4 +1,8 @@
-import { Manrope_400Regular, Manrope_700Bold, useFonts } from '@expo-google-fonts/manrope';
+import {
+  Manrope_400Regular,
+  Manrope_700Bold,
+  useFonts,
+} from '@expo-google-fonts/manrope';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -113,7 +117,9 @@ export default function LoginScreen() {
     return (
       <View style={styles.page}>
         <SafeAreaView style={styles.safeArea}>
-          <Animated.View style={[styles.loginLoaderFullscreen, { opacity: loaderOpacity }]}>
+          <Animated.View
+            style={[styles.loginLoaderFullscreen, { opacity: loaderOpacity }]}
+          >
             <Animated.View
               style={[
                 styles.loginLoaderCard,
@@ -149,7 +155,8 @@ export default function LoginScreen() {
               language={language.language}
               email={auth.email}
               password={auth.password}
-              name={auth.name}
+              firstName={auth.firstName}
+              lastName={auth.lastName}
               restaurants={auth.restaurants}
               selectedRestaurantId={auth.selectedRestaurantId}
               requestManagerRole={auth.requestManagerRole}
@@ -163,7 +170,8 @@ export default function LoginScreen() {
               notice={auth.notice}
               onEmailChange={auth.setEmail}
               onPasswordChange={auth.setPassword}
-              onNameChange={auth.setName}
+              onFirstNameChange={auth.setFirstName}
+              onLastNameChange={auth.setLastName}
               onSelectRestaurant={auth.setSelectedRestaurantId}
               onToggleRequestManagerRole={() => {
                 auth.setRequestManagerRole((currentValue) => !currentValue);
@@ -175,7 +183,11 @@ export default function LoginScreen() {
                 void language.setLanguage(nextLanguage);
               }}
               onSubmit={() => {
-                void auth.submitAuth(auth.mode, language.text, language.language);
+                void auth.submitAuth(
+                  auth.mode,
+                  language.text,
+                  language.language,
+                );
               }}
               onForgotPassword={() => {
                 void auth.forgotPassword(language.text, language.language);

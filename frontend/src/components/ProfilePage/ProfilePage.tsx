@@ -15,6 +15,36 @@ import { updateMyProfile, uploadMyProfilePhoto } from '../../services/usersApi';
 import { styles } from './ProfilePage.styles';
 import type { User } from '../../types/auth';
 
+type ProfileNameDraft = {
+  firstName: string;
+  lastName: string;
+};
+
+function splitProfileName(name: string | null): ProfileNameDraft {
+  const normalizedName = name?.trim() ?? '';
+
+  if (!normalizedName) {
+    return {
+      firstName: '',
+      lastName: '',
+    };
+  }
+
+  const parts = normalizedName.split(/\s+/).filter(Boolean);
+
+  if (parts.length === 1) {
+    return {
+      firstName: parts[0],
+      lastName: '',
+    };
+  }
+
+  return {
+    lastName: parts[0],
+    firstName: parts.slice(1).join(' '),
+  };
+}
+
 type ProfilePageProps = {
   text: AppText;
   user: User;
@@ -58,12 +88,19 @@ export function ProfilePage({
 }: ProfilePageProps) {
   const { width } = useWindowDimensions();
   const isWideLayout = width >= 980;
-  const [nameDraft, setNameDraft] = useState(user.name ?? '');
+  const [firstNameDraft, setFirstNameDraft] = useState(
+    () => splitProfileName(user.name).firstName,
+  );
+  const [lastNameDraft, setLastNameDraft] = useState(
+    () => splitProfileName(user.name).lastName,
+  );
   const [nameError, setNameError] = useState<string | null>(null);
   const [isSavingName, setIsSavingName] = useState(false);
 
   useEffect(() => {
-    setNameDraft(user.name ?? '');
+    const nextDraft = splitProfileName(user.name);
+    setFirstNameDraft(nextDraft.firstName);
+    setLastNameDraft(nextDraft.lastName);
   }, [user.name]);
 
   async function handlePickAndUploadPhoto() {
@@ -97,7 +134,9 @@ export function ProfilePage({
   }
 
   async function handleSaveName() {
-    const normalizedName = nameDraft.trim();
+    const normalizedName = [lastNameDraft.trim(), firstNameDraft.trim()]
+      .filter((value) => value.length > 0)
+      .join(' ');
 
     if (!normalizedName) {
       setNameError(text.profile.nameUpdateError);
@@ -303,6 +342,9 @@ export function ProfilePage({
               onPress={() => {
                 void handlePickAndUploadPhoto();
               }}
+              accessibilityRole="button"
+              accessibilityLabel={text.profile.uploadPhotoButton}
+              accessibilityState={{ disabled: isUploadingPhoto }}
             >
               <Ionicons
                 name="cloud-upload-outline"
@@ -338,15 +380,33 @@ export function ProfilePage({
 
             {canEditName ? (
               <View style={styles.nameEditorBlock}>
+                <Text style={styles.nameInputLabel}>
+                  {text.profile.lastNameLabel}
+                </Text>
                 <TextInput
                   style={styles.nameInput}
-                  value={nameDraft}
-                  onChangeText={setNameDraft}
-                  placeholder={text.profile.nameEditPlaceholder}
+                  value={lastNameDraft}
+                  onChangeText={setLastNameDraft}
+                  placeholder={text.profile.lastNamePlaceholder}
                   placeholderTextColor={COLORS.placeholderAlt}
                   autoCapitalize="words"
                   autoCorrect={false}
                   editable={!isSavingName}
+                  accessibilityLabel={text.profile.lastNameLabel}
+                />
+                <Text style={styles.nameInputLabel}>
+                  {text.profile.firstNameLabel}
+                </Text>
+                <TextInput
+                  style={styles.nameInput}
+                  value={firstNameDraft}
+                  onChangeText={setFirstNameDraft}
+                  placeholder={text.profile.firstNamePlaceholder}
+                  placeholderTextColor={COLORS.placeholderAlt}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  editable={!isSavingName}
+                  accessibilityLabel={text.profile.firstNameLabel}
                 />
                 <Pressable
                   style={[
@@ -357,6 +417,9 @@ export function ProfilePage({
                   onPress={() => {
                     void handleSaveName();
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel={text.profile.saveNameButton}
+                  accessibilityState={{ disabled: isSavingName }}
                 >
                   <Text style={styles.secondaryButtonText}>
                     {isSavingName

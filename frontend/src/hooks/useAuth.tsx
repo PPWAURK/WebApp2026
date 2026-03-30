@@ -1,4 +1,12 @@
-import { createContext, type ReactNode, useContext, useState } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import { onUnauthorized } from '../services/authSession';
 import type { AuthContextValue } from './auth/auth.shared';
 import { useAuthActions } from './auth/useAuthActions';
 import { useAuthFormState } from './auth/useAuthFormState';
@@ -18,6 +26,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     setIsSubmitting,
   });
+  const logoutRef = useRef(actions.logout);
+
+  useEffect(() => {
+    logoutRef.current = actions.logout;
+  }, [actions.logout]);
+
+  useEffect(() => {
+    const unsubscribe = onUnauthorized(() => {
+      void logoutRef.current();
+    });
+
+    return unsubscribe;
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -27,7 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         mode: form.mode,
         email: form.email,
         password: form.password,
-        name: form.name,
+        firstName: form.firstName,
+        lastName: form.lastName,
         requestManagerRole: form.requestManagerRole,
         rememberMe: form.rememberMe,
         error: form.error,
@@ -40,7 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         selectedRestaurantId: form.selectedRestaurantId,
         setEmail: form.setEmail,
         setPassword: form.setPassword,
-        setName: form.setName,
+        setFirstName: form.setFirstName,
+        setLastName: form.setLastName,
         setSelectedRestaurantId: form.setSelectedRestaurantId,
         setRequestManagerRole: form.setRequestManagerRole,
         setRememberMe: form.setRememberMe,

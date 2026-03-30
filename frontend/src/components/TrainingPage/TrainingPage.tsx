@@ -61,9 +61,19 @@ export function TrainingPage({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heroCard}>
-          <View style={styles.heroHeader}>
+          <View
+            style={styles.heroHeader}
+            accessible
+            accessibilityLabel={`${text.training.title}. ${text.training.intro}`}
+          >
             <View style={styles.heroCopy}>
-              <Text style={styles.title}>{text.training.title}</Text>
+              <Text
+                style={styles.title}
+                accessibilityRole="header"
+                accessibilityLabel={text.training.title}
+              >
+                {text.training.title}
+              </Text>
               <Text style={styles.subtitle}>{text.training.intro}</Text>
             </View>
 

@@ -17,7 +17,7 @@ type WebPdfFrameProps = {
 
 export function getQuizLinkKey(
   section: TrainingSection,
-  language: 'fr' | 'bn',
+  language: 'fr' | 'bn' | 'zh',
 ) {
   return `${section}:${language}`;
 }

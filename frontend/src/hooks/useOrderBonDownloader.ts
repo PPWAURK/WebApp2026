@@ -11,9 +11,7 @@ type OrderBonDownloadTarget = {
   number?: string;
 };
 
-export function useOrderBonDownloader(
-  accessToken: string | null | undefined,
-) {
+export function useOrderBonDownloader(accessToken: string | null | undefined) {
   const language = useLanguage();
 
   return async function downloadOrderBon(order: OrderBonDownloadTarget) {
@@ -49,11 +47,13 @@ export function useOrderBonDownloader(
         const objectUrl = window.URL.createObjectURL(blob);
         const anchor = window.document.createElement('a');
         anchor.href = objectUrl;
-        anchor.download = fileName;
+        anchor.setAttribute('download', '');
         window.document.body.append(anchor);
         anchor.click();
         anchor.remove();
-        window.URL.revokeObjectURL(objectUrl);
+        window.setTimeout(() => {
+          window.URL.revokeObjectURL(objectUrl);
+        }, 1000);
       } catch {
         if (
           typeof window !== 'undefined' &&

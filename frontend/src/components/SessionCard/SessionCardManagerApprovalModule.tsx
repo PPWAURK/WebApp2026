@@ -57,6 +57,7 @@ export function SessionCardManagerApprovalModule({
           placeholderTextColor={COLORS.placeholder}
           value={supervisorState.approvalSearch}
           onChangeText={(value) => supervisorState.setApprovalSearch(value)}
+          accessibilityLabel={text.dashboard.quickSearchPlaceholder}
         />
       </View>
 
@@ -258,9 +259,13 @@ export function SessionCardManagerApprovalModule({
                             supervisorState.isRejectingUserId === entry.id &&
                               styles.buttonDisabled,
                           ]}
-                          accessibilityLabel={
-                            text.adminTraining.rejectAccountButton
-                          }
+                          accessibilityLabel={`${text.adminTraining.rejectAccountButton} ${displayName}`}
+                          accessibilityRole="button"
+                          accessibilityState={{
+                            disabled:
+                              supervisorState.isApprovingUserId === entry.id ||
+                              supervisorState.isRejectingUserId === entry.id,
+                          }}
                           disabled={
                             supervisorState.isApprovingUserId === entry.id ||
                             supervisorState.isRejectingUserId === entry.id
@@ -287,9 +292,13 @@ export function SessionCardManagerApprovalModule({
                             supervisorState.isApprovingUserId === entry.id &&
                               styles.buttonDisabled,
                           ]}
-                          accessibilityLabel={
-                            text.adminTraining.approveAccountButton
-                          }
+                          accessibilityLabel={`${text.adminTraining.approveAccountButton} ${displayName}`}
+                          accessibilityRole="button"
+                          accessibilityState={{
+                            disabled:
+                              supervisorState.isApprovingUserId === entry.id ||
+                              supervisorState.isRejectingUserId === entry.id,
+                          }}
                           disabled={
                             supervisorState.isApprovingUserId === entry.id ||
                             supervisorState.isRejectingUserId === entry.id

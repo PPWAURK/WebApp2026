@@ -51,6 +51,7 @@ export function SessionCardManagerDeleteModule({
           placeholderTextColor={COLORS.placeholder}
           value={supervisorState.deleteSearch}
           onChangeText={(value) => supervisorState.setDeleteSearch(value)}
+          accessibilityLabel={text.dashboard.quickSearchPlaceholder}
         />
       </View>
 
@@ -131,7 +132,11 @@ export function SessionCardManagerDeleteModule({
                     supervisorState.isDeletingUserId === entry.id &&
                       styles.buttonDisabled,
                   ]}
-                  accessibilityLabel={text.dashboard.quickDeleteButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${text.dashboard.quickDeleteButton} ${displayName}`}
+                  accessibilityState={{
+                    disabled: supervisorState.isDeletingUserId === entry.id,
+                  }}
                   disabled={supervisorState.isDeletingUserId === entry.id}
                   onPress={() => {
                     void supervisorState.handleDeleteUser(entry);

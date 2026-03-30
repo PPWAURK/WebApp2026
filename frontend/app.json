@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "frontend",
+    "name": "Zhao's Family",
     "slug": "frontend",
     "scheme": "zhao-platforme",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo2024/logozhao正方形.jpg",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -25,7 +25,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/logo2024/logozhao正方形.jpg"
     },
     "plugins": [
       "expo-router",

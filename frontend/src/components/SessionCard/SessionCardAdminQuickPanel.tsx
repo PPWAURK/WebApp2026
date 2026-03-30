@@ -109,6 +109,7 @@ export function SessionCardAdminQuickPanel({
           placeholderTextColor={COLORS.placeholder}
           value={supervisorState.approvalSearch}
           onChangeText={(value) => supervisorState.setApprovalSearch(value)}
+          accessibilityLabel={text.dashboard.quickSearchPlaceholder}
         />
       </View>
 
@@ -225,7 +226,13 @@ export function SessionCardAdminQuickPanel({
                     supervisorState.isRejectingUserId === entry.id &&
                       styles.buttonDisabled,
                   ]}
-                  accessibilityLabel={text.adminTraining.rejectAccountButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${text.adminTraining.rejectAccountButton} ${entry.name ?? entry.email}`}
+                  accessibilityState={{
+                    disabled:
+                      supervisorState.isApprovingUserId === entry.id ||
+                      supervisorState.isRejectingUserId === entry.id,
+                  }}
                   disabled={
                     supervisorState.isApprovingUserId === entry.id ||
                     supervisorState.isRejectingUserId === entry.id
@@ -251,7 +258,13 @@ export function SessionCardAdminQuickPanel({
                     supervisorState.isApprovingUserId === entry.id &&
                       styles.buttonDisabled,
                   ]}
-                  accessibilityLabel={text.adminTraining.approveAccountButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${text.adminTraining.approveAccountButton} ${entry.name ?? entry.email}`}
+                  accessibilityState={{
+                    disabled:
+                      supervisorState.isApprovingUserId === entry.id ||
+                      supervisorState.isRejectingUserId === entry.id,
+                  }}
                   disabled={
                     supervisorState.isApprovingUserId === entry.id ||
                     supervisorState.isRejectingUserId === entry.id

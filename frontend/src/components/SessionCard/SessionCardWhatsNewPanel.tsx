@@ -129,6 +129,9 @@ export function SessionCardWhatsNewPanel({
                   },
                 ]}
                 onPress={() => whatsNewState.setWhatsNewLane(option.key)}
+                accessibilityRole="button"
+                accessibilityLabel={option.label}
+                accessibilityState={{ selected: isActive }}
               >
                 <Text
                   style={[
@@ -156,6 +159,7 @@ export function SessionCardWhatsNewPanel({
           onChangeText={(value) => whatsNewState.setWhatsNewTitle(value)}
           placeholder={text.dashboard.whatsNewTitlePlaceholder}
           placeholderTextColor={COLORS.placeholder}
+          accessibilityLabel={text.dashboard.whatsNewTitlePlaceholder}
         />
       </View>
 
@@ -171,6 +175,7 @@ export function SessionCardWhatsNewPanel({
           placeholderTextColor={COLORS.placeholder}
           multiline
           textAlignVertical="top"
+          accessibilityLabel={text.dashboard.whatsNewMessagePlaceholder}
         />
       </View>
 
@@ -184,6 +189,7 @@ export function SessionCardWhatsNewPanel({
           onChangeText={(value) => whatsNewState.setWhatsNewTagsInput(value)}
           placeholder={text.dashboard.whatsNewTagsPlaceholder}
           placeholderTextColor={COLORS.placeholder}
+          accessibilityLabel={text.dashboard.whatsNewTagsPlaceholder}
         />
         <Text style={styles.panelSubtitleOnDark}>
           {text.dashboard.whatsNewTagsHint}
@@ -212,6 +218,11 @@ export function SessionCardWhatsNewPanel({
             isCompactAdminCardLayout && styles.whatsNewLevelsTriggerCompact,
           ]}
           onPress={whatsNewState.toggleWhatsNewLevelsExpanded}
+          accessibilityRole="button"
+          accessibilityLabel={text.dashboard.whatsNewVisibleLevelsLabel}
+          accessibilityState={{
+            expanded: whatsNewState.isWhatsNewLevelsExpanded,
+          }}
         >
           <View style={styles.whatsNewLevelsTriggerTextWrap}>
             <Text
@@ -254,6 +265,11 @@ export function SessionCardWhatsNewPanel({
                     styles.whatsNewLevelChipActive,
                 ]}
                 onPress={whatsNewState.clearWhatsNewVisibleLevels}
+                accessibilityRole="button"
+                accessibilityLabel={text.dashboard.newsVisibleLevelsAll}
+                accessibilityState={{
+                  selected: whatsNewState.whatsNewVisibleLevels.length === 0,
+                }}
               >
                 <Text
                   style={[
@@ -284,6 +300,9 @@ export function SessionCardWhatsNewPanel({
                     onPress={() =>
                       whatsNewState.toggleWhatsNewVisibleLevel(level)
                     }
+                    accessibilityRole="button"
+                    accessibilityLabel={text.dashboard.levels[level]}
+                    accessibilityState={{ selected: isActive }}
                   >
                     <Text
                       style={[
@@ -320,6 +339,9 @@ export function SessionCardWhatsNewPanel({
           onPress={() => {
             void whatsNewState.handlePublishWhatsNew();
           }}
+          accessibilityRole="button"
+          accessibilityLabel={text.dashboard.whatsNewCta}
+          accessibilityState={{ disabled: whatsNewState.whatsNewPublishing }}
         >
           <Text style={styles.whatsNewPublishButtonText}>
             {whatsNewState.whatsNewPublishing
@@ -339,6 +361,9 @@ export function SessionCardWhatsNewPanel({
           onPress={() => {
             void whatsNewState.handleWhatsNewUpload();
           }}
+          accessibilityRole="button"
+          accessibilityLabel={text.dashboard.whatsNewAttachCta}
+          accessibilityState={{ disabled: whatsNewState.whatsNewUploading }}
         >
           <Text style={styles.whatsNewSecondaryButtonText}>
             {whatsNewState.whatsNewUploading

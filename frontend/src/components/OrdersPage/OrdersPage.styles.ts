@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 const BORDER = 'rgba(171, 30, 36, 0.18)';
 const SOFT_BORDER = 'rgba(171, 30, 36, 0.14)';
@@ -8,6 +8,17 @@ const BRAND = '#ab1e24';
 const BRAND_SOFT = '#fff3ef';
 const TEXT = '#5f1c21';
 const MUTED = '#8d5a5f';
+const WEB_INPUT_RESET = Platform.select({
+  web: {
+    outlineStyle: 'none',
+    outlineWidth: 0,
+    outlineColor: 'transparent',
+    boxShadow: 'none',
+    appearance: 'none',
+    WebkitAppearance: 'none',
+  } as never,
+  default: {},
+});
 
 export const styles = StyleSheet.create({
   pageRoot: {
@@ -219,6 +230,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   searchInput: {
+    ...WEB_INPUT_RESET,
     flex: 1,
     minWidth: 0,
     color: TEXT,

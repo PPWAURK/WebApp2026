@@ -52,6 +52,7 @@ export function SessionCardLevelManagementModule({
           placeholderTextColor={COLORS.placeholder}
           value={supervisorState.levelSearch}
           onChangeText={(value) => supervisorState.setLevelSearch(value)}
+          accessibilityLabel={text.dashboard.quickSearchPlaceholder}
         />
       </View>
 
@@ -121,7 +122,12 @@ export function SessionCardLevelManagementModule({
                     supervisorState.isUpdatingLevelUserId === entry.id &&
                       styles.buttonDisabled,
                   ]}
-                  accessibilityLabel={text.dashboard.levelModalTitle}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${text.dashboard.levelModalTitle} ${entry.name ?? entry.email}`}
+                  accessibilityState={{
+                    disabled:
+                      supervisorState.isUpdatingLevelUserId === entry.id,
+                  }}
                   disabled={supervisorState.isUpdatingLevelUserId === entry.id}
                   onPress={() => supervisorState.openLevelEditor(entry)}
                 >
@@ -157,6 +163,12 @@ export function SessionCardLevelManagementModule({
                           entry,
                           workplaceRole,
                         );
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${text.dashboard.workplaceValues[workplaceRole]} ${entry.name ?? entry.email}`}
+                      accessibilityState={{
+                        selected: isActive,
+                        disabled: isUpdating,
                       }}
                     >
                       <Text

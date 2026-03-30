@@ -29,7 +29,7 @@ export type TrainingAccessByLevelProfile = {
   sections: TrainingSection[];
 };
 
-export type TrainingQuizLinkLanguage = 'fr' | 'bn';
+export type TrainingQuizLinkLanguage = 'fr' | 'bn' | 'zh';
 
 export type TrainingQuizLinkItem = {
   section: TrainingSection;

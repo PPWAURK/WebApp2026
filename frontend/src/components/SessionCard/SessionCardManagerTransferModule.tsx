@@ -49,6 +49,7 @@ export function SessionCardManagerTransferModule({
           placeholderTextColor={COLORS.placeholder}
           value={supervisorState.transferSearch}
           onChangeText={(value) => supervisorState.setTransferSearch(value)}
+          accessibilityLabel={text.adminRestaurant.transferSearchPlaceholder}
         />
       </View>
 
@@ -89,6 +90,9 @@ export function SessionCardManagerTransferModule({
                   isActive && styles.employeeCompactSelectableRowActive,
                 ]}
                 onPress={() => supervisorState.selectTransferUser(entry.id)}
+                accessibilityRole="button"
+                accessibilityLabel={displayName}
+                accessibilityState={{ selected: isActive }}
               >
                 <View style={styles.employeeCompactTopRow}>
                   <View style={styles.employeeModuleAvatar}>
@@ -209,6 +213,9 @@ export function SessionCardManagerTransferModule({
                       onPress={() =>
                         supervisorState.selectTransferRestaurant(restaurant.id)
                       }
+                      accessibilityRole="button"
+                      accessibilityLabel={restaurant.name}
+                      accessibilityState={{ selected: isActive }}
                     >
                       <View style={styles.transferDestinationRowMain}>
                         <Text
@@ -262,6 +269,15 @@ export function SessionCardManagerTransferModule({
             }
             onPress={() => {
               void supervisorState.handleTransferUser();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={text.adminRestaurant.transferButton}
+            accessibilityState={{
+              disabled:
+                supervisorState.isTransferringUserId ===
+                  supervisorState.selectedTransferUser.id ||
+                !supervisorState.selectedTransferRestaurantId ||
+                supervisorState.availableTransferRestaurants.length === 0,
             }}
           >
             <Ionicons
