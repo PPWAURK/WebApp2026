@@ -3,7 +3,6 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { EmployeeLevel, Prisma, Role, WorkplaceRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -175,7 +174,7 @@ export class UsersService {
     );
 
     if (!isCurrentPasswordValid) {
-      throw new UnauthorizedException('CURRENT_PASSWORD_INCORRECT');
+      throw new BadRequestException('CURRENT_PASSWORD_INCORRECT');
     }
 
     if (normalizedEmail === user.email) {
@@ -218,7 +217,7 @@ export class UsersService {
     );
 
     if (!isCurrentPasswordValid) {
-      throw new UnauthorizedException('CURRENT_PASSWORD_INCORRECT');
+      throw new BadRequestException('CURRENT_PASSWORD_INCORRECT');
     }
 
     const isSamePassword = await bcrypt.compare(
