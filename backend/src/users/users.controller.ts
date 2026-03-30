@@ -23,6 +23,8 @@ import { diskStorage } from 'multer';
 import { extname, isAbsolute, join, resolve } from 'path';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UpdateOwnEmailDto } from './dto/update-own-email.dto';
+import { UpdateOwnPasswordDto } from './dto/update-own-password.dto';
 import { UsersApprovalService } from './users-approval.service';
 import { UsersService } from './users.service';
 import { UsersTrainingAccessService } from './users-training-access.service';
@@ -485,6 +487,36 @@ export class UsersController {
     return this.usersService.updateOwnProfile(req.user.id, {
       name,
     });
+  }
+
+  @ApiOperation({ summary: 'Update email for current user' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/email')
+  updateOwnEmail(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: UpdateOwnEmailDto,
+  ) {
+    if (!req.user) {
+      throw new ForbiddenException('Unauthenticated request');
+    }
+
+    return this.usersService.updateOwnEmail(req.user.id, body);
+  }
+
+  @ApiOperation({ summary: 'Update password for current user' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/password')
+  updateOwnPassword(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: UpdateOwnPasswordDto,
+  ) {
+    if (!req.user) {
+      throw new ForbiddenException('Unauthenticated request');
+    }
+
+    return this.usersService.updateOwnPassword(req.user.id, body);
   }
 
   @ApiOperation({ summary: 'Upload profile photo for current user' })

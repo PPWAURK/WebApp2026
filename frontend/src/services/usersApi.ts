@@ -394,6 +394,68 @@ export async function updateMyProfile(
   return data as User;
 }
 
+export async function updateMyEmail(
+  token: string,
+  payload: { email: string; currentPassword: string },
+): Promise<User> {
+  const response = await fetch(`${API_URL}/users/me/email`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await response.json()) as
+    | User
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : (errorData.message ?? 'Failed to update email');
+    throw new Error(message);
+  }
+
+  return data as User;
+}
+
+export async function updateMyPassword(
+  token: string,
+  payload: { currentPassword: string; newPassword: string },
+): Promise<{ success: boolean }> {
+  const response = await fetch(`${API_URL}/users/me/password`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await response.json()) as
+    | { success?: unknown }
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : (errorData.message ?? 'Failed to update password');
+    throw new Error(message);
+  }
+
+  return {
+    success: Boolean((data as { success?: unknown }).success),
+  };
+}
+
 export async function confirmUserProbation(
   token: string,
   userId: number,

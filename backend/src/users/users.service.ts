@@ -1,9 +1,12 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { EmployeeLevel, Role, WorkplaceRole } from '@prisma/client';
+import { EmployeeLevel, Prisma, Role, WorkplaceRole } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizeTrainingAccess } from './users-training-access.utils';
 import type { RequestLike } from './users.types';
@@ -51,6 +54,14 @@ const MUTABLE_PROFILE_SELECT = {
     },
   },
 } as const;
+
+type MutableProfileRecord = Prisma.UserGetPayload<{
+  select: typeof MUTABLE_PROFILE_SELECT;
+}>;
+
+type MutableProfileResponse = Omit<MutableProfileRecord, 'trainingAccess'> & {
+  trainingAccess: ReturnType<typeof normalizeTrainingAccess>;
+};
 
 @Injectable()
 export class UsersService {
@@ -116,7 +127,7 @@ export class UsersService {
     userId: number,
     file: Express.Multer.File,
     req: RequestLike,
-  ) {
+  ): Promise<MutableProfileResponse> {
     if (!file) {
       throw new BadRequestException('A file is required');
     }
@@ -131,13 +142,13 @@ export class UsersService {
       select: MUTABLE_PROFILE_SELECT,
     });
 
-    return {
-      ...updated,
-      trainingAccess: normalizeTrainingAccess(updated.trainingAccess),
-    };
+    return this.formatMutableProfile(updated);
   }
 
-  async updateOwnProfile(userId: number, payload: { name: string }) {
+  async updateOwnProfile(
+    userId: number,
+    payload: { name: string },
+  ): Promise<MutableProfileResponse> {
     await this.ensureUserExists(userId);
 
     const updated = await this.prisma.user.update({
@@ -148,10 +159,90 @@ export class UsersService {
       select: MUTABLE_PROFILE_SELECT,
     });
 
-    return {
-      ...updated,
-      trainingAccess: normalizeTrainingAccess(updated.trainingAccess),
-    };
+    return this.formatMutableProfile(updated);
+  }
+
+  async updateOwnEmail(
+    userId: number,
+    payload: { email: string; currentPassword: string },
+  ): Promise<MutableProfileResponse> {
+    const user = await this.getCredentialUpdateTarget(userId);
+    const normalizedEmail = payload.email.trim().toLowerCase();
+
+    const isCurrentPasswordValid = await bcrypt.compare(
+      payload.currentPassword,
+      user.passwordHash,
+    );
+
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException('CURRENT_PASSWORD_INCORRECT');
+    }
+
+    if (normalizedEmail === user.email) {
+      const currentProfile = await this.getMutableProfile(userId);
+      return this.formatMutableProfile(currentProfile);
+    }
+
+    const existingEmailOwner = await this.prisma.user.findUnique({
+      where: {
+        email: normalizedEmail,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingEmailOwner && existingEmailOwner.id !== userId) {
+      throw new ConflictException('EMAIL_ALREADY_REGISTERED');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        email: normalizedEmail,
+      },
+      select: MUTABLE_PROFILE_SELECT,
+    });
+
+    return this.formatMutableProfile(updated);
+  }
+
+  async updateOwnPassword(
+    userId: number,
+    payload: { currentPassword: string; newPassword: string },
+  ): Promise<{ success: true }> {
+    const user = await this.getCredentialUpdateTarget(userId);
+    const isCurrentPasswordValid = await bcrypt.compare(
+      payload.currentPassword,
+      user.passwordHash,
+    );
+
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException('CURRENT_PASSWORD_INCORRECT');
+    }
+
+    const isSamePassword = await bcrypt.compare(
+      payload.newPassword,
+      user.passwordHash,
+    );
+
+    if (isSamePassword) {
+      throw new BadRequestException('NEW_PASSWORD_MUST_BE_DIFFERENT');
+    }
+
+    const passwordHash = await bcrypt.hash(payload.newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return { success: true };
   }
 
   private async ensureUserExists(userId: number): Promise<void> {
@@ -163,6 +254,54 @@ export class UsersService {
     if (!existing) {
       throw new NotFoundException('User not found');
     }
+  }
+
+  private async getCredentialUpdateTarget(userId: number): Promise<{
+    id: number;
+    email: string;
+    passwordHash: string;
+  }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      ...user,
+      email: user.email.trim().toLowerCase(),
+    };
+  }
+
+  private async getMutableProfile(
+    userId: number,
+  ): Promise<MutableProfileRecord> {
+    const profile = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: MUTABLE_PROFILE_SELECT,
+    });
+
+    if (!profile) {
+      throw new NotFoundException('User not found');
+    }
+
+    return profile;
+  }
+
+  private formatMutableProfile(
+    profile: MutableProfileRecord,
+  ): MutableProfileResponse {
+    return {
+      ...profile,
+      trainingAccess: normalizeTrainingAccess(profile.trainingAccess),
+    };
   }
 
   private buildProfilePhotoUrl(req: RequestLike, fileName: string): string {

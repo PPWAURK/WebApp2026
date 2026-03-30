@@ -10,6 +10,8 @@ import { UsersWorkforceService } from './users-workforce.service';
 describe('UsersController', () => {
   let controller: UsersController;
   let usersProfileService: {
+    updateOwnEmail: jest.Mock;
+    updateOwnPassword: jest.Mock;
     updateOwnProfile: jest.Mock;
   };
   let usersWorkforceService: {
@@ -18,6 +20,8 @@ describe('UsersController', () => {
 
   beforeEach(async () => {
     usersProfileService = {
+      updateOwnEmail: jest.fn(),
+      updateOwnPassword: jest.fn(),
       updateOwnProfile: jest.fn(),
     };
     usersWorkforceService = {
@@ -86,6 +90,59 @@ describe('UsersController', () => {
 
     expect(usersProfileService.updateOwnProfile).toHaveBeenCalledWith(1, {
       name: 'Alice',
+    });
+    expect(result).toBe(expected);
+  });
+
+  it('allows authenticated users to update their own email', () => {
+    const expected = {
+      id: 1,
+      email: 'alice@example.com',
+    };
+    usersProfileService.updateOwnEmail.mockReturnValue(expected);
+
+    const result = controller.updateOwnEmail(
+      {
+        user: {
+          id: 1,
+          role: Role.EMPLOYEE,
+          restaurantId: 3,
+        },
+      } as never,
+      {
+        email: 'alice@example.com',
+        currentPassword: 'Password123',
+      },
+    );
+
+    expect(usersProfileService.updateOwnEmail).toHaveBeenCalledWith(1, {
+      email: 'alice@example.com',
+      currentPassword: 'Password123',
+    });
+    expect(result).toBe(expected);
+  });
+
+  it('allows authenticated users to update their own password', () => {
+    const expected = { success: true };
+    usersProfileService.updateOwnPassword.mockReturnValue(expected);
+
+    const result = controller.updateOwnPassword(
+      {
+        user: {
+          id: 1,
+          role: Role.EMPLOYEE,
+          restaurantId: 3,
+        },
+      } as never,
+      {
+        currentPassword: 'Password123',
+        newPassword: 'Password456',
+      },
+    );
+
+    expect(usersProfileService.updateOwnPassword).toHaveBeenCalledWith(1, {
+      currentPassword: 'Password123',
+      newPassword: 'Password456',
     });
     expect(result).toBe(expected);
   });
