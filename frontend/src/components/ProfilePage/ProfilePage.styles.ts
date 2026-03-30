@@ -198,6 +198,9 @@ export const styles = StyleSheet.create({
   nameEditorBlock: {
     gap: 10,
   },
+  formBlock: {
+    gap: 10,
+  },
   nameInputLabel: {
     color: '#8d5a5f',
     fontFamily: 'Manrope_700Bold',
@@ -338,6 +341,11 @@ export const styles = StyleSheet.create({
   },
   error: {
     color: '#b42318',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  success: {
+    color: '#12724f',
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
   },

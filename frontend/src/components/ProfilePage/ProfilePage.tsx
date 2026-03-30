@@ -11,7 +11,12 @@ import {
 } from 'react-native';
 import { COLORS } from '../../constants/colors';
 import type { AppText } from '../../locales/translations';
-import { updateMyProfile, uploadMyProfilePhoto } from '../../services/usersApi';
+import {
+  updateMyEmail,
+  updateMyPassword,
+  updateMyProfile,
+  uploadMyProfilePhoto,
+} from '../../services/usersApi';
 import { styles } from './ProfilePage.styles';
 import type { User } from '../../types/auth';
 
@@ -43,6 +48,60 @@ function splitProfileName(name: string | null): ProfileNameDraft {
     lastName: parts[0],
     firstName: parts.slice(1).join(' '),
   };
+}
+
+function isValidEmailAddress(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function getProfileEmailErrorMessage(
+  error: unknown,
+  text: AppText,
+): string {
+  const rawMessage = error instanceof Error ? error.message : '';
+
+  if (rawMessage.includes('CURRENT_PASSWORD_INCORRECT')) {
+    return text.profile.currentPasswordIncorrect;
+  }
+
+  if (rawMessage.includes('EMAIL_ALREADY_REGISTERED')) {
+    return text.profile.emailAlreadyRegistered;
+  }
+
+  if (rawMessage.includes('INVALID_EMAIL')) {
+    return text.profile.emailInvalid;
+  }
+
+  if (rawMessage.includes('CURRENT_PASSWORD_REQUIRED')) {
+    return text.profile.currentPasswordRequired;
+  }
+
+  return text.profile.emailUpdateError;
+}
+
+function getProfilePasswordErrorMessage(
+  error: unknown,
+  text: AppText,
+): string {
+  const rawMessage = error instanceof Error ? error.message : '';
+
+  if (rawMessage.includes('CURRENT_PASSWORD_INCORRECT')) {
+    return text.profile.currentPasswordIncorrect;
+  }
+
+  if (rawMessage.includes('CURRENT_PASSWORD_REQUIRED')) {
+    return text.profile.currentPasswordRequired;
+  }
+
+  if (rawMessage.includes('PASSWORD_TOO_SHORT')) {
+    return text.profile.passwordTooShort;
+  }
+
+  if (rawMessage.includes('NEW_PASSWORD_MUST_BE_DIFFERENT')) {
+    return text.profile.passwordSameAsCurrent;
+  }
+
+  return text.profile.passwordUpdateError;
 }
 
 type ProfilePageProps = {
@@ -96,12 +155,28 @@ export function ProfilePage({
   );
   const [nameError, setNameError] = useState<string | null>(null);
   const [isSavingName, setIsSavingName] = useState(false);
+  const [emailDraft, setEmailDraft] = useState(user.email);
+  const [emailPasswordDraft, setEmailPasswordDraft] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [currentPasswordDraft, setCurrentPasswordDraft] = useState('');
+  const [newPasswordDraft, setNewPasswordDraft] = useState('');
+  const [confirmPasswordDraft, setConfirmPasswordDraft] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   useEffect(() => {
     const nextDraft = splitProfileName(user.name);
     setFirstNameDraft(nextDraft.firstName);
     setLastNameDraft(nextDraft.lastName);
   }, [user.name]);
+
+  useEffect(() => {
+    setEmailDraft(user.email);
+    setEmailPasswordDraft('');
+  }, [user.email]);
 
   async function handlePickAndUploadPhoto() {
     const result = await DocumentPicker.getDocumentAsync({
@@ -160,6 +235,91 @@ export function ProfilePage({
       setNameError(text.profile.nameUpdateError);
     } finally {
       setIsSavingName(false);
+    }
+  }
+
+  async function handleSaveEmail() {
+    const normalizedEmail = emailDraft.trim().toLowerCase();
+    const currentEmail = user.email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      setEmailError(text.profile.emailUpdateError);
+      return;
+    }
+
+    if (!isValidEmailAddress(normalizedEmail)) {
+      setEmailError(text.profile.emailInvalid);
+      return;
+    }
+
+    if (!emailPasswordDraft) {
+      setEmailError(text.profile.currentPasswordRequired);
+      return;
+    }
+
+    if (normalizedEmail === currentEmail) {
+      return;
+    }
+
+    setIsSavingEmail(true);
+    setEmailError(null);
+    setEmailSuccess(null);
+
+    try {
+      const nextUser = await updateMyEmail(accessToken, {
+        email: normalizedEmail,
+        currentPassword: emailPasswordDraft,
+      });
+
+      onUserUpdate(nextUser);
+      setEmailPasswordDraft('');
+      setEmailSuccess(text.profile.emailUpdateSuccess);
+    } catch (error) {
+      setEmailError(getProfileEmailErrorMessage(error, text));
+    } finally {
+      setIsSavingEmail(false);
+    }
+  }
+
+  async function handleSavePassword() {
+    if (!currentPasswordDraft) {
+      setPasswordError(text.profile.currentPasswordRequired);
+      return;
+    }
+
+    if (newPasswordDraft.length < 8) {
+      setPasswordError(text.profile.passwordTooShort);
+      return;
+    }
+
+    if (newPasswordDraft !== confirmPasswordDraft) {
+      setPasswordError(text.profile.passwordConfirmMismatch);
+      return;
+    }
+
+    if (newPasswordDraft === currentPasswordDraft) {
+      setPasswordError(text.profile.passwordSameAsCurrent);
+      return;
+    }
+
+    setIsSavingPassword(true);
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    try {
+      await updateMyPassword(accessToken, {
+        currentPassword: currentPasswordDraft,
+        newPassword: newPasswordDraft,
+      });
+
+      setCurrentPasswordDraft('');
+      setNewPasswordDraft('');
+      setConfirmPasswordDraft('');
+      setPasswordSuccess(text.profile.passwordUpdateSuccess);
+    } catch (error) {
+      setPasswordError(getProfilePasswordErrorMessage(error, text));
+    } finally {
+      setIsSavingPassword(false);
     }
   }
 
@@ -442,6 +602,181 @@ export function ProfilePage({
                 </Text>
               </View>
             )}
+          </View>
+
+          <View style={styles.panel}>
+            <View style={styles.panelHeader}>
+              <View style={styles.panelTitleWrap}>
+                <Text style={styles.panelEyebrow}>
+                  {text.profile.emailLabel}
+                </Text>
+                <Text style={styles.panelTitle}>
+                  {text.profile.emailPanelTitle}
+                </Text>
+              </View>
+              <View style={styles.panelIconBadge}>
+                <Ionicons
+                  name="mail-outline"
+                  size={18}
+                  color={COLORS.brandPrimary}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.panelDescription}>
+              {text.profile.emailPanelSubtitle}
+            </Text>
+
+            <View style={styles.formBlock}>
+              <Text style={styles.nameInputLabel}>{text.profile.emailLabel}</Text>
+              <TextInput
+                style={styles.nameInput}
+                value={emailDraft}
+                onChangeText={setEmailDraft}
+                placeholder={text.profile.emailPlaceholder}
+                placeholderTextColor={COLORS.placeholderAlt}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                editable={!isSavingEmail}
+                accessibilityLabel={text.profile.emailLabel}
+              />
+              <Text style={styles.nameInputLabel}>
+                {text.profile.currentPasswordLabel}
+              </Text>
+              <TextInput
+                style={styles.nameInput}
+                value={emailPasswordDraft}
+                onChangeText={setEmailPasswordDraft}
+                placeholder={text.profile.currentPasswordPlaceholder}
+                placeholderTextColor={COLORS.placeholderAlt}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+                editable={!isSavingEmail}
+                accessibilityLabel={text.profile.currentPasswordLabel}
+              />
+              <Pressable
+                style={[
+                  styles.secondaryButton,
+                  isSavingEmail && styles.buttonDisabled,
+                ]}
+                disabled={isSavingEmail}
+                onPress={() => {
+                  void handleSaveEmail();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={text.profile.saveEmailButton}
+                accessibilityState={{ disabled: isSavingEmail }}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  {isSavingEmail
+                    ? text.profile.savingEmail
+                    : text.profile.saveEmailButton}
+                </Text>
+              </Pressable>
+              {emailError ? <Text style={styles.error}>{emailError}</Text> : null}
+              {emailSuccess ? (
+                <Text style={styles.success}>{emailSuccess}</Text>
+              ) : null}
+            </View>
+          </View>
+
+          <View style={styles.panel}>
+            <View style={styles.panelHeader}>
+              <View style={styles.panelTitleWrap}>
+                <Text style={styles.panelEyebrow}>
+                  {text.profile.passwordPanelEyebrow}
+                </Text>
+                <Text style={styles.panelTitle}>
+                  {text.profile.passwordPanelTitle}
+                </Text>
+              </View>
+              <View style={styles.panelIconBadge}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color={COLORS.brandPrimary}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.panelDescription}>
+              {text.profile.passwordPanelSubtitle}
+            </Text>
+
+            <View style={styles.formBlock}>
+              <Text style={styles.nameInputLabel}>
+                {text.profile.currentPasswordLabel}
+              </Text>
+              <TextInput
+                style={styles.nameInput}
+                value={currentPasswordDraft}
+                onChangeText={setCurrentPasswordDraft}
+                placeholder={text.profile.currentPasswordPlaceholder}
+                placeholderTextColor={COLORS.placeholderAlt}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+                editable={!isSavingPassword}
+                accessibilityLabel={text.profile.currentPasswordLabel}
+              />
+              <Text style={styles.nameInputLabel}>
+                {text.profile.newPasswordLabel}
+              </Text>
+              <TextInput
+                style={styles.nameInput}
+                value={newPasswordDraft}
+                onChangeText={setNewPasswordDraft}
+                placeholder={text.profile.newPasswordPlaceholder}
+                placeholderTextColor={COLORS.placeholderAlt}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+                editable={!isSavingPassword}
+                accessibilityLabel={text.profile.newPasswordLabel}
+              />
+              <Text style={styles.nameInputLabel}>
+                {text.profile.confirmPasswordLabel}
+              </Text>
+              <TextInput
+                style={styles.nameInput}
+                value={confirmPasswordDraft}
+                onChangeText={setConfirmPasswordDraft}
+                placeholder={text.profile.confirmPasswordPlaceholder}
+                placeholderTextColor={COLORS.placeholderAlt}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+                editable={!isSavingPassword}
+                accessibilityLabel={text.profile.confirmPasswordLabel}
+              />
+              <Pressable
+                style={[
+                  styles.secondaryButton,
+                  isSavingPassword && styles.buttonDisabled,
+                ]}
+                disabled={isSavingPassword}
+                onPress={() => {
+                  void handleSavePassword();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={text.profile.savePasswordButton}
+                accessibilityState={{ disabled: isSavingPassword }}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  {isSavingPassword
+                    ? text.profile.savingPassword
+                    : text.profile.savePasswordButton}
+                </Text>
+              </Pressable>
+              {passwordError ? (
+                <Text style={styles.error}>{passwordError}</Text>
+              ) : null}
+              {passwordSuccess ? (
+                <Text style={styles.success}>{passwordSuccess}</Text>
+              ) : null}
+            </View>
           </View>
         </View>
 
