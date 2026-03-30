@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from './users.service';
@@ -124,9 +123,7 @@ describe('UsersService credential updates', () => {
         currentPassword: 'WrongPassword',
         newPassword: 'Password456',
       }),
-    ).rejects.toThrow(
-      new UnauthorizedException('CURRENT_PASSWORD_INCORRECT'),
-    );
+    ).rejects.toThrow(new BadRequestException('CURRENT_PASSWORD_INCORRECT'));
 
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
