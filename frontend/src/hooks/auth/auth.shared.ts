@@ -15,7 +15,8 @@ export type AuthContextValue = {
   mode: AuthMode;
   email: string;
   password: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   requestManagerRole: boolean;
   rememberMe: boolean;
   error: string | null;
@@ -27,7 +28,8 @@ export type AuthContextValue = {
   selectedRestaurantId: number | null;
   setEmail: (value: string) => void;
   setPassword: (value: string) => void;
-  setName: (value: string) => void;
+  setFirstName: (value: string) => void;
+  setLastName: (value: string) => void;
   setSelectedRestaurantId: (restaurantId: number | null) => void;
   setRequestManagerRole: Dispatch<SetStateAction<boolean>>;
   setRememberMe: Dispatch<SetStateAction<boolean>>;
@@ -49,7 +51,8 @@ export type AuthFormState = {
   mode: AuthMode;
   email: string;
   password: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   restaurants: Restaurant[];
   selectedRestaurantId: number | null;
   requestManagerRole: boolean;
@@ -61,7 +64,8 @@ export type AuthFormState = {
   setMode: Dispatch<SetStateAction<AuthMode>>;
   setEmail: Dispatch<SetStateAction<string>>;
   setPassword: Dispatch<SetStateAction<string>>;
-  setName: Dispatch<SetStateAction<string>>;
+  setFirstName: Dispatch<SetStateAction<string>>;
+  setLastName: Dispatch<SetStateAction<string>>;
   setRestaurants: Dispatch<SetStateAction<Restaurant[]>>;
   setSelectedRestaurantId: Dispatch<SetStateAction<number | null>>;
   setRequestManagerRole: Dispatch<SetStateAction<boolean>>;

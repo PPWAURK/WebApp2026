@@ -35,6 +35,7 @@ type StoreSummary = {
   name: string;
   address: string;
   total: number;
+  memberCount: number;
   managementCount: number;
   probationCount: number;
   workplaceCounts: Record<WorkplaceRole, number>;
@@ -116,7 +117,9 @@ export function TeamOverviewPage({
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRosterKey, setSelectedRosterKey] = useState<string | null>(null);
+  const [selectedRosterKey, setSelectedRosterKey] = useState<string | null>(
+    null,
+  );
   const [selectedRosterPage, setSelectedRosterPage] = useState(1);
 
   useEffect(() => {
@@ -217,7 +220,8 @@ export function TeamOverviewPage({
       }
 
       const scopedRestaurant =
-        restaurantDirectory.get(currentUser.restaurant.id) ?? currentUser.restaurant;
+        restaurantDirectory.get(currentUser.restaurant.id) ??
+        currentUser.restaurant;
 
       return [scopedRestaurant];
     }
@@ -237,6 +241,7 @@ export function TeamOverviewPage({
         name: restaurant.name,
         address: restaurant.address,
         total: 0,
+        memberCount: 0,
         managementCount: 0,
         probationCount: 0,
         workplaceCounts: createEmptyWorkplaceCounts(),
@@ -256,9 +261,13 @@ export function TeamOverviewPage({
         next.set(key, {
           key,
           id: entry.restaurant?.id ?? null,
-          name: restaurantRecord?.name ?? entry.restaurant?.name ?? text.teamOverview.unassignedRestaurant,
+          name:
+            restaurantRecord?.name ??
+            entry.restaurant?.name ??
+            text.teamOverview.unassignedRestaurant,
           address: restaurantRecord?.address ?? text.profile.noAddress,
           total: 0,
+          memberCount: 0,
           managementCount: 0,
           probationCount: 0,
           workplaceCounts: createEmptyWorkplaceCounts(),
@@ -277,6 +286,8 @@ export function TeamOverviewPage({
 
       if (entry.role === 'ADMIN' || entry.role === 'MANAGER') {
         summary.managementCount += 1;
+      } else {
+        summary.memberCount += 1;
       }
 
       if (entry.isOnProbation) {
@@ -288,18 +299,24 @@ export function TeamOverviewPage({
       .map((summary) => ({
         ...summary,
         roster: [...summary.roster].sort((left, right) => {
-          const roleOrder = getRolePriority(left.role) - getRolePriority(right.role);
+          const roleOrder =
+            getRolePriority(left.role) - getRolePriority(right.role);
           if (roleOrder !== 0) {
             return roleOrder;
           }
 
-          return getDisplayName(left, text.dashboard.fallbackName).localeCompare(
-            getDisplayName(right, text.dashboard.fallbackName),
-          );
+          return getDisplayName(
+            left,
+            text.dashboard.fallbackName,
+          ).localeCompare(getDisplayName(right, text.dashboard.fallbackName));
         }),
       }))
       .sort((left, right) => {
-        if (left.id !== null && right.id !== null && left.total !== right.total) {
+        if (
+          left.id !== null &&
+          right.id !== null &&
+          left.total !== right.total
+        ) {
           return right.total - left.total;
         }
 
@@ -327,13 +344,16 @@ export function TeamOverviewPage({
   const managementCount = scopedUsers.filter(
     (entry) => entry.role === 'ADMIN' || entry.role === 'MANAGER',
   ).length;
-  const probationCount = scopedUsers.filter((entry) => entry.isOnProbation).length;
+  const probationCount = scopedUsers.filter(
+    (entry) => entry.isOnProbation,
+  ).length;
 
   const levelDistribution = useMemo(
     () =>
       LEVEL_ORDER.map((level) => ({
         level,
-        count: scopedUsers.filter((entry) => entry.employeeLevel === level).length,
+        count: scopedUsers.filter((entry) => entry.employeeLevel === level)
+          .length,
       })).filter((entry) => entry.count > 0),
     [scopedUsers],
   );
@@ -351,16 +371,31 @@ export function TeamOverviewPage({
 
   const scopeValue =
     currentUser.role === 'MANAGER'
-      ? currentUser.restaurant?.name ?? text.profile.noRestaurant
+      ? (currentUser.restaurant?.name ?? text.profile.noRestaurant)
       : text.teamOverview.scopeAllValue;
   const emptyMessage =
     currentUser.role === 'MANAGER' && !currentUser.restaurant
       ? text.dashboard.managerRestaurantMissing
       : text.teamOverview.empty;
-  const sectionCardWidth = !isMediumLayout ? '100%' : isWideLayout ? '48.5%' : '100%';
-  const storeCardWidth = !isMediumLayout ? '100%' : isWideLayout ? '32%' : '48.5%';
-  const metricCardWidth = isCompactLayout ? '100%' : isMediumLayout ? '24%' : '48.5%';
-  const maxLevelCount = Math.max(...levelDistribution.map((entry) => entry.count), 1);
+  const sectionCardWidth = !isMediumLayout
+    ? '100%'
+    : isWideLayout
+      ? '48.5%'
+      : '100%';
+  const storeCardWidth = !isMediumLayout
+    ? '100%'
+    : isWideLayout
+      ? '32%'
+      : '48.5%';
+  const metricCardWidth = isCompactLayout
+    ? '100%'
+    : isMediumLayout
+      ? '24%'
+      : '48.5%';
+  const maxLevelCount = Math.max(
+    ...levelDistribution.map((entry) => entry.count),
+    1,
+  );
   const selectedRosterSummary = useMemo(
     () =>
       storeSummaries.find((summary) => summary.key === selectedRosterKey) ??
@@ -372,7 +407,9 @@ export function TeamOverviewPage({
     () =>
       Math.max(
         1,
-        Math.ceil((selectedRosterSummary?.roster.length ?? 0) / rosterItemsPerPage),
+        Math.ceil(
+          (selectedRosterSummary?.roster.length ?? 0) / rosterItemsPerPage,
+        ),
       ),
     [rosterItemsPerPage, selectedRosterSummary?.roster.length],
   );
@@ -493,7 +530,10 @@ export function TeamOverviewPage({
             value: probationCount,
           },
         ].map((item) => (
-          <View key={item.label} style={[styles.metricCard, { width: metricCardWidth }]}>
+          <View
+            key={item.label}
+            style={[styles.metricCard, { width: metricCardWidth }]}
+          >
             <View style={styles.metricIconWrap}>
               <Ionicons name={item.icon} size={18} color="#ab1e24" />
             </View>
@@ -527,7 +567,8 @@ export function TeamOverviewPage({
               {storeSummaries.map((summary) => {
                 const managerNames = summary.roster
                   .filter(
-                    (entry) => entry.role === 'ADMIN' || entry.role === 'MANAGER',
+                    (entry) =>
+                      entry.role === 'ADMIN' || entry.role === 'MANAGER',
                   )
                   .map((entry) =>
                     getDisplayName(entry, text.dashboard.fallbackName),
@@ -541,10 +582,17 @@ export function TeamOverviewPage({
                     <View style={styles.storeHeader}>
                       <View style={styles.storeTextWrap}>
                         <Text style={styles.storeName}>{summary.name}</Text>
-                        <Text style={styles.storeAddress}>{summary.address}</Text>
+                        <Text style={styles.storeAddress}>
+                          {summary.address}
+                        </Text>
                       </View>
                       <View style={styles.storeCountBadge}>
-                        <Text style={styles.storeCountValue}>{summary.total}</Text>
+                        <Text style={styles.storeCountLabel}>
+                          {text.teamOverview.totalLabel}
+                        </Text>
+                        <Text style={styles.storeCountValue}>
+                          {summary.total}
+                        </Text>
                       </View>
                     </View>
 
@@ -553,7 +601,9 @@ export function TeamOverviewPage({
                         <Text style={styles.storeStatLabel}>
                           {text.teamOverview.membersLabel}
                         </Text>
-                        <Text style={styles.storeStatValue}>{summary.total}</Text>
+                        <Text style={styles.storeStatValue}>
+                          {summary.memberCount}
+                        </Text>
                       </View>
                       <View style={styles.storeStatChip}>
                         <Text style={styles.storeStatLabel}>
@@ -618,7 +668,9 @@ export function TeamOverviewPage({
               <View style={styles.distributionList}>
                 {levelDistribution.map((entry) => {
                   const percentage =
-                    teamCount > 0 ? Math.round((entry.count / teamCount) * 100) : 0;
+                    teamCount > 0
+                      ? Math.round((entry.count / teamCount) * 100)
+                      : 0;
                   const barWidth = Math.max(
                     10,
                     Math.round((entry.count / maxLevelCount) * 100),
@@ -662,8 +714,13 @@ export function TeamOverviewPage({
 
               <View style={styles.workplaceSummaryGrid}>
                 {workplaceDistribution.map((entry) => (
-                  <View key={entry.workplaceRole} style={styles.workplaceSummaryCard}>
-                    <Text style={styles.workplaceSummaryValue}>{entry.count}</Text>
+                  <View
+                    key={entry.workplaceRole}
+                    style={styles.workplaceSummaryCard}
+                  >
+                    <Text style={styles.workplaceSummaryValue}>
+                      {entry.count}
+                    </Text>
                     <Text style={styles.workplaceSummaryLabel}>
                       {text.dashboard.workplaceValues[entry.workplaceRole]}
                     </Text>
@@ -750,7 +807,7 @@ export function TeamOverviewPage({
                   <View style={styles.rosterHeaderStats}>
                     <View style={styles.rosterHeaderBadge}>
                       <Text style={styles.rosterHeaderBadgeValue}>
-                        {selectedRosterSummary.total}
+                        {selectedRosterSummary.memberCount}
                       </Text>
                       <Text style={styles.rosterHeaderBadgeLabel}>
                         {text.teamOverview.membersLabel}
@@ -790,7 +847,9 @@ export function TeamOverviewPage({
                           <Ionicons
                             name="chevron-back-outline"
                             size={14}
-                            color={selectedRosterPage === 1 ? '#c9acab' : '#ab1e24'}
+                            color={
+                              selectedRosterPage === 1 ? '#c9acab' : '#ab1e24'
+                            }
                           />
                           <Text
                             style={[
@@ -848,100 +907,130 @@ export function TeamOverviewPage({
                   </View>
                 ) : (
                   <View style={styles.rosterColumnsWrap}>
-                    {paginatedRosterColumns.map((columnEntries, columnIndex) => (
-                      <View
-                        key={`roster-column-${columnIndex + 1}`}
-                        style={[
-                          styles.rosterColumn,
-                          { width: rosterColumnWidth },
-                        ]}
-                      >
-                        {columnEntries.map((entry, index) => {
-                          const displayName = getDisplayName(
-                            entry,
-                            text.dashboard.fallbackName,
-                          );
-                          const rosterOrder =
-                            (selectedRosterPage - 1) * rosterItemsPerPage +
-                            columnIndex * rosterRowsPerColumn +
-                            index +
-                            1;
+                    {paginatedRosterColumns.map(
+                      (columnEntries, columnIndex) => (
+                        <View
+                          key={`roster-column-${columnIndex + 1}`}
+                          style={[
+                            styles.rosterColumn,
+                            { width: rosterColumnWidth },
+                          ]}
+                        >
+                          {columnEntries.map((entry, index) => {
+                            const displayName = getDisplayName(
+                              entry,
+                              text.dashboard.fallbackName,
+                            );
+                            const rosterOrder =
+                              (selectedRosterPage - 1) * rosterItemsPerPage +
+                              columnIndex * rosterRowsPerColumn +
+                              index +
+                              1;
 
-                          return (
-                            <View key={entry.id} style={styles.rosterCompactCard}>
-                              <View style={styles.rosterCardHeader}>
-                                <View style={styles.avatarWrap}>
-                                  {entry.profilePhoto ? (
-                                    <Image
-                                      source={{ uri: entry.profilePhoto }}
-                                      style={styles.avatarImage}
-                                    />
-                                  ) : (
-                                    <Text style={styles.avatarText}>
-                                      {getInitial(displayName)}
+                            return (
+                              <View
+                                key={entry.id}
+                                style={styles.rosterCompactCard}
+                              >
+                                <View style={styles.rosterCardHeader}>
+                                  <View style={styles.avatarWrap}>
+                                    {entry.profilePhoto ? (
+                                      <Image
+                                        source={{ uri: entry.profilePhoto }}
+                                        style={styles.avatarImage}
+                                      />
+                                    ) : (
+                                      <Text style={styles.avatarText}>
+                                        {getInitial(displayName)}
+                                      </Text>
+                                    )}
+                                  </View>
+                                  <View style={styles.rosterBody}>
+                                    <Text
+                                      style={styles.rosterName}
+                                      numberOfLines={1}
+                                    >
+                                      {displayName}
                                     </Text>
-                                  )}
+                                    <Text
+                                      style={styles.rosterEmail}
+                                      numberOfLines={1}
+                                    >
+                                      {entry.email}
+                                    </Text>
+                                  </View>
+                                  <View style={styles.rosterOrderBadge}>
+                                    <Text style={styles.rosterOrderBadgeText}>
+                                      {rosterOrder}
+                                    </Text>
+                                  </View>
                                 </View>
-                                <View style={styles.rosterBody}>
-                                  <Text style={styles.rosterName} numberOfLines={1}>
-                                    {displayName}
-                                  </Text>
-                                  <Text style={styles.rosterEmail} numberOfLines={1}>
-                                    {entry.email}
-                                  </Text>
-                                </View>
-                                <View style={styles.rosterOrderBadge}>
-                                  <Text style={styles.rosterOrderBadgeText}>
-                                    {rosterOrder}
-                                  </Text>
+
+                                <View style={styles.rosterInfoPanel}>
+                                  <View style={styles.rosterInfoGrid}>
+                                    <View style={styles.rosterInfoItem}>
+                                      <Text style={styles.rosterInfoLabel}>
+                                        {text.dashboard.role}
+                                      </Text>
+                                      <Text
+                                        style={styles.rosterInfoValue}
+                                        numberOfLines={1}
+                                      >
+                                        {text.dashboard.roleValues[entry.role]}
+                                      </Text>
+                                    </View>
+                                    <View style={styles.rosterInfoItem}>
+                                      <Text style={styles.rosterInfoLabel}>
+                                        {text.dashboard.workplace}
+                                      </Text>
+                                      <Text
+                                        style={styles.rosterInfoValue}
+                                        numberOfLines={1}
+                                      >
+                                        {
+                                          text.dashboard.workplaceValues[
+                                            entry.workplaceRole
+                                          ]
+                                        }
+                                      </Text>
+                                    </View>
+                                    <View
+                                      style={[
+                                        styles.rosterInfoItem,
+                                        styles.rosterInfoItemWide,
+                                      ]}
+                                    >
+                                      <Text style={styles.rosterInfoLabel}>
+                                        {text.dashboard.employeeLevelLabel}
+                                      </Text>
+                                      <Text
+                                        style={styles.rosterInfoValue}
+                                        numberOfLines={1}
+                                      >
+                                        {
+                                          text.dashboard.levels[
+                                            entry.employeeLevel
+                                          ]
+                                        }
+                                      </Text>
+                                    </View>
+                                  </View>
+                                  {entry.isOnProbation ? (
+                                    <View style={styles.rosterStatusBadge}>
+                                      <Text
+                                        style={styles.rosterStatusBadgeText}
+                                      >
+                                        {text.dashboard.probation}
+                                      </Text>
+                                    </View>
+                                  ) : null}
                                 </View>
                               </View>
-
-                              <View style={styles.rosterInfoPanel}>
-                                <View style={styles.rosterInfoGrid}>
-                                  <View style={styles.rosterInfoItem}>
-                                    <Text style={styles.rosterInfoLabel}>
-                                      {text.dashboard.role}
-                                    </Text>
-                                    <Text style={styles.rosterInfoValue} numberOfLines={1}>
-                                      {text.dashboard.roleValues[entry.role]}
-                                    </Text>
-                                  </View>
-                                  <View style={styles.rosterInfoItem}>
-                                    <Text style={styles.rosterInfoLabel}>
-                                      {text.dashboard.workplace}
-                                    </Text>
-                                    <Text style={styles.rosterInfoValue} numberOfLines={1}>
-                                      {text.dashboard.workplaceValues[entry.workplaceRole]}
-                                    </Text>
-                                  </View>
-                                  <View
-                                    style={[
-                                      styles.rosterInfoItem,
-                                      styles.rosterInfoItemWide,
-                                    ]}
-                                  >
-                                    <Text style={styles.rosterInfoLabel}>
-                                      {text.dashboard.employeeLevelLabel}
-                                    </Text>
-                                    <Text style={styles.rosterInfoValue} numberOfLines={1}>
-                                      {text.dashboard.levels[entry.employeeLevel]}
-                                    </Text>
-                                  </View>
-                                </View>
-                                {entry.isOnProbation ? (
-                                  <View style={styles.rosterStatusBadge}>
-                                    <Text style={styles.rosterStatusBadgeText}>
-                                      {text.dashboard.probation}
-                                    </Text>
-                                  </View>
-                                ) : null}
-                              </View>
-                            </View>
-                          );
-                        })}
-                      </View>
-                    ))}
+                            );
+                          })}
+                        </View>
+                      ),
+                    )}
                   </View>
                 )}
               </View>

@@ -21,7 +21,11 @@ export function SessionCardLevelEditorModal({
       onRequestClose={supervisorState.closeLevelEditor}
     >
       <View style={styles.previewModalBackdrop}>
-        <View style={styles.levelModalCard}>
+        <View
+          style={styles.levelModalCard}
+          accessible
+          accessibilityLabel={text.dashboard.levelModalTitle}
+        >
           <View style={styles.previewModalHeader}>
             <Text style={styles.quickBlockTitle}>
               {text.dashboard.levelModalTitle}
@@ -29,6 +33,8 @@ export function SessionCardLevelEditorModal({
             <Pressable
               style={styles.secondaryButton}
               onPress={supervisorState.closeLevelEditor}
+              accessibilityRole="button"
+              accessibilityLabel={text.dashboard.levelModalClose}
             >
               <Text style={styles.secondaryButtonText}>
                 {text.dashboard.levelModalClose}
@@ -64,6 +70,15 @@ export function SessionCardLevelEditorModal({
                     supervisorState.levelEditorUser,
                     level,
                   );
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={text.dashboard.levels[level]}
+                accessibilityState={{
+                  selected:
+                    supervisorState.levelEditorUser?.employeeLevel === level,
+                  disabled:
+                    supervisorState.isUpdatingLevelUserId ===
+                    supervisorState.levelEditorUser?.id,
                 }}
               >
                 <Text

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import { COLORS } from '../../constants/colors';
 import type { AppText } from '../../locales/translations';
 import { styles } from './SessionCard.styles';
 import { SessionCardRestaurantFilter } from './SessionCardRestaurantFilter';
@@ -45,7 +46,11 @@ export function SessionCardAdminQuickPanel({
           ]}
         >
           <View style={styles.dashboardTopCardIconWrap}>
-            <Ionicons name="people-outline" size={18} color="#ffffff" />
+            <Ionicons
+              name="people-outline"
+              size={18}
+              color={COLORS.textOnDark}
+            />
           </View>
           <Text
             style={[
@@ -101,9 +106,10 @@ export function SessionCardAdminQuickPanel({
               styles.managerApprovalSearchInputCompact,
           ]}
           placeholder={text.dashboard.quickSearchPlaceholder}
-          placeholderTextColor="#a98a8d"
+          placeholderTextColor={COLORS.placeholder}
           value={supervisorState.approvalSearch}
           onChangeText={(value) => supervisorState.setApprovalSearch(value)}
+          accessibilityLabel={text.dashboard.quickSearchPlaceholder}
         />
       </View>
 
@@ -189,7 +195,7 @@ export function SessionCardAdminQuickPanel({
             <Ionicons
               name="checkmark-circle-outline"
               size={18}
-              color="#ab1e24"
+              color={COLORS.brandPrimary}
             />
             <Text style={styles.managerApprovalEmptyText}>
               {text.dashboard.quickNoPendingAccount}
@@ -220,7 +226,13 @@ export function SessionCardAdminQuickPanel({
                     supervisorState.isRejectingUserId === entry.id &&
                       styles.buttonDisabled,
                   ]}
-                  accessibilityLabel={text.adminTraining.rejectAccountButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${text.adminTraining.rejectAccountButton} ${entry.name ?? entry.email}`}
+                  accessibilityState={{
+                    disabled:
+                      supervisorState.isApprovingUserId === entry.id ||
+                      supervisorState.isRejectingUserId === entry.id,
+                  }}
                   disabled={
                     supervisorState.isApprovingUserId === entry.id ||
                     supervisorState.isRejectingUserId === entry.id
@@ -236,7 +248,7 @@ export function SessionCardAdminQuickPanel({
                         : 'close-outline'
                     }
                     size={18}
-                    color="#ab1e24"
+                    color={COLORS.brandPrimary}
                   />
                 </Pressable>
                 <Pressable
@@ -246,7 +258,13 @@ export function SessionCardAdminQuickPanel({
                     supervisorState.isApprovingUserId === entry.id &&
                       styles.buttonDisabled,
                   ]}
-                  accessibilityLabel={text.adminTraining.approveAccountButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${text.adminTraining.approveAccountButton} ${entry.name ?? entry.email}`}
+                  accessibilityState={{
+                    disabled:
+                      supervisorState.isApprovingUserId === entry.id ||
+                      supervisorState.isRejectingUserId === entry.id,
+                  }}
                   disabled={
                     supervisorState.isApprovingUserId === entry.id ||
                     supervisorState.isRejectingUserId === entry.id
@@ -264,8 +282,8 @@ export function SessionCardAdminQuickPanel({
                     size={18}
                     color={
                       supervisorState.isApprovingUserId === entry.id
-                        ? '#7f1b21'
-                        : '#2f7d32'
+                        ? COLORS.brandPrimaryDark
+                        : COLORS.statusSuccess
                     }
                   />
                 </Pressable>

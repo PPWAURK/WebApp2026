@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { COLORS } from '../../constants/colors';
 import {
   EMPLOYEE_LEVELS,
   formatNewsTag,
@@ -39,7 +40,11 @@ export function SessionCardWhatsNewPanel({
       >
         <View style={styles.whatsNewHeaderMain}>
           <View style={styles.whatsNewHeaderIconWrap}>
-            <Ionicons name="megaphone-outline" size={18} color="#ffffff" />
+            <Ionicons
+              name="megaphone-outline"
+              size={18}
+              color={COLORS.textOnDark}
+            />
           </View>
           <View style={styles.whatsNewHeaderTitleWrap}>
             <Text
@@ -124,6 +129,9 @@ export function SessionCardWhatsNewPanel({
                   },
                 ]}
                 onPress={() => whatsNewState.setWhatsNewLane(option.key)}
+                accessibilityRole="button"
+                accessibilityLabel={option.label}
+                accessibilityState={{ selected: isActive }}
               >
                 <Text
                   style={[
@@ -150,7 +158,8 @@ export function SessionCardWhatsNewPanel({
           value={whatsNewState.whatsNewTitle}
           onChangeText={(value) => whatsNewState.setWhatsNewTitle(value)}
           placeholder={text.dashboard.whatsNewTitlePlaceholder}
-          placeholderTextColor="#a98a8d"
+          placeholderTextColor={COLORS.placeholder}
+          accessibilityLabel={text.dashboard.whatsNewTitlePlaceholder}
         />
       </View>
 
@@ -163,9 +172,10 @@ export function SessionCardWhatsNewPanel({
           value={whatsNewState.whatsNewMessage}
           onChangeText={(value) => whatsNewState.setWhatsNewMessage(value)}
           placeholder={text.dashboard.whatsNewMessagePlaceholder}
-          placeholderTextColor="#a98a8d"
+          placeholderTextColor={COLORS.placeholder}
           multiline
           textAlignVertical="top"
+          accessibilityLabel={text.dashboard.whatsNewMessagePlaceholder}
         />
       </View>
 
@@ -178,7 +188,8 @@ export function SessionCardWhatsNewPanel({
           value={whatsNewState.whatsNewTagsInput}
           onChangeText={(value) => whatsNewState.setWhatsNewTagsInput(value)}
           placeholder={text.dashboard.whatsNewTagsPlaceholder}
-          placeholderTextColor="#a98a8d"
+          placeholderTextColor={COLORS.placeholder}
+          accessibilityLabel={text.dashboard.whatsNewTagsPlaceholder}
         />
         <Text style={styles.panelSubtitleOnDark}>
           {text.dashboard.whatsNewTagsHint}
@@ -187,10 +198,7 @@ export function SessionCardWhatsNewPanel({
         {whatsNewState.parsedWhatsNewTags.length > 0 ? (
           <View style={styles.newsTagRow}>
             {whatsNewState.parsedWhatsNewTags.map((tag) => (
-              <View
-                key={`whats-new-tag-${tag}`}
-                style={styles.newsIndexedTag}
-              >
+              <View key={`whats-new-tag-${tag}`} style={styles.newsIndexedTag}>
                 <Text style={styles.newsIndexedTagText}>
                   {formatNewsTag(tag)}
                 </Text>
@@ -210,6 +218,11 @@ export function SessionCardWhatsNewPanel({
             isCompactAdminCardLayout && styles.whatsNewLevelsTriggerCompact,
           ]}
           onPress={whatsNewState.toggleWhatsNewLevelsExpanded}
+          accessibilityRole="button"
+          accessibilityLabel={text.dashboard.whatsNewVisibleLevelsLabel}
+          accessibilityState={{
+            expanded: whatsNewState.isWhatsNewLevelsExpanded,
+          }}
         >
           <View style={styles.whatsNewLevelsTriggerTextWrap}>
             <Text
@@ -234,7 +247,7 @@ export function SessionCardWhatsNewPanel({
                 : 'chevron-down-outline'
             }
             size={18}
-            color="#7f1b21"
+            color={COLORS.brandPrimaryDark}
           />
         </Pressable>
 
@@ -252,6 +265,11 @@ export function SessionCardWhatsNewPanel({
                     styles.whatsNewLevelChipActive,
                 ]}
                 onPress={whatsNewState.clearWhatsNewVisibleLevels}
+                accessibilityRole="button"
+                accessibilityLabel={text.dashboard.newsVisibleLevelsAll}
+                accessibilityState={{
+                  selected: whatsNewState.whatsNewVisibleLevels.length === 0,
+                }}
               >
                 <Text
                   style={[
@@ -282,6 +300,9 @@ export function SessionCardWhatsNewPanel({
                     onPress={() =>
                       whatsNewState.toggleWhatsNewVisibleLevel(level)
                     }
+                    accessibilityRole="button"
+                    accessibilityLabel={text.dashboard.levels[level]}
+                    accessibilityState={{ selected: isActive }}
                   >
                     <Text
                       style={[
@@ -318,6 +339,9 @@ export function SessionCardWhatsNewPanel({
           onPress={() => {
             void whatsNewState.handlePublishWhatsNew();
           }}
+          accessibilityRole="button"
+          accessibilityLabel={text.dashboard.whatsNewCta}
+          accessibilityState={{ disabled: whatsNewState.whatsNewPublishing }}
         >
           <Text style={styles.whatsNewPublishButtonText}>
             {whatsNewState.whatsNewPublishing
@@ -337,6 +361,9 @@ export function SessionCardWhatsNewPanel({
           onPress={() => {
             void whatsNewState.handleWhatsNewUpload();
           }}
+          accessibilityRole="button"
+          accessibilityLabel={text.dashboard.whatsNewAttachCta}
+          accessibilityState={{ disabled: whatsNewState.whatsNewUploading }}
         >
           <Text style={styles.whatsNewSecondaryButtonText}>
             {whatsNewState.whatsNewUploading

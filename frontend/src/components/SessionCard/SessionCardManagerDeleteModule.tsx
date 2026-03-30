@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { COLORS } from '../../constants/colors';
 import type { AppText } from '../../locales/translations';
 import { styles } from './SessionCard.styles';
 import type { SessionCardSupervisorState } from './useSessionCardSupervisorState';
@@ -18,7 +19,11 @@ export function SessionCardManagerDeleteModule({
       <View style={styles.employeeModuleHeader}>
         <View style={styles.employeeModuleHeaderMain}>
           <View style={styles.employeeModuleHeaderIconWrap}>
-            <Ionicons name="trash-outline" size={18} color="#ffffff" />
+            <Ionicons
+              name="trash-outline"
+              size={18}
+              color={COLORS.textOnDark}
+            />
           </View>
           <View style={styles.employeeModuleHeaderCopy}>
             <Text style={styles.quickBlockTitle}>
@@ -39,13 +44,14 @@ export function SessionCardManagerDeleteModule({
       </View>
 
       <View style={styles.employeeModuleSearchShell}>
-        <Ionicons name="search-outline" size={18} color="#8d5a5f" />
+        <Ionicons name="search-outline" size={18} color={COLORS.textMuted} />
         <TextInput
           style={styles.employeeModuleSearchInput}
           placeholder={text.dashboard.quickSearchPlaceholder}
-          placeholderTextColor="#a98a8d"
+          placeholderTextColor={COLORS.placeholder}
           value={supervisorState.deleteSearch}
           onChangeText={(value) => supervisorState.setDeleteSearch(value)}
+          accessibilityLabel={text.dashboard.quickSearchPlaceholder}
         />
       </View>
 
@@ -60,7 +66,11 @@ export function SessionCardManagerDeleteModule({
       !supervisorState.usersError &&
       supervisorState.deletionUsers.length === 0 ? (
         <View style={styles.employeeModuleEmptyState}>
-          <Ionicons name="people-outline" size={18} color="#ab1e24" />
+          <Ionicons
+            name="people-outline"
+            size={18}
+            color={COLORS.brandPrimary}
+          />
           <Text style={styles.employeeModuleEmptyText}>
             {text.dashboard.quickNoEmployee}
           </Text>
@@ -122,7 +132,11 @@ export function SessionCardManagerDeleteModule({
                     supervisorState.isDeletingUserId === entry.id &&
                       styles.buttonDisabled,
                   ]}
-                  accessibilityLabel={text.dashboard.quickDeleteButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${text.dashboard.quickDeleteButton} ${displayName}`}
+                  accessibilityState={{
+                    disabled: supervisorState.isDeletingUserId === entry.id,
+                  }}
                   disabled={supervisorState.isDeletingUserId === entry.id}
                   onPress={() => {
                     void supervisorState.handleDeleteUser(entry);
@@ -135,7 +149,7 @@ export function SessionCardManagerDeleteModule({
                         : 'trash-outline'
                     }
                     size={16}
-                    color="#ab1e24"
+                    color={COLORS.brandPrimary}
                   />
                 </Pressable>
               </View>

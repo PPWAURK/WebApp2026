@@ -69,6 +69,9 @@ export function SessionCardRestaurantFilter({
             compact && styles.restaurantFilterSelectTriggerCompact,
           ]}
           onPress={onToggle}
+          accessibilityRole="button"
+          accessibilityLabel={`${text.dashboard.quickRestaurantFilterTitle} ${selectedLabel}`}
+          accessibilityState={{ expanded: isOpen }}
         >
           <Text
             style={[
@@ -105,6 +108,9 @@ export function SessionCardRestaurantFilter({
                       styles.restaurantFilterSelectItemLast,
                   ]}
                   onPress={() => onSelect(option.value)}
+                  accessibilityRole="button"
+                  accessibilityLabel={option.label}
+                  accessibilityState={{ selected: isActive }}
                 >
                   <Text
                     style={[

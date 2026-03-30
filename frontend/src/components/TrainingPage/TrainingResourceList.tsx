@@ -74,6 +74,7 @@ export function TrainingResourceList({
             placeholderTextColor={COLORS.placeholder}
             autoCapitalize="none"
             autoCorrect={false}
+            accessibilityLabel={text.training.searchPlaceholder}
           />
         </View>
       </View>
@@ -157,6 +158,12 @@ export function TrainingResourceList({
                     <Pressable
                       style={styles.taskActionButton}
                       onPress={() => onOpenDocument(item)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${
+                        isWebPlatform
+                          ? text.training.previewButton
+                          : text.training.openPdfButton
+                      } ${item.originalName}`}
                     >
                       <Text style={styles.taskActionButtonText}>
                         {isWebPlatform
@@ -168,6 +175,8 @@ export function TrainingResourceList({
                     <Pressable
                       style={styles.taskActionButton}
                       onPress={() => onOpenVideo(item)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${text.training.playVideoButton} ${item.originalName}`}
                     >
                       <Text style={styles.taskActionButtonText}>
                         {text.training.playVideoButton}
@@ -184,6 +193,13 @@ export function TrainingResourceList({
                     onPress={() => {
                       void onToggleCompletion(item.fileName);
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${
+                      isCompleted
+                        ? text.training.markUndone
+                        : text.training.markDone
+                    } ${item.originalName}`}
+                    accessibilityState={{ selected: isCompleted }}
                   >
                     <Text
                       style={[

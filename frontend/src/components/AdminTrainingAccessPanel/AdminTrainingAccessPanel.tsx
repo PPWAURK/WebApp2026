@@ -30,7 +30,7 @@ type AdminTrainingAccessPanelProps = {
   text: AppText;
 };
 
-const QUIZ_LINK_LANGUAGES: TrainingQuizLinkLanguage[] = ['fr', 'bn'];
+const QUIZ_LINK_LANGUAGES: TrainingQuizLinkLanguage[] = ['fr', 'bn', 'zh'];
 
 function getQuizLinkKey(
   section: TrainingSection,
@@ -713,6 +713,11 @@ export function AdminTrainingAccessPanel({
             onPress={() => {
               void saveAccess();
             }}
+            accessibilityRole="button"
+            accessibilityLabel={text.adminTraining.save}
+            accessibilityState={{
+              disabled: isSaving || isLoading || !selectedLevel,
+            }}
           >
             <Text style={styles.primaryButtonText}>
               {isSaving ? text.adminTraining.saving : text.adminTraining.save}
@@ -789,6 +794,9 @@ export function AdminTrainingAccessPanel({
                       <Pressable
                         style={styles.scenarioToggleButton}
                         onPress={() => toggleQuizScenarioExpanded(scenario.key)}
+                        accessibilityRole="button"
+                        accessibilityLabel={scenario.label}
+                        accessibilityState={{ expanded: isScenarioExpanded }}
                       >
                         <View style={styles.scenarioHeaderCopy}>
                           <Text style={styles.scenarioTitle}>
@@ -855,7 +863,9 @@ export function AdminTrainingAccessPanel({
                                   >
                                     {languageValue === 'fr'
                                       ? text.adminTraining.quizLanguageFr
-                                      : text.adminTraining.quizLanguageBn}
+                                      : languageValue === 'bn'
+                                        ? text.adminTraining.quizLanguageBn
+                                        : text.adminTraining.quizLanguageZh}
                                   </Text>
                                   <TextInput
                                     style={[
@@ -878,6 +888,15 @@ export function AdminTrainingAccessPanel({
                                     autoCapitalize="none"
                                     autoCorrect={false}
                                     keyboardType="url"
+                                    accessibilityLabel={`${
+                                      sectionLabelByKey.get(section) ?? section
+                                    } ${
+                                      languageValue === 'fr'
+                                        ? text.adminTraining.quizLanguageFr
+                                        : languageValue === 'bn'
+                                          ? text.adminTraining.quizLanguageBn
+                                          : text.adminTraining.quizLanguageZh
+                                    }`}
                                   />
                                   <Pressable
                                     style={[
@@ -890,6 +909,20 @@ export function AdminTrainingAccessPanel({
                                     disabled={!isQuizDirty || isSavingQuizLink}
                                     onPress={() => {
                                       void saveQuizLink(section, languageValue);
+                                    }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`${
+                                      text.adminTraining.quizLinkSave
+                                    } ${sectionLabelByKey.get(section) ?? section} ${
+                                      languageValue === 'fr'
+                                        ? text.adminTraining.quizLanguageFr
+                                        : languageValue === 'bn'
+                                          ? text.adminTraining.quizLanguageBn
+                                          : text.adminTraining.quizLanguageZh
+                                    }`}
+                                    accessibilityState={{
+                                      disabled:
+                                        !isQuizDirty || isSavingQuizLink,
                                     }}
                                   >
                                     <Text style={styles.quizLinkSaveButtonText}>

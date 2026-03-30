@@ -66,6 +66,11 @@ export function TrainingScenarioPanel({
                 activeScenario?.key === scenario.key && styles.pillActive,
               ]}
               onPress={() => onSelectScenario(scenario.key)}
+              accessibilityRole="button"
+              accessibilityLabel={scenario.label}
+              accessibilityState={{
+                selected: activeScenario?.key === scenario.key,
+              }}
             >
               <Text
                 style={[
@@ -108,6 +113,9 @@ export function TrainingScenarioPanel({
                 activeSection === section && styles.pillActive,
               ]}
               onPress={() => onSelectSection(section)}
+              accessibilityRole="button"
+              accessibilityLabel={sectionLabelByKey.get(section) ?? section}
+              accessibilityState={{ selected: activeSection === section }}
             >
               <Text
                 style={[
@@ -136,6 +144,9 @@ export function TrainingScenarioPanel({
             ]}
             onPress={onOpenQuiz}
             disabled={!quizUrl}
+            accessibilityRole="button"
+            accessibilityLabel={text.training.quizButton}
+            accessibilityState={{ disabled: !quizUrl }}
           >
             <Text style={styles.quizActionButtonText}>
               {text.training.quizButton}
@@ -148,7 +159,7 @@ export function TrainingScenarioPanel({
             {text.training.quizLanguageLabel}
           </Text>
           <View style={styles.quizLanguageChipRow}>
-            {(['fr', 'bn'] as TrainingQuizLinkLanguage[]).map(
+            {(['fr', 'bn', 'zh'] as TrainingQuizLinkLanguage[]).map(
               (languageValue) => (
                 <Pressable
                   key={`quiz-language-${languageValue}`}
@@ -158,6 +169,17 @@ export function TrainingScenarioPanel({
                       styles.quizLanguageChipActive,
                   ]}
                   onPress={() => onSelectQuizLanguage(languageValue)}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    languageValue === 'fr'
+                      ? text.training.quizLanguageFr
+                      : languageValue === 'bn'
+                        ? text.training.quizLanguageBn
+                        : text.training.quizLanguageZh
+                  }
+                  accessibilityState={{
+                    selected: quizLanguage === languageValue,
+                  }}
                 >
                   <Text
                     style={[
@@ -168,7 +190,9 @@ export function TrainingScenarioPanel({
                   >
                     {languageValue === 'fr'
                       ? text.training.quizLanguageFr
-                      : text.training.quizLanguageBn}
+                      : languageValue === 'bn'
+                        ? text.training.quizLanguageBn
+                        : text.training.quizLanguageZh}
                   </Text>
                 </Pressable>
               ),

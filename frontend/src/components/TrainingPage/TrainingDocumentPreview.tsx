@@ -46,6 +46,8 @@ export function TrainingDocumentPreview({
               <Pressable
                 style={styles.previewControlButton}
                 onPress={() => setIsFullscreen(true)}
+                accessibilityRole="button"
+                accessibilityLabel={text.training.previewFullscreen}
               >
                 <Text style={styles.previewControlButtonText}>
                   {text.training.previewFullscreen}
@@ -94,7 +96,11 @@ export function TrainingDocumentPreview({
         onRequestClose={() => setIsFullscreen(false)}
       >
         <View style={styles.previewFullscreenBackdrop}>
-          <View style={styles.previewFullscreenCard}>
+          <View
+            style={styles.previewFullscreenCard}
+            accessible
+            accessibilityLabel={text.training.previewTitle}
+          >
             <View style={styles.previewFullscreenHeader}>
               <Text style={styles.previewFullscreenTitle} numberOfLines={1}>
                 {webPreviewDocument?.originalName ?? text.training.previewTitle}
@@ -102,6 +108,8 @@ export function TrainingDocumentPreview({
               <Pressable
                 style={styles.previewControlButton}
                 onPress={() => setIsFullscreen(false)}
+                accessibilityRole="button"
+                accessibilityLabel={text.dashboard.levelModalClose}
               >
                 <Text style={styles.previewControlButtonText}>X</Text>
               </Pressable>

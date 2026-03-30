@@ -567,6 +567,7 @@ export function AdminUploadPanel({ accessToken, text }: AdminUploadPanelProps) {
         onCancel={() => setDeleteCategoryDialogVisible(false)}
         onConfirm={() => {
           void handleDeleteCustomCategory();
+          void handleDeleteCustomCategory();
         }}
       />
     </View>

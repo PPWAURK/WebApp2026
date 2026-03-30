@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { COLORS } from '../../constants/colors';
 import type { AppText } from '../../locales/translations';
 import { styles } from './SessionCard.styles';
 import type { SessionCardSupervisorState } from './useSessionCardSupervisorState';
@@ -18,7 +19,11 @@ export function SessionCardManagerTransferModule({
       <View style={styles.employeeModuleHeader}>
         <View style={styles.employeeModuleHeaderMain}>
           <View style={styles.employeeModuleHeaderIconWrap}>
-            <Ionicons name="swap-horizontal-outline" size={18} color="#ffffff" />
+            <Ionicons
+              name="swap-horizontal-outline"
+              size={18}
+              color={COLORS.textOnDark}
+            />
           </View>
           <View style={styles.employeeModuleHeaderCopy}>
             <Text style={styles.quickBlockTitle}>
@@ -37,23 +42,30 @@ export function SessionCardManagerTransferModule({
       </View>
 
       <View style={styles.employeeModuleSearchShell}>
-        <Ionicons name="search-outline" size={18} color="#8d5a5f" />
+        <Ionicons name="search-outline" size={18} color={COLORS.textMuted} />
         <TextInput
           style={styles.employeeModuleSearchInput}
           placeholder={text.adminRestaurant.transferSearchPlaceholder}
-          placeholderTextColor="#a98a8d"
+          placeholderTextColor={COLORS.placeholder}
           value={supervisorState.transferSearch}
           onChangeText={(value) => supervisorState.setTransferSearch(value)}
+          accessibilityLabel={text.adminRestaurant.transferSearchPlaceholder}
         />
       </View>
 
       {supervisorState.transferBlockError ? (
-        <Text style={styles.errorText}>{supervisorState.transferBlockError}</Text>
+        <Text style={styles.errorText}>
+          {supervisorState.transferBlockError}
+        </Text>
       ) : null}
 
       {supervisorState.visibleTransferUsers.length === 0 ? (
         <View style={styles.employeeModuleEmptyState}>
-          <Ionicons name="people-outline" size={18} color="#ab1e24" />
+          <Ionicons
+            name="people-outline"
+            size={18}
+            color={COLORS.brandPrimary}
+          />
           <Text style={styles.employeeModuleEmptyText}>
             {text.dashboard.quickNoEmployee}
           </Text>
@@ -66,7 +78,8 @@ export function SessionCardManagerTransferModule({
           contentContainerStyle={styles.employeeModuleScrollableListContent}
         >
           {supervisorState.visibleTransferUsers.map((entry) => {
-            const isActive = supervisorState.selectedTransferUserId === entry.id;
+            const isActive =
+              supervisorState.selectedTransferUserId === entry.id;
             const displayName = (entry.name ?? entry.email).trim();
 
             return (
@@ -77,6 +90,9 @@ export function SessionCardManagerTransferModule({
                   isActive && styles.employeeCompactSelectableRowActive,
                 ]}
                 onPress={() => supervisorState.selectTransferUser(entry.id)}
+                accessibilityRole="button"
+                accessibilityLabel={displayName}
+                accessibilityState={{ selected: isActive }}
               >
                 <View style={styles.employeeCompactTopRow}>
                   <View style={styles.employeeModuleAvatar}>
@@ -106,7 +122,7 @@ export function SessionCardManagerTransferModule({
                   <Ionicons
                     name="chevron-forward-outline"
                     size={16}
-                    color={isActive ? '#ab1e24' : '#8d5a5f'}
+                    color={isActive ? COLORS.brandPrimary : COLORS.textMuted}
                   />
                 </View>
               </Pressable>
@@ -121,8 +137,10 @@ export function SessionCardManagerTransferModule({
             <View style={styles.transferPanelHeaderMain}>
               <View style={styles.employeeModuleAvatar}>
                 <Text style={styles.employeeModuleAvatarText}>
-                  {(supervisorState.selectedTransferUser.name ??
-                    supervisorState.selectedTransferUser.email)
+                  {(
+                    supervisorState.selectedTransferUser.name ??
+                    supervisorState.selectedTransferUser.email
+                  )
                     .trim()
                     .slice(0, 1)
                     .toUpperCase()}
@@ -179,47 +197,57 @@ export function SessionCardManagerTransferModule({
               style={styles.transferDestinationList}
               contentContainerStyle={styles.transferDestinationListContent}
             >
-              {supervisorState.availableTransferRestaurants.map((restaurant) => {
-                const isActive =
-                  supervisorState.selectedTransferRestaurantId === restaurant.id;
+              {supervisorState.availableTransferRestaurants.map(
+                (restaurant) => {
+                  const isActive =
+                    supervisorState.selectedTransferRestaurantId ===
+                    restaurant.id;
 
-                return (
-                  <Pressable
-                    key={`transfer-restaurant-${restaurant.id}`}
-                    style={[
-                      styles.transferDestinationRow,
-                      isActive && styles.transferDestinationRowActive,
-                    ]}
-                    onPress={() =>
-                      supervisorState.selectTransferRestaurant(restaurant.id)
-                    }
-                  >
-                    <View style={styles.transferDestinationRowMain}>
-                      <Text
-                        style={[
-                          styles.transferDestinationRowText,
-                          isActive && styles.transferDestinationRowTextActive,
-                        ]}
-                        numberOfLines={2}
-                      >
-                        {restaurant.name}
-                      </Text>
-                    </View>
-                    <View
+                  return (
+                    <Pressable
+                      key={`transfer-restaurant-${restaurant.id}`}
                       style={[
-                        styles.transferDestinationIndicator,
-                        isActive && styles.transferDestinationIndicatorActive,
+                        styles.transferDestinationRow,
+                        isActive && styles.transferDestinationRowActive,
                       ]}
+                      onPress={() =>
+                        supervisorState.selectTransferRestaurant(restaurant.id)
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel={restaurant.name}
+                      accessibilityState={{ selected: isActive }}
                     >
-                      <Ionicons
-                        name={isActive ? 'checkmark-outline' : 'ellipse-outline'}
-                        size={16}
-                        color={isActive ? '#ffffff' : '#ab1e24'}
-                      />
-                    </View>
-                  </Pressable>
-                );
-              })}
+                      <View style={styles.transferDestinationRowMain}>
+                        <Text
+                          style={[
+                            styles.transferDestinationRowText,
+                            isActive && styles.transferDestinationRowTextActive,
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {restaurant.name}
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.transferDestinationIndicator,
+                          isActive && styles.transferDestinationIndicatorActive,
+                        ]}
+                      >
+                        <Ionicons
+                          name={
+                            isActive ? 'checkmark-outline' : 'ellipse-outline'
+                          }
+                          size={16}
+                          color={
+                            isActive ? COLORS.textOnDark : COLORS.brandPrimary
+                          }
+                        />
+                      </View>
+                    </Pressable>
+                  );
+                },
+              )}
             </ScrollView>
           )}
 
@@ -242,6 +270,15 @@ export function SessionCardManagerTransferModule({
             onPress={() => {
               void supervisorState.handleTransferUser();
             }}
+            accessibilityRole="button"
+            accessibilityLabel={text.adminRestaurant.transferButton}
+            accessibilityState={{
+              disabled:
+                supervisorState.isTransferringUserId ===
+                  supervisorState.selectedTransferUser.id ||
+                !supervisorState.selectedTransferRestaurantId ||
+                supervisorState.availableTransferRestaurants.length === 0,
+            }}
           >
             <Ionicons
               name={
@@ -251,7 +288,7 @@ export function SessionCardManagerTransferModule({
                   : 'swap-horizontal-outline'
               }
               size={16}
-              color="#7f1b21"
+              color={COLORS.brandPrimaryDark}
             />
             <Text style={styles.employeeModuleNeutralActionText}>
               {supervisorState.isTransferringUserId ===

@@ -7,6 +7,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { COLORS } from '../../constants/colors';
 import type { AppText } from '../../locales/translations';
 import type { OrderReturnDraftItem } from '../../services/ordersApi';
 import type { ReturnPhotoDraft } from './orderReturn.types';
@@ -126,7 +127,11 @@ export function OrderReturnItemCard({
               }}
               disabled={submitting}
             >
-              <Ionicons name="camera-outline" size={16} color="#ab1e24" />
+              <Ionicons
+                name="camera-outline"
+                size={16}
+                color={COLORS.brandPrimary}
+              />
               <Text style={styles.photoActionButtonText}>
                 {text.orders.returnPhotoCameraButton}
               </Text>
@@ -143,7 +148,11 @@ export function OrderReturnItemCard({
             }}
             disabled={submitting}
           >
-            <Ionicons name="images-outline" size={16} color="#ab1e24" />
+            <Ionicons
+              name="images-outline"
+              size={16}
+              color={COLORS.brandPrimary}
+            />
             <Text style={styles.photoActionButtonText}>
               {text.orders.returnPhotoLibraryButton}
             </Text>

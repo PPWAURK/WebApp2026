@@ -25,6 +25,12 @@ export function useAuthActions({
   session,
   setIsSubmitting,
 }: UseAuthActionsParams) {
+  function buildRegisterName() {
+    return [form.lastName.trim(), form.firstName.trim()]
+      .filter((value) => value.length > 0)
+      .join(' ');
+  }
+
   async function submitAuth(
     currentMode: AuthMode,
     text: AppText,
@@ -42,7 +48,7 @@ export function useAuthActions({
       const authData = await requestAuth(currentMode, {
         email: form.email.trim(),
         password: form.password,
-        name: currentMode === 'register' ? form.name.trim() : undefined,
+        name: currentMode === 'register' ? buildRegisterName() : undefined,
         restaurantId:
           currentMode === 'register' && form.selectedRestaurantId
             ? form.selectedRestaurantId
@@ -161,7 +167,8 @@ export function useAuthActions({
     session.setSession(null);
     form.setEmail('');
     form.setPassword('');
-    form.setName('');
+    form.setFirstName('');
+    form.setLastName('');
     form.setRequestManagerRole(false);
     form.setMode('login');
     form.setError(null);

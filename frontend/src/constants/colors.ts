@@ -1,9 +1,11 @@
 export const COLORS = {
   brandPrimary: '#ab1e24',
   brandPrimaryDark: '#7f1b21',
+  statusSuccess: '#2f7d32',
   textPrimary: '#5f1c21',
   textSecondary: '#724448',
   textMuted: '#8d5a5f',
+  textMutedCool: '#7f8a8a',
   textMutedSoft: '#8b5a5e',
   textOnDark: '#ffffff',
   placeholder: '#a98a8d',

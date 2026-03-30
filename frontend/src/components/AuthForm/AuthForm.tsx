@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { styles } from './AuthForm.styles';
+import { COLORS } from '../../constants/colors';
 import type { AuthMode, Restaurant } from '../../types/auth';
 import type { AppText } from '../../locales/translations';
 import type { Language } from '../../types/language';
@@ -21,7 +22,8 @@ type AuthFormProps = {
   language: Language;
   email: string;
   password: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   restaurants: Restaurant[];
   selectedRestaurantId: number | null;
   requestManagerRole: boolean;
@@ -33,7 +35,8 @@ type AuthFormProps = {
   notice?: string | null;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
-  onNameChange: (value: string) => void;
+  onFirstNameChange: (value: string) => void;
+  onLastNameChange: (value: string) => void;
   onSelectRestaurant: (restaurantId: number) => void;
   onToggleRequestManagerRole: () => void;
   onRememberToggle: () => void;
@@ -88,13 +91,14 @@ export function AuthForm(props: AuthFormProps) {
 
   const hasEmail = props.email.trim().length > 0;
   const hasPassword = props.password.trim().length > 0;
-  const hasName = props.name.trim().length > 0;
+  const hasFirstName = props.firstName.trim().length > 0;
+  const hasLastName = props.lastName.trim().length > 0;
   const hasRestaurant = props.selectedRestaurantId !== null;
 
   const isFormValid =
     props.mode === 'login'
       ? hasEmail && hasPassword
-      : hasName && hasEmail && hasPassword && hasRestaurant;
+      : hasFirstName && hasLastName && hasEmail && hasPassword && hasRestaurant;
 
   const isSubmitDisabled = props.isSubmitting || !isFormValid;
   const isForgotPasswordDisabled =
@@ -175,6 +179,9 @@ export function AuthForm(props: AuthFormProps) {
             props.language === 'fr' && styles.authLanguageChipActive,
           ]}
           onPress={() => props.onSelectLanguage('fr')}
+          accessibilityRole="button"
+          accessibilityLabel={props.text.drawer.fr}
+          accessibilityState={{ selected: props.language === 'fr' }}
         >
           <Text style={styles.authLanguageChipText}>
             {props.text.drawer.fr}
@@ -186,6 +193,9 @@ export function AuthForm(props: AuthFormProps) {
             props.language === 'zh' && styles.authLanguageChipActive,
           ]}
           onPress={() => props.onSelectLanguage('zh')}
+          accessibilityRole="button"
+          accessibilityLabel={props.text.drawer.zh}
+          accessibilityState={{ selected: props.language === 'zh' }}
         >
           <Text style={styles.authLanguageChipText}>
             {props.text.drawer.zh}
@@ -196,7 +206,7 @@ export function AuthForm(props: AuthFormProps) {
       {props.mode === 'register' ? (
         <>
           <Text style={styles.uploadFieldTitle}>
-            {props.text.auth.namePlaceholder}
+            {props.text.auth.lastNamePlaceholder}
           </Text>
           <View style={styles.passwordWrapper}>
             <TextInput
@@ -205,12 +215,33 @@ export function AuthForm(props: AuthFormProps) {
               autoCorrect={false}
               spellCheck={false}
               importantForAutofill="no"
-              selectionColor="#ab1e24"
-              placeholder={props.text.auth.namePlaceholder}
-              placeholderTextColor="#7f8a8a"
+              selectionColor={COLORS.brandPrimary}
+              placeholder={props.text.auth.lastNamePlaceholder}
+              placeholderTextColor={COLORS.textMutedCool}
               style={[styles.passwordInput, webInputResetStyle]}
-              value={props.name}
-              onChangeText={props.onNameChange}
+              value={props.lastName}
+              onChangeText={props.onLastNameChange}
+              accessibilityLabel={props.text.auth.lastNamePlaceholder}
+            />
+          </View>
+
+          <Text style={styles.uploadFieldTitle}>
+            {props.text.auth.firstNamePlaceholder}
+          </Text>
+          <View style={styles.passwordWrapper}>
+            <TextInput
+              autoCapitalize="words"
+              autoComplete="off"
+              autoCorrect={false}
+              spellCheck={false}
+              importantForAutofill="no"
+              selectionColor={COLORS.brandPrimary}
+              placeholder={props.text.auth.firstNamePlaceholder}
+              placeholderTextColor={COLORS.textMutedCool}
+              style={[styles.passwordInput, webInputResetStyle]}
+              value={props.firstName}
+              onChangeText={props.onFirstNameChange}
+              accessibilityLabel={props.text.auth.firstNamePlaceholder}
             />
           </View>
 
@@ -225,6 +256,9 @@ export function AuthForm(props: AuthFormProps) {
               onPress={() =>
                 setIsRestaurantListOpen((currentValue) => !currentValue)
               }
+              accessibilityRole="button"
+              accessibilityLabel={`${props.text.auth.restaurantLabel} ${selectedRestaurant?.name ?? props.text.auth.restaurantPlaceholder}`}
+              accessibilityState={{ expanded: isRestaurantListOpen }}
             >
               <Text style={styles.restaurantSelectTriggerText}>
                 {selectedRestaurant?.name ??
@@ -248,6 +282,11 @@ export function AuthForm(props: AuthFormProps) {
                     onPress={() => {
                       props.onSelectRestaurant(restaurant.id);
                       setIsRestaurantListOpen(false);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={restaurant.name}
+                    accessibilityState={{
+                      selected: props.selectedRestaurantId === restaurant.id,
                     }}
                   >
                     <Text
@@ -280,6 +319,9 @@ export function AuthForm(props: AuthFormProps) {
           <Pressable
             style={styles.registerOptionRow}
             onPress={props.onToggleRequestManagerRole}
+            accessibilityRole="button"
+            accessibilityLabel={props.text.auth.registerManagerRequestLabel}
+            accessibilityState={{ selected: props.requestManagerRole }}
           >
             <View
               style={[
@@ -312,12 +354,13 @@ export function AuthForm(props: AuthFormProps) {
           spellCheck={false}
           importantForAutofill="no"
           keyboardType="email-address"
-          selectionColor="#ab1e24"
+          selectionColor={COLORS.brandPrimary}
           placeholder={props.text.auth.emailPlaceholder}
-          placeholderTextColor="#7f8a8a"
+          placeholderTextColor={COLORS.textMutedCool}
           style={[styles.passwordInput, webInputResetStyle]}
           value={props.email}
           onChangeText={props.onEmailChange}
+          accessibilityLabel={props.text.auth.emailPlaceholder}
         />
       </View>
 
@@ -332,21 +375,33 @@ export function AuthForm(props: AuthFormProps) {
           spellCheck={false}
           importantForAutofill="no"
           secureTextEntry={!passwordVisible}
-          selectionColor="#ab1e24"
+          selectionColor={COLORS.brandPrimary}
           placeholder={props.text.auth.passwordPlaceholder}
-          placeholderTextColor="#7f8a8a"
+          placeholderTextColor={COLORS.textMutedCool}
           style={[styles.passwordInput, webInputResetStyle]}
           value={props.password}
           onChangeText={props.onPasswordChange}
+          accessibilityLabel={props.text.auth.passwordPlaceholder}
         />
         <Pressable
           style={styles.eyeButton}
           onPress={() => setPasswordVisible((current) => !current)}
+          accessibilityRole="button"
+          accessibilityLabel={
+            passwordVisible
+              ? props.language === 'zh'
+                ? '隐藏密码'
+                : 'Masquer le mot de passe'
+              : props.language === 'zh'
+                ? '显示密码'
+                : 'Afficher le mot de passe'
+          }
+          accessibilityState={{ selected: passwordVisible }}
         >
           <Ionicons
             name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
             size={18}
-            color="#ab1e24"
+            color={COLORS.brandPrimary}
           />
         </Pressable>
       </View>
@@ -356,6 +411,9 @@ export function AuthForm(props: AuthFormProps) {
           <Pressable
             style={styles.rememberRow}
             onPress={props.onRememberToggle}
+            accessibilityRole="button"
+            accessibilityLabel={props.text.auth.rememberMe}
+            accessibilityState={{ selected: props.rememberMe }}
           >
             <View
               style={[
@@ -375,6 +433,9 @@ export function AuthForm(props: AuthFormProps) {
           <Pressable
             disabled={isForgotPasswordDisabled}
             onPress={props.onForgotPassword}
+            accessibilityRole="button"
+            accessibilityLabel={props.text.auth.forgotPassword}
+            accessibilityState={{ disabled: isForgotPasswordDisabled }}
           >
             <Text
               style={[
@@ -396,6 +457,9 @@ export function AuthForm(props: AuthFormProps) {
           disabled={isResendVerificationDisabled}
           style={styles.linkButton}
           onPress={props.onResendVerification}
+          accessibilityRole="button"
+          accessibilityLabel={props.text.auth.resendVerificationEmail}
+          accessibilityState={{ disabled: isResendVerificationDisabled }}
         >
           <Text
             style={[
@@ -418,6 +482,13 @@ export function AuthForm(props: AuthFormProps) {
           props.isSubmitting && styles.buttonDisabled,
         ]}
         onPress={props.onSubmit}
+        accessibilityRole="button"
+        accessibilityLabel={
+          props.mode === 'login'
+            ? props.text.auth.loginButton
+            : props.text.auth.registerButton
+        }
+        accessibilityState={{ disabled: isSubmitDisabled }}
       >
         <Text style={styles.primaryButtonText}>
           {props.isSubmitting
@@ -432,6 +503,13 @@ export function AuthForm(props: AuthFormProps) {
         disabled={props.isSubmitting}
         style={styles.linkButton}
         onPress={props.onToggleMode}
+        accessibilityRole="button"
+        accessibilityLabel={
+          props.mode === 'login'
+            ? props.text.auth.switchToRegister
+            : props.text.auth.switchToLogin
+        }
+        accessibilityState={{ disabled: props.isSubmitting }}
       >
         <Text style={styles.linkText}>
           {props.mode === 'login'
@@ -445,6 +523,9 @@ export function AuthForm(props: AuthFormProps) {
           disabled={props.isSubmitting}
           style={styles.linkButton}
           onPress={props.onBackToLanding}
+          accessibilityRole="button"
+          accessibilityLabel={props.text.landing.backButton}
+          accessibilityState={{ disabled: props.isSubmitting }}
         >
           <Text style={styles.linkText}>{props.text.landing.backButton}</Text>
         </Pressable>

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { COLORS } from '../../constants/colors';
 import { WORKPLACE_ROLES } from '../../features/dashboard/lib/dashboardShared';
 import type { AppText } from '../../locales/translations';
 import { styles } from './SessionCard.styles';
@@ -19,7 +20,11 @@ export function SessionCardLevelManagementModule({
       <View style={styles.employeeModuleHeader}>
         <View style={styles.employeeModuleHeaderMain}>
           <View style={styles.employeeModuleHeaderIconWrap}>
-            <Ionicons name="ribbon-outline" size={18} color="#ffffff" />
+            <Ionicons
+              name="ribbon-outline"
+              size={18}
+              color={COLORS.textOnDark}
+            />
           </View>
           <View style={styles.employeeModuleHeaderCopy}>
             <Text style={styles.quickBlockTitle}>
@@ -40,13 +45,14 @@ export function SessionCardLevelManagementModule({
       </View>
 
       <View style={styles.employeeModuleSearchShell}>
-        <Ionicons name="search-outline" size={18} color="#8d5a5f" />
+        <Ionicons name="search-outline" size={18} color={COLORS.textMuted} />
         <TextInput
           style={styles.employeeModuleSearchInput}
           placeholder={text.dashboard.quickSearchPlaceholder}
-          placeholderTextColor="#a98a8d"
+          placeholderTextColor={COLORS.placeholder}
           value={supervisorState.levelSearch}
           onChangeText={(value) => supervisorState.setLevelSearch(value)}
+          accessibilityLabel={text.dashboard.quickSearchPlaceholder}
         />
       </View>
 
@@ -56,7 +62,11 @@ export function SessionCardLevelManagementModule({
 
       {supervisorState.levelUsers.length === 0 ? (
         <View style={styles.employeeModuleEmptyState}>
-          <Ionicons name="people-outline" size={18} color="#ab1e24" />
+          <Ionicons
+            name="people-outline"
+            size={18}
+            color={COLORS.brandPrimary}
+          />
           <Text style={styles.employeeModuleEmptyText}>
             {text.dashboard.quickNoEmployee}
           </Text>
@@ -73,7 +83,10 @@ export function SessionCardLevelManagementModule({
               <View style={styles.employeeCompactTopRow}>
                 <View style={styles.employeeModuleAvatar}>
                   <Text style={styles.employeeModuleAvatarText}>
-                    {(entry.name ?? entry.email).trim().slice(0, 1).toUpperCase()}
+                    {(entry.name ?? entry.email)
+                      .trim()
+                      .slice(0, 1)
+                      .toUpperCase()}
                   </Text>
                 </View>
                 <View style={styles.employeeCompactIdentity}>
@@ -109,7 +122,12 @@ export function SessionCardLevelManagementModule({
                     supervisorState.isUpdatingLevelUserId === entry.id &&
                       styles.buttonDisabled,
                   ]}
-                  accessibilityLabel={text.dashboard.levelModalTitle}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${text.dashboard.levelModalTitle} ${entry.name ?? entry.email}`}
+                  accessibilityState={{
+                    disabled:
+                      supervisorState.isUpdatingLevelUserId === entry.id,
+                  }}
                   disabled={supervisorState.isUpdatingLevelUserId === entry.id}
                   onPress={() => supervisorState.openLevelEditor(entry)}
                 >
@@ -120,7 +138,7 @@ export function SessionCardLevelManagementModule({
                         : 'arrow-up-circle-outline'
                     }
                     size={18}
-                    color="#7f1b21"
+                    color={COLORS.brandPrimaryDark}
                   />
                 </Pressable>
               </View>
@@ -145,6 +163,12 @@ export function SessionCardLevelManagementModule({
                           entry,
                           workplaceRole,
                         );
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${text.dashboard.workplaceValues[workplaceRole]} ${entry.name ?? entry.email}`}
+                      accessibilityState={{
+                        selected: isActive,
+                        disabled: isUpdating,
                       }}
                     >
                       <Text

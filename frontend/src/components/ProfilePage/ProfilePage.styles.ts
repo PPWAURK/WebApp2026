@@ -198,6 +198,11 @@ export const styles = StyleSheet.create({
   nameEditorBlock: {
     gap: 10,
   },
+  nameInputLabel: {
+    color: '#8d5a5f',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
   nameInput: {
     borderWidth: 1,
     borderColor: 'rgba(171, 30, 36, 0.12)',

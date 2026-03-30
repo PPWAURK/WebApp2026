@@ -52,7 +52,7 @@ export function useTrainingData({
     {},
   );
   const [quizLanguage, setQuizLanguage] = useState<TrainingQuizLinkLanguage>(
-    language === 'fr' ? 'fr' : 'bn',
+    language === 'fr' ? 'fr' : language === 'zh' ? 'zh' : 'bn',
   );
   const [completionByFile, setCompletionByFile] =
     useState<TrainingCompletionMap>({});

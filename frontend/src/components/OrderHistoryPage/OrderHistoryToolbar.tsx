@@ -64,6 +64,9 @@ export function OrderHistoryToolbar({
                   isActive && styles.supplierChipActive,
                 ]}
                 onPress={() => onSelectSupplier(supplierGroup.supplierKey)}
+                accessibilityRole="button"
+                accessibilityLabel={supplierGroup.supplierName}
+                accessibilityState={{ selected: isActive }}
               >
                 <Text
                   style={[
@@ -111,6 +114,7 @@ export function OrderHistoryToolbar({
               placeholderTextColor={COLORS.textMuted}
               value={search}
               onChangeText={onChangeSearch}
+              accessibilityLabel={text.orders.searchHistoryPlaceholder}
             />
           </View>
         </View>
@@ -131,6 +135,9 @@ export function OrderHistoryToolbar({
                     isActive && styles.filterChipActive,
                   ]}
                   onPress={() => onChangePeriod(periodOption.key)}
+                  accessibilityRole="button"
+                  accessibilityLabel={text.orders[periodOption.textKey]}
+                  accessibilityState={{ selected: isActive }}
                 >
                   <Text
                     style={[
@@ -162,6 +169,9 @@ export function OrderHistoryToolbar({
                     isActive && styles.filterChipActive,
                   ]}
                   onPress={() => onChangeSort(sortOption.key)}
+                  accessibilityRole="button"
+                  accessibilityLabel={text.orders[sortOption.textKey]}
+                  accessibilityState={{ selected: isActive }}
                 >
                   <Text
                     style={[

@@ -92,7 +92,9 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
     Platform.OS === 'web'
       ? ({ pointerEvents: mobileDrawerPointerEvents } as never)
       : null;
-  const drawerTranslateX = useRef(new Animated.Value(-SIDEBAR_WIDTH - 24)).current;
+  const drawerTranslateX = useRef(
+    new Animated.Value(-SIDEBAR_WIDTH - 24),
+  ).current;
   const locale = props.language === 'zh' ? 'zh-CN' : 'fr-FR';
   const todayLabel = new Intl.DateTimeFormat(locale, {
     weekday: 'long',
@@ -100,7 +102,8 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
     month: 'long',
     day: 'numeric',
   }).format(new Date());
-  const displayName = props.currentUser.name?.trim() || props.text.dashboard.fallbackName;
+  const displayName =
+    props.currentUser.name?.trim() || props.text.dashboard.fallbackName;
   const roleLabel = props.text.dashboard.roleValues[props.currentUser.role];
   const restaurantLabel =
     props.currentUser.restaurant?.name || props.text.profile.noRestaurant;
@@ -187,15 +190,25 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
         key={item.key}
         style={[styles.navItem, isActive && styles.navItemActive]}
         onPress={() => handleSelectPage(item.key)}
+        accessibilityRole="button"
+        accessibilityLabel={item.label}
+        accessibilityState={{ selected: isActive }}
       >
-        <View style={[styles.navItemIconWrap, isActive && styles.navItemIconWrapActive]}>
+        <View
+          style={[
+            styles.navItemIconWrap,
+            isActive && styles.navItemIconWrapActive,
+          ]}
+        >
           <Ionicons
             name={item.icon}
             size={18}
             color={isActive ? palette.navIconActive : palette.navIconDefault}
           />
         </View>
-        <Text style={[styles.navItemText, isActive && styles.navItemTextActive]}>
+        <Text
+          style={[styles.navItemText, isActive && styles.navItemTextActive]}
+        >
           {item.label}
         </Text>
       </Pressable>
@@ -236,16 +249,29 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
                 key={item.key}
                 style={[styles.navSubItem, isActive && styles.navSubItemActive]}
                 onPress={() => handleSelectPage(item.key)}
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
+                accessibilityState={{ selected: isActive }}
               >
-                <View style={[styles.navSubIconWrap, isActive && styles.navSubIconWrapActive]}>
+                <View
+                  style={[
+                    styles.navSubIconWrap,
+                    isActive && styles.navSubIconWrapActive,
+                  ]}
+                >
                   <Ionicons
                     name={item.icon}
                     size={15}
-                    color={isActive ? palette.navIconActive : palette.navIconDefault}
+                    color={
+                      isActive ? palette.navIconActive : palette.navIconDefault
+                    }
                   />
                 </View>
                 <Text
-                  style={[styles.navSubItemText, isActive && styles.navSubItemTextActive]}
+                  style={[
+                    styles.navSubItemText,
+                    isActive && styles.navSubItemTextActive,
+                  ]}
                 >
                   {item.label}
                 </Text>
@@ -267,11 +293,17 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
         >
           <View style={styles.brandBlock}>
             <View style={styles.brandBadge}>
-              <Text style={styles.brandBadgeText}>{props.text.header.title}</Text>
+              <Text style={styles.brandBadgeText}>
+                {props.text.header.title}
+              </Text>
             </View>
             <View style={styles.brandValuesStack}>
               {brandValueLines.map((line) => (
-                <Text key={line} style={styles.brandValuesText} numberOfLines={1}>
+                <Text
+                  key={line}
+                  style={styles.brandValuesText}
+                  numberOfLines={1}
+                >
                   {line}
                 </Text>
               ))}
@@ -280,7 +312,9 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
 
           <View style={styles.navSection}>
             <Text style={styles.sidebarLabel}>{props.text.drawer.title}</Text>
-            <View style={styles.navList}>{primaryItems.map(renderNavItem)}</View>
+            <View style={styles.navList}>
+              {primaryItems.map(renderNavItem)}
+            </View>
           </View>
 
           {renderOrdersSection()}
@@ -309,7 +343,11 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
 
               <View style={styles.sidebarUserDetailRow}>
                 <View style={styles.sidebarUserDetailIcon}>
-                  <Ionicons name="business-outline" size={14} color={palette.surfaceIcon} />
+                  <Ionicons
+                    name="business-outline"
+                    size={14}
+                    color={palette.surfaceIcon}
+                  />
                 </View>
                 <View style={styles.sidebarUserDetailTextWrap}>
                   <Text
@@ -324,16 +362,28 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
             </View>
 
             <View style={styles.themeGroup}>
-              <Text style={styles.sidebarLabel}>{props.text.drawer.themeTitle}</Text>
+              <Text style={styles.sidebarLabel}>
+                {props.text.drawer.themeTitle}
+              </Text>
               <View style={styles.themeRow}>
                 <Pressable
-                  style={[styles.themeChip, props.theme === 'light' && styles.themeChipActive]}
+                  style={[
+                    styles.themeChip,
+                    props.theme === 'light' && styles.themeChipActive,
+                  ]}
                   onPress={() => props.onSelectTheme('light')}
+                  accessibilityRole="button"
+                  accessibilityLabel={props.text.drawer.themeLight}
+                  accessibilityState={{ selected: props.theme === 'light' }}
                 >
                   <Ionicons
                     name="sunny-outline"
                     size={16}
-                    color={props.theme === 'light' ? palette.brand : palette.navIconDefault}
+                    color={
+                      props.theme === 'light'
+                        ? palette.brand
+                        : palette.navIconDefault
+                    }
                   />
                   <Text
                     style={[
@@ -346,13 +396,23 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
                 </Pressable>
 
                 <Pressable
-                  style={[styles.themeChip, props.theme === 'dark' && styles.themeChipActive]}
+                  style={[
+                    styles.themeChip,
+                    props.theme === 'dark' && styles.themeChipActive,
+                  ]}
                   onPress={() => props.onSelectTheme('dark')}
+                  accessibilityRole="button"
+                  accessibilityLabel={props.text.drawer.themeDark}
+                  accessibilityState={{ selected: props.theme === 'dark' }}
                 >
                   <Ionicons
                     name="moon-outline"
                     size={16}
-                    color={props.theme === 'dark' ? palette.brand : palette.navIconDefault}
+                    color={
+                      props.theme === 'dark'
+                        ? palette.brand
+                        : palette.navIconDefault
+                    }
                   />
                   <Text
                     style={[
@@ -367,11 +427,19 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
             </View>
 
             <View style={styles.languageGroup}>
-              <Text style={styles.sidebarLabel}>{props.text.drawer.languageTitle}</Text>
+              <Text style={styles.sidebarLabel}>
+                {props.text.drawer.languageTitle}
+              </Text>
               <View style={styles.languageRow}>
                 <Pressable
-                  style={[styles.languageChip, props.language === 'fr' && styles.languageChipActive]}
+                  style={[
+                    styles.languageChip,
+                    props.language === 'fr' && styles.languageChipActive,
+                  ]}
                   onPress={() => props.onSelectLanguage('fr')}
+                  accessibilityRole="button"
+                  accessibilityLabel={props.text.drawer.fr}
+                  accessibilityState={{ selected: props.language === 'fr' }}
                 >
                   <Text
                     style={[
@@ -383,8 +451,14 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
                   </Text>
                 </Pressable>
                 <Pressable
-                  style={[styles.languageChip, props.language === 'zh' && styles.languageChipActive]}
+                  style={[
+                    styles.languageChip,
+                    props.language === 'zh' && styles.languageChipActive,
+                  ]}
                   onPress={() => props.onSelectLanguage('zh')}
+                  accessibilityRole="button"
+                  accessibilityLabel={props.text.drawer.zh}
+                  accessibilityState={{ selected: props.language === 'zh' }}
                 >
                   <Text
                     style={[
@@ -398,9 +472,20 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
               </View>
             </View>
             <View style={styles.logoutSection}>
-              <Pressable style={styles.logoutButton} onPress={props.onLogout}>
-                <Ionicons name="log-out-outline" size={16} color={palette.surfaceIcon} />
-                <Text style={styles.logoutButtonText}>{props.text.dashboard.logout}</Text>
+              <Pressable
+                style={styles.logoutButton}
+                onPress={props.onLogout}
+                accessibilityRole="button"
+                accessibilityLabel={props.text.dashboard.logout}
+              >
+                <Ionicons
+                  name="log-out-outline"
+                  size={16}
+                  color={palette.surfaceIcon}
+                />
+                <Text style={styles.logoutButtonText}>
+                  {props.text.dashboard.logout}
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -420,7 +505,16 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
       </View>
 
       {!isDesktop && props.isSidebarOpen ? (
-        <Pressable style={styles.mobileBackdrop} onPress={props.onCloseSidebar} />
+        <Pressable
+          style={styles.mobileBackdrop}
+          onPress={props.onCloseSidebar}
+          accessibilityRole="button"
+          accessibilityLabel={
+            props.language === 'zh'
+              ? '关闭导航菜单'
+              : 'Fermer le menu de navigation'
+          }
+        />
       ) : null}
 
       {!isDesktop ? (
@@ -439,14 +533,20 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
       ) : null}
 
       <View style={styles.shellLayout}>
-        {isDesktop ? <View style={styles.sidebarRail}>{renderSidebar()}</View> : null}
+        {isDesktop ? (
+          <View style={styles.sidebarRail}>{renderSidebar()}</View>
+        ) : null}
 
         <View style={styles.mainColumn}>
           <View style={styles.topBar}>
             <View style={styles.topBarTextWrap}>
               <Text style={styles.topBarEyebrow}>{todayLabel}</Text>
-              <Text style={styles.topBarTitle}>{`${props.text.dashboard.welcome} ${displayName}`}</Text>
-              <Text style={styles.topBarSubtitle}>{`${activePageLabel} · ${restaurantLabel}`}</Text>
+              <Text
+                style={styles.topBarTitle}
+              >{`${props.text.dashboard.welcome} ${displayName}`}</Text>
+              <Text
+                style={styles.topBarSubtitle}
+              >{`${activePageLabel} · ${restaurantLabel}`}</Text>
             </View>
 
             <View style={styles.topBarMetaRow}>
@@ -455,17 +555,34 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
                   <Text style={styles.topBarInfoLabel}>{statusLabel}</Text>
                   <View style={styles.topBarInfoStatusRow}>
                     <View style={styles.brandStatusDot} />
-                    <Text style={styles.topBarInfoValue}>{props.text.header.connected}</Text>
+                    <Text style={styles.topBarInfoValue}>
+                      {props.text.header.connected}
+                    </Text>
                   </View>
                 </View>
               ) : (
                 <>
                   <View style={styles.statusPill}>
                     <View style={styles.brandStatusDot} />
-                    <Text style={styles.statusPillText}>{props.text.header.connected}</Text>
+                    <Text style={styles.statusPillText}>
+                      {props.text.header.connected}
+                    </Text>
                   </View>
-                  <Pressable style={styles.mobileMenuButton} onPress={props.onToggleSidebar}>
-                    <Ionicons name="menu-outline" size={22} color={palette.surfaceIcon} />
+                  <Pressable
+                    style={styles.mobileMenuButton}
+                    onPress={props.onToggleSidebar}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      props.language === 'zh'
+                        ? '打开导航菜单'
+                        : 'Ouvrir le menu de navigation'
+                    }
+                  >
+                    <Ionicons
+                      name="menu-outline"
+                      size={22}
+                      color={palette.surfaceIcon}
+                    />
                   </Pressable>
                 </>
               )}

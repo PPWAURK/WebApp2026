@@ -385,15 +385,13 @@ export class OrdersDocumentService {
 
       doc
         .fillColor(this.pdfColors.text)
-        .font('Helvetica')
+        .font(this.resolveContentFont())
         .fontSize(10)
         .text(productNameFr, left + 8, y + 6, {
           width: colProduct - 12,
         });
 
-      if (this.cjkFontPath) {
-        doc.font(this.cjkFontPath);
-      }
+      doc.font(this.resolveContentFont());
       doc
         .fontSize(9)
         .fillColor(this.pdfColors.muted)
@@ -401,11 +399,7 @@ export class OrdersDocumentService {
           width: colProduct - 12,
         });
 
-      if (this.cjkFontPath && this.containsCjk(productSpecification)) {
-        doc.font(this.cjkFontPath);
-      } else {
-        doc.font('Helvetica');
-      }
+      doc.font(this.resolveContentFont());
 
       doc
         .fillColor(this.pdfColors.text)
@@ -415,11 +409,7 @@ export class OrdersDocumentService {
           align: 'center',
         });
 
-      if (this.cjkFontPath && this.containsCjk(orderUnit)) {
-        doc.font(this.cjkFontPath);
-      } else {
-        doc.font('Helvetica');
-      }
+      doc.font(this.resolveContentFont());
 
       doc
         .fillColor(this.pdfColors.text)
@@ -509,6 +499,10 @@ export class OrdersDocumentService {
     }
 
     return `${value.slice(0, maxLength - 1)}...`;
+  }
+
+  private resolveContentFont(): string {
+    return this.cjkFontPath ?? 'Helvetica';
   }
 
   private drawBackground(doc: PdfDoc): void {

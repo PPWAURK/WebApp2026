@@ -77,30 +77,38 @@ export function DashboardNewsFeed({
   const laneConfigs: Array<{
     key: NewsLane;
     label: string;
+    iconName: keyof typeof Ionicons.glyphMap;
     color: string;
     badgeBorder: string;
     badgeBackground: string;
+    panelBackground: string;
   }> = [
     {
       key: 'NEWS',
       label: text.dashboard.newsColumnNews,
+      iconName: 'newspaper-outline',
       color: '#c9545b',
       badgeBorder: 'rgba(201,84,91,0.56)',
       badgeBackground: 'rgba(201,84,91,0.14)',
+      panelBackground: '#fffaf8',
     },
     {
       key: 'CONGRATS',
       label: text.dashboard.newsColumnCongrats,
+      iconName: 'sparkles-outline',
       color: '#d77a95',
       badgeBorder: 'rgba(215,122,149,0.56)',
       badgeBackground: 'rgba(215,122,149,0.14)',
+      panelBackground: '#fff9fc',
     },
     {
       key: 'CRITIQUE',
       label: text.dashboard.newsColumnCritique,
+      iconName: 'alert-circle-outline',
       color: '#ab1e24',
       badgeBorder: 'rgba(171,30,36,0.56)',
       badgeBackground: 'rgba(171,30,36,0.16)',
+      panelBackground: '#fff8f6',
     },
   ];
 
@@ -118,6 +126,39 @@ export function DashboardNewsFeed({
         CRITIQUE: [],
       },
     );
+
+  function renderStateCard(
+    iconName: keyof typeof Ionicons.glyphMap,
+    title: string,
+    description: string,
+    tone: 'default' | 'error' = 'default',
+  ) {
+    return (
+      <View
+        style={[
+          styles.newsFeedStateCard,
+          tone === 'error' && styles.newsFeedStateCardError,
+        ]}
+      >
+        <View
+          style={[
+            styles.newsFeedStateIconWrap,
+            tone === 'error' && styles.newsFeedStateIconWrapError,
+          ]}
+        >
+          <Ionicons
+            name={iconName}
+            size={18}
+            color={tone === 'error' ? '#ab1e24' : '#7f1b21'}
+          />
+        </View>
+        <View style={styles.newsFeedStateCopy}>
+          <Text style={styles.newsFeedStateTitle}>{title}</Text>
+          <Text style={styles.newsFeedStateDescription}>{description}</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.quickBlock, styles.newsFeedHighlightBlock]}>
@@ -280,37 +321,62 @@ export function DashboardNewsFeed({
         </View>
       </View>
 
-      {newsFeedLoading ? (
-        <Text style={styles.panelSubtitleOnDark}>
-          {text.adminTraining.loading}
-        </Text>
-      ) : null}
-      {newsFeedError ? (
-        <Text style={styles.errorText}>{newsFeedError}</Text>
-      ) : null}
+      {newsFeedLoading
+        ? renderStateCard(
+            'time-outline',
+            text.adminTraining.loading,
+            text.dashboard.newsFeedSubtitle,
+          )
+        : null}
+      {newsFeedError
+        ? renderStateCard(
+            'alert-circle-outline',
+            newsFeedError,
+            text.dashboard.newsFeedSubtitle,
+            'error',
+          )
+        : null}
 
-      {!newsFeedLoading && !newsFeedError && effectiveNewsFeed.length === 0 ? (
-        <Text style={styles.panelSubtitleOnDark}>
-          {text.dashboard.newsFeedEmpty}
-        </Text>
-      ) : null}
+      {!newsFeedLoading && !newsFeedError && effectiveNewsFeed.length === 0
+        ? renderStateCard(
+            'notifications-off-outline',
+            text.dashboard.newsFeedEmpty,
+            text.dashboard.newsFeedSubtitle,
+          )
+        : null}
 
       {!newsFeedLoading && !newsFeedError && effectiveNewsFeed.length > 0 ? (
         <View style={styles.newsBoard}>
           {laneConfigs.map((laneConfig) => (
             <View
               key={`news-lane-${laneConfig.key}`}
-              style={styles.newsLaneColumn}
+              style={[
+                styles.newsLaneColumn,
+                { backgroundColor: laneConfig.panelBackground },
+              ]}
             >
               <View style={styles.newsLaneHeader}>
                 <View style={styles.newsLaneTitleWrap}>
                   <View
                     style={[
-                      styles.newsLaneDot,
-                      { backgroundColor: laneConfig.color },
+                      styles.newsLaneIconWrap,
+                      { backgroundColor: laneConfig.badgeBackground },
                     ]}
-                  />
-                  <Text style={styles.newsLaneTitle}>{laneConfig.label}</Text>
+                  >
+                    <Ionicons
+                      name={laneConfig.iconName}
+                      size={15}
+                      color={laneConfig.color}
+                    />
+                  </View>
+                  <View style={styles.newsLaneTitleCopy}>
+                    <Text style={styles.newsLaneTitle}>{laneConfig.label}</Text>
+                    <Text style={styles.newsLaneHint}>
+                      {lanePosts[laneConfig.key].length === 0
+                        ? text.dashboard.newsFeedEmpty
+                        : `${lanePosts[laneConfig.key].length} ${text.dashboard.newsFeedTitle.toLowerCase()}`}
+                    </Text>
+                  </View>
                 </View>
                 <Text style={styles.newsLaneCount}>
                   {lanePosts[laneConfig.key].length}
@@ -320,8 +386,16 @@ export function DashboardNewsFeed({
               <View style={styles.newsLaneBody}>
                 {lanePosts[laneConfig.key].length === 0 ? (
                   <View style={styles.newsLaneEmptyState}>
-                    <Text style={styles.panelSubtitleOnDark}>
+                    <Ionicons
+                      name="albums-outline"
+                      size={18}
+                      color={laneConfig.color}
+                    />
+                    <Text style={styles.newsLaneEmptyTitle}>
                       {text.dashboard.newsFeedEmpty}
+                    </Text>
+                    <Text style={styles.newsLaneEmptyDescription}>
+                      {text.dashboard.newsFeedSubtitle}
                     </Text>
                   </View>
                 ) : (
@@ -340,9 +414,29 @@ export function DashboardNewsFeed({
                         }}
                       >
                         <View style={styles.newsPostMetaRow}>
-                          <Text style={styles.newsPostMetaText}>
-                            {new Date(post.createdAt).toLocaleString()}
-                          </Text>
+                          <View style={styles.newsPostMetaLead}>
+                            <View
+                              style={[
+                                styles.newsLaneDot,
+                                { backgroundColor: laneConfig.color },
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.newsPostMetaText,
+                                !isPostRead && styles.newsPostMetaTextUnread,
+                              ]}
+                            >
+                              {new Date(post.createdAt).toLocaleString()}
+                            </Text>
+                            {!isPostRead ? (
+                              <View style={styles.newsUnreadBadge}>
+                                <Text style={styles.newsUnreadBadgeText}>
+                                  {text.dashboard.newsUnreadLabel}
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
                           <Text
                             style={[
                               styles.newsPostTag,
@@ -357,9 +451,26 @@ export function DashboardNewsFeed({
                         </View>
 
                         <View style={styles.quickNewsRowHeader}>
-                          <Text style={styles.newsPostTitle}>
-                            {stripNewsLaneMarker(post.title)}
-                          </Text>
+                          <View style={styles.newsPostHeaderBlock}>
+                            <Text
+                              style={[
+                                styles.newsPostTitle,
+                                !isPostRead && styles.newsPostTitleUnread,
+                              ]}
+                            >
+                              {stripNewsLaneMarker(post.title)}
+                            </Text>
+                            <View style={styles.newsPostAuthorRow}>
+                              <Ionicons
+                                name="person-circle-outline"
+                                size={14}
+                                color="#8d5a5f"
+                              />
+                              <Text style={styles.newsPostAuthorText}>
+                                {post.createdBy.name ?? post.createdBy.email}
+                              </Text>
+                            </View>
+                          </View>
 
                           {!isAdmin ? (
                             <Pressable
@@ -423,11 +534,20 @@ export function DashboardNewsFeed({
                           )}
                         </View>
 
-                        <Text style={styles.newsPostBodyText} numberOfLines={4}>
-                          {post.message}
-                        </Text>
+                        <View style={styles.newsPostBodyBox}>
+                          <Text
+                            style={[
+                              styles.newsPostBodyText,
+                              !isPostRead && styles.newsPostBodyTextUnread,
+                            ]}
+                            numberOfLines={4}
+                          >
+                            {post.message}
+                          </Text>
+                        </View>
 
                         <View style={styles.newsPostFooterBlock}>
+                          <View style={styles.newsPostDivider} />
                           <View style={styles.newsTagRow}>
                             <View style={styles.newsAudiencePill}>
                               <Text style={styles.newsAudiencePillText}>
@@ -446,15 +566,19 @@ export function DashboardNewsFeed({
                             ))}
                           </View>
 
-                          <Text style={styles.newsPostMetaText}>
-                            {post.createdBy.name ?? post.createdBy.email}
-                          </Text>
-                          <Text style={styles.newsPostMetaText}>
-                            {`${text.dashboard.newsVisibleLevelsLabel}: ${getVisibleLevelsSummary(post.visibleEmployeeLevels, text)}`}
-                          </Text>
+                          <View style={styles.newsVisibilityRow}>
+                            <Ionicons
+                              name="layers-outline"
+                              size={14}
+                              color="#8d5a5f"
+                            />
+                            <Text style={styles.newsVisibilityText}>
+                              {`${text.dashboard.newsVisibleLevelsLabel}: ${getVisibleLevelsSummary(post.visibleEmployeeLevels, text)}`}
+                            </Text>
+                          </View>
 
                           {!isAdmin ? (
-                            <Text style={styles.panelSubtitleOnDark}>
+                            <Text style={styles.newsPostStatusText}>
                               {isPostRead
                                 ? text.dashboard.newsReadConfirmed
                                 : text.dashboard.newsReadPendingConfirm}
@@ -462,9 +586,16 @@ export function DashboardNewsFeed({
                           ) : null}
 
                           {post.attachment ? (
-                            <Text style={styles.quickNewsLink}>
-                              {post.attachment.originalName}
-                            </Text>
+                            <View style={styles.newsAttachmentRow}>
+                              <Ionicons
+                                name="attach-outline"
+                                size={14}
+                                color="#ab1e24"
+                              />
+                              <Text style={styles.quickNewsLink}>
+                                {post.attachment.originalName}
+                              </Text>
+                            </View>
                           ) : null}
                         </View>
 
@@ -472,12 +603,25 @@ export function DashboardNewsFeed({
                           <View style={styles.newsTrackingCard}>
                             {newsTrackingByPostId[post.id] ? (
                               <>
-                                <Text style={styles.panelSectionLabelOnDark}>
-                                  {text.dashboard.newsReadTrackingTitle}
-                                </Text>
-                                <Text style={styles.panelSubtitleOnDark}>
-                                  {`${text.dashboard.newsReadTrackingGlobal}: ${newsTrackingByPostId[post.id].readCount}/${newsTrackingByPostId[post.id].totalUsers}`}
-                                </Text>
+                                <View style={styles.newsTrackingHeader}>
+                                  <View style={styles.newsTrackingHeaderMain}>
+                                    <Text
+                                      style={styles.panelSectionLabelOnDark}
+                                    >
+                                      {text.dashboard.newsReadTrackingTitle}
+                                    </Text>
+                                    <Text style={styles.panelSubtitleOnDark}>
+                                      {text.dashboard.newsReadTrackingGlobal}
+                                    </Text>
+                                  </View>
+                                  <View style={styles.newsTrackingSummaryPill}>
+                                    <Text
+                                      style={styles.newsTrackingSummaryPillText}
+                                    >
+                                      {`${newsTrackingByPostId[post.id].readCount}/${newsTrackingByPostId[post.id].totalUsers}`}
+                                    </Text>
+                                  </View>
+                                </View>
 
                                 {newsTrackingByPostId[post.id].byRestaurant.map(
                                   (group) => (
@@ -492,7 +636,11 @@ export function DashboardNewsFeed({
                                           text.dashboard
                                             .newsReadTrackingNoRestaurant}
                                       </Text>
-                                      <Text style={styles.panelSubtitleOnDark}>
+                                      <Text
+                                        style={
+                                          styles.newsTrackingRestaurantMeta
+                                        }
+                                      >
                                         {`${text.dashboard.newsReadTrackingUnread}: ${group.unreadCount} | ${text.dashboard.newsReadTrackingRead}: ${group.readCount}`}
                                       </Text>
 
