@@ -7,6 +7,7 @@ import {
   Platform,
   SafeAreaView,
   ScrollView,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { ResetPasswordForm } from '../../src/components/ResetPasswordForm';
@@ -28,6 +29,7 @@ function normalizeToken(value: string | string[] | undefined): string | null {
 }
 
 export default function ResetPasswordScreen() {
+  const { width } = useWindowDimensions();
   const router = useRouter();
   const language = useLanguage();
   const params = useLocalSearchParams<{ token?: string | string[] }>();
@@ -36,6 +38,7 @@ export default function ResetPasswordScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const shouldDisableOuterScroll = width >= 768;
   const [fontsLoaded] = useFonts({
     Manrope_400Regular,
     Manrope_700Bold,
@@ -56,66 +59,137 @@ export default function ResetPasswordScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardAreaContent}
         >
-          <ScrollView contentContainerStyle={styles.content}>
-            <ResetPasswordForm
-              text={language.text}
-              password={password}
-              isSubmitting={isSubmitting}
-              error={error}
-              notice={notice}
-              hasToken={Boolean(token)}
-              onPasswordChange={setPassword}
-              onSubmit={() => {
-                if (!token) {
-                  setError(language.text.auth.resetTokenMissing);
-                  return;
-                }
+          {shouldDisableOuterScroll ? (
+            <View style={styles.staticContent}>
+              <ResetPasswordForm
+                text={language.text}
+                password={password}
+                isSubmitting={isSubmitting}
+                error={error}
+                notice={notice}
+                hasToken={Boolean(token)}
+                onPasswordChange={setPassword}
+                onSubmit={() => {
+                  if (!token) {
+                    setError(language.text.auth.resetTokenMissing);
+                    return;
+                  }
 
-                if (password.trim().length < 8) {
-                  setError(language.text.auth.passwordTooShort);
-                  return;
-                }
+                  if (password.trim().length < 8) {
+                    setError(language.text.auth.passwordTooShort);
+                    return;
+                  }
 
-                setIsSubmitting(true);
-                setError(null);
-                setNotice(null);
+                  setIsSubmitting(true);
+                  setError(null);
+                  setNotice(null);
 
-                void requestResetPassword(token, password)
-                  .then(() => {
-                    setPassword('');
-                    setNotice(language.text.auth.resetPasswordSuccess);
-                    setTimeout(() => {
-                      router.replace('/login');
-                    }, 900);
-                  })
-                  .catch((requestError: unknown) => {
-                    if (
-                      requestError instanceof Error &&
-                      requestError.message.includes('INVALID_OR_EXPIRED_RESET_TOKEN')
-                    ) {
-                      setError(language.text.auth.resetTokenInvalidOrExpired);
-                      return;
-                    }
+                  void requestResetPassword(token, password)
+                    .then(() => {
+                      setPassword('');
+                      setNotice(language.text.auth.resetPasswordSuccess);
+                      setTimeout(() => {
+                        router.replace('/login');
+                      }, 900);
+                    })
+                    .catch((requestError: unknown) => {
+                      if (
+                        requestError instanceof Error &&
+                        requestError.message.includes(
+                          'INVALID_OR_EXPIRED_RESET_TOKEN',
+                        )
+                      ) {
+                        setError(
+                          language.text.auth.resetTokenInvalidOrExpired,
+                        );
+                        return;
+                      }
 
-                    if (
-                      requestError instanceof Error &&
-                      requestError.message.includes('PASSWORD_TOO_SHORT')
-                    ) {
-                      setError(language.text.auth.passwordTooShort);
-                      return;
-                    }
+                      if (
+                        requestError instanceof Error &&
+                        requestError.message.includes('PASSWORD_TOO_SHORT')
+                      ) {
+                        setError(language.text.auth.passwordTooShort);
+                        return;
+                      }
 
-                    setError(language.text.auth.resetPasswordFailed);
-                  })
-                  .finally(() => {
-                    setIsSubmitting(false);
-                  });
-              }}
-              onBackToLogin={() => {
-                router.replace('/login');
-              }}
-            />
-          </ScrollView>
+                      setError(language.text.auth.resetPasswordFailed);
+                    })
+                    .finally(() => {
+                      setIsSubmitting(false);
+                    });
+                }}
+                onBackToLogin={() => {
+                  router.replace('/login');
+                }}
+              />
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={styles.content}>
+              <ResetPasswordForm
+                text={language.text}
+                password={password}
+                isSubmitting={isSubmitting}
+                error={error}
+                notice={notice}
+                hasToken={Boolean(token)}
+                onPasswordChange={setPassword}
+                onSubmit={() => {
+                  if (!token) {
+                    setError(language.text.auth.resetTokenMissing);
+                    return;
+                  }
+
+                  if (password.trim().length < 8) {
+                    setError(language.text.auth.passwordTooShort);
+                    return;
+                  }
+
+                  setIsSubmitting(true);
+                  setError(null);
+                  setNotice(null);
+
+                  void requestResetPassword(token, password)
+                    .then(() => {
+                      setPassword('');
+                      setNotice(language.text.auth.resetPasswordSuccess);
+                      setTimeout(() => {
+                        router.replace('/login');
+                      }, 900);
+                    })
+                    .catch((requestError: unknown) => {
+                      if (
+                        requestError instanceof Error &&
+                        requestError.message.includes(
+                          'INVALID_OR_EXPIRED_RESET_TOKEN',
+                        )
+                      ) {
+                        setError(
+                          language.text.auth.resetTokenInvalidOrExpired,
+                        );
+                        return;
+                      }
+
+                      if (
+                        requestError instanceof Error &&
+                        requestError.message.includes('PASSWORD_TOO_SHORT')
+                      ) {
+                        setError(language.text.auth.passwordTooShort);
+                        return;
+                      }
+
+                      setError(language.text.auth.resetPasswordFailed);
+                    })
+                    .finally(() => {
+                      setIsSubmitting(false);
+                    });
+                }}
+                onBackToLogin={() => {
+                  router.replace('/login');
+                }}
+              />
+            </ScrollView>
+          )}
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>

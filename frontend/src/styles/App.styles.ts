@@ -34,6 +34,13 @@ export const styles = StyleSheet.create({
     paddingVertical: 28,
     gap: 18,
   },
+  staticContent: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 28,
+    gap: 18,
+  },
   contentWithHeader: {
     paddingTop: 12,
   },

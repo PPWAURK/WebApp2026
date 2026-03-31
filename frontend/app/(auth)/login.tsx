@@ -13,6 +13,7 @@ import {
   Platform,
   SafeAreaView,
   ScrollView,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { AuthForm } from '../../src/components/AuthForm';
@@ -25,6 +26,7 @@ const LOGIN_ANIMATION_DURATION_MS = 2000;
 const CAN_USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 export default function LoginScreen() {
+  const { width } = useWindowDimensions();
   const router = useRouter();
   const auth = useAuth();
   const language = useLanguage();
@@ -33,6 +35,7 @@ export default function LoginScreen() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loaderOpacity = useRef(new Animated.Value(0)).current;
   const loaderScale = useRef(new Animated.Value(0.86)).current;
+  const shouldDisableOuterScroll = width >= 768;
   const [fontsLoaded] = useFonts({
     Manrope_400Regular,
     Manrope_700Bold,
@@ -144,67 +147,135 @@ export default function LoginScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardAreaContent}
         >
-          <ScrollView contentContainerStyle={styles.content}>
-            <AuthForm
-              mode={auth.mode}
-              title={
-                auth.mode === 'login'
-                  ? language.text.auth.loginTitle
-                  : language.text.auth.registerTitle
-              }
-              text={language.text}
-              language={language.language}
-              email={auth.email}
-              password={auth.password}
-              firstName={auth.firstName}
-              lastName={auth.lastName}
-              restaurants={auth.restaurants}
-              selectedRestaurantId={auth.selectedRestaurantId}
-              requestManagerRole={auth.requestManagerRole}
-              rememberMe={auth.rememberMe}
-              isSubmitting={auth.isSubmitting}
-              forgotPasswordCooldownSeconds={auth.forgotPasswordCooldownSeconds}
-              resendVerificationCooldownSeconds={
-                auth.resendVerificationCooldownSeconds
-              }
-              error={auth.error}
-              notice={auth.notice}
-              onEmailChange={auth.setEmail}
-              onPasswordChange={auth.setPassword}
-              onFirstNameChange={auth.setFirstName}
-              onLastNameChange={auth.setLastName}
-              onSelectRestaurant={auth.setSelectedRestaurantId}
-              onToggleRequestManagerRole={() => {
-                auth.setRequestManagerRole((currentValue) => !currentValue);
-              }}
-              onRememberToggle={() => {
-                auth.setRememberMe((currentValue) => !currentValue);
-              }}
-              onSelectLanguage={(nextLanguage) => {
-                void language.setLanguage(nextLanguage);
-              }}
-              onSubmit={() => {
-                void auth.submitAuth(
-                  auth.mode,
-                  language.text,
-                  language.language,
-                );
-              }}
-              onForgotPassword={() => {
-                void auth.forgotPassword(language.text, language.language);
-              }}
-              onResendVerification={() => {
-                void auth.resendVerificationEmail(
-                  language.text,
-                  language.language,
-                );
-              }}
-              onToggleMode={auth.toggleMode}
-              onBackToLanding={() => {
-                router.replace('/');
-              }}
-            />
-          </ScrollView>
+          {shouldDisableOuterScroll ? (
+            <View style={styles.staticContent}>
+              <AuthForm
+                mode={auth.mode}
+                title={
+                  auth.mode === 'login'
+                    ? language.text.auth.loginTitle
+                    : language.text.auth.registerTitle
+                }
+                text={language.text}
+                language={language.language}
+                email={auth.email}
+                password={auth.password}
+                firstName={auth.firstName}
+                lastName={auth.lastName}
+                restaurants={auth.restaurants}
+                selectedRestaurantId={auth.selectedRestaurantId}
+                requestManagerRole={auth.requestManagerRole}
+                rememberMe={auth.rememberMe}
+                isSubmitting={auth.isSubmitting}
+                forgotPasswordCooldownSeconds={
+                  auth.forgotPasswordCooldownSeconds
+                }
+                resendVerificationCooldownSeconds={
+                  auth.resendVerificationCooldownSeconds
+                }
+                error={auth.error}
+                notice={auth.notice}
+                onEmailChange={auth.setEmail}
+                onPasswordChange={auth.setPassword}
+                onFirstNameChange={auth.setFirstName}
+                onLastNameChange={auth.setLastName}
+                onSelectRestaurant={auth.setSelectedRestaurantId}
+                onToggleRequestManagerRole={() => {
+                  auth.setRequestManagerRole((currentValue) => !currentValue);
+                }}
+                onRememberToggle={() => {
+                  auth.setRememberMe((currentValue) => !currentValue);
+                }}
+                onSelectLanguage={(nextLanguage) => {
+                  void language.setLanguage(nextLanguage);
+                }}
+                onSubmit={() => {
+                  void auth.submitAuth(
+                    auth.mode,
+                    language.text,
+                    language.language,
+                  );
+                }}
+                onForgotPassword={() => {
+                  void auth.forgotPassword(language.text, language.language);
+                }}
+                onResendVerification={() => {
+                  void auth.resendVerificationEmail(
+                    language.text,
+                    language.language,
+                  );
+                }}
+                onToggleMode={auth.toggleMode}
+                onBackToLanding={() => {
+                  router.replace('/');
+                }}
+              />
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={styles.content}>
+              <AuthForm
+                mode={auth.mode}
+                title={
+                  auth.mode === 'login'
+                    ? language.text.auth.loginTitle
+                    : language.text.auth.registerTitle
+                }
+                text={language.text}
+                language={language.language}
+                email={auth.email}
+                password={auth.password}
+                firstName={auth.firstName}
+                lastName={auth.lastName}
+                restaurants={auth.restaurants}
+                selectedRestaurantId={auth.selectedRestaurantId}
+                requestManagerRole={auth.requestManagerRole}
+                rememberMe={auth.rememberMe}
+                isSubmitting={auth.isSubmitting}
+                forgotPasswordCooldownSeconds={
+                  auth.forgotPasswordCooldownSeconds
+                }
+                resendVerificationCooldownSeconds={
+                  auth.resendVerificationCooldownSeconds
+                }
+                error={auth.error}
+                notice={auth.notice}
+                onEmailChange={auth.setEmail}
+                onPasswordChange={auth.setPassword}
+                onFirstNameChange={auth.setFirstName}
+                onLastNameChange={auth.setLastName}
+                onSelectRestaurant={auth.setSelectedRestaurantId}
+                onToggleRequestManagerRole={() => {
+                  auth.setRequestManagerRole((currentValue) => !currentValue);
+                }}
+                onRememberToggle={() => {
+                  auth.setRememberMe((currentValue) => !currentValue);
+                }}
+                onSelectLanguage={(nextLanguage) => {
+                  void language.setLanguage(nextLanguage);
+                }}
+                onSubmit={() => {
+                  void auth.submitAuth(
+                    auth.mode,
+                    language.text,
+                    language.language,
+                  );
+                }}
+                onForgotPassword={() => {
+                  void auth.forgotPassword(language.text, language.language);
+                }}
+                onResendVerification={() => {
+                  void auth.resendVerificationEmail(
+                    language.text,
+                    language.language,
+                  );
+                }}
+                onToggleMode={auth.toggleMode}
+                onBackToLanding={() => {
+                  router.replace('/');
+                }}
+              />
+            </ScrollView>
+          )}
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
