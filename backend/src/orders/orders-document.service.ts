@@ -372,7 +372,7 @@ export class OrdersDocumentService {
       const y = doc.y;
 
       const productNameFr = this.truncateText(
-        this.sanitizeLabel(item.nameFr),
+        this.sanitizePlainLabel(item.nameFr),
         44,
       );
       const productNameZh = this.truncateText(
@@ -394,13 +394,13 @@ export class OrdersDocumentService {
 
       doc
         .fillColor(this.pdfColors.text)
-        .font(this.resolveContentFont())
+        .font(this.resolveFontForText(productNameFr))
         .fontSize(10)
         .text(productNameFr, left + 8, y + 6, {
           width: colProduct - 12,
         });
 
-      doc.font(this.resolveContentFont());
+      doc.font(this.resolveFontForText(productNameZh));
       doc
         .fontSize(9)
         .fillColor(this.pdfColors.muted)
@@ -408,7 +408,7 @@ export class OrdersDocumentService {
           width: colProduct - 12,
         });
 
-      doc.font(this.resolveContentFont());
+      doc.font(this.resolveFontForText(productSpecification));
 
       doc
         .fillColor(this.pdfColors.text)
@@ -418,7 +418,7 @@ export class OrdersDocumentService {
           align: 'center',
         });
 
-      doc.font(this.resolveContentFont());
+      doc.font(this.resolveFontForText(orderUnit));
 
       doc
         .fillColor(this.pdfColors.text)
