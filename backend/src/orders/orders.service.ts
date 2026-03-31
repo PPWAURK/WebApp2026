@@ -178,13 +178,13 @@ export class OrdersService {
     );
 
     const pdfItems = preparedItems.map((item) => {
-      const frRaw = this.ordersDocumentService.recoverUtf8(
+      const frRaw = this.ordersDocumentService.sanitizePlainLabel(
         item.product.designationFr ?? item.product.nomCn,
       );
       const nameFr =
-        this.ordersDocumentService.sanitizeLabel(
+        this.ordersDocumentService.sanitizePlainLabel(
           this.ordersDocumentService.makeFrLabel(frRaw),
-        ) || this.ordersDocumentService.sanitizeLabel(frRaw);
+        ) || frRaw;
 
       const zhRaw = this.ordersDocumentService.recoverUtf8(item.product.nomCn);
       const nameZh = this.ordersDocumentService.sanitizeLabel(zhRaw);
@@ -907,13 +907,13 @@ export class OrdersService {
       deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
       deliveryAddress: order.deliveryAddress,
       items: order.items.map((item) => {
-        const frRaw = this.ordersDocumentService.recoverUtf8(
+        const frRaw = this.ordersDocumentService.sanitizePlainLabel(
           item.product.designationFr ?? item.nameZh,
         );
         const nameFr =
-          this.ordersDocumentService.sanitizeLabel(
+          this.ordersDocumentService.sanitizePlainLabel(
             this.ordersDocumentService.makeFrLabel(frRaw),
-          ) || this.ordersDocumentService.sanitizeLabel(frRaw);
+          ) || frRaw;
 
         const nameZh = this.ordersDocumentService.sanitizeLabel(
           this.ordersDocumentService.resolveZhName(

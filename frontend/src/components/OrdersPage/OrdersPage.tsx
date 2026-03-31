@@ -187,6 +187,7 @@ export function OrdersPage({
   const isSmallScreen = width < 560;
   const isWideLayout = width >= 1180;
   const useSingleColumnGrid = width < 900;
+  const shouldMoveSummaryCardToBottom = width >= 768 && width < 1180;
 
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);
@@ -398,6 +399,36 @@ export function OrdersPage({
     });
   }, [onSubmitOrder, selectedItems, summary.totalAmount, summary.totalItems]);
 
+  const summaryCard = (
+    <View style={styles.summaryCard}>
+      <Text style={styles.summaryTitle}>{text.orders.summaryTitle}</Text>
+      <View style={styles.summaryMetricRow}>
+        <Text style={styles.summaryMetricLabel}>{text.orders.summaryItems}</Text>
+        <Text style={styles.summaryMetricValue}>{summary.totalItems}</Text>
+      </View>
+      <View style={styles.summaryMetricRow}>
+        <Text style={styles.summaryMetricLabel}>{text.orders.summaryAmount}</Text>
+        <Text style={styles.summaryMetricValue}>
+          {formatAmount(summary.totalAmount)}
+        </Text>
+      </View>
+
+      <Pressable
+        style={[
+          styles.primaryButton,
+          summary.totalItems === 0 && styles.buttonDisabled,
+        ]}
+        disabled={summary.totalItems === 0}
+        onPress={handleSubmitOrder}
+        accessibilityRole="button"
+        accessibilityLabel={text.orders.submitButton}
+        accessibilityState={{ disabled: summary.totalItems === 0 }}
+      >
+        <Text style={styles.primaryButtonText}>{text.orders.submitButton}</Text>
+      </Pressable>
+    </View>
+  );
+
   const supplierProductCountById = useMemo(() => {
     const next = new Map<number, number>();
 
@@ -534,44 +565,7 @@ export function OrdersPage({
                 </View>
               )}
             </View>
-
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>
-                {text.orders.summaryTitle}
-              </Text>
-              <View style={styles.summaryMetricRow}>
-                <Text style={styles.summaryMetricLabel}>
-                  {text.orders.summaryItems}
-                </Text>
-                <Text style={styles.summaryMetricValue}>
-                  {summary.totalItems}
-                </Text>
-              </View>
-              <View style={styles.summaryMetricRow}>
-                <Text style={styles.summaryMetricLabel}>
-                  {text.orders.summaryAmount}
-                </Text>
-                <Text style={styles.summaryMetricValue}>
-                  {formatAmount(summary.totalAmount)}
-                </Text>
-              </View>
-
-              <Pressable
-                style={[
-                  styles.primaryButton,
-                  summary.totalItems === 0 && styles.buttonDisabled,
-                ]}
-                disabled={summary.totalItems === 0}
-                onPress={handleSubmitOrder}
-                accessibilityRole="button"
-                accessibilityLabel={text.orders.submitButton}
-                accessibilityState={{ disabled: summary.totalItems === 0 }}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {text.orders.submitButton}
-                </Text>
-              </Pressable>
-            </View>
+            {shouldMoveSummaryCardToBottom ? null : summaryCard}
           </View>
 
           <View style={styles.contentColumn}>
@@ -721,6 +715,9 @@ export function OrdersPage({
             </View>
           </View>
         </View>
+        {shouldMoveSummaryCardToBottom ? (
+          <View style={styles.summaryBottomWrap}>{summaryCard}</View>
+        ) : null}
       </ScrollView>
     </View>
   );

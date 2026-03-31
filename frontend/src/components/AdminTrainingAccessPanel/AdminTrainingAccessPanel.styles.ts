@@ -81,6 +81,14 @@ export const styles = StyleSheet.create({
   surfaceCardCompact: {
     padding: 14,
   },
+  surfaceBodyScroll: {
+    flex: 1,
+    minHeight: 0,
+  },
+  surfaceBodyContent: {
+    gap: 14,
+    paddingBottom: 2,
+  },
   surfaceHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -169,6 +177,9 @@ export const styles = StyleSheet.create({
   },
   levelList: {
     gap: 8,
+  },
+  levelListScroll: {
+    minHeight: 0,
   },
   levelSelectTrigger: {
     minHeight: 52,

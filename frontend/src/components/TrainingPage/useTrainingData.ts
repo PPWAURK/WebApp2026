@@ -213,62 +213,14 @@ export function useTrainingData({
     }
 
     if (!webPreviewDocument) {
-      setWebPreviewUrl((currentUrl) => {
-        if (currentUrl) {
-          URL.revokeObjectURL(currentUrl);
-        }
-
-        return null;
-      });
+      setWebPreviewUrl(null);
       setWebPreviewLoading(false);
       return;
     }
 
-    let isActive = true;
     setWebPreviewLoading(true);
-
-    void fetch(webPreviewDocument.fileUrl)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error('TRAINING_PREVIEW_FAILED');
-        }
-
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-
-        if (!isActive) {
-          URL.revokeObjectURL(objectUrl);
-          return;
-        }
-
-        setWebPreviewUrl((currentUrl) => {
-          if (currentUrl) {
-            URL.revokeObjectURL(currentUrl);
-          }
-
-          return objectUrl;
-        });
-      })
-      .catch(() => {
-        if (isActive) {
-          setWebPreviewUrl((currentUrl) => {
-            if (currentUrl) {
-              URL.revokeObjectURL(currentUrl);
-            }
-
-            return null;
-          });
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setWebPreviewLoading(false);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
+    setWebPreviewUrl(webPreviewDocument.fileUrl);
+    setWebPreviewLoading(false);
   }, [webPreviewDocument]);
 
   const quizStatusText = !quizBaseUrl

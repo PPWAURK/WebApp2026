@@ -25,6 +25,7 @@ RUN npm ci --omit=dev && npm cache clean --force && npx prisma generate
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/assets ./assets
 
 EXPOSE 3000
 
