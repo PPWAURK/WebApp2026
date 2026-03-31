@@ -271,6 +271,9 @@ export const styles = StyleSheet.create({
     padding: 18,
     gap: 14,
   },
+  summaryBottomWrap: {
+    width: '100%',
+  },
   summaryTitle: {
     color: TEXT,
     fontFamily: 'Manrope_700Bold',

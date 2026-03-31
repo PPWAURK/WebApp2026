@@ -1,6 +1,4 @@
-import { createElement } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform } from 'react-native';
 import type { LibraryFileItem } from '../../services/uploadsApi';
 import type { TrainingSection } from '../../types/auth';
 
@@ -8,11 +6,6 @@ export type OpenedDocumentState = {
   fileName: string;
   originalName: string;
   section: TrainingSection;
-};
-
-type WebPdfFrameProps = {
-  src: string;
-  title: string;
 };
 
 export function getQuizLinkKey(
@@ -35,40 +28,6 @@ export function buildQuizUrl(
 
   const joinWith = baseUrl.includes('?') ? '&' : '?';
   return `${baseUrl}${joinWith}${params.toString()}`;
-}
-
-export function WebPdfFrame({ src, title }: WebPdfFrameProps) {
-  if (Platform.OS !== 'web') {
-    return null;
-  }
-
-  return createElement('iframe', {
-    src,
-    title,
-    style: {
-      border: '0',
-      width: '100%',
-      height: '100%',
-      backgroundColor: '#ffffff',
-      borderRadius: '12px',
-    },
-  });
-}
-
-export function buildWebPreviewUrl(src: string): string {
-  const [baseUrl, hash = ''] = src.split('#', 2);
-  const previewParams = new URLSearchParams(hash);
-
-  if (!previewParams.has('page')) {
-    previewParams.set('page', '1');
-  }
-
-  previewParams.set('zoom', 'page-height');
-  previewParams.set('toolbar', '0');
-  previewParams.set('navpanes', '0');
-  previewParams.set('scrollbar', '0');
-
-  return `${baseUrl}#${previewParams.toString()}`;
 }
 
 export function formatDateLabel(value: string) {

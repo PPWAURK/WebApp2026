@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -47,12 +48,15 @@ export function AdminTrainingAccessPanel({
   accessToken,
   text,
 }: AdminTrainingAccessPanelProps) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isWideLayout = width >= 1340;
   const isDenseLayout = width < 980;
   const isPhoneLayout = width < 560;
   const isCompactLayout = width < 980;
   const isCompactSurfaceHeader = width < 820;
+  const isTabletLayout = width >= 768 && width < 1340;
+  const tabletCardMaxHeight = Math.min(Math.max(height * 0.72, 520), 760);
+  const tabletLevelListMaxHeight = Math.min(Math.max(height * 0.26, 180), 280);
   const scenarios = useMemo(() => getTrainingScenarios(text), [text]);
 
   const sectionLabelByKey = useMemo(() => {
@@ -452,6 +456,7 @@ export function AdminTrainingAccessPanel({
           style={[
             styles.surfaceCard,
             isDenseLayout && styles.surfaceCardCompact,
+            isTabletLayout && { maxHeight: tabletCardMaxHeight },
           ]}
         >
           <View
@@ -515,7 +520,15 @@ export function AdminTrainingAccessPanel({
           </Pressable>
 
           {isLevelListExpanded ? (
-            <View style={styles.levelList}>
+            <ScrollView
+              style={[
+                styles.levelListScroll,
+                isTabletLayout && { maxHeight: tabletLevelListMaxHeight },
+              ]}
+              contentContainerStyle={styles.levelList}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={isTabletLayout}
+            >
               {levelOptions.map((level) => (
                 <Pressable
                   key={level}
@@ -550,185 +563,197 @@ export function AdminTrainingAccessPanel({
                   />
                 </Pressable>
               ))}
-            </View>
+            </ScrollView>
           ) : null}
 
-          <View
-            style={[
-              styles.actionRail,
-              isPhoneLayout && styles.actionRailCompact,
-            ]}
+          <ScrollView
+            style={isTabletLayout ? styles.surfaceBodyScroll : undefined}
+            contentContainerStyle={styles.surfaceBodyContent}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={isTabletLayout}
           >
-            <Pressable
+            <View
               style={[
-                styles.actionButton,
-                isPhoneLayout && styles.actionButtonCompact,
+                styles.actionRail,
+                isPhoneLayout && styles.actionRailCompact,
               ]}
-              onPress={selectAllSections}
             >
-              <Text style={styles.actionButtonText}>
-                {text.adminTraining.selectAllSections}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.actionButton,
-                isPhoneLayout && styles.actionButtonCompact,
-              ]}
-              onPress={clearAllSections}
-            >
-              <Text style={styles.actionButtonText}>
-                {text.adminTraining.clearAllSections}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.actionButton,
-                isPhoneLayout && styles.actionButtonCompact,
-                !isDirty && styles.buttonDisabled,
-              ]}
-              disabled={!isDirty}
-              onPress={resetLevelProfile}
-            >
-              <Text style={styles.actionButtonText}>
-                {text.adminTraining.resetSections}
-              </Text>
-            </Pressable>
-          </View>
+              <Pressable
+                style={[
+                  styles.actionButton,
+                  isPhoneLayout && styles.actionButtonCompact,
+                ]}
+                onPress={selectAllSections}
+              >
+                <Text style={styles.actionButtonText}>
+                  {text.adminTraining.selectAllSections}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.actionButton,
+                  isPhoneLayout && styles.actionButtonCompact,
+                ]}
+                onPress={clearAllSections}
+              >
+                <Text style={styles.actionButtonText}>
+                  {text.adminTraining.clearAllSections}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.actionButton,
+                  isPhoneLayout && styles.actionButtonCompact,
+                  !isDirty && styles.buttonDisabled,
+                ]}
+                disabled={!isDirty}
+                onPress={resetLevelProfile}
+              >
+                <Text style={styles.actionButtonText}>
+                  {text.adminTraining.resetSections}
+                </Text>
+              </Pressable>
+            </View>
 
-          <View style={styles.scenarioStack}>
-            {scenarios.map((scenario) => {
-              const selectedInScenario = scenario.sections.filter((section) =>
-                draftSections.includes(section),
-              ).length;
-              const isScenarioExpanded = expandedAccessScenarios[scenario.key];
+            <View style={styles.scenarioStack}>
+              {scenarios.map((scenario) => {
+                const selectedInScenario = scenario.sections.filter((section) =>
+                  draftSections.includes(section),
+                ).length;
+                const isScenarioExpanded = expandedAccessScenarios[scenario.key];
 
-              return (
-                <View key={scenario.key} style={styles.scenarioCard}>
-                  <View style={styles.scenarioHeaderRow}>
-                    <Pressable
-                      style={styles.scenarioToggleButton}
-                      onPress={() => toggleAccessScenarioExpanded(scenario.key)}
-                    >
-                      <View style={styles.scenarioHeaderCopy}>
-                        <Text style={styles.scenarioTitle}>
-                          {scenario.label}
-                        </Text>
-                        <Text style={styles.scenarioMeta}>
-                          {selectedInScenario}/{scenario.sections.length}
-                        </Text>
-                      </View>
-                      <Ionicons
-                        name={
-                          isScenarioExpanded
-                            ? 'chevron-up-outline'
-                            : 'chevron-down-outline'
+                return (
+                  <View key={scenario.key} style={styles.scenarioCard}>
+                    <View style={styles.scenarioHeaderRow}>
+                      <Pressable
+                        style={styles.scenarioToggleButton}
+                        onPress={() =>
+                          toggleAccessScenarioExpanded(scenario.key)
                         }
-                        size={18}
-                        color="#7f1b21"
-                      />
-                    </Pressable>
-                  </View>
-
-                  {isScenarioExpanded ? (
-                    <>
-                      <View
-                        style={[
-                          styles.scenarioActionsRow,
-                          isPhoneLayout && styles.scenarioActionsRowCompact,
-                        ]}
                       >
-                        <Pressable
-                          style={[
-                            styles.scenarioActionButton,
-                            isPhoneLayout && styles.scenarioActionButtonCompact,
-                          ]}
-                          onPress={() => toggleScenarioSections(scenario)}
-                        >
-                          <Text style={styles.scenarioActionButtonText}>
-                            {text.adminTraining.selectScenario}
+                        <View style={styles.scenarioHeaderCopy}>
+                          <Text style={styles.scenarioTitle}>
+                            {scenario.label}
                           </Text>
-                        </Pressable>
-                        <Pressable
-                          style={[
-                            styles.scenarioActionButton,
-                            isPhoneLayout && styles.scenarioActionButtonCompact,
-                          ]}
-                          onPress={() => clearScenarioSections(scenario)}
-                        >
-                          <Text style={styles.scenarioActionButtonText}>
-                            {text.adminTraining.clearScenario}
+                          <Text style={styles.scenarioMeta}>
+                            {selectedInScenario}/{scenario.sections.length}
                           </Text>
-                        </Pressable>
-                      </View>
+                        </View>
+                        <Ionicons
+                          name={
+                            isScenarioExpanded
+                              ? 'chevron-up-outline'
+                              : 'chevron-down-outline'
+                          }
+                          size={18}
+                          color="#7f1b21"
+                        />
+                      </Pressable>
+                    </View>
 
-                      <View style={styles.sectionChipRow}>
-                        {scenario.sections.map((section) => {
-                          const checked = draftSections.includes(section);
+                    {isScenarioExpanded ? (
+                      <>
+                        <View
+                          style={[
+                            styles.scenarioActionsRow,
+                            isPhoneLayout && styles.scenarioActionsRowCompact,
+                          ]}
+                        >
+                          <Pressable
+                            style={[
+                              styles.scenarioActionButton,
+                              isPhoneLayout &&
+                                styles.scenarioActionButtonCompact,
+                            ]}
+                            onPress={() => toggleScenarioSections(scenario)}
+                          >
+                            <Text style={styles.scenarioActionButtonText}>
+                              {text.adminTraining.selectScenario}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.scenarioActionButton,
+                              isPhoneLayout &&
+                                styles.scenarioActionButtonCompact,
+                            ]}
+                            onPress={() => clearScenarioSections(scenario)}
+                          >
+                            <Text style={styles.scenarioActionButtonText}>
+                              {text.adminTraining.clearScenario}
+                            </Text>
+                          </Pressable>
+                        </View>
 
-                          return (
-                            <Pressable
-                              key={section}
-                              style={[
-                                styles.sectionChip,
-                                isDenseLayout && styles.sectionChipDense,
-                                isPhoneLayout && styles.sectionChipCompact,
-                                checked && styles.sectionChipActive,
-                              ]}
-                              onPress={() => toggleSection(section)}
-                            >
-                              <Text
+                        <View style={styles.sectionChipRow}>
+                          {scenario.sections.map((section) => {
+                            const checked = draftSections.includes(section);
+
+                            return (
+                              <Pressable
+                                key={section}
                                 style={[
-                                  styles.sectionChipText,
-                                  isDenseLayout &&
-                                    styles.sectionChipTextCompact,
-                                  isPhoneLayout &&
-                                    styles.sectionChipTextCompact,
-                                  checked && styles.sectionChipTextActive,
+                                  styles.sectionChip,
+                                  isDenseLayout && styles.sectionChipDense,
+                                  isPhoneLayout && styles.sectionChipCompact,
+                                  checked && styles.sectionChipActive,
                                 ]}
+                                onPress={() => toggleSection(section)}
                               >
-                                {sectionLabelByKey.get(section) ?? section}
-                              </Text>
-                            </Pressable>
-                          );
-                        })}
-                      </View>
-                    </>
-                  ) : (
-                    <Text style={styles.scenarioCollapsedHint}>
-                      {text.adminTraining.scenarioMatrixSubtitle}
-                    </Text>
-                  )}
-                </View>
-              );
-            })}
-          </View>
+                                <Text
+                                  style={[
+                                    styles.sectionChipText,
+                                    isDenseLayout &&
+                                      styles.sectionChipTextCompact,
+                                    isPhoneLayout &&
+                                      styles.sectionChipTextCompact,
+                                    checked && styles.sectionChipTextActive,
+                                  ]}
+                                >
+                                  {sectionLabelByKey.get(section) ?? section}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </>
+                    ) : (
+                      <Text style={styles.scenarioCollapsedHint}>
+                        {text.adminTraining.scenarioMatrixSubtitle}
+                      </Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
 
-          <Pressable
-            style={[
-              styles.primaryButton,
-              (isSaving || isLoading) && styles.buttonDisabled,
-            ]}
-            disabled={isSaving || isLoading || !selectedLevel}
-            onPress={() => {
-              void saveAccess();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={text.adminTraining.save}
-            accessibilityState={{
-              disabled: isSaving || isLoading || !selectedLevel,
-            }}
-          >
-            <Text style={styles.primaryButtonText}>
-              {isSaving ? text.adminTraining.saving : text.adminTraining.save}
-            </Text>
-          </Pressable>
+            <Pressable
+              style={[
+                styles.primaryButton,
+                (isSaving || isLoading) && styles.buttonDisabled,
+              ]}
+              disabled={isSaving || isLoading || !selectedLevel}
+              onPress={() => {
+                void saveAccess();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={text.adminTraining.save}
+              accessibilityState={{
+                disabled: isSaving || isLoading || !selectedLevel,
+              }}
+            >
+              <Text style={styles.primaryButtonText}>
+                {isSaving ? text.adminTraining.saving : text.adminTraining.save}
+              </Text>
+            </Pressable>
+          </ScrollView>
         </View>
 
         <View
           style={[
             styles.surfaceCard,
             isDenseLayout && styles.surfaceCardCompact,
+            isTabletLayout && { maxHeight: tabletCardMaxHeight },
           ]}
         >
           <View
@@ -764,188 +789,200 @@ export function AdminTrainingAccessPanel({
           {isQuizLinksLoading ? (
             <Text style={styles.helperText}>{text.adminTraining.loading}</Text>
           ) : (
-            <View style={styles.quizScenarioStack}>
-              {scenarios.map((scenario) => {
-                const scenarioConfiguredCount = scenario.sections.reduce(
-                  (count, section) => {
-                    return (
-                      count +
-                      QUIZ_LINK_LANGUAGES.filter((languageValue) =>
-                        Boolean(
-                          (
-                            savedQuizLinksByKey[
-                              getQuizLinkKey(section, languageValue)
-                            ] ?? ''
-                          ).trim(),
-                        ),
-                      ).length
-                    );
-                  },
-                  0,
-                );
-                const isScenarioExpanded = expandedQuizScenarios[scenario.key];
+            <ScrollView
+              style={isTabletLayout ? styles.surfaceBodyScroll : undefined}
+              contentContainerStyle={styles.surfaceBodyContent}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={isTabletLayout}
+            >
+              <View style={styles.quizScenarioStack}>
+                {scenarios.map((scenario) => {
+                  const scenarioConfiguredCount = scenario.sections.reduce(
+                    (count, section) => {
+                      return (
+                        count +
+                        QUIZ_LINK_LANGUAGES.filter((languageValue) =>
+                          Boolean(
+                            (
+                              savedQuizLinksByKey[
+                                getQuizLinkKey(section, languageValue)
+                              ] ?? ''
+                            ).trim(),
+                          ),
+                        ).length
+                      );
+                    },
+                    0,
+                  );
+                  const isScenarioExpanded = expandedQuizScenarios[scenario.key];
 
-                return (
-                  <View
-                    key={`quiz-link-${scenario.key}`}
-                    style={styles.quizScenarioCard}
-                  >
-                    <View style={styles.scenarioHeaderRow}>
-                      <Pressable
-                        style={styles.scenarioToggleButton}
-                        onPress={() => toggleQuizScenarioExpanded(scenario.key)}
-                        accessibilityRole="button"
-                        accessibilityLabel={scenario.label}
-                        accessibilityState={{ expanded: isScenarioExpanded }}
-                      >
-                        <View style={styles.scenarioHeaderCopy}>
-                          <Text style={styles.scenarioTitle}>
-                            {scenario.label}
-                          </Text>
-                          <Text style={styles.scenarioMeta}>
-                            {scenarioConfiguredCount}/
-                            {scenario.sections.length *
-                              QUIZ_LINK_LANGUAGES.length}
-                          </Text>
-                        </View>
-                        <Ionicons
-                          name={
-                            isScenarioExpanded
-                              ? 'chevron-up-outline'
-                              : 'chevron-down-outline'
-                          }
-                          size={18}
-                          color="#7f1b21"
-                        />
-                      </Pressable>
-                    </View>
-
-                    {isScenarioExpanded ? (
-                      <View style={styles.quizSectionStack}>
-                        {scenario.sections.map((section) => (
-                          <View
-                            key={`quiz-link-${section}`}
-                            style={styles.quizSectionCard}
-                          >
-                            <Text style={styles.quizSectionTitle}>
-                              {sectionLabelByKey.get(section) ?? section}
+                  return (
+                    <View
+                      key={`quiz-link-${scenario.key}`}
+                      style={styles.quizScenarioCard}
+                    >
+                      <View style={styles.scenarioHeaderRow}>
+                        <Pressable
+                          style={styles.scenarioToggleButton}
+                          onPress={() => toggleQuizScenarioExpanded(scenario.key)}
+                          accessibilityRole="button"
+                          accessibilityLabel={scenario.label}
+                          accessibilityState={{ expanded: isScenarioExpanded }}
+                        >
+                          <View style={styles.scenarioHeaderCopy}>
+                            <Text style={styles.scenarioTitle}>
+                              {scenario.label}
                             </Text>
-
-                            {QUIZ_LINK_LANGUAGES.map((languageValue) => {
-                              const linkKey = getQuizLinkKey(
-                                section,
-                                languageValue,
-                              );
-                              const draftValue =
-                                quizLinkDraftsByKey[linkKey] ?? '';
-                              const savedValue =
-                                savedQuizLinksByKey[linkKey] ?? '';
-                              const isQuizDirty =
-                                draftValue.trim() !== savedValue.trim();
-                              const isSavingQuizLink =
-                                savingQuizLinkKey === linkKey;
-
-                              return (
-                                <View
-                                  key={`quiz-link-row-${section}-${languageValue}`}
-                                  style={[
-                                    styles.quizLinkRow,
-                                    isCompactLayout &&
-                                      styles.quizLinkRowCompact,
-                                  ]}
-                                >
-                                  <Text
-                                    style={[
-                                      styles.quizLanguageBadge,
-                                      isCompactLayout &&
-                                        styles.quizLanguageBadgeCompact,
-                                    ]}
-                                  >
-                                    {languageValue === 'fr'
-                                      ? text.adminTraining.quizLanguageFr
-                                      : languageValue === 'bn'
-                                        ? text.adminTraining.quizLanguageBn
-                                        : text.adminTraining.quizLanguageZh}
-                                  </Text>
-                                  <TextInput
-                                    style={[
-                                      styles.quizLinkInput,
-                                      isCompactLayout &&
-                                        styles.quizLinkInputCompact,
-                                    ]}
-                                    value={draftValue}
-                                    onChangeText={(value) =>
-                                      updateQuizLinkDraft(
-                                        section,
-                                        languageValue,
-                                        value,
-                                      )
-                                    }
-                                    placeholder={
-                                      text.adminTraining.quizLinkPlaceholder
-                                    }
-                                    placeholderTextColor="#a98a8d"
-                                    autoCapitalize="none"
-                                    autoCorrect={false}
-                                    keyboardType="url"
-                                    accessibilityLabel={`${
-                                      sectionLabelByKey.get(section) ?? section
-                                    } ${
-                                      languageValue === 'fr'
-                                        ? text.adminTraining.quizLanguageFr
-                                        : languageValue === 'bn'
-                                          ? text.adminTraining.quizLanguageBn
-                                          : text.adminTraining.quizLanguageZh
-                                    }`}
-                                  />
-                                  <Pressable
-                                    style={[
-                                      styles.quizLinkSaveButton,
-                                      isCompactLayout &&
-                                        styles.quizLinkSaveButtonCompact,
-                                      (!isQuizDirty || isSavingQuizLink) &&
-                                        styles.buttonDisabled,
-                                    ]}
-                                    disabled={!isQuizDirty || isSavingQuizLink}
-                                    onPress={() => {
-                                      void saveQuizLink(section, languageValue);
-                                    }}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={`${
-                                      text.adminTraining.quizLinkSave
-                                    } ${sectionLabelByKey.get(section) ?? section} ${
-                                      languageValue === 'fr'
-                                        ? text.adminTraining.quizLanguageFr
-                                        : languageValue === 'bn'
-                                          ? text.adminTraining.quizLanguageBn
-                                          : text.adminTraining.quizLanguageZh
-                                    }`}
-                                    accessibilityState={{
-                                      disabled:
-                                        !isQuizDirty || isSavingQuizLink,
-                                    }}
-                                  >
-                                    <Text style={styles.quizLinkSaveButtonText}>
-                                      {isSavingQuizLink
-                                        ? text.adminTraining.saving
-                                        : text.adminTraining.quizLinkSave}
-                                    </Text>
-                                  </Pressable>
-                                </View>
-                              );
-                            })}
+                            <Text style={styles.scenarioMeta}>
+                              {scenarioConfiguredCount}/
+                              {scenario.sections.length *
+                                QUIZ_LINK_LANGUAGES.length}
+                            </Text>
                           </View>
-                        ))}
+                          <Ionicons
+                            name={
+                              isScenarioExpanded
+                                ? 'chevron-up-outline'
+                                : 'chevron-down-outline'
+                            }
+                            size={18}
+                            color="#7f1b21"
+                          />
+                        </Pressable>
                       </View>
-                    ) : (
-                      <Text style={styles.scenarioCollapsedHint}>
-                        {text.adminTraining.quizLinksSubtitle}
-                      </Text>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
+
+                      {isScenarioExpanded ? (
+                        <View style={styles.quizSectionStack}>
+                          {scenario.sections.map((section) => (
+                            <View
+                              key={`quiz-link-${section}`}
+                              style={styles.quizSectionCard}
+                            >
+                              <Text style={styles.quizSectionTitle}>
+                                {sectionLabelByKey.get(section) ?? section}
+                              </Text>
+
+                              {QUIZ_LINK_LANGUAGES.map((languageValue) => {
+                                const linkKey = getQuizLinkKey(
+                                  section,
+                                  languageValue,
+                                );
+                                const draftValue =
+                                  quizLinkDraftsByKey[linkKey] ?? '';
+                                const savedValue =
+                                  savedQuizLinksByKey[linkKey] ?? '';
+                                const isQuizDirty =
+                                  draftValue.trim() !== savedValue.trim();
+                                const isSavingQuizLink =
+                                  savingQuizLinkKey === linkKey;
+
+                                return (
+                                  <View
+                                    key={`quiz-link-row-${section}-${languageValue}`}
+                                    style={[
+                                      styles.quizLinkRow,
+                                      isCompactLayout &&
+                                        styles.quizLinkRowCompact,
+                                    ]}
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.quizLanguageBadge,
+                                        isCompactLayout &&
+                                          styles.quizLanguageBadgeCompact,
+                                      ]}
+                                    >
+                                      {languageValue === 'fr'
+                                        ? text.adminTraining.quizLanguageFr
+                                        : languageValue === 'bn'
+                                          ? text.adminTraining.quizLanguageBn
+                                          : text.adminTraining.quizLanguageZh}
+                                    </Text>
+                                    <TextInput
+                                      style={[
+                                        styles.quizLinkInput,
+                                        isCompactLayout &&
+                                          styles.quizLinkInputCompact,
+                                      ]}
+                                      value={draftValue}
+                                      onChangeText={(value) =>
+                                        updateQuizLinkDraft(
+                                          section,
+                                          languageValue,
+                                          value,
+                                        )
+                                      }
+                                      placeholder={
+                                        text.adminTraining.quizLinkPlaceholder
+                                      }
+                                      placeholderTextColor="#a98a8d"
+                                      autoCapitalize="none"
+                                      autoCorrect={false}
+                                      keyboardType="url"
+                                      accessibilityLabel={`${
+                                        sectionLabelByKey.get(section) ?? section
+                                      } ${
+                                        languageValue === 'fr'
+                                          ? text.adminTraining.quizLanguageFr
+                                          : languageValue === 'bn'
+                                            ? text.adminTraining.quizLanguageBn
+                                            : text.adminTraining.quizLanguageZh
+                                      }`}
+                                    />
+                                    <Pressable
+                                      style={[
+                                        styles.quizLinkSaveButton,
+                                        isCompactLayout &&
+                                          styles.quizLinkSaveButtonCompact,
+                                        (!isQuizDirty || isSavingQuizLink) &&
+                                          styles.buttonDisabled,
+                                      ]}
+                                      disabled={!isQuizDirty || isSavingQuizLink}
+                                      onPress={() => {
+                                        void saveQuizLink(
+                                          section,
+                                          languageValue,
+                                        );
+                                      }}
+                                      accessibilityRole="button"
+                                      accessibilityLabel={`${
+                                        text.adminTraining.quizLinkSave
+                                      } ${
+                                        sectionLabelByKey.get(section) ?? section
+                                      } ${
+                                        languageValue === 'fr'
+                                          ? text.adminTraining.quizLanguageFr
+                                          : languageValue === 'bn'
+                                            ? text.adminTraining.quizLanguageBn
+                                            : text.adminTraining.quizLanguageZh
+                                      }`}
+                                      accessibilityState={{
+                                        disabled:
+                                          !isQuizDirty || isSavingQuizLink,
+                                      }}
+                                    >
+                                      <Text style={styles.quizLinkSaveButtonText}>
+                                        {isSavingQuizLink
+                                          ? text.adminTraining.saving
+                                          : text.adminTraining.quizLinkSave}
+                                      </Text>
+                                    </Pressable>
+                                  </View>
+                                );
+                              })}
+                            </View>
+                          ))}
+                        </View>
+                      ) : (
+                        <Text style={styles.scenarioCollapsedHint}>
+                          {text.adminTraining.quizLinksSubtitle}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            </ScrollView>
           )}
         </View>
       </View>

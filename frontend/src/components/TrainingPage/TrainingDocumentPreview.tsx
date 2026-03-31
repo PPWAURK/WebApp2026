@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import type { AppText } from '../../locales/translations';
 import type { LibraryFileItem } from '../../services/uploadsApi';
-import { buildWebPreviewUrl, WebPdfFrame } from './trainingPage.shared';
+import { TrainingPdfPageViewer } from './TrainingPdfPageViewer';
 import { styles } from './TrainingPage.styles';
 
 type TrainingDocumentPreviewProps = {
@@ -12,6 +12,7 @@ type TrainingDocumentPreviewProps = {
   webPreviewLoading: boolean;
   showSidePreview: boolean;
   previewFrameHeight: number;
+  showTabletPageControls?: boolean;
 };
 
 export function TrainingDocumentPreview({
@@ -21,8 +22,84 @@ export function TrainingDocumentPreview({
   webPreviewLoading,
   showSidePreview,
   previewFrameHeight,
+  showTabletPageControls = false,
 }: TrainingDocumentPreviewProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [previewPage, setPreviewPage] = useState(1);
+  const [pageCount, setPageCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    setPreviewPage(1);
+    setPageCount(null);
+  }, [webPreviewDocument?.fileName, webPreviewUrl]);
+
+  useEffect(() => {
+    if (!pageCount) {
+      return;
+    }
+
+    setPreviewPage((current) => Math.min(current, pageCount));
+  }, [pageCount]);
+
+  function goToPreviousPage() {
+    setPreviewPage((current) => Math.max(1, current - 1));
+  }
+
+  function goToNextPage() {
+    setPreviewPage((current) =>
+      pageCount ? Math.min(current + 1, pageCount) : current + 1,
+    );
+  }
+
+  function renderPageControls() {
+    if (!showTabletPageControls || !webPreviewDocument || !webPreviewUrl) {
+      return null;
+    }
+
+    return (
+      <View style={styles.previewPageControlsRow}>
+        <Pressable
+          style={[
+            styles.previewControlButton,
+            previewPage === 1 && styles.previewPageControlButtonDisabled,
+          ]}
+          onPress={goToPreviousPage}
+          disabled={previewPage === 1}
+          accessibilityRole="button"
+          accessibilityLabel={text.training.previewPreviousPage}
+          accessibilityState={{ disabled: previewPage === 1 }}
+        >
+          <Text style={styles.previewControlButtonText}>
+            {text.training.previewPreviousPage}
+          </Text>
+        </Pressable>
+        <View style={styles.previewPageIndicator}>
+          <Text style={styles.previewPageIndicatorText}>
+            {text.training.previewPageLabel.replace('{page}', String(previewPage))}
+          </Text>
+        </View>
+        <Pressable
+          style={[
+            styles.previewControlButton,
+            pageCount !== null &&
+              previewPage >= pageCount &&
+              styles.previewPageControlButtonDisabled,
+          ]}
+          onPress={goToNextPage}
+          disabled={pageCount !== null && previewPage >= pageCount}
+          accessibilityRole="button"
+          accessibilityLabel={text.training.previewNextPage}
+          accessibilityState={{
+            disabled: pageCount !== null && previewPage >= pageCount,
+          }}
+        >
+          <Text style={styles.previewControlButtonText}>
+            {text.training.previewNextPage}
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <>
@@ -43,6 +120,7 @@ export function TrainingDocumentPreview({
           </View>
           {webPreviewDocument ? (
             <View style={styles.previewControlsRow}>
+              {renderPageControls()}
               <Pressable
                 style={styles.previewControlButton}
                 onPress={() => setIsFullscreen(true)}
@@ -62,9 +140,13 @@ export function TrainingDocumentPreview({
         >
           {webPreviewDocument ? (
             webPreviewUrl ? (
-              <WebPdfFrame
-                src={buildWebPreviewUrl(webPreviewUrl)}
+              <TrainingPdfPageViewer
+                src={webPreviewUrl}
+                pageNumber={previewPage}
                 title={webPreviewDocument.originalName}
+                loadingLabel={text.training.loadingLibrary}
+                errorLabel={text.training.loadError}
+                onDocumentLoadSuccess={setPageCount}
               />
             ) : webPreviewLoading ? (
               <View style={styles.previewEmptyWrap}>
@@ -105,20 +187,27 @@ export function TrainingDocumentPreview({
               <Text style={styles.previewFullscreenTitle} numberOfLines={1}>
                 {webPreviewDocument?.originalName ?? text.training.previewTitle}
               </Text>
-              <Pressable
-                style={styles.previewControlButton}
-                onPress={() => setIsFullscreen(false)}
-                accessibilityRole="button"
-                accessibilityLabel={text.dashboard.levelModalClose}
-              >
-                <Text style={styles.previewControlButtonText}>X</Text>
-              </Pressable>
+              <View style={styles.previewControlsRow}>
+                {renderPageControls()}
+                <Pressable
+                  style={styles.previewControlButton}
+                  onPress={() => setIsFullscreen(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel={text.dashboard.levelModalClose}
+                >
+                  <Text style={styles.previewControlButtonText}>X</Text>
+                </Pressable>
+              </View>
             </View>
             <View style={styles.previewFullscreenFrameShell}>
               {webPreviewDocument && webPreviewUrl ? (
-                <WebPdfFrame
-                  src={buildWebPreviewUrl(webPreviewUrl)}
+                <TrainingPdfPageViewer
+                  src={webPreviewUrl}
+                  pageNumber={previewPage}
                   title={webPreviewDocument.originalName}
+                  loadingLabel={text.training.loadingLibrary}
+                  errorLabel={text.training.loadError}
+                  onDocumentLoadSuccess={setPageCount}
                 />
               ) : webPreviewLoading ? (
                 <View style={styles.previewEmptyWrap}>

@@ -497,6 +497,13 @@ export const styles = StyleSheet.create({
   previewControlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  previewPageControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
   },
   previewControlButton: {
@@ -509,6 +516,22 @@ export const styles = StyleSheet.create({
   },
   previewControlButtonText: {
     color: BRAND,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+  },
+  previewPageControlButtonDisabled: {
+    opacity: 0.45,
+  },
+  previewPageIndicator: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  previewPageIndicatorText: {
+    color: TEXT,
     fontFamily: 'Manrope_700Bold',
     fontSize: 11,
   },

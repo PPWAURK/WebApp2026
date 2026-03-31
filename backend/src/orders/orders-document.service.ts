@@ -183,6 +183,15 @@ export class OrdersDocumentService {
       .trim();
   }
 
+  sanitizePlainLabel(value: string | null | undefined): string {
+    const safeValue = (value ?? '').trim();
+    if (!safeValue) return '-';
+
+    return this.replaceControlCharsWithSpaces(safeValue)
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   private buildApiUrl(req: OrdersRequestContext, path: string): string {
     const normalizedPrefix = (process.env.API_PREFIX ?? '').replace(
       /^\/+|\/+$/g,

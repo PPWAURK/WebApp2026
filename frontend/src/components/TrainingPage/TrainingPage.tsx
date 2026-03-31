@@ -48,10 +48,13 @@ export function TrainingPage({
   });
 
   const isWebPlatform = Platform.OS === 'web';
+  const isTabletBrowserWidth = windowWidth >= 768 && windowWidth < 1180;
   const showSidePreview = isWebPlatform && windowWidth >= 1180;
   const previewFrameHeight = showSidePreview
     ? Math.max(360, Math.min(windowHeight - 320, 560))
-    : Math.max(300, Math.min(windowHeight * 0.45, 460));
+    : isTabletBrowserWidth
+      ? Math.max(520, Math.min(windowHeight * 0.72, 760))
+      : Math.max(300, Math.min(windowHeight * 0.45, 460));
 
   return (
     <View style={styles.pageRoot}>
