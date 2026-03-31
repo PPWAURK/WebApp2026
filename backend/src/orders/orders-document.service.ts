@@ -510,6 +510,10 @@ export class OrdersDocumentService {
     return `${value.slice(0, maxLength - 1)}...`;
   }
 
+  private resolveFontForText(value: string): string {
+    return this.containsCjk(value) ? this.resolveContentFont() : 'Helvetica';
+  }
+
   private resolveContentFont(): string {
     return this.cjkFontPath ?? 'Helvetica';
   }
