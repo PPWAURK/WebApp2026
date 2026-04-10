@@ -14,8 +14,10 @@ import {
   updateRestaurant,
 } from '../../services/restaurantsApi';
 import {
+  approveUserAccount,
   deleteUserAccount,
   fetchTrainingAccessUsers,
+  rejectUserAccount,
   updateUserLevel,
   updateUserManagerRole,
   type TrainingAccessUser,
@@ -70,6 +72,16 @@ export function StoreManagementPage({
   const [isUpdatingUserId, setIsUpdatingUserId] = useState<number | null>(null);
   const [deletingUser, setDeletingUser] = useState<TrainingAccessUser | null>(null);
   const [levelEditorUser, setLevelEditorUser] =
+    useState<TrainingAccessUser | null>(null);
+  const [isApprovingUserId, setIsApprovingUserId] = useState<number | null>(
+    null,
+  );
+  const [isRejectingUserId, setIsRejectingUserId] = useState<number | null>(
+    null,
+  );
+  const [approvingUser, setApprovingUser] =
+    useState<TrainingAccessUser | null>(null);
+  const [rejectingUser, setRejectingUser] =
     useState<TrainingAccessUser | null>(null);
 
   useEffect(() => {
@@ -126,7 +138,8 @@ export function StoreManagementPage({
         .filter(
           (entry) =>
             entry.restaurant?.id === selectedRestaurantId &&
-            entry.role !== 'ADMIN',
+            entry.role !== 'ADMIN' &&
+            entry.isApproved,
         )
         .sort((left, right) => {
           if (left.role !== right.role) {
@@ -138,6 +151,42 @@ export function StoreManagementPage({
             text.dashboard.fallbackName,
           ).localeCompare(getDisplayName(right, text.dashboard.fallbackName));
         }),
+    [selectedRestaurantId, text.dashboard.fallbackName, users],
+  );
+
+  const pendingApprovalUsers = useMemo(
+    () =>
+      users
+        .filter(
+          (entry) =>
+            entry.restaurant?.id === selectedRestaurantId &&
+            entry.role === 'EMPLOYEE' &&
+            !entry.isApproved &&
+            entry.isEmailVerified,
+        )
+        .sort((left, right) =>
+          getDisplayName(left, text.dashboard.fallbackName).localeCompare(
+            getDisplayName(right, text.dashboard.fallbackName),
+          ),
+        ),
+    [selectedRestaurantId, text.dashboard.fallbackName, users],
+  );
+
+  const pendingEmailVerificationUsers = useMemo(
+    () =>
+      users
+        .filter(
+          (entry) =>
+            entry.restaurant?.id === selectedRestaurantId &&
+            entry.role === 'EMPLOYEE' &&
+            !entry.isApproved &&
+            !entry.isEmailVerified,
+        )
+        .sort((left, right) =>
+          getDisplayName(left, text.dashboard.fallbackName).localeCompare(
+            getDisplayName(right, text.dashboard.fallbackName),
+          ),
+        ),
     [selectedRestaurantId, text.dashboard.fallbackName, users],
   );
 
@@ -273,6 +322,60 @@ export function StoreManagementPage({
     }
   }
 
+  async function handleApproveAccount() {
+    if (!approvingUser) {
+      return;
+    }
+
+    setIsApprovingUserId(approvingUser.id);
+    setError(null);
+
+    try {
+      const updated = await approveUserAccount(accessToken, approvingUser.id);
+      setUsers((currentValue) =>
+        currentValue.map((entry) =>
+          entry.id === updated.id
+            ? { ...entry, isApproved: updated.isApproved }
+            : entry,
+        ),
+      );
+      setApprovingUser(null);
+    } catch (approveError) {
+      setError(
+        approveError instanceof Error
+          ? approveError.message
+          : text.adminTraining.approveAccountError,
+      );
+    } finally {
+      setIsApprovingUserId(null);
+    }
+  }
+
+  async function handleRejectAccount() {
+    if (!rejectingUser) {
+      return;
+    }
+
+    setIsRejectingUserId(rejectingUser.id);
+    setError(null);
+
+    try {
+      await rejectUserAccount(accessToken, rejectingUser.id);
+      setUsers((currentValue) =>
+        currentValue.filter((entry) => entry.id !== rejectingUser.id),
+      );
+      setRejectingUser(null);
+    } catch (rejectError) {
+      setError(
+        rejectError instanceof Error
+          ? rejectError.message
+          : text.adminTraining.rejectAccountError,
+      );
+    } finally {
+      setIsRejectingUserId(null);
+    }
+  }
+
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content}>
       <View style={styles.headerCard}>
@@ -373,6 +476,136 @@ export function StoreManagementPage({
         </View>
 
         <View style={[styles.column, styles.rightColumn]}>
+          <View style={styles.card}>
+            <View style={styles.pendingHeader}>
+              <Text style={styles.cardTitle}>
+                {text.storeManagement.pendingTitle}
+              </Text>
+              <View style={styles.pendingCountBadge}>
+                <Text style={styles.pendingCountText}>
+                  {pendingApprovalUsers.length +
+                    pendingEmailVerificationUsers.length}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.cardSubtitle}>
+              {text.storeManagement.pendingSubtitle}
+            </Text>
+
+            {isLoading ? (
+              <Text style={styles.emptyText}>
+                {text.storeManagement.loading}
+              </Text>
+            ) : !selectedRestaurant ? (
+              <Text style={styles.emptyText}>
+                {text.storeManagement.noRestaurantSelected}
+              </Text>
+            ) : pendingApprovalUsers.length === 0 &&
+              pendingEmailVerificationUsers.length === 0 ? (
+              <Text style={styles.emptyText}>
+                {text.storeManagement.noPendingAccounts}
+              </Text>
+            ) : (
+              <>
+                {pendingApprovalUsers.length > 0 ? (
+                  <View style={styles.pendingSection}>
+                    <Text style={styles.pendingSectionTitle}>
+                      {text.storeManagement.pendingApprovalSectionTitle}
+                    </Text>
+                    {pendingApprovalUsers.map((entry) => (
+                      <View key={entry.id} style={styles.userCard}>
+                        <View style={styles.userHeader}>
+                          <View style={styles.userIdentity}>
+                            <Text style={styles.userName}>
+                              {getDisplayName(entry, text.dashboard.fallbackName)}
+                            </Text>
+                            <Text style={styles.userEmail}>{entry.email}</Text>
+                          </View>
+                          <View style={styles.badge}>
+                            <Text style={styles.badgeText}>
+                              {text.adminTraining.accountStatusValues.pending}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.actionsWrap}>
+                          <Pressable
+                            style={[styles.secondaryButton, styles.dangerButton]}
+                            disabled={
+                              isApprovingUserId === entry.id ||
+                              isRejectingUserId === entry.id
+                            }
+                            onPress={() => setRejectingUser(entry)}
+                          >
+                            <Text
+                              style={[
+                                styles.secondaryButtonText,
+                                styles.dangerButtonText,
+                              ]}
+                            >
+                              {text.adminTraining.rejectAccountButton}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.primaryButton,
+                              styles.inlinePrimaryButton,
+                              (isApprovingUserId === entry.id ||
+                                isRejectingUserId === entry.id) &&
+                                styles.primaryButtonDisabled,
+                            ]}
+                            disabled={
+                              isApprovingUserId === entry.id ||
+                              isRejectingUserId === entry.id
+                            }
+                            onPress={() => setApprovingUser(entry)}
+                          >
+                            <Text style={styles.primaryButtonText}>
+                              {isApprovingUserId === entry.id
+                                ? text.adminTraining.approveAccountSaving
+                                : text.adminTraining.approveAccountButton}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+
+                {pendingEmailVerificationUsers.length > 0 ? (
+                  <View style={styles.pendingSection}>
+                    <Text style={styles.pendingSectionTitle}>
+                      {text.storeManagement.pendingEmailSectionTitle}
+                    </Text>
+                    {pendingEmailVerificationUsers.map((entry) => (
+                      <View key={entry.id} style={styles.userCard}>
+                        <View style={styles.userHeader}>
+                          <View style={styles.userIdentity}>
+                            <Text style={styles.userName}>
+                              {getDisplayName(entry, text.dashboard.fallbackName)}
+                            </Text>
+                            <Text style={styles.userEmail}>{entry.email}</Text>
+                          </View>
+                          <View style={styles.badge}>
+                            <Text style={styles.badgeText}>
+                              {
+                                text.adminTraining.accountStatusValues
+                                  .emailVerificationPending
+                              }
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={styles.cardSubtitle}>
+                          {text.storeManagement.pendingEmailHint}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+              </>
+            )}
+          </View>
+
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{text.storeManagement.accountsTitle}</Text>
             <Text style={styles.cardSubtitle}>
@@ -534,6 +767,39 @@ export function StoreManagementPage({
         onCancel={() => setDeletingUser(null)}
         onConfirm={() => {
           void handleDeleteUser();
+        }}
+      />
+
+      <ConfirmDialog
+        visible={approvingUser !== null}
+        title={text.dashboard.quickApproveTitle}
+        message={text.adminTraining.approveAccountMessage}
+        cancelLabel={text.adminTraining.approveAccountCancel}
+        confirmLabel={text.adminTraining.approveAccountConfirm}
+        onCancel={() => {
+          if (isApprovingUserId === null) {
+            setApprovingUser(null);
+          }
+        }}
+        onConfirm={() => {
+          void handleApproveAccount();
+        }}
+      />
+
+      <ConfirmDialog
+        visible={rejectingUser !== null}
+        title={text.adminTraining.rejectAccountTitle}
+        message={text.adminTraining.rejectAccountMessage}
+        cancelLabel={text.adminTraining.approveAccountCancel}
+        confirmLabel={text.adminTraining.rejectAccountConfirm}
+        destructive
+        onCancel={() => {
+          if (isRejectingUserId === null) {
+            setRejectingUser(null);
+          }
+        }}
+        onConfirm={() => {
+          void handleRejectAccount();
         }}
       />
     </ScrollView>
