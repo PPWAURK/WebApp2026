@@ -1,8 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { EmployeeLevel, Role } from '@prisma/client';
 import { UsersWorkforceService } from './users-workforce.service';
 
-describe('UsersWorkforceService.assignUserRestaurant', () => {
+describe('UsersWorkforceService', () => {
   let service: UsersWorkforceService;
   let prisma: {
     restaurant: {
@@ -113,5 +113,72 @@ describe('UsersWorkforceService.assignUserRestaurant', () => {
     ).rejects.toThrow(
       new BadRequestException('Manager can only move EMPLOYEE accounts'),
     );
+  });
+
+  it('allows admins to update one employee level', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 14,
+      role: Role.EMPLOYEE,
+      restaurantId: 9,
+    });
+    prisma.user.update.mockResolvedValue({
+      id: 14,
+      role: Role.EMPLOYEE,
+      employeeLevel: EmployeeLevel.L4_EXCELLENT,
+      isOnProbation: false,
+    });
+
+    const result = await service.updateEmployeeLevel(
+      14,
+      EmployeeLevel.L4_EXCELLENT,
+      {
+        actorId: 1,
+        actorRole: Role.ADMIN,
+        actorRestaurantId: null,
+      },
+    );
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 14 },
+      data: {
+        employeeLevel: EmployeeLevel.L4_EXCELLENT,
+        role: Role.EMPLOYEE,
+        isOnProbation: false,
+      },
+      select: {
+        id: true,
+        role: true,
+        employeeLevel: true,
+        isOnProbation: true,
+      },
+    });
+    expect(result).toMatchObject({
+      id: 14,
+      role: Role.EMPLOYEE,
+      employeeLevel: EmployeeLevel.L4_EXCELLENT,
+      isOnProbation: false,
+    });
+  });
+
+  it('rejects admins updating a manager level', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 14,
+      role: Role.EMPLOYEE,
+      restaurantId: 9,
+    });
+
+    await expect(
+      service.updateEmployeeLevel(14, EmployeeLevel.L6_MA, {
+        actorId: 1,
+        actorRole: Role.ADMIN,
+        actorRestaurantId: null,
+      }),
+    ).rejects.toThrow(
+      new BadRequestException(
+        'Admin must use manager role update for manager accounts',
+      ),
+    );
+
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 });

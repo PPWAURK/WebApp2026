@@ -16,6 +16,7 @@ describe('UsersController', () => {
   };
   let usersWorkforceService: {
     assignUserRestaurant: jest.Mock;
+    updateEmployeeLevel: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -26,6 +27,7 @@ describe('UsersController', () => {
     };
     usersWorkforceService = {
       assignUserRestaurant: jest.fn(),
+      updateEmployeeLevel: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -196,5 +198,36 @@ describe('UsersController', () => {
     );
 
     expect(usersWorkforceService.assignUserRestaurant).not.toHaveBeenCalled();
+  });
+
+  it('allows admins to update one employee level', () => {
+    const expected = {
+      id: 22,
+      employeeLevel: Role.EMPLOYEE,
+    };
+    usersWorkforceService.updateEmployeeLevel.mockReturnValue(expected);
+
+    const result = controller.updateEmployeeLevel(
+      {
+        user: {
+          id: 1,
+          role: Role.ADMIN,
+          restaurantId: null,
+        },
+      } as never,
+      22,
+      'L4_EXCELLENT',
+    );
+
+    expect(usersWorkforceService.updateEmployeeLevel).toHaveBeenCalledWith(
+      22,
+      'L4_EXCELLENT',
+      {
+        actorId: 1,
+        actorRole: Role.ADMIN,
+        actorRestaurantId: null,
+      },
+    );
+    expect(result).toBe(expected);
   });
 });

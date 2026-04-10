@@ -20,42 +20,32 @@ export class RestaurantsService {
   }
 
   async createRestaurant(params: { name: string; address: string }) {
-    const name = params.name.trim();
-    const address = params.address.trim();
-
-    if (!name) {
-      throw new BadRequestException('Restaurant name is required');
-    }
-
-    if (!address) {
-      throw new BadRequestException('Restaurant address is required');
-    }
+    const normalized = this.normalizeRestaurantPayload(params);
 
     try {
       return await this.prisma.restaurant.create({
-        data: {
-          name,
-          address,
-        },
+        data: normalized,
       });
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException('Restaurant name already exists');
-      }
+      this.rethrowPersistenceError(error);
+    }
+  }
 
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2000'
-      ) {
-        throw new BadRequestException(
-          'Restaurant name or address exceeds the allowed length',
-        );
-      }
+  async updateRestaurant(
+    restaurantId: number,
+    params: { name: string; address: string },
+  ) {
+    await this.ensureRestaurantExists(restaurantId);
 
-      throw error;
+    const normalized = this.normalizeRestaurantPayload(params);
+
+    try {
+      return await this.prisma.restaurant.update({
+        where: { id: restaurantId },
+        data: normalized,
+      });
+    } catch (error) {
+      this.rethrowPersistenceError(error);
     }
   }
 
@@ -69,5 +59,46 @@ export class RestaurantsService {
     }
 
     return restaurant;
+  }
+
+  private normalizeRestaurantPayload(params: {
+    name: string;
+    address: string;
+  }) {
+    const name = params.name.trim();
+    const address = params.address.trim();
+
+    if (!name) {
+      throw new BadRequestException('Restaurant name is required');
+    }
+
+    if (!address) {
+      throw new BadRequestException('Restaurant address is required');
+    }
+
+    return {
+      name,
+      address,
+    };
+  }
+
+  private rethrowPersistenceError(error: unknown): never {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      throw new ConflictException('Restaurant name already exists');
+    }
+
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2000'
+    ) {
+      throw new BadRequestException(
+        'Restaurant name or address exceeds the allowed length',
+      );
+    }
+
+    throw error;
   }
 }

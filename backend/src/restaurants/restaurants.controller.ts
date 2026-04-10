@@ -3,6 +3,9 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  Param,
+  ParseIntPipe,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -11,6 +14,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
+import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import { RestaurantsService } from './restaurants.service';
 
 type AuthenticatedRequest = Request & {
@@ -43,5 +47,24 @@ export class RestaurantsController {
     }
 
     return this.restaurantsService.createRestaurant(createRestaurantDto);
+  }
+
+  @ApiOperation({ summary: 'Update one restaurant (admin only)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id')
+  updateRestaurant(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) restaurantId: number,
+    @Body() updateRestaurantDto: UpdateRestaurantDto,
+  ) {
+    if (req.user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.restaurantsService.updateRestaurant(
+      restaurantId,
+      updateRestaurantDto,
+    );
   }
 }

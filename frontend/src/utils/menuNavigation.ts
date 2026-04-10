@@ -30,6 +30,10 @@ export function pathnameToMenuPage(pathname: string): MenuPage | null {
     return 'restaurantForms';
   }
 
+  if (normalized === '/store-management') {
+    return 'storeManagement';
+  }
+
   if (normalized === '/orders') {
     return 'orders';
   }
@@ -68,6 +72,10 @@ export function menuPageToPath(page: MenuPage): string {
 
   if (page === 'restaurantForms') {
     return '/restaurant-forms';
+  }
+
+  if (page === 'storeManagement') {
+    return '/store-management';
   }
 
   if (page === 'orders') {

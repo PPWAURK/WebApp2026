@@ -43,6 +43,10 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
     ...(props.currentUser.role === 'ADMIN'
       ? [
           {
+            key: 'storeManagement' as MenuPage,
+            label: props.text.drawer.storeManagement,
+          },
+          {
             key: 'supplierManagement' as MenuPage,
             label: props.text.drawer.supplierManagement,
           },

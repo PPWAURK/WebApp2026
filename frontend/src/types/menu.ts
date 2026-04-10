@@ -4,6 +4,7 @@ export type MenuPage =
   | 'profile'
   | 'training'
   | 'restaurantForms'
+  | 'storeManagement'
   | 'orders'
   | 'supplierManagement'
   | 'orderRecap'

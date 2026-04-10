@@ -77,6 +77,10 @@ function getActivePageLabel(text: AppText, page: MenuPage): string {
     return text.drawer.supplierManagement;
   }
 
+  if (page === 'storeManagement') {
+    return text.drawer.storeManagement;
+  }
+
   return text.drawer.dashboard;
 }
 
@@ -154,6 +158,12 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
   ];
 
   if (props.currentUser.role === 'ADMIN') {
+    primaryItems.push({
+      key: 'storeManagement',
+      label: props.text.drawer.storeManagement,
+      icon: 'business-outline',
+    });
+
     primaryItems.push({
       key: 'supplierManagement',
       label: props.text.drawer.supplierManagement,

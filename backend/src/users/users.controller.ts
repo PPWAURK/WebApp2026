@@ -345,7 +345,9 @@ export class UsersController {
     });
   }
 
-  @ApiOperation({ summary: 'Delete employee account (admin/manager)' })
+  @ApiOperation({
+    summary: 'Delete employee or manager account (admin/manager)',
+  })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
@@ -389,7 +391,7 @@ export class UsersController {
     });
   }
 
-  @ApiOperation({ summary: 'Update employee level (manager only)' })
+  @ApiOperation({ summary: 'Update employee level (admin/manager)' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Patch(':id/level')
@@ -400,8 +402,10 @@ export class UsersController {
   ) {
     const actor = req.user;
 
-    if (!actor || actor.role !== 'MANAGER') {
-      throw new ForbiddenException('Manager only');
+    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
+      throw new ForbiddenException(
+        'Only ADMIN and MANAGER can access this resource',
+      );
     }
 
     if (

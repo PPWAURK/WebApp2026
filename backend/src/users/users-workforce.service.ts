@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -196,10 +195,6 @@ export class UsersWorkforceService {
     level: EmployeeLevel,
     actor: RoleScopeActorWithId,
   ) {
-    if (actor.actorRole !== Role.MANAGER) {
-      throw new ForbiddenException('Only MANAGER can update employee level');
-    }
-
     ensureAdminOrManagerScope(actor);
 
     const user = await this.prisma.user.findUnique({
@@ -223,11 +218,23 @@ export class UsersWorkforceService {
       throw new BadRequestException('Only EMPLOYEE level can be updated');
     }
 
-    if (actor.actorId === userId) {
-      throw new BadRequestException('Manager cannot update own level');
+    if (
+      actor.actorRole === Role.ADMIN &&
+      deriveRoleFromLevel(level) === Role.MANAGER
+    ) {
+      throw new BadRequestException(
+        'Admin must use manager role update for manager accounts',
+      );
     }
 
-    if (user.restaurantId !== actor.actorRestaurantId) {
+    if (actor.actorId === userId) {
+      throw new BadRequestException('Cannot update own level');
+    }
+
+    if (
+      actor.actorRole === Role.MANAGER &&
+      user.restaurantId !== actor.actorRestaurantId
+    ) {
       throw new BadRequestException(
         'Manager can only update users in own restaurant',
       );

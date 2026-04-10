@@ -1,4 +1,8 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { RestaurantsService } from './restaurants.service';
 
@@ -9,6 +13,7 @@ describe('RestaurantsService', () => {
       create: jest.Mock;
       findUnique: jest.Mock;
       findMany: jest.Mock;
+      update: jest.Mock;
     };
   };
 
@@ -18,6 +23,7 @@ describe('RestaurantsService', () => {
         create: jest.fn(),
         findUnique: jest.fn(),
         findMany: jest.fn(),
+        update: jest.fn(),
       },
     };
 
@@ -78,5 +84,44 @@ describe('RestaurantsService', () => {
         'Restaurant name or address exceeds the allowed length',
       ),
     );
+  });
+
+  it('trims name and address before updating a restaurant', async () => {
+    prisma.restaurant.findUnique.mockResolvedValue({
+      id: 3,
+      name: 'Paris 11',
+      address: '12 Rue Exemple',
+    });
+    prisma.restaurant.update.mockResolvedValue({
+      id: 3,
+      name: 'Paris 12',
+      address: '34 Rue Exemple',
+    });
+
+    await service.updateRestaurant(3, {
+      name: '  Paris 12  ',
+      address: '  34 Rue Exemple  ',
+    });
+
+    expect(prisma.restaurant.update).toHaveBeenCalledWith({
+      where: { id: 3 },
+      data: {
+        name: 'Paris 12',
+        address: '34 Rue Exemple',
+      },
+    });
+  });
+
+  it('rejects updates for missing restaurants', async () => {
+    prisma.restaurant.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.updateRestaurant(7, {
+        name: 'Paris 12',
+        address: '34 Rue Exemple',
+      }),
+    ).rejects.toThrow(new NotFoundException('Restaurant not found'));
+
+    expect(prisma.restaurant.update).not.toHaveBeenCalled();
   });
 });

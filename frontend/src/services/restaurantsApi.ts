@@ -44,3 +44,32 @@ export async function createRestaurant(
 
   return data as Restaurant;
 }
+
+export async function updateRestaurant(
+  token: string,
+  restaurantId: number,
+  payload: { name: string; address: string },
+): Promise<Restaurant> {
+  const response = await fetch(`${API_URL}/restaurants/${restaurantId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await response.json()) as Restaurant | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message ?? 'Failed to update restaurant';
+    throw new Error(message);
+  }
+
+  return data as Restaurant;
+}

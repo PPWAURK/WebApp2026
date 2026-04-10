@@ -230,8 +230,14 @@ export class UsersApprovalService {
       throw new NotFoundException('User not found');
     }
 
-    if (user.role !== Role.EMPLOYEE) {
-      throw new BadRequestException('Only EMPLOYEE accounts can be deleted');
+    if (user.role === Role.ADMIN) {
+      throw new BadRequestException('ADMIN accounts cannot be deleted');
+    }
+
+    if (actor.actorRole === Role.MANAGER && user.role !== Role.EMPLOYEE) {
+      throw new BadRequestException(
+        'Manager can only delete EMPLOYEE accounts',
+      );
     }
 
     if (
