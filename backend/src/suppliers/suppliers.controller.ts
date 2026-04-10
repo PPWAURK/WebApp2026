@@ -16,9 +16,19 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SuppliersService } from './suppliers.service';
 
+const ORDER_ACCESS_LEVELS = [
+  'L5_PAM',
+  'L5_AM',
+  'L6_PM',
+  'L6_MA',
+  'L7_PDI',
+  'L7_D',
+];
+
 type AuthenticatedRequest = Request & {
   user?: {
     role?: string;
+    employeeLevel?: string;
   };
 };
 
@@ -33,10 +43,14 @@ export class SuppliersController {
   @Get()
   listSuppliers(@Req() req: AuthenticatedRequest) {
     const role = req.user?.role;
-    if (role !== 'ADMIN' && role !== 'MANAGER') {
-      throw new ForbiddenException(
-        'Only ADMIN and MANAGER can access suppliers',
-      );
+    const level = req.user?.employeeLevel;
+    const canAccess =
+      role === 'ADMIN' ||
+      role === 'MANAGER' ||
+      (role === 'EMPLOYEE' && level !== undefined && ORDER_ACCESS_LEVELS.includes(level));
+
+    if (!canAccess) {
+      throw new ForbiddenException('Insufficient level to access suppliers');
     }
 
     return this.suppliersService.listSuppliers();

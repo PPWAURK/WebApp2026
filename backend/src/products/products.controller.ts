@@ -41,9 +41,19 @@ function createStoredFileName(originalName: string) {
   return `${randomUUID()}${fileExtension}`;
 }
 
+const ORDER_ACCESS_LEVELS = [
+  'L5_PAM',
+  'L5_AM',
+  'L6_PM',
+  'L6_MA',
+  'L7_PDI',
+  'L7_D',
+];
+
 type AuthenticatedRequest = Request & {
   user?: {
     role?: string;
+    employeeLevel?: string;
   };
 };
 
@@ -58,10 +68,14 @@ export class ProductsController {
   @Get()
   listProducts(@Req() req: AuthenticatedRequest) {
     const role = req.user?.role;
-    if (role !== 'ADMIN' && role !== 'MANAGER') {
-      throw new ForbiddenException(
-        'Only ADMIN and MANAGER can access products',
-      );
+    const level = req.user?.employeeLevel;
+    const canAccess =
+      role === 'ADMIN' ||
+      role === 'MANAGER' ||
+      (role === 'EMPLOYEE' && level !== undefined && ORDER_ACCESS_LEVELS.includes(level));
+
+    if (!canAccess) {
+      throw new ForbiddenException('Insufficient level to access products');
     }
 
     return this.productsService.listProducts();
