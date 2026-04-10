@@ -47,7 +47,9 @@ export class SuppliersController {
     const canAccess =
       role === 'ADMIN' ||
       role === 'MANAGER' ||
-      (role === 'EMPLOYEE' && level !== undefined && ORDER_ACCESS_LEVELS.includes(level));
+      (role === 'EMPLOYEE' &&
+        level !== undefined &&
+        ORDER_ACCESS_LEVELS.includes(level));
 
     if (!canAccess) {
       throw new ForbiddenException('Insufficient level to access suppliers');
