@@ -33,6 +33,7 @@ describe('OrdersService', () => {
     deleteFileIfExists: jest.Mock;
     recoverUtf8: jest.Mock;
     sanitizeLabel: jest.Mock;
+    sanitizePlainLabel: jest.Mock;
     makeFrLabel: jest.Mock;
     resolveZhName: jest.Mock;
     hasOrderFile: jest.Mock;
@@ -98,6 +99,10 @@ describe('OrdersService', () => {
       deleteFileIfExists: jest.fn(),
       recoverUtf8: jest.fn((value: string | null | undefined) => value ?? ''),
       sanitizeLabel: jest.fn((value: string | null | undefined) => {
+        const safeValue = (value ?? '').trim();
+        return safeValue || '-';
+      }),
+      sanitizePlainLabel: jest.fn((value: string | null | undefined) => {
         const safeValue = (value ?? '').trim();
         return safeValue || '-';
       }),
