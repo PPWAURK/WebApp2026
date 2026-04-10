@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from './users.service';
 
@@ -168,14 +165,19 @@ describe('UsersService credential updates', () => {
       }),
     ).resolves.toEqual({ success: true });
 
-    expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: 7 },
-      data: {
-        passwordHash: expect.any(String),
-      },
-      select: {
-        id: true,
-      },
-    });
+    const [[updateCall]] = prisma.user.update.mock.calls as Array<
+      [
+        {
+          where: { id: number };
+          data: { passwordHash: string };
+          select: { id: true };
+        },
+      ]
+    >;
+
+    expect(updateCall.where).toEqual({ id: 7 });
+    expect(updateCall.select).toEqual({ id: true });
+    expect(typeof updateCall.data.passwordHash).toBe('string');
+    expect(updateCall.data.passwordHash.length).toBeGreaterThan(0);
   });
 });
