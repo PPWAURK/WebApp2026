@@ -3,12 +3,8 @@ import { OrdersPage } from '../../src/components/OrdersPage';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useLanguage } from '../../src/hooks/useLanguage';
 import { useOrderFlow } from '../../src/hooks/useOrderFlow';
-import type { Role } from '../../src/types/auth';
 import type { OrderRecapData } from '../../src/types/order';
-
-function canAccessOrders(role: Role) {
-  return role === 'ADMIN' || role === 'MANAGER';
-}
+import { canUserAccessOrders } from '../../src/utils/orderAccess';
 
 export default function OrdersScreen() {
   const auth = useAuth();
@@ -31,7 +27,7 @@ export default function OrdersScreen() {
     return null;
   }
 
-  if (!canAccessOrders(auth.session.user.role)) {
+  if (!canUserAccessOrders(auth.session.user)) {
     return <Redirect href="/dashboard" />;
   }
 

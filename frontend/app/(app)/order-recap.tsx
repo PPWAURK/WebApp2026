@@ -9,11 +9,7 @@ import {
 } from '../../src/hooks/useOrderBonDownloader';
 import { useOrderFlow } from '../../src/hooks/useOrderFlow';
 import { createOrder } from '../../src/services/ordersApi';
-import type { Role } from '../../src/types/auth';
-
-function canAccessOrders(role: Role) {
-  return role === 'ADMIN' || role === 'MANAGER';
-}
+import { canUserAccessOrders } from '../../src/utils/orderAccess';
 
 export default function OrderRecapScreen() {
   const auth = useAuth();
@@ -35,7 +31,7 @@ export default function OrderRecapScreen() {
     return null;
   }
 
-  if (!canAccessOrders(auth.session.user.role)) {
+  if (!canUserAccessOrders(auth.session.user)) {
     return <Redirect href="/dashboard" />;
   }
 

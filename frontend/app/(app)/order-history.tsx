@@ -12,11 +12,7 @@ import {
   type OrderReturnSummary,
   type OrderSummary,
 } from '../../src/services/ordersApi';
-import type { Role } from '../../src/types/auth';
-
-function canAccessOrders(role: Role) {
-  return role === 'ADMIN' || role === 'MANAGER';
-}
+import { canUserAccessOrders } from '../../src/utils/orderAccess';
 
 function showFeedback(title: string, message: string) {
   if (Platform.OS === 'web') {
@@ -52,7 +48,7 @@ export default function OrderHistoryScreen() {
   }
 
   useEffect(() => {
-    if (!auth.session || !canAccessOrders(auth.session.user.role)) {
+    if (!auth.session || !canUserAccessOrders(auth.session.user)) {
       setOrders([]);
       setOrderReturns([]);
       setIsLoading(false);
@@ -91,7 +87,7 @@ export default function OrderHistoryScreen() {
     return null;
   }
 
-  if (!canAccessOrders(auth.session.user.role)) {
+  if (!canUserAccessOrders(auth.session.user)) {
     return <Redirect href="/dashboard" />;
   }
 
