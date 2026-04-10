@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { EmployeeLevel, Role } from '@prisma/client';
 import { UsersApprovalService } from './users-approval.service';
 
 describe('UsersApprovalService', () => {
@@ -70,6 +70,50 @@ describe('UsersApprovalService', () => {
     ).resolves.toEqual({
       success: true,
       id: 24,
+    });
+  });
+
+  it('clears probation when approving a manager account', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 24,
+      role: Role.MANAGER,
+      restaurantId: 5,
+      isApproved: false,
+      emailVerifiedAt: new Date('2026-04-10T10:00:00.000Z'),
+    });
+    prisma.user.update.mockResolvedValue({
+      id: 24,
+      email: 'manager@example.com',
+      name: 'Manager',
+      preferredLanguage: 'fr',
+      isApproved: true,
+    });
+    mailService.sendAccountApprovedEmail.mockResolvedValue(undefined);
+
+    await expect(
+      service.approveEmployeeAccount(24, {
+        actorRole: Role.ADMIN,
+        actorRestaurantId: null,
+      }),
+    ).resolves.toEqual({
+      id: 24,
+      isApproved: true,
+    });
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 24 },
+      data: {
+        isApproved: true,
+        employeeLevel: EmployeeLevel.L7_D,
+        isOnProbation: false,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        preferredLanguage: true,
+        isApproved: true,
+      },
     });
   });
 

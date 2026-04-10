@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { EmployeeLevel, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { UsersService } from './users.service';
 import { ensureAdminOrManagerScope } from './users-scope';
 import {
   ensureAdminRole,
@@ -21,13 +22,18 @@ import type { RoleScopeActorWithId } from './users.types';
 
 @Injectable()
 export class UsersTrainingAccessService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly usersService: UsersService,
+  ) {}
 
   async listUsersTrainingAccess(
     restaurantId: number | undefined,
     actor: RoleScopeActorWithId,
   ) {
     ensureAdminOrManagerScope(actor);
+
+    await this.usersService.deleteExpiredPendingEmailVerificationUsers();
 
     const effectiveRestaurantId =
       actor.actorRole === Role.ADMIN ? restaurantId : actor.actorRestaurantId;

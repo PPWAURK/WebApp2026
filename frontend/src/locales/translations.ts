@@ -800,6 +800,9 @@ export const translations = {
       currentRestaurantLabel: 'Restaurant actuel',
       unassignedLabel: 'Non affecté',
       transferButton: 'Changer le restaurant',
+      transferConfirmTitle: 'Confirmer le changement de restaurant',
+      transferConfirmMessage:
+        'Confirmez-vous le changement de {name} de "{from}" vers "{to}" ?',
       transferring: 'Changement...',
       loadError: 'Impossible de charger les données des restaurants',
       createError: 'Impossible de créer le restaurant',
@@ -1639,6 +1642,8 @@ export const translations = {
       currentRestaurantLabel: '当前门店',
       unassignedLabel: '未分配',
       transferButton: '变更门店',
+      transferConfirmTitle: '确认变更门店',
+      transferConfirmMessage: '确认将 {name} 从“{from}”变更到“{to}”吗？',
       transferring: '变更中...',
       loadError: '加载门店数据失败',
       createError: '创建门店失败',

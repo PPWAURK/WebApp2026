@@ -15,6 +15,7 @@ import type { User } from '../../types/auth';
 import type { Language } from '../../types/language';
 import type { MenuPage } from '../../types/menu';
 import type { AppTheme } from '../../types/theme';
+import { canUserAccessOrders } from '../../utils/orderAccess';
 import {
   createStyles,
   DESKTOP_BREAKPOINT,
@@ -121,8 +122,7 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
           'L’effort forge l’accomplissement,',
           'La persévérance crée la valeur',
         ];
-  const canAccessOrders =
-    props.currentUser.role === 'ADMIN' || props.currentUser.role === 'MANAGER';
+  const canAccessOrders = canUserAccessOrders(props.currentUser);
   const canAccessTeamOverview =
     props.currentUser.role === 'ADMIN' || props.currentUser.role === 'MANAGER';
   const primaryItems: PrimaryNavItem[] = [

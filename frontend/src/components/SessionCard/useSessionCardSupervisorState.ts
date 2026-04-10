@@ -106,6 +106,10 @@ function matchesUserQuery(entry: TrainingAccessUser, query: string) {
   return name.includes(query) || entry.email.toLowerCase().includes(query);
 }
 
+function getUserDisplayName(entry: Pick<TrainingAccessUser, 'name' | 'email'>) {
+  return (entry.name ?? entry.email).trim();
+}
+
 export function useSessionCardSupervisorState({
   accessToken,
   confirmAction,
@@ -624,7 +628,27 @@ export function useSessionCardSupervisorState({
   }
 
   async function handleTransferUser() {
-    if (!selectedTransferUser || !selectedTransferRestaurantId) {
+    if (
+      !selectedTransferUser ||
+      !selectedTransferRestaurantId ||
+      !selectedTransferRestaurant
+    ) {
+      return;
+    }
+
+    const confirmed = await confirmAction(
+      text.adminRestaurant.transferConfirmTitle,
+      text.adminRestaurant.transferConfirmMessage
+        .replace('{name}', getUserDisplayName(selectedTransferUser))
+        .replace(
+          '{from}',
+          selectedTransferUser.restaurant?.name ?? text.adminRestaurant.unassignedLabel,
+        )
+        .replace('{to}', selectedTransferRestaurant.name),
+      text.adminRestaurant.transferButton,
+    );
+
+    if (!confirmed) {
       return;
     }
 

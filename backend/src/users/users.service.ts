@@ -7,8 +7,12 @@ import {
 import { EmployeeLevel, Prisma, Role, WorkplaceRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { EMAIL_VERIFICATION_TOKEN_LIFETIME_HOURS } from '../auth/auth.constants';
 import { normalizeTrainingAccess } from './users-training-access.utils';
 import type { RequestLike } from './users.types';
+
+const EXPIRED_PENDING_EMAIL_VERIFICATION_WINDOW_MS =
+  EMAIL_VERIFICATION_TOKEN_LIFETIME_HOURS * 60 * 60 * 1000;
 
 const USER_DETAILS_SELECT = {
   id: true,
@@ -81,6 +85,29 @@ export class UsersService {
     });
   }
 
+  async deleteExpiredPendingEmailVerificationUsers(params?: {
+    email?: string;
+    now?: Date;
+  }) {
+    const now = params?.now ?? new Date();
+    const expiredBefore = new Date(
+      now.getTime() - EXPIRED_PENDING_EMAIL_VERIFICATION_WINDOW_MS,
+    );
+
+    const result = await this.prisma.user.deleteMany({
+      where: {
+        isApproved: false,
+        emailVerifiedAt: null,
+        createdAt: {
+          lte: expiredBefore,
+        },
+        ...(params?.email ? { email: params.email } : {}),
+      },
+    });
+
+    return result.count;
+  }
+
   createEmployee(params: {
     email: string;
     passwordHash: string;
@@ -92,17 +119,20 @@ export class UsersService {
     emailVerifiedAt?: Date | null;
     preferredLanguage?: 'fr' | 'zh';
   }) {
+    const employeeLevel =
+      params.employeeLevel ?? EmployeeLevel.L0_PROBATION;
+
     return this.prisma.user.create({
       data: {
-        email: params.email,
+        email: params.email.trim().toLowerCase(),
         passwordHash: params.passwordHash,
         name: params.name,
         restaurantId: params.restaurantId,
         role: params.role ?? Role.EMPLOYEE,
-        employeeLevel: params.employeeLevel ?? EmployeeLevel.L0_PROBATION,
+        employeeLevel,
         isApproved: params.isApproved ?? true,
         emailVerifiedAt: params.emailVerifiedAt,
-        isOnProbation: true,
+        isOnProbation: employeeLevel === EmployeeLevel.L0_PROBATION,
         preferredLanguage: params.preferredLanguage ?? 'fr',
         workplaceRole: WorkplaceRole.BOTH,
         trainingAccess: [],

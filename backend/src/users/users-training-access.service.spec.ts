@@ -4,6 +4,9 @@ import { UsersTrainingAccessService } from './users-training-access.service';
 
 describe('UsersTrainingAccessService', () => {
   let service: UsersTrainingAccessService;
+  let usersService: {
+    deleteExpiredPendingEmailVerificationUsers: jest.Mock;
+  };
   let prisma: {
     trainingQuizLink: {
       deleteMany: jest.Mock;
@@ -22,6 +25,9 @@ describe('UsersTrainingAccessService', () => {
   };
 
   beforeEach(() => {
+    usersService = {
+      deleteExpiredPendingEmailVerificationUsers: jest.fn(),
+    };
     prisma = {
       trainingQuizLink: {
         deleteMany: jest.fn(),
@@ -39,7 +45,10 @@ describe('UsersTrainingAccessService', () => {
       },
     };
 
-    service = new UsersTrainingAccessService(prisma as never);
+    service = new UsersTrainingAccessService(
+      prisma as never,
+      usersService as never,
+    );
   });
 
   it('rejects invalid quiz URLs before writing them', async () => {
@@ -90,6 +99,7 @@ describe('UsersTrainingAccessService', () => {
   });
 
   it('exposes whether a pending account has verified its email', async () => {
+    usersService.deleteExpiredPendingEmailVerificationUsers.mockResolvedValue(0);
     prisma.user.findMany.mockResolvedValue([
       {
         id: 3,
@@ -124,5 +134,8 @@ describe('UsersTrainingAccessService', () => {
         isEmailVerified: true,
       }),
     ]);
+    expect(
+      usersService.deleteExpiredPendingEmailVerificationUsers,
+    ).toHaveBeenCalledWith();
   });
 });

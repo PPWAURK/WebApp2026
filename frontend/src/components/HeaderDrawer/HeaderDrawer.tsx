@@ -5,6 +5,7 @@ import { styles } from './HeaderDrawer.styles';
 import type { Language } from '../../types/language';
 import type { MenuPage } from '../../types/menu';
 import type { User } from '../../types/auth';
+import { canUserAccessOrders } from '../../utils/orderAccess';
 
 type HeaderDrawerProps = {
   isOpen: boolean;
@@ -21,6 +22,7 @@ type HeaderDrawerProps = {
 
 export function HeaderDrawer(props: HeaderDrawerProps) {
   const translateX = useRef(new Animated.Value(-280)).current;
+  const canAccessOrders = canUserAccessOrders(props.currentUser);
   const [isOrdersGroupOpen, setIsOrdersGroupOpen] = useState(
     props.activePage === 'orders' ||
       props.activePage === 'orderHistory' ||
@@ -144,8 +146,7 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
           </Pressable>
         ))}
 
-        {props.currentUser.role === 'ADMIN' ||
-        props.currentUser.role === 'MANAGER' ? (
+        {canAccessOrders ? (
           <View style={styles.drawerGroupWrap}>
             <Pressable
               style={[

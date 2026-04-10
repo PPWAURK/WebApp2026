@@ -132,7 +132,10 @@ export class UsersApprovalService {
       data: {
         isApproved: true,
         ...(user.role === Role.MANAGER
-          ? { employeeLevel: EmployeeLevel.L7_D }
+          ? {
+              employeeLevel: EmployeeLevel.L7_D,
+              isOnProbation: false,
+            }
           : {}),
       },
       select: {

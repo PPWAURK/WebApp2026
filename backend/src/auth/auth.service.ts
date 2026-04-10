@@ -15,6 +15,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RestaurantsService } from '../restaurants/restaurants.service';
 import { UsersTrainingAccessService } from '../users/users-training-access.service';
 import { UsersService } from '../users/users.service';
+import { EMAIL_VERIFICATION_TOKEN_LIFETIME_HOURS } from './auth.constants';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -38,7 +39,8 @@ export class AuthService {
 
   private readonly resetTokenLifetimeMinutes = 30;
   private readonly resetEmailCooldownMs = 30_000;
-  private readonly emailVerificationTokenLifetimeHours = 24;
+  private readonly emailVerificationTokenLifetimeHours =
+    EMAIL_VERIFICATION_TOKEN_LIFETIME_HOURS;
   private readonly emailVerificationCooldownMs = 30_000;
 
   async login(loginDto: LoginDto) {
@@ -86,7 +88,13 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto) {
-    const existingUser = await this.usersService.findByEmail(registerDto.email);
+    const normalizedEmail = registerDto.email.trim().toLowerCase();
+
+    await this.usersService.deleteExpiredPendingEmailVerificationUsers({
+      email: normalizedEmail,
+    });
+
+    const existingUser = await this.usersService.findByEmail(normalizedEmail);
 
     if (existingUser) {
       throw new ConflictException('EMAIL_ALREADY_REGISTERED');
@@ -98,7 +106,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(registerDto.password, 10);
     const createdUser = await this.usersService.createEmployee({
-      email: registerDto.email,
+      email: normalizedEmail,
       passwordHash,
       name: registerDto.name,
       restaurantId: registerDto.restaurantId,
@@ -202,6 +210,11 @@ export class AuthService {
 
   async resendVerificationEmail(dto: ResendVerificationEmailDto) {
     const normalizedEmail = dto.email.trim().toLowerCase();
+
+    await this.usersService.deleteExpiredPendingEmailVerificationUsers({
+      email: normalizedEmail,
+    });
+
     const user = await this.usersService.findByEmail(normalizedEmail);
 
     if (!user || user.emailVerifiedAt) {

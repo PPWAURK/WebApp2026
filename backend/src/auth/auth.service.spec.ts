@@ -16,6 +16,7 @@ type EmailVerificationTokenUpdateManyArgs = {
 describe('AuthService', () => {
   let service: AuthService;
   let usersService: {
+    deleteExpiredPendingEmailVerificationUsers: jest.Mock;
     findByEmail: jest.Mock;
     findById: jest.Mock;
     createEmployee: jest.Mock;
@@ -57,6 +58,7 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     usersService = {
+      deleteExpiredPendingEmailVerificationUsers: jest.fn(),
       findByEmail: jest.fn(),
       findById: jest.fn(),
       createEmployee: jest.fn(),
@@ -109,6 +111,7 @@ describe('AuthService', () => {
 
   it('creates an unverified account and sends a verification email on register', async () => {
     usersService.findByEmail.mockResolvedValue(null);
+    usersService.deleteExpiredPendingEmailVerificationUsers.mockResolvedValue(0);
     restaurantsService.ensureRestaurantExists.mockResolvedValue(undefined);
     usersService.createEmployee.mockResolvedValue({
       id: 18,
@@ -137,6 +140,11 @@ describe('AuthService', () => {
         emailVerifiedAt: null,
       }),
     );
+    expect(
+      usersService.deleteExpiredPendingEmailVerificationUsers,
+    ).toHaveBeenCalledWith({
+      email: 'alice@example.com',
+    });
     expect(prisma.emailVerificationToken.create).toHaveBeenCalled();
     expect(mailService.sendEmailVerificationEmail).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -150,6 +158,64 @@ describe('AuthService', () => {
       requiresEmailVerification: true,
       userId: 18,
       message: 'EMAIL_VERIFICATION_REQUIRED',
+    });
+  });
+
+  it('normalizes the email before removing expired pending accounts on register', async () => {
+    usersService.deleteExpiredPendingEmailVerificationUsers.mockResolvedValue(0);
+    usersService.findByEmail.mockResolvedValue(null);
+    restaurantsService.ensureRestaurantExists.mockResolvedValue(undefined);
+    usersService.createEmployee.mockResolvedValue({
+      id: 19,
+      email: 'alice@example.com',
+      name: 'Alice',
+    });
+    prisma.emailVerificationToken.create.mockResolvedValue({
+      id: 2,
+    });
+    mailService.sendEmailVerificationEmail.mockResolvedValue(undefined);
+
+    await service.register({
+      email: '  ALICE@example.com ',
+      password: 'Password123',
+      name: 'Alice',
+      restaurantId: 3,
+      requestManagerRole: false,
+      language: 'fr',
+    });
+
+    expect(
+      usersService.deleteExpiredPendingEmailVerificationUsers,
+    ).toHaveBeenCalledWith({
+      email: 'alice@example.com',
+    });
+    expect(usersService.findByEmail).toHaveBeenCalledWith('alice@example.com');
+    expect(usersService.createEmployee).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'alice@example.com',
+      }),
+    );
+  });
+
+  it('cleans up expired pending accounts before resending verification emails', async () => {
+    usersService.deleteExpiredPendingEmailVerificationUsers.mockResolvedValue(1);
+    usersService.findByEmail.mockResolvedValue(null);
+
+    const result = await service.resendVerificationEmail({
+      email: '  ALICE@example.com ',
+      language: 'fr',
+    });
+
+    expect(
+      usersService.deleteExpiredPendingEmailVerificationUsers,
+    ).toHaveBeenCalledWith({
+      email: 'alice@example.com',
+    });
+    expect(usersService.findByEmail).toHaveBeenCalledWith('alice@example.com');
+    expect(mailService.sendEmailVerificationEmail).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      success: true,
+      message: 'EMAIL_VERIFICATION_EMAIL_SENT_IF_EXISTS',
     });
   });
 
