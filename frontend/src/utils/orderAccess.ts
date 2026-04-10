@@ -12,7 +12,7 @@ const ORDER_ACCESS_LEVELS: EmployeeLevel[] = [
 export function canUserAccessOrders(
   user: Pick<User, 'role' | 'employeeLevel'>,
 ): boolean {
-  if (user.role === 'ADMIN') {
+  if (user.role === 'ADMIN' || user.role === 'MANAGER') {
     return true;
   }
 

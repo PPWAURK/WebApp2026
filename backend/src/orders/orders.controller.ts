@@ -40,6 +40,7 @@ export class OrdersController {
     return {
       id: user.id,
       role: user.role,
+      employeeLevel: user.employeeLevel ?? null,
       restaurantId: user.restaurantId ?? null,
     };
   }

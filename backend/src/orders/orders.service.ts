@@ -19,6 +19,7 @@ import type { OrdersRequestContext } from './orders.types';
 type Actor = {
   id: number;
   role: string;
+  employeeLevel: string | null;
   restaurantId: number | null;
 };
 
@@ -1657,9 +1658,28 @@ export class OrdersService {
   }
 
   private ensureCanManageOrders(actor: Actor) {
-    if (actor.role !== 'ADMIN' && actor.role !== 'MANAGER') {
-      throw new ForbiddenException('Only ADMIN and MANAGER can access orders');
+    if (actor.role === 'ADMIN' || actor.role === 'MANAGER') {
+      return;
     }
+
+    const ORDER_ACCESS_LEVELS = [
+      'L5_PAM',
+      'L5_AM',
+      'L6_PM',
+      'L6_MA',
+      'L7_PDI',
+      'L7_D',
+    ];
+
+    if (
+      actor.role === 'EMPLOYEE' &&
+      actor.employeeLevel !== null &&
+      ORDER_ACCESS_LEVELS.includes(actor.employeeLevel)
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException('Insufficient level to access orders');
   }
 
   private parseDeliveryDate(raw: string) {
