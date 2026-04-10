@@ -99,7 +99,9 @@ describe('UsersTrainingAccessService', () => {
   });
 
   it('exposes whether a pending account has verified its email', async () => {
-    usersService.deleteExpiredPendingEmailVerificationUsers.mockResolvedValue(0);
+    usersService.deleteExpiredPendingEmailVerificationUsers.mockResolvedValue(
+      0,
+    );
     prisma.user.findMany.mockResolvedValue([
       {
         id: 3,

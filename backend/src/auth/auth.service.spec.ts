@@ -111,7 +111,9 @@ describe('AuthService', () => {
 
   it('creates an unverified account and sends a verification email on register', async () => {
     usersService.findByEmail.mockResolvedValue(null);
-    usersService.deleteExpiredPendingEmailVerificationUsers.mockResolvedValue(0);
+    usersService.deleteExpiredPendingEmailVerificationUsers.mockResolvedValue(
+      0,
+    );
     restaurantsService.ensureRestaurantExists.mockResolvedValue(undefined);
     usersService.createEmployee.mockResolvedValue({
       id: 18,
@@ -162,7 +164,9 @@ describe('AuthService', () => {
   });
 
   it('normalizes the email before removing expired pending accounts on register', async () => {
-    usersService.deleteExpiredPendingEmailVerificationUsers.mockResolvedValue(0);
+    usersService.deleteExpiredPendingEmailVerificationUsers.mockResolvedValue(
+      0,
+    );
     usersService.findByEmail.mockResolvedValue(null);
     restaurantsService.ensureRestaurantExists.mockResolvedValue(undefined);
     usersService.createEmployee.mockResolvedValue({
@@ -198,7 +202,9 @@ describe('AuthService', () => {
   });
 
   it('cleans up expired pending accounts before resending verification emails', async () => {
-    usersService.deleteExpiredPendingEmailVerificationUsers.mockResolvedValue(1);
+    usersService.deleteExpiredPendingEmailVerificationUsers.mockResolvedValue(
+      1,
+    );
     usersService.findByEmail.mockResolvedValue(null);
 
     const result = await service.resendVerificationEmail({

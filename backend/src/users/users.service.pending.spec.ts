@@ -2,6 +2,14 @@ import { EmployeeLevel, Role } from '@prisma/client';
 import { UsersService } from './users.service';
 
 describe('UsersService pending email verification cleanup', () => {
+  type CreateEmployeeCall = {
+    data: {
+      role: Role;
+      employeeLevel: EmployeeLevel;
+      isOnProbation: boolean;
+    };
+  };
+
   let service: UsersService;
   let prisma: {
     user: {
@@ -57,12 +65,14 @@ describe('UsersService pending email verification cleanup', () => {
       employeeLevel: EmployeeLevel.L7_D,
     });
 
-    expect(prisma.user.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        role: Role.MANAGER,
-        employeeLevel: EmployeeLevel.L7_D,
-        isOnProbation: false,
-      }),
+    const [[createCall]] = prisma.user.create.mock.calls as [
+      [CreateEmployeeCall],
+    ];
+
+    expect(createCall.data).toMatchObject({
+      role: Role.MANAGER,
+      employeeLevel: EmployeeLevel.L7_D,
+      isOnProbation: false,
     });
   });
 });

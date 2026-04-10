@@ -119,8 +119,7 @@ export class UsersService {
     emailVerifiedAt?: Date | null;
     preferredLanguage?: 'fr' | 'zh';
   }) {
-    const employeeLevel =
-      params.employeeLevel ?? EmployeeLevel.L0_PROBATION;
+    const employeeLevel = params.employeeLevel ?? EmployeeLevel.L0_PROBATION;
 
     return this.prisma.user.create({
       data: {
