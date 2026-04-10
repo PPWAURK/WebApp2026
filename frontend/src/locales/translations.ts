@@ -341,6 +341,14 @@ export const translations = {
       accountsTitle: 'Comptes du restaurant',
       accountsSubtitle:
         'Gérez les employés et les managers de ce restaurant.',
+      pendingTitle: 'Demandes d’inscription',
+      pendingSubtitle:
+        'Validez ou refusez les demandes d’inscription des employés rattachés à ce restaurant.',
+      pendingApprovalSectionTitle: 'À valider',
+      pendingEmailSectionTitle: 'En attente de vérification e-mail',
+      pendingEmailHint:
+        'Le membre doit confirmer son adresse e-mail avant de pouvoir être validé.',
+      noPendingAccounts: 'Aucune demande en attente pour ce restaurant.',
       nameLabel: 'Nom du restaurant',
       namePlaceholder: 'Ex. : ZHAO Paris 11',
       addressLabel: 'Adresse',
@@ -1213,6 +1221,12 @@ export const translations = {
       infoSubtitle: '当前版本仅支持修改门店名称和地址。',
       accountsTitle: '门店账号',
       accountsSubtitle: '可管理当前门店下的员工和店长账号。',
+      pendingTitle: '员工注册审核',
+      pendingSubtitle: '审核当前门店下伙伴的注册申请，可通过或拒绝。',
+      pendingApprovalSectionTitle: '待审核',
+      pendingEmailSectionTitle: '待邮箱验证',
+      pendingEmailHint: '伙伴需先完成邮箱验证后才能进入审核。',
+      noPendingAccounts: '当前门店暂无待审核申请。',
       nameLabel: '门店名称',
       namePlaceholder: '例如：ZHAO Paris 11',
       addressLabel: '门店地址',

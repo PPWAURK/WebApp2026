@@ -98,8 +98,14 @@ export class UsersApprovalService {
       );
     }
 
-    if (actor.actorRole === Role.ADMIN && user.role !== Role.MANAGER) {
-      throw new BadRequestException('Admin can only approve MANAGER accounts');
+    if (
+      actor.actorRole === Role.ADMIN &&
+      user.role !== Role.MANAGER &&
+      user.role !== Role.EMPLOYEE
+    ) {
+      throw new BadRequestException(
+        'Admin can only approve MANAGER or EMPLOYEE accounts',
+      );
     }
 
     if (
@@ -191,8 +197,14 @@ export class UsersApprovalService {
       );
     }
 
-    if (actor.actorRole === Role.ADMIN && user.role !== Role.MANAGER) {
-      throw new BadRequestException('Admin can only reject MANAGER accounts');
+    if (
+      actor.actorRole === Role.ADMIN &&
+      user.role !== Role.MANAGER &&
+      user.role !== Role.EMPLOYEE
+    ) {
+      throw new BadRequestException(
+        'Admin can only reject MANAGER or EMPLOYEE accounts',
+      );
     }
 
     if (

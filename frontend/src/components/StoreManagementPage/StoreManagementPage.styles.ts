@@ -152,6 +152,42 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  userIdentity: {
+    flex: 1,
+    gap: 2,
+  },
+  pendingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  pendingCountBadge: {
+    minWidth: 28,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: '#7f1b21',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pendingCountText: {
+    color: '#fff8f6',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+  },
+  pendingSection: {
+    gap: 12,
+  },
+  pendingSectionTitle: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 14,
+  },
+  inlinePrimaryButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
   userName: {
     color: '#6f1d1b',
     fontFamily: 'Manrope_700Bold',
