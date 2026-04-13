@@ -835,15 +835,16 @@ describe('OrdersService', () => {
       ),
     ).resolves.toEqual([]);
 
-    expect(prisma.purchaseOrderItem.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          quantity: {
-            gt: 0,
-          },
-        }),
-      }),
-    );
+    const purchaseOrderItemFindManyCalls = prisma.purchaseOrderItem.findMany
+      .mock.calls as Array<[unknown]>;
+
+    expect(purchaseOrderItemFindManyCalls[0]?.[0]).toMatchObject({
+      where: {
+        quantity: {
+          gt: 0,
+        },
+      },
+    });
   });
 
   it('deletes a purchase return and cleans up attached photo documents', async () => {
