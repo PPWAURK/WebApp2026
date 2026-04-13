@@ -14,6 +14,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UpdateSupplierOrderSettingsDto } from './dto/update-supplier-order-settings.dto';
 import { SuppliersService } from './suppliers.service';
 
 const ORDER_ACCESS_LEVELS = [
@@ -88,6 +89,25 @@ export class SuppliersController {
     }
 
     return this.suppliersService.reorderSuppliers(supplierIds);
+  }
+
+  @ApiOperation({ summary: 'Update supplier order generation settings' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/order-settings')
+  updateSupplierOrderSettings(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) supplierId: number,
+    @Body() body: UpdateSupplierOrderSettingsDto,
+  ) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') {
+      throw new ForbiddenException(
+        'Only ADMIN can update supplier order settings',
+      );
+    }
+
+    return this.suppliersService.updateSupplierOrderSettings(supplierId, body);
   }
 
   @ApiOperation({ summary: 'Delete one supplier' })

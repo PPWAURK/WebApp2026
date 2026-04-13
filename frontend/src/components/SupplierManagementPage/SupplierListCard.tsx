@@ -14,6 +14,7 @@ type SupplierListCardProps = {
   newSupplierName: string;
   isCreatingSupplier: boolean;
   isReorderingSuppliers: boolean;
+  isUpdatingSupplierOrderSettings: boolean;
   deletingSupplierId: number | null;
   canMoveSelectedSupplierUp: boolean;
   canMoveSelectedSupplierDown: boolean;
@@ -21,6 +22,7 @@ type SupplierListCardProps = {
   onSelectSupplier: (supplierId: number) => void;
   onChangeNewSupplierName: (value: string) => void;
   onCreateSupplier: () => void;
+  onToggleSupplierOrderTemplate: (nextValue: boolean) => void;
   onMoveSupplier: (direction: -1 | 1) => void;
   onDeleteSupplier: (supplier: SupplierItem) => void;
 };
@@ -34,6 +36,7 @@ export function SupplierListCard({
   newSupplierName,
   isCreatingSupplier,
   isReorderingSuppliers,
+  isUpdatingSupplierOrderSettings,
   deletingSupplierId,
   canMoveSelectedSupplierUp,
   canMoveSelectedSupplierDown,
@@ -41,9 +44,13 @@ export function SupplierListCard({
   onSelectSupplier,
   onChangeNewSupplierName,
   onCreateSupplier,
+  onToggleSupplierOrderTemplate,
   onMoveSupplier,
   onDeleteSupplier,
 }: SupplierListCardProps) {
+  const orderTemplateEnabled =
+    selectedSupplier?.includeAllProductsInOrder ?? false;
+
   return (
     <View style={styles.surfaceCard}>
       <View style={styles.surfaceHeader}>
@@ -162,6 +169,70 @@ export function SupplierListCard({
       </View>
 
       <View style={styles.surfaceDivider} />
+
+      <View style={styles.settingBlock}>
+        <View style={styles.settingHeader}>
+          <View style={styles.settingHeaderCopy}>
+            <Text style={styles.fieldLabel}>
+              {text.supplierManagement.orderTemplateTitle}
+            </Text>
+            <Text style={styles.helperText}>
+              {text.supplierManagement.orderTemplateHint}
+            </Text>
+          </View>
+          {selectedSupplier ? (
+            <Text style={styles.surfacePill}>
+              {isUpdatingSupplierOrderSettings
+                ? text.supplierManagement.savingSupplierOrderSettings
+                : selectedSupplier.name}
+            </Text>
+          ) : null}
+        </View>
+
+        <Pressable
+          style={[
+            styles.toggleCard,
+            orderTemplateEnabled && styles.toggleCardActive,
+            (!selectedSupplier || isUpdatingSupplierOrderSettings) &&
+              styles.buttonDisabled,
+          ]}
+          disabled={!selectedSupplier || isUpdatingSupplierOrderSettings}
+          onPress={() => {
+            onToggleSupplierOrderTemplate(!orderTemplateEnabled);
+          }}
+          accessibilityRole="switch"
+          accessibilityLabel={
+            text.supplierManagement.includeAllProductsInOrderLabel
+          }
+          accessibilityState={{
+            checked: orderTemplateEnabled,
+            disabled: !selectedSupplier || isUpdatingSupplierOrderSettings,
+          }}
+        >
+          <View style={styles.toggleCopy}>
+            <Text style={styles.toggleTitle}>
+              {text.supplierManagement.includeAllProductsInOrderLabel}
+            </Text>
+            <Text style={styles.toggleDescription}>
+              {text.supplierManagement.includeAllProductsInOrderHint}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.toggleTrack,
+              orderTemplateEnabled && styles.toggleTrackActive,
+            ]}
+          >
+            <View
+              style={[
+                styles.toggleThumb,
+                orderTemplateEnabled && styles.toggleThumbActive,
+              ]}
+            />
+          </View>
+        </Pressable>
+      </View>
 
       <View
         style={[styles.actionRail, !isMediumScreen && styles.actionRailStack]}

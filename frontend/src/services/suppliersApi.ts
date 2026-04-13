@@ -4,11 +4,13 @@ import { throwIfUnauthorized } from './authSession';
 export type SupplierItem = {
   id: number;
   name: string;
+  includeAllProductsInOrder: boolean;
 };
 
 type RawSupplier = {
   id?: unknown;
   name?: unknown;
+  includeAllProductsInOrder?: unknown;
 };
 
 function normalizeSupplier(raw: RawSupplier): SupplierItem | null {
@@ -19,7 +21,11 @@ function normalizeSupplier(raw: RawSupplier): SupplierItem | null {
     return null;
   }
 
-  return { id, name };
+  return {
+    id,
+    name,
+    includeAllProductsInOrder: raw.includeAllProductsInOrder === true,
+  };
 }
 
 function normalizeSupplierList(data: unknown): SupplierItem[] {
@@ -126,4 +132,42 @@ export async function deleteSupplier(token: string, supplierId: number): Promise
     ? data.message.join(', ')
     : data.message ?? 'SUPPLIERS_DELETE_FAILED';
   throw new Error(message);
+}
+
+export async function updateSupplierOrderSettings(
+  token: string,
+  supplierId: number,
+  payload: { includeAllProductsInOrder: boolean },
+): Promise<SupplierItem> {
+  const response = await fetch(
+    `${API_URL}/suppliers/${supplierId}/order-settings`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  throwIfUnauthorized(response);
+
+  const data = (await response.json()) as RawSupplier & {
+    message?: string | string[];
+  };
+
+  if (!response.ok) {
+    const message = Array.isArray(data.message)
+      ? data.message.join(', ')
+      : data.message ?? 'SUPPLIER_ORDER_SETTINGS_UPDATE_FAILED';
+    throw new Error(message);
+  }
+
+  const supplier = normalizeSupplier(data);
+  if (!supplier) {
+    throw new Error('SUPPLIER_ORDER_SETTINGS_UPDATE_FAILED');
+  }
+
+  return supplier;
 }

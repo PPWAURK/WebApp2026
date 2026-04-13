@@ -730,6 +730,16 @@ export const translations = {
       createSupplierError: 'Impossible de créer le fournisseur',
       supplierOrderHint:
         'Sélectionnez un fournisseur puis ajustez son ordre d’affichage.',
+      orderTemplateTitle: 'Gabarit de commande',
+      orderTemplateHint:
+        'Choisissez si les nouvelles commandes de ce fournisseur doivent aussi inclure les produits non commandés avec une quantité à 0.',
+      includeAllProductsInOrderLabel:
+        'Inclure tous les produits dans la commande',
+      includeAllProductsInOrderHint:
+        'Les lignes non sélectionnées restent visibles avec une quantité à 0.',
+      savingSupplierOrderSettings: 'Mise à jour...',
+      updateSupplierOrderSettingsError:
+        'Impossible de mettre à jour les paramètres de commande du fournisseur',
       moveSupplierUpButton: 'Monter',
       moveSupplierDownButton: 'Descendre',
       reorderingSupplier: 'Mise à jour de l’ordre...',
@@ -1579,6 +1589,13 @@ export const translations = {
       creatingSupplier: '创建中...',
       createSupplierError: '创建供应商失败',
       supplierOrderHint: '先选中一个供应商，再调整它的显示顺序。',
+      orderTemplateTitle: '下单模板',
+      orderTemplateHint:
+        '设置该供应商的新订单是否要把未下单商品也带出来，并显示为 0 数量。',
+      includeAllProductsInOrderLabel: '下单时包含全部商品',
+      includeAllProductsInOrderHint: '未选择的商品行仍会显示，数量保持为 0。',
+      savingSupplierOrderSettings: '更新中...',
+      updateSupplierOrderSettingsError: '更新供应商下单设置失败',
       moveSupplierUpButton: '上移',
       moveSupplierDownButton: '下移',
       reorderingSupplier: '顺序调整中...',

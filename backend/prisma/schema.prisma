@@ -115,11 +115,12 @@ model Produit {
 }
 
 model Fournisseur {
-  id              Int              @id @default(autoincrement())
-  nom             String           @db.VarChar(255)
-  sortOrder       Int              @map("sort_order")
-  purchaseOrders  PurchaseOrder[]
-  purchaseReturns PurchaseReturn[]
+  id                        Int              @id @default(autoincrement())
+  nom                       String           @db.VarChar(255)
+  sortOrder                 Int              @map("sort_order")
+  includeAllProductsInOrder Boolean          @default(false) @map("include_all_products_in_order")
+  purchaseOrders            PurchaseOrder[]
+  purchaseReturns           PurchaseReturn[]
 
   @@index([sortOrder])
   @@map("fournisseurs")

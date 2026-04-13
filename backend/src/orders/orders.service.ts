@@ -82,6 +82,33 @@ type ProductSpecificationSelection = {
   unitPrice: number;
 };
 
+type OrderLineProduct = {
+  id: bigint;
+  supplierId: number;
+  categorie: string;
+  nomCn: string;
+  designationFr: string | null;
+  specification: string | null;
+  unite: string | null;
+  prixUHt: Prisma.Decimal | number | null;
+  specification2?: string | null;
+  unite2?: string | null;
+  prixUHt2?: Prisma.Decimal | number | null;
+  specification3?: string | null;
+  unite3?: string | null;
+  prixUHt3?: Prisma.Decimal | number | null;
+};
+
+type PreparedOrderItem = {
+  product: OrderLineProduct;
+  quantity: number;
+  specificationSlot: number | null;
+  specification: string | null;
+  unit: string | null;
+  unitPrice: number;
+  lineTotal: number;
+};
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -175,29 +202,25 @@ export class OrdersService {
       throw new NotFoundException('Restaurant not found');
     }
 
-    const preparedItems = normalizedItems.map((item) => {
+    const selectedPreparedItems = normalizedItems.map((item) => {
       const product = productById.get(item.productId);
       if (!product) {
         throw new BadRequestException('Selected product does not exist');
       }
 
-      const selectedSpecification = this.resolveSelectedSpecification(
+      return this.buildPreparedOrderItem(
         product,
+        item.quantity,
         item.specificationSlot,
       );
-      const unitPrice = selectedSpecification.unitPrice;
-      const lineTotal = unitPrice * item.quantity;
-
-      return {
-        product,
-        quantity: item.quantity,
-        specificationSlot: selectedSpecification.slot,
-        specification: selectedSpecification.specification,
-        unit: selectedSpecification.unit,
-        unitPrice,
-        lineTotal,
-      };
     });
+
+    const preparedItems = supplier.includeAllProductsInOrder
+      ? await this.buildSupplierCatalogOrderItems(
+          supplierId,
+          selectedPreparedItems,
+        )
+      : selectedPreparedItems;
 
     const totalItems = preparedItems.reduce(
       (sum, item) => sum + item.quantity,
@@ -1060,7 +1083,12 @@ export class OrdersService {
         : undefined;
 
     const items = await this.prisma.purchaseOrderItem.findMany({
-      where: whereClause,
+      where: {
+        ...whereClause,
+        quantity: {
+          gt: 0,
+        },
+      },
       include: {
         purchaseOrder: {
           select: {
@@ -1291,6 +1319,9 @@ export class OrdersService {
       this.prisma.purchaseOrderItem.findMany({
         where: {
           purchaseOrder: currentWhere,
+          quantity: {
+            gt: 0,
+          },
         },
         select: {
           productId: true,
@@ -1306,6 +1337,9 @@ export class OrdersService {
       this.prisma.purchaseOrderItem.findMany({
         where: {
           purchaseOrder: previousWhere,
+          quantity: {
+            gt: 0,
+          },
         },
         select: {
           productId: true,
@@ -1656,6 +1690,111 @@ export class OrdersService {
       avgOrderItems:
         ordersCount > 0 ? Number((totalItems / ordersCount).toFixed(1)) : 0,
     };
+  }
+
+  private buildPreparedOrderItem(
+    product: OrderLineProduct,
+    quantity: number,
+    specificationSlot: number | null,
+  ): PreparedOrderItem {
+    const selectedSpecification = this.resolveSelectedSpecification(
+      product,
+      specificationSlot,
+    );
+    const unitPrice = selectedSpecification.unitPrice;
+
+    return {
+      product,
+      quantity,
+      specificationSlot: selectedSpecification.slot,
+      specification: selectedSpecification.specification,
+      unit: selectedSpecification.unit,
+      unitPrice,
+      lineTotal: unitPrice * quantity,
+    };
+  }
+
+  private async buildSupplierCatalogOrderItems(
+    supplierId: number,
+    selectedItems: PreparedOrderItem[],
+  ): Promise<PreparedOrderItem[]> {
+    const supplierProducts = await this.prisma.produit.findMany({
+      where: {
+        supplierId,
+      },
+      orderBy: {
+        id: 'asc',
+      },
+    });
+
+    const selectedItemByKey = new Map<string, PreparedOrderItem>();
+
+    for (const item of selectedItems) {
+      selectedItemByKey.set(
+        this.buildOrderItemSelectionKey(
+          Number(item.product.id),
+          item.specificationSlot,
+        ),
+        item,
+      );
+    }
+
+    const catalogItems: PreparedOrderItem[] = [];
+
+    for (const product of supplierProducts) {
+      const specifications = this.listOrderDocumentSpecifications(product);
+
+      for (const specification of specifications) {
+        const selectionKey = this.buildOrderItemSelectionKey(
+          Number(product.id),
+          specification.slot,
+        );
+        const selectedItem = selectedItemByKey.get(selectionKey);
+
+        if (selectedItem) {
+          catalogItems.push(selectedItem);
+          continue;
+        }
+
+        catalogItems.push({
+          product,
+          quantity: 0,
+          specificationSlot: specification.slot,
+          specification: specification.specification,
+          unit: specification.unit,
+          unitPrice: specification.unitPrice,
+          lineTotal: 0,
+        });
+      }
+    }
+
+    return catalogItems;
+  }
+
+  private listOrderDocumentSpecifications(
+    product: OrderLineProduct,
+  ): ProductSpecificationSelection[] {
+    const selectableSpecifications = this.listSelectableSpecifications(product);
+
+    if (selectableSpecifications.length > 0) {
+      return selectableSpecifications;
+    }
+
+    return [
+      {
+        slot: this.normalizeSpecificationText(product.specification) ? 1 : null,
+        specification: this.normalizeSpecificationText(product.specification),
+        unit: this.normalizeSpecificationText(product.unite),
+        unitPrice: Number(product.prixUHt ?? 0),
+      },
+    ];
+  }
+
+  private buildOrderItemSelectionKey(
+    productId: number,
+    specificationSlot: number | null,
+  ) {
+    return `${productId}:${specificationSlot ?? 'base'}`;
   }
 
   private resolveSelectedSpecification(

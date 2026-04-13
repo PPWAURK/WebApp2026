@@ -265,6 +265,73 @@ export const styles = StyleSheet.create({
     height: 1,
     backgroundColor: SOFT_BORDER,
   },
+  settingBlock: {
+    gap: 12,
+  },
+  settingHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  settingHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  toggleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: PANEL,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  toggleCardActive: {
+    borderColor: BRAND,
+    backgroundColor: BRAND_SOFT,
+  },
+  toggleCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  toggleTitle: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  toggleDescription: {
+    color: MUTED,
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  toggleTrack: {
+    width: 48,
+    height: 28,
+    borderRadius: 999,
+    padding: 3,
+    backgroundColor: '#ead5d6',
+    justifyContent: 'center',
+  },
+  toggleTrackActive: {
+    backgroundColor: BRAND,
+  },
+  toggleThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    backgroundColor: '#ffffff',
+  },
+  toggleThumbActive: {
+    alignSelf: 'flex-end',
+  },
   actionRail: {
     flexDirection: 'row',
     flexWrap: 'wrap',

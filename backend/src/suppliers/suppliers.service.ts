@@ -10,6 +10,7 @@ type SupplierRecord = {
   id: number;
   nom: string;
   sortOrder: number;
+  includeAllProductsInOrder: boolean;
 };
 
 type PrismaExecutor = Prisma.TransactionClient | PrismaService;
@@ -39,16 +40,47 @@ export class SuppliersService {
         data: {
           nom: trimmedName,
           sortOrder: (lastSupplier?.sortOrder ?? 0) + 1,
+          includeAllProductsInOrder: false,
         },
         select: {
           id: true,
           nom: true,
           sortOrder: true,
+          includeAllProductsInOrder: true,
         },
       });
     });
 
     return this.toSupplierItem(created);
+  }
+
+  async updateSupplierOrderSettings(
+    supplierId: number,
+    payload: { includeAllProductsInOrder: boolean },
+  ) {
+    const existing = await this.prisma.fournisseur.findUnique({
+      where: { id: supplierId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Supplier not found');
+    }
+
+    const updated = await this.prisma.fournisseur.update({
+      where: { id: supplierId },
+      data: {
+        includeAllProductsInOrder: payload.includeAllProductsInOrder,
+      },
+      select: {
+        id: true,
+        nom: true,
+        sortOrder: true,
+        includeAllProductsInOrder: true,
+      },
+    });
+
+    return this.toSupplierItem(updated);
   }
 
   async reorderSuppliers(supplierIdsRaw: unknown) {
@@ -170,6 +202,7 @@ export class SuppliersService {
         id: true,
         nom: true,
         sortOrder: true,
+        includeAllProductsInOrder: true,
       },
     });
   }
@@ -194,6 +227,7 @@ export class SuppliersService {
     return {
       id: supplier.id,
       name: supplier.nom,
+      includeAllProductsInOrder: supplier.includeAllProductsInOrder,
     };
   }
 }

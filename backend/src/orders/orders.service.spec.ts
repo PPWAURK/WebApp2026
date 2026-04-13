@@ -12,6 +12,10 @@ describe('OrdersService', () => {
     fournisseur: { findUnique: jest.Mock };
     restaurant: { findUnique: jest.Mock };
     purchaseOrder: { findUnique: jest.Mock; delete: jest.Mock };
+    purchaseOrderItem: {
+      createMany: jest.Mock;
+      findMany: jest.Mock;
+    };
     purchaseReturn: {
       create: jest.Mock;
       findMany: jest.Mock;
@@ -60,6 +64,10 @@ describe('OrdersService', () => {
       purchaseOrder: {
         findUnique: jest.fn(),
         delete: jest.fn(),
+      },
+      purchaseOrderItem: {
+        createMany: jest.fn(),
+        findMany: jest.fn(),
       },
       purchaseReturn: {
         create: jest.fn(),
@@ -279,6 +287,141 @@ describe('OrdersService', () => {
             unit: 'box',
             unitPrice: 20,
             lineTotal: 40,
+          }),
+        ],
+      }),
+    );
+  });
+
+  it('includes zero-quantity supplier catalog rows when supplier requires full order templates', async () => {
+    const tx = {
+      purchaseOrder: {
+        create: jest.fn().mockResolvedValue({
+          id: 53,
+          createdAt: new Date('2026-03-22T10:00:00.000Z'),
+        }),
+        update: jest.fn().mockResolvedValue(undefined),
+      },
+      purchaseOrderItem: {
+        createMany: jest.fn().mockResolvedValue(undefined),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
+    );
+    prisma.produit.findMany
+      .mockResolvedValueOnce([
+        {
+          id: BigInt(2),
+          supplierId: 7,
+          prixUHt: 12.5,
+          prixUHt2: null,
+          prixUHt3: null,
+          nomCn: 'Produit CN',
+          designationFr: 'Produit FR',
+          specification: '1kg',
+          specification2: null,
+          specification3: null,
+          unite: 'piece',
+          unite2: null,
+          unite3: null,
+          categorie: 'fresh',
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: BigInt(2),
+          supplierId: 7,
+          prixUHt: 12.5,
+          prixUHt2: null,
+          prixUHt3: null,
+          nomCn: 'Produit CN',
+          designationFr: 'Produit FR',
+          specification: '1kg',
+          specification2: null,
+          specification3: null,
+          unite: 'piece',
+          unite2: null,
+          unite3: null,
+          categorie: 'fresh',
+        },
+        {
+          id: BigInt(9),
+          supplierId: 7,
+          prixUHt: 8,
+          prixUHt2: null,
+          prixUHt3: null,
+          nomCn: 'Produit bonus',
+          designationFr: 'Produit Bonus',
+          specification: '500g',
+          specification2: null,
+          specification3: null,
+          unite: 'bag',
+          unite2: null,
+          unite3: null,
+          categorie: 'fresh',
+        },
+      ]);
+    prisma.fournisseur.findUnique.mockResolvedValue({
+      id: 7,
+      nom: 'Supplier',
+      includeAllProductsInOrder: true,
+    });
+    prisma.restaurant.findUnique.mockResolvedValue({
+      id: 5,
+      name: 'Restaurant',
+      address: '12 Rue Exemple',
+    });
+
+    await expect(
+      service.createOrder(
+        {
+          id: 8,
+          role: 'MANAGER',
+          restaurantId: 5,
+        },
+        {
+          deliveryDate: '2026-03-22',
+          items: [{ productId: 2, quantity: 3, specificationSlot: 1 }],
+        },
+        {
+          protocol: 'https',
+          get: jest.fn((name: string) =>
+            name === 'host' ? 'api.example.com' : undefined,
+          ),
+        },
+      ),
+    ).resolves.toMatchObject({
+      id: 53,
+      totalItems: 3,
+      totalAmount: 37.5,
+    });
+
+    expect(tx.purchaseOrderItem.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          productId: BigInt(2),
+          quantity: 3,
+          lineTotal: 37.5,
+        }),
+        expect.objectContaining({
+          productId: BigInt(9),
+          quantity: 0,
+          lineTotal: 0,
+        }),
+      ],
+    });
+    expect(ordersDocumentService.generateCommandePdf).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            nameZh: 'Produit CN',
+            quantity: 3,
+          }),
+          expect.objectContaining({
+            nameZh: 'Produit bonus',
+            quantity: 0,
+            lineTotal: 0,
           }),
         ],
       }),
@@ -671,6 +814,36 @@ describe('OrdersService', () => {
     );
 
     expect(prisma.purchaseOrder.delete).not.toHaveBeenCalled();
+  });
+
+  it('filters zero-quantity order rows out of top-product analytics', async () => {
+    prisma.fournisseur.findUnique.mockResolvedValue({
+      id: 7,
+      nom: 'Supplier',
+    });
+    prisma.purchaseOrderItem.findMany.mockResolvedValue([]);
+
+    await expect(
+      service.getTopOrderedProductsBySupplier(
+        {
+          id: 8,
+          role: 'MANAGER',
+          restaurantId: 5,
+        },
+        7,
+        '2026-03',
+      ),
+    ).resolves.toEqual([]);
+
+    expect(prisma.purchaseOrderItem.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          quantity: {
+            gt: 0,
+          },
+        }),
+      }),
+    );
   });
 
   it('deletes a purchase return and cleans up attached photo documents', async () => {

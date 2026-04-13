@@ -14,6 +14,7 @@ import {
   deleteSupplier,
   fetchSuppliers,
   reorderSuppliers,
+  updateSupplierOrderSettings,
   type SupplierItem,
 } from '../../services/suppliersApi';
 
@@ -43,6 +44,8 @@ export function useSupplierManagement({
   const [isCreatingSupplier, setIsCreatingSupplier] = useState(false);
   const [isReorderingSuppliers, setIsReorderingSuppliers] = useState(false);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [isUpdatingSupplierOrderSettings, setIsUpdatingSupplierOrderSettings] =
+    useState(false);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [deletingProductId, setDeletingProductId] = useState<number | null>(
@@ -591,6 +594,53 @@ export function useSupplierManagement({
     }
   }
 
+  async function handleToggleSupplierOrderTemplate(
+    includeAllProductsInOrder: boolean,
+  ) {
+    if (!selectedSupplier) {
+      return;
+    }
+
+    const previousSupplier = selectedSupplier;
+    setIsUpdatingSupplierOrderSettings(true);
+    setError(null);
+    setSuppliers((current) =>
+      current.map((supplier) =>
+        supplier.id === previousSupplier.id
+          ? { ...supplier, includeAllProductsInOrder }
+          : supplier,
+      ),
+    );
+
+    try {
+      const updated = await updateSupplierOrderSettings(
+        accessToken,
+        previousSupplier.id,
+        {
+          includeAllProductsInOrder,
+        },
+      );
+      setSuppliers((current) =>
+        current.map((supplier) =>
+          supplier.id === updated.id ? updated : supplier,
+        ),
+      );
+    } catch (updateError) {
+      setSuppliers((current) =>
+        current.map((supplier) =>
+          supplier.id === previousSupplier.id ? previousSupplier : supplier,
+        ),
+      );
+      if (updateError instanceof Error && updateError.message.trim()) {
+        setError(updateError.message);
+      } else {
+        setError(text.supplierManagement.updateSupplierOrderSettingsError);
+      }
+    } finally {
+      setIsUpdatingSupplierOrderSettings(false);
+    }
+  }
+
   function closeDeleteProductDialog(value: boolean) {
     if (confirmDeleteResolverRef.current) {
       confirmDeleteResolverRef.current(value);
@@ -645,6 +695,7 @@ export function useSupplierManagement({
     isCreatingSupplier,
     isReorderingSuppliers,
     isSavingProduct,
+    isUpdatingSupplierOrderSettings,
     isCreatingProduct,
     isUploadingImage,
     deletingProductId,
@@ -721,6 +772,7 @@ export function useSupplierManagement({
     selectProductForEditing,
     handleCreateSupplier,
     handleMoveSelectedSupplier,
+    handleToggleSupplierOrderTemplate,
     handleCreateProduct,
     handleSaveProduct,
     handleUploadProductImage,
