@@ -398,6 +398,30 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
   },
+  specificationList: {
+    gap: 10,
+  },
+  specificationCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: '#fff8f5',
+    padding: 12,
+    gap: 10,
+  },
+  specificationCardActive: {
+    borderColor: BRAND,
+    backgroundColor: BRAND_SOFT,
+  },
+  specificationCopy: {
+    gap: 4,
+  },
+  specificationValue: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 14,
+    lineHeight: 19,
+  },
   quantityBar: {
     flexDirection: 'row',
     alignItems: 'center',

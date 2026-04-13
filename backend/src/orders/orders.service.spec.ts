@@ -191,6 +191,154 @@ describe('OrdersService', () => {
     );
   });
 
+  it('uses the selected specification slot when creating an order', async () => {
+    const tx = {
+      purchaseOrder: {
+        create: jest.fn().mockResolvedValue({
+          id: 52,
+          createdAt: new Date('2026-03-21T10:00:00.000Z'),
+        }),
+        update: jest.fn().mockResolvedValue(undefined),
+      },
+      purchaseOrderItem: {
+        createMany: jest.fn().mockResolvedValue(undefined),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
+    );
+    prisma.produit.findMany.mockResolvedValue([
+      {
+        id: BigInt(2),
+        supplierId: 7,
+        prixUHt: 12.5,
+        prixUHt2: 20,
+        prixUHt3: null,
+        nomCn: 'Produit CN',
+        designationFr: 'Produit FR',
+        specification: '1kg',
+        specification2: '2kg',
+        specification3: null,
+        unite: 'piece',
+        unite2: 'box',
+        unite3: null,
+        categorie: 'fresh',
+      },
+    ]);
+    prisma.fournisseur.findUnique.mockResolvedValue({
+      id: 7,
+      nom: 'Supplier',
+    });
+    prisma.restaurant.findUnique.mockResolvedValue({
+      id: 5,
+      name: 'Restaurant',
+      address: '12 Rue Exemple',
+    });
+
+    await expect(
+      service.createOrder(
+        {
+          id: 8,
+          role: 'MANAGER',
+          restaurantId: 5,
+        },
+        {
+          deliveryDate: '2026-03-21',
+          items: [{ productId: 2, quantity: 2, specificationSlot: 2 }],
+        },
+        {
+          protocol: 'https',
+          get: jest.fn((name: string) =>
+            name === 'host' ? 'api.example.com' : undefined,
+          ),
+        },
+      ),
+    ).resolves.toMatchObject({
+      id: 52,
+      totalItems: 2,
+      totalAmount: 40,
+    });
+
+    expect(tx.purchaseOrderItem.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          productId: BigInt(2),
+          specificationSlot: 2,
+          specification: '2kg',
+          unit: 'box',
+          unitPriceHt: 20,
+          lineTotal: 40,
+        }),
+      ],
+    });
+    expect(ordersDocumentService.generateCommandePdf).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            specification: '2kg',
+            unit: 'box',
+            unitPrice: 20,
+            lineTotal: 40,
+          }),
+        ],
+      }),
+    );
+  });
+
+  it('rejects order creation when a multi-spec product is missing specificationSlot', async () => {
+    prisma.produit.findMany.mockResolvedValue([
+      {
+        id: BigInt(2),
+        supplierId: 7,
+        prixUHt: 12.5,
+        prixUHt2: 20,
+        prixUHt3: null,
+        nomCn: 'Produit CN',
+        designationFr: 'Produit FR',
+        specification: '1kg',
+        specification2: '2kg',
+        specification3: null,
+        unite: 'piece',
+        unite2: 'box',
+        unite3: null,
+        categorie: 'fresh',
+      },
+    ]);
+    prisma.fournisseur.findUnique.mockResolvedValue({
+      id: 7,
+      nom: 'Supplier',
+    });
+    prisma.restaurant.findUnique.mockResolvedValue({
+      id: 5,
+      name: 'Restaurant',
+      address: '12 Rue Exemple',
+    });
+
+    await expect(
+      service.createOrder(
+        {
+          id: 8,
+          role: 'MANAGER',
+          restaurantId: 5,
+        },
+        {
+          deliveryDate: '2026-03-21',
+          items: [{ productId: 2, quantity: 2 }],
+        },
+        {
+          protocol: 'https',
+          get: jest.fn(),
+        },
+      ),
+    ).rejects.toThrow(
+      new BadRequestException(
+        'Item specificationSlot is required for products with multiple specifications',
+      ),
+    );
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it('rejects actors without restaurant assignment before opening a transaction', async () => {
     await expect(
       service.createOrder(

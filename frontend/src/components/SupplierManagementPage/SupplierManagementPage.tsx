@@ -128,6 +128,12 @@ export function SupplierManagementPage({
               newProductSpecification={state.newProductSpecification}
               newProductUnit={state.newProductUnit}
               newProductPriceHt={state.newProductPriceHt}
+              newProductSpecification2={state.newProductSpecification2}
+              newProductUnit2={state.newProductUnit2}
+              newProductPriceHt2={state.newProductPriceHt2}
+              newProductSpecification3={state.newProductSpecification3}
+              newProductUnit3={state.newProductUnit3}
+              newProductPriceHt3={state.newProductPriceHt3}
               onChangeReference={state.setNewProductReference}
               onChangeCategory={state.setNewProductCategory}
               onChangeNameZh={state.setNewProductNameZh}
@@ -135,6 +141,12 @@ export function SupplierManagementPage({
               onChangeSpecification={state.setNewProductSpecification}
               onChangeUnit={state.setNewProductUnit}
               onChangePriceHt={state.setNewProductPriceHt}
+              onChangeSpecification2={state.setNewProductSpecification2}
+              onChangeUnit2={state.setNewProductUnit2}
+              onChangePriceHt2={state.setNewProductPriceHt2}
+              onChangeSpecification3={state.setNewProductSpecification3}
+              onChangeUnit3={state.setNewProductUnit3}
+              onChangePriceHt3={state.setNewProductPriceHt3}
               onCreateProduct={() => {
                 void state.handleCreateProduct();
               }}
@@ -184,13 +196,27 @@ export function SupplierManagementPage({
         editNameZh={state.editNameZh}
         editNameFr={state.editNameFr}
         editSpecification={state.editSpecification}
+        editUnit={state.editUnit}
         editPriceHt={state.editPriceHt}
+        editSpecification2={state.editSpecification2}
+        editUnit2={state.editUnit2}
+        editPriceHt2={state.editPriceHt2}
+        editSpecification3={state.editSpecification3}
+        editUnit3={state.editUnit3}
+        editPriceHt3={state.editPriceHt3}
         editImage={state.editImage}
         onChangeCategory={state.setEditCategory}
         onChangeNameZh={state.setEditNameZh}
         onChangeNameFr={state.setEditNameFr}
         onChangeSpecification={state.setEditSpecification}
+        onChangeUnit={state.setEditUnit}
         onChangePriceHt={state.setEditPriceHt}
+        onChangeSpecification2={state.setEditSpecification2}
+        onChangeUnit2={state.setEditUnit2}
+        onChangePriceHt2={state.setEditPriceHt2}
+        onChangeSpecification3={state.setEditSpecification3}
+        onChangeUnit3={state.setEditUnit3}
+        onChangePriceHt3={state.setEditPriceHt3}
         onClose={() => state.setIsEditorOpen(false)}
         onSave={() => {
           void state.handleSaveProduct();

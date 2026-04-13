@@ -10,7 +10,11 @@ import {
   View,
 } from 'react-native';
 import type { AppText } from '../../locales/translations';
-import { fetchProducts, type ProductItem } from '../../services/productsApi';
+import {
+  fetchProducts,
+  type ProductItem,
+  type ProductSpecificationItem,
+} from '../../services/productsApi';
 import { fetchSuppliers, type SupplierItem } from '../../services/suppliersApi';
 import { styles } from './OrdersPage.styles';
 import type { Language } from '../../types/language';
@@ -20,11 +24,11 @@ type OrdersPageProps = {
   text: AppText;
   accessToken: string;
   language: Language;
-  quantities: Record<number, number>;
+  quantities: Record<string, number>;
   selectedSupplierId: number | 'ALL';
   selectedCategory: string;
   productSearch: string;
-  onQuantitiesChange: (next: Record<number, number>) => void;
+  onQuantitiesChange: (next: Record<string, number>) => void;
   onSelectedSupplierIdChange: (next: number | 'ALL') => void;
   onSelectedCategoryChange: (next: string) => void;
   onProductSearchChange: (next: string) => void;
@@ -35,21 +39,32 @@ function formatAmount(value: number) {
   return value.toFixed(2);
 }
 
+function buildOrderItemKey(productId: number, specificationSlot: number | null) {
+  return `${productId}:${specificationSlot ?? 'base'}`;
+}
+
+function formatSpecificationLabel(
+  text: AppText,
+  specification: ProductSpecificationItem,
+) {
+  return specification.specification ?? text.orders.defaultSpecificationLabel;
+}
+
 type ProductCardProps = {
   isSmallScreen: boolean;
   language: Language;
   product: ProductItem;
-  quantity: number;
+  quantities: Record<string, number>;
   text: AppText;
   useSingleColumnGrid: boolean;
-  onChangeQuantity: (productId: number, delta: number) => void;
+  onChangeQuantity: (orderItemKey: string, delta: number) => void;
 };
 
 const ProductCard = memo(function ProductCard({
   isSmallScreen,
   language,
   product,
-  quantity,
+  quantities,
   text,
   useSingleColumnGrid,
   onChangeQuantity,
@@ -112,58 +127,84 @@ const ProductCard = memo(function ProductCard({
           ]}
         >
           <Text style={styles.productTitle}>{productName}</Text>
-          {product.specification ? (
-            <Text style={styles.docItemMeta}>
-              {text.orders.specificationLabel}: {product.specification}
-            </Text>
-          ) : null}
-          {product.unit ? (
-            <Text style={styles.docItemMeta}>
-              {text.orders.unitLabel}: {product.unit}
-            </Text>
-          ) : null}
-          <Text style={styles.priceText}>
-            {text.orders.priceLabel}:{' '}
-            {product.priceHt === null
-              ? text.orders.priceNotAvailable
-              : formatAmount(product.priceHt)}
+          <Text style={styles.docItemMeta}>
+            {text.orders.specificationCountLabel}: {product.specifications.length}
           </Text>
+          {product.requiresSpecificationSelection ? (
+            <Text style={styles.docItemMeta}>
+              {text.orders.multiSpecificationHint}
+            </Text>
+          ) : null}
         </View>
       </View>
 
-      <View style={styles.quantityBar}>
-        <Pressable
-          style={styles.quantityButton}
-          onPress={() => onChangeQuantity(product.id, -1)}
-          accessibilityRole="button"
-          accessibilityLabel={
-            language === 'zh'
-              ? `减少${productName}数量`
-              : `Réduire la quantité de ${productName}`
-          }
-        >
-          <Text style={styles.quantityButtonText}>-</Text>
-        </Pressable>
+      <View style={styles.specificationList}>
+        {product.specifications.map((specification) => {
+          const orderItemKey = buildOrderItemKey(product.id, specification.slot);
+          const quantity = quantities[orderItemKey] ?? 0;
+          const specificationLabel = formatSpecificationLabel(text, specification);
 
-        <View style={styles.quantityValuePill}>
-          <Text style={styles.quantityValueLabel}>
-            {text.orders.quantityLabel}
-          </Text>
-          <Text style={styles.quantityValueText}>{quantity}</Text>
-        </View>
+          return (
+            <View
+              key={`${product.id}-${specification.slot ?? 'base'}`}
+              style={[
+                styles.specificationCard,
+                quantity > 0 && styles.specificationCardActive,
+              ]}
+            >
+              <View style={styles.specificationCopy}>
+                <Text style={styles.specificationValue}>
+                  {specificationLabel}
+                </Text>
+                <Text style={styles.docItemMeta}>
+                  {text.orders.unitLabel}:{' '}
+                  {specification.unit ?? text.orders.unitNotAvailable}
+                </Text>
+                <Text style={styles.priceText}>
+                  {text.orders.priceLabel}:{' '}
+                  {specification.priceHt === null
+                    ? text.orders.priceNotAvailable
+                    : formatAmount(specification.priceHt)}
+                </Text>
+              </View>
 
-        <Pressable
-          style={styles.quantityButton}
-          onPress={() => onChangeQuantity(product.id, 1)}
-          accessibilityRole="button"
-          accessibilityLabel={
-            language === 'zh'
-              ? `增加${productName}数量`
-              : `Augmenter la quantité de ${productName}`
-          }
-        >
-          <Text style={styles.quantityButtonText}>+</Text>
-        </Pressable>
+              <View style={styles.quantityBar}>
+                <Pressable
+                  style={styles.quantityButton}
+                  onPress={() => onChangeQuantity(orderItemKey, -1)}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    language === 'zh'
+                      ? `减少${productName}${specificationLabel}数量`
+                      : `Réduire la quantité de ${productName} ${specificationLabel}`
+                  }
+                >
+                  <Text style={styles.quantityButtonText}>-</Text>
+                </Pressable>
+
+                <View style={styles.quantityValuePill}>
+                  <Text style={styles.quantityValueLabel}>
+                    {text.orders.quantityLabel}
+                  </Text>
+                  <Text style={styles.quantityValueText}>{quantity}</Text>
+                </View>
+
+                <Pressable
+                  style={styles.quantityButton}
+                  onPress={() => onChangeQuantity(orderItemKey, 1)}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    language === 'zh'
+                      ? `增加${productName}${specificationLabel}数量`
+                      : `Augmenter la quantité de ${productName} ${specificationLabel}`
+                  }
+                >
+                  <Text style={styles.quantityButtonText}>+</Text>
+                </Pressable>
+              </View>
+            </View>
+          );
+        })}
       </View>
     </View>
   );
@@ -246,7 +287,13 @@ export function OrdersPage({
     }
 
     const supplierWithSelectedItems = products.find(
-      (product) => (quantities[product.id] ?? 0) > 0,
+      (product) =>
+        product.specifications.some(
+          (specification) =>
+            (quantities[
+              buildOrderItemKey(product.id, specification.slot)
+            ] ?? 0) > 0,
+        ),
     )?.supplierId;
 
     onSelectedSupplierIdChange(supplierWithSelectedItems ?? suppliers[0].id);
@@ -261,12 +308,12 @@ export function OrdersPage({
   ]);
 
   const changeQuantity = useCallback(
-    (productId: number, delta: number) => {
-      const next = (quantities[productId] ?? 0) + delta;
+    (orderItemKey: string, delta: number) => {
+      const next = (quantities[orderItemKey] ?? 0) + delta;
       const clamped = Math.max(0, next);
       onQuantitiesChange({
         ...quantities,
-        [productId]: clamped,
+        [orderItemKey]: clamped,
       });
     },
     [onQuantitiesChange, quantities],
@@ -303,40 +350,49 @@ export function OrdersPage({
   }, [onSelectedCategoryChange, selectedCategory, supplierProducts]);
 
   const summary = useMemo(() => {
-    return supplierProducts.reduce(
-      (accumulator, product) => {
-        const qty = quantities[product.id] ?? 0;
-        accumulator.totalItems += qty;
-        accumulator.totalAmount += qty * (product.priceHt ?? 0);
-        return accumulator;
-      },
-      { totalItems: 0, totalAmount: 0 },
-    );
+    return supplierProducts.reduce((accumulator, product) => {
+      for (const specification of product.specifications) {
+        const quantity =
+          quantities[buildOrderItemKey(product.id, specification.slot)] ?? 0;
+
+        accumulator.totalItems += quantity;
+        accumulator.totalAmount += quantity * (specification.priceHt ?? 0);
+      }
+
+      return accumulator;
+    }, { totalItems: 0, totalAmount: 0 });
   }, [quantities, supplierProducts]);
 
   const selectedItems = useMemo(() => {
-    return supplierProducts
-      .map((product) => {
-        const quantity = quantities[product.id] ?? 0;
-        if (quantity <= 0) {
-          return null;
-        }
+    return supplierProducts.flatMap((product) =>
+      product.specifications
+        .map((specification) => {
+          const orderItemKey = buildOrderItemKey(product.id, specification.slot);
+          const quantity = quantities[orderItemKey] ?? 0;
 
-        const price = product.priceHt ?? 0;
-        return {
-          productId: product.id,
-          supplierId: product.supplierId,
-          category: product.category,
-          nameZh: product.nameZh,
-          nameFr: product.nameFr,
-          unit: product.unit,
-          priceHt: product.priceHt,
-          image: product.image,
-          quantity,
-          lineTotal: quantity * price,
-        };
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null);
+          if (quantity <= 0) {
+            return null;
+          }
+
+          const price = specification.priceHt ?? 0;
+          return {
+            orderItemKey,
+            productId: product.id,
+            specificationSlot: specification.slot,
+            supplierId: product.supplierId,
+            category: product.category,
+            nameZh: product.nameZh,
+            nameFr: product.nameFr,
+            specification: specification.specification,
+            unit: specification.unit,
+            priceHt: specification.priceHt,
+            image: product.image,
+            quantity,
+            lineTotal: quantity * price,
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null),
+    );
   }, [quantities, supplierProducts]);
 
   const categories = useMemo(() => {
@@ -369,13 +425,17 @@ export function OrdersPage({
       const nameFr = (product.nameFr ?? '').toLowerCase();
       const nameZh = (product.nameZh ?? '').toLowerCase();
       const reference = (product.reference ?? '').toLowerCase();
-      const specification = (product.specification ?? '').toLowerCase();
+      const specifications = product.specifications.map((item) =>
+        (item.specification ?? '').toLowerCase(),
+      );
 
       return (
         nameFr.includes(normalizedQuery) ||
         nameZh.includes(normalizedQuery) ||
         reference.includes(normalizedQuery) ||
-        specification.includes(normalizedQuery)
+        specifications.some((specification) =>
+          specification.includes(normalizedQuery),
+        )
       );
     });
   }, [productSearch, selectedCategory, supplierProducts]);
@@ -696,13 +756,11 @@ export function OrdersPage({
 
               <View style={[styles.productGrid, styles.listBlock]}>
                 {filteredProducts.map((product) => {
-                  const qty = quantities[product.id] ?? 0;
-
                   return (
                     <ProductCard
                       key={product.id}
                       product={product}
-                      quantity={qty}
+                      quantities={quantities}
                       language={language}
                       text={text}
                       isSmallScreen={isSmallScreen}

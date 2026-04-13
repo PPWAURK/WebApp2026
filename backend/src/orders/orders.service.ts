@@ -25,7 +25,11 @@ type Actor = {
 
 type CreateOrderPayload = {
   deliveryDate: string;
-  items: Array<{ productId: number; quantity: number }>;
+  items: Array<{
+    productId: number;
+    quantity: number;
+    specificationSlot?: number;
+  }>;
 };
 
 type CreateOrderReturnPayload = {
@@ -71,6 +75,13 @@ type HistoryAnalyticsTotals = {
   avgOrderItems: number;
 };
 
+type ProductSpecificationSelection = {
+  slot: number | null;
+  specification: string | null;
+  unit: string | null;
+  unitPrice: number;
+};
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -99,12 +110,24 @@ export class OrdersService {
     const normalizedItems = payload.items.map((item) => ({
       productId: item.productId,
       quantity: item.quantity,
+      specificationSlot: item.specificationSlot ?? null,
     }));
 
     for (const item of normalizedItems) {
       if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
         throw new BadRequestException(
           'Item quantity must be a positive integer',
+        );
+      }
+
+      if (
+        item.specificationSlot !== null &&
+        (!Number.isInteger(item.specificationSlot) ||
+          item.specificationSlot < 1 ||
+          item.specificationSlot > 3)
+      ) {
+        throw new BadRequestException(
+          'Item specificationSlot must be an integer between 1 and 3',
         );
       }
     }
@@ -158,12 +181,19 @@ export class OrdersService {
         throw new BadRequestException('Selected product does not exist');
       }
 
-      const unitPrice = Number(product.prixUHt ?? 0);
+      const selectedSpecification = this.resolveSelectedSpecification(
+        product,
+        item.specificationSlot,
+      );
+      const unitPrice = selectedSpecification.unitPrice;
       const lineTotal = unitPrice * item.quantity;
 
       return {
         product,
         quantity: item.quantity,
+        specificationSlot: selectedSpecification.slot,
+        specification: selectedSpecification.specification,
+        unit: selectedSpecification.unit,
         unitPrice,
         lineTotal,
       };
@@ -190,11 +220,11 @@ export class OrdersService {
       const zhRaw = this.ordersDocumentService.recoverUtf8(item.product.nomCn);
       const nameZh = this.ordersDocumentService.sanitizeLabel(zhRaw);
       const specification = this.ordersDocumentService.sanitizeLabel(
-        this.ordersDocumentService.recoverUtf8(item.product.specification),
+        this.ordersDocumentService.recoverUtf8(item.specification),
       );
 
       const unit = this.ordersDocumentService.sanitizeLabel(
-        item.product.unite?.trim() || '-',
+        item.unit?.trim() || '-',
       );
 
       return {
@@ -245,12 +275,14 @@ export class OrdersService {
             purchaseOrderId: draftOrder.id,
             productId: item.product.id,
             supplierId,
+            specificationSlot: item.specificationSlot,
             quantity: item.quantity,
             unitPriceHt: item.unitPrice,
             lineTotal: item.lineTotal,
             nameZh: item.product.nomCn,
             nameFr: item.product.designationFr,
-            unit: item.product.unite,
+            specification: item.specification,
+            unit: item.unit,
             category: item.product.categorie,
           })),
         });
@@ -381,9 +413,11 @@ export class OrdersService {
             id: 'asc',
           },
           select: {
+            specificationSlot: true,
             quantity: true,
             nameZh: true,
             nameFr: true,
+            specification: true,
             unit: true,
             photos: {
               orderBy: {
@@ -423,12 +457,16 @@ export class OrdersService {
       totalItems: entry.totalItems,
       createdAt: entry.createdAt,
       items: entry.items.map((item) => ({
+        specificationSlot: item.specificationSlot,
         quantity: item.quantity,
         nameZh: this.ordersDocumentService.sanitizeLabel(
           this.ordersDocumentService.recoverUtf8(item.nameZh),
         ),
         nameFr: this.ordersDocumentService.sanitizeLabel(
           this.ordersDocumentService.recoverUtf8(item.nameFr),
+        ),
+        specification: this.ordersDocumentService.sanitizeLabel(
+          this.ordersDocumentService.recoverUtf8(item.specification),
         ),
         unit: this.ordersDocumentService.sanitizeLabel(item.unit?.trim()),
         photos: item.photos.map((photo) => ({
@@ -465,9 +503,11 @@ export class OrdersService {
           select: {
             id: true,
             productId: true,
+            specificationSlot: true,
             quantity: true,
             nameZh: true,
             nameFr: true,
+            specification: true,
             unit: true,
             category: true,
           },
@@ -510,12 +550,16 @@ export class OrdersService {
         return {
           purchaseOrderItemId: item.id,
           productId: Number(item.productId),
+          specificationSlot: item.specificationSlot,
           category: item.category,
           nameZh: this.ordersDocumentService.sanitizeLabel(
             this.ordersDocumentService.recoverUtf8(item.nameZh),
           ),
           nameFr: this.ordersDocumentService.sanitizeLabel(
             this.ordersDocumentService.recoverUtf8(item.nameFr),
+          ),
+          specification: this.ordersDocumentService.sanitizeLabel(
+            this.ordersDocumentService.recoverUtf8(item.specification),
           ),
           unit: this.ordersDocumentService.sanitizeLabel(item.unit?.trim()),
           orderedQuantity: item.quantity,
@@ -554,9 +598,11 @@ export class OrdersService {
           select: {
             id: true,
             productId: true,
+            specificationSlot: true,
             quantity: true,
             nameZh: true,
             nameFr: true,
+            specification: true,
             unit: true,
             category: true,
           },
@@ -731,9 +777,11 @@ export class OrdersService {
             purchaseReturnId: created.id,
             purchaseOrderItemId: item.orderItem.id,
             productId: item.orderItem.productId,
+            specificationSlot: item.orderItem.specificationSlot,
             quantity: item.quantity,
             nameZh: item.orderItem.nameZh,
             nameFr: item.orderItem.nameFr,
+            specification: item.orderItem.specification,
             unit: item.orderItem.unit,
             category: item.orderItem.category,
           },
@@ -872,6 +920,8 @@ export class OrdersService {
           select: {
             nameZh: true,
             nameFr: true,
+            specificationSlot: true,
+            specification: true,
             unit: true,
             quantity: true,
             unitPriceHt: true,
@@ -923,11 +973,13 @@ export class OrdersService {
           ),
         );
         const specification = this.ordersDocumentService.sanitizeLabel(
-          this.ordersDocumentService.recoverUtf8(item.product.specification),
+          this.ordersDocumentService.recoverUtf8(
+            item.specification ?? item.product.specification,
+          ),
         );
 
         const unitCandidate =
-          (item.product.unite ?? '').trim() || (item.unit ?? '').trim() || '-';
+          (item.unit ?? '').trim() || (item.product.unite ?? '').trim() || '-';
         const unit = this.ordersDocumentService.sanitizeLabel(unitCandidate);
 
         return {
@@ -1604,6 +1656,96 @@ export class OrdersService {
       avgOrderItems:
         ordersCount > 0 ? Number((totalItems / ordersCount).toFixed(1)) : 0,
     };
+  }
+
+  private resolveSelectedSpecification(
+    product: {
+      specification: string | null;
+      unite: string | null;
+      prixUHt: Prisma.Decimal | number | null;
+      specification2?: string | null;
+      unite2?: string | null;
+      prixUHt2?: Prisma.Decimal | number | null;
+      specification3?: string | null;
+      unite3?: string | null;
+      prixUHt3?: Prisma.Decimal | number | null;
+    },
+    specificationSlot: number | null,
+  ): ProductSpecificationSelection {
+    const selectableSpecifications = this.listSelectableSpecifications(product);
+    const hasAdditionalSpecificationChoices = selectableSpecifications.some(
+      (entry) => entry.slot !== 1,
+    );
+
+    if (!hasAdditionalSpecificationChoices) {
+      if (specificationSlot !== null && specificationSlot !== 1) {
+        throw new BadRequestException(
+          'Selected product specification does not exist',
+        );
+      }
+
+      return {
+        slot: this.normalizeSpecificationText(product.specification) ? 1 : null,
+        specification: this.normalizeSpecificationText(product.specification),
+        unit: this.normalizeSpecificationText(product.unite),
+        unitPrice: Number(product.prixUHt ?? 0),
+      };
+    }
+
+    if (specificationSlot === null) {
+      throw new BadRequestException(
+        'Item specificationSlot is required for products with multiple specifications',
+      );
+    }
+
+    const selected = selectableSpecifications.find(
+      (entry) => entry.slot === specificationSlot,
+    );
+    if (!selected) {
+      throw new BadRequestException(
+        'Selected product specification does not exist',
+      );
+    }
+
+    return selected;
+  }
+
+  private listSelectableSpecifications(product: {
+    specification: string | null;
+    unite: string | null;
+    prixUHt: Prisma.Decimal | number | null;
+    specification2?: string | null;
+    unite2?: string | null;
+    prixUHt2?: Prisma.Decimal | number | null;
+    specification3?: string | null;
+    unite3?: string | null;
+    prixUHt3?: Prisma.Decimal | number | null;
+  }): ProductSpecificationSelection[] {
+    return [
+      {
+        slot: 1,
+        specification: this.normalizeSpecificationText(product.specification),
+        unit: this.normalizeSpecificationText(product.unite),
+        unitPrice: Number(product.prixUHt ?? 0),
+      },
+      {
+        slot: 2,
+        specification: this.normalizeSpecificationText(product.specification2),
+        unit: this.normalizeSpecificationText(product.unite2),
+        unitPrice: Number(product.prixUHt2 ?? 0),
+      },
+      {
+        slot: 3,
+        specification: this.normalizeSpecificationText(product.specification3),
+        unit: this.normalizeSpecificationText(product.unite3),
+        unitPrice: Number(product.prixUHt3 ?? 0),
+      },
+    ].filter((entry) => entry.specification !== null);
+  }
+
+  private normalizeSpecificationText(value: string | null | undefined) {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : null;
   }
 
   private sumReturnedQuantities(

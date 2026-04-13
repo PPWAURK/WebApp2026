@@ -17,6 +17,12 @@ type ProductCreateCardProps = {
   newProductSpecification: string;
   newProductUnit: string;
   newProductPriceHt: string;
+  newProductSpecification2: string;
+  newProductUnit2: string;
+  newProductPriceHt2: string;
+  newProductSpecification3: string;
+  newProductUnit3: string;
+  newProductPriceHt3: string;
   onChangeReference: (value: string) => void;
   onChangeCategory: (value: string) => void;
   onChangeNameZh: (value: string) => void;
@@ -24,6 +30,12 @@ type ProductCreateCardProps = {
   onChangeSpecification: (value: string) => void;
   onChangeUnit: (value: string) => void;
   onChangePriceHt: (value: string) => void;
+  onChangeSpecification2: (value: string) => void;
+  onChangeUnit2: (value: string) => void;
+  onChangePriceHt2: (value: string) => void;
+  onChangeSpecification3: (value: string) => void;
+  onChangeUnit3: (value: string) => void;
+  onChangePriceHt3: (value: string) => void;
   onCreateProduct: () => void;
 };
 
@@ -40,6 +52,12 @@ export function ProductCreateCard({
   newProductSpecification,
   newProductUnit,
   newProductPriceHt,
+  newProductSpecification2,
+  newProductUnit2,
+  newProductPriceHt2,
+  newProductSpecification3,
+  newProductUnit3,
+  newProductPriceHt3,
   onChangeReference,
   onChangeCategory,
   onChangeNameZh,
@@ -47,6 +65,12 @@ export function ProductCreateCard({
   onChangeSpecification,
   onChangeUnit,
   onChangePriceHt,
+  onChangeSpecification2,
+  onChangeUnit2,
+  onChangePriceHt2,
+  onChangeSpecification3,
+  onChangeUnit3,
+  onChangePriceHt3,
   onCreateProduct,
 }: ProductCreateCardProps) {
   return (
@@ -124,6 +148,46 @@ export function ProductCreateCard({
           label={text.supplierManagement.fields.priceHt}
           value={newProductPriceHt}
           onChangeText={onChangePriceHt}
+          isMediumScreen={isMediumScreen}
+          keyboardType="decimal-pad"
+        />
+        <FieldInput
+          label={`${text.supplierManagement.fields.specification} 2`}
+          value={newProductSpecification2}
+          onChangeText={onChangeSpecification2}
+          isMediumScreen={isMediumScreen}
+          fullWidth
+        />
+        <FieldInput
+          label={`${text.supplierManagement.fields.unit} 2`}
+          value={newProductUnit2}
+          onChangeText={onChangeUnit2}
+          isMediumScreen={isMediumScreen}
+        />
+        <FieldInput
+          label={`${text.supplierManagement.fields.priceHt} 2`}
+          value={newProductPriceHt2}
+          onChangeText={onChangePriceHt2}
+          isMediumScreen={isMediumScreen}
+          keyboardType="decimal-pad"
+        />
+        <FieldInput
+          label={`${text.supplierManagement.fields.specification} 3`}
+          value={newProductSpecification3}
+          onChangeText={onChangeSpecification3}
+          isMediumScreen={isMediumScreen}
+          fullWidth
+        />
+        <FieldInput
+          label={`${text.supplierManagement.fields.unit} 3`}
+          value={newProductUnit3}
+          onChangeText={onChangeUnit3}
+          isMediumScreen={isMediumScreen}
+        />
+        <FieldInput
+          label={`${text.supplierManagement.fields.priceHt} 3`}
+          value={newProductPriceHt3}
+          onChangeText={onChangePriceHt3}
           isMediumScreen={isMediumScreen}
           keyboardType="decimal-pad"
         />

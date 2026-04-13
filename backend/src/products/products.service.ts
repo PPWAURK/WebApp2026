@@ -6,6 +6,61 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
+type ProductPayload = {
+  supplierId: number;
+  reference?: string | null;
+  category: string;
+  nameZh: string;
+  nameFr?: string | null;
+  specification?: string | null;
+  unit?: string | null;
+  priceHt?: number | null;
+  specification2?: string | null;
+  unit2?: string | null;
+  priceHt2?: number | null;
+  specification3?: string | null;
+  unit3?: string | null;
+  priceHt3?: number | null;
+  image?: string | null;
+};
+
+type UpdateProductPayload = {
+  supplierId?: number;
+  reference?: string | null;
+  category?: string;
+  nameZh?: string;
+  nameFr?: string | null;
+  specification?: string | null;
+  unit?: string | null;
+  priceHt?: number | null;
+  specification2?: string | null;
+  unit2?: string | null;
+  priceHt2?: number | null;
+  specification3?: string | null;
+  unit3?: string | null;
+  priceHt3?: number | null;
+  image?: string | null;
+};
+
+type ProductRecord = {
+  id: bigint;
+  supplierId: number;
+  reference: string | null;
+  categorie: string;
+  nomCn: string;
+  designationFr: string | null;
+  specification: string | null;
+  unite: string | null;
+  prixUHt: Prisma.Decimal | null;
+  specification2: string | null;
+  unite2: string | null;
+  prixUHt2: Prisma.Decimal | null;
+  specification3: string | null;
+  unite3: string | null;
+  prixUHt3: Prisma.Decimal | null;
+  image: string | null;
+};
+
 @Injectable()
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -22,17 +77,7 @@ export class ProductsService {
     return products.map((product) => this.serializeProduct(product));
   }
 
-  async createProduct(payload: {
-    supplierId: number;
-    reference?: string | null;
-    category: string;
-    nameZh: string;
-    nameFr?: string | null;
-    specification?: string | null;
-    unit?: string | null;
-    priceHt?: number | null;
-    image?: string | null;
-  }) {
+  async createProduct(payload: ProductPayload) {
     if (!Number.isInteger(payload.supplierId) || payload.supplierId <= 0) {
       throw new BadRequestException('supplierId must be a positive integer');
     }
@@ -49,13 +94,7 @@ export class ProductsService {
       throw new BadRequestException('nameZh cannot be empty');
     }
 
-    if (
-      payload.priceHt !== undefined &&
-      payload.priceHt !== null &&
-      !Number.isFinite(payload.priceHt)
-    ) {
-      throw new BadRequestException('priceHt must be a finite number or null');
-    }
+    this.validateSpecificationPayload(payload);
 
     const created = await this.prisma.produit.create({
       data: {
@@ -67,6 +106,12 @@ export class ProductsService {
         specification: this.normalizeOptionalText(payload.specification),
         unite: this.normalizeOptionalText(payload.unit),
         prixUHt: payload.priceHt ?? null,
+        specification2: this.normalizeOptionalText(payload.specification2),
+        unite2: this.normalizeOptionalText(payload.unit2),
+        prixUHt2: payload.priceHt2 ?? null,
+        specification3: this.normalizeOptionalText(payload.specification3),
+        unite3: this.normalizeOptionalText(payload.unit3),
+        prixUHt3: payload.priceHt3 ?? null,
         image: this.normalizeOptionalText(payload.image),
       },
     });
@@ -74,20 +119,7 @@ export class ProductsService {
     return this.serializeProduct(created);
   }
 
-  async updateProduct(
-    productId: number,
-    payload: {
-      supplierId?: number;
-      reference?: string | null;
-      category?: string;
-      nameZh?: string;
-      nameFr?: string | null;
-      specification?: string | null;
-      unit?: string | null;
-      priceHt?: number | null;
-      image?: string | null;
-    },
-  ) {
+  async updateProduct(productId: number, payload: UpdateProductPayload) {
     const existing = await this.prisma.produit.findUnique({
       where: { id: BigInt(productId) },
       select: { id: true },
@@ -106,8 +138,16 @@ export class ProductsService {
       specification?: string | null;
       unite?: string | null;
       prixUHt?: number | null;
+      specification2?: string | null;
+      unite2?: string | null;
+      prixUHt2?: number | null;
+      specification3?: string | null;
+      unite3?: string | null;
+      prixUHt3?: number | null;
       image?: string | null;
     } = {};
+
+    this.validateSpecificationPayload(payload);
 
     if (payload.supplierId !== undefined) {
       if (!Number.isInteger(payload.supplierId) || payload.supplierId <= 0) {
@@ -151,13 +191,31 @@ export class ProductsService {
     }
 
     if (payload.priceHt !== undefined) {
-      if (payload.priceHt !== null && !Number.isFinite(payload.priceHt)) {
-        throw new BadRequestException(
-          'priceHt must be a finite number or null',
-        );
-      }
-
       data.prixUHt = payload.priceHt;
+    }
+
+    if (payload.specification2 !== undefined) {
+      data.specification2 = this.normalizeOptionalText(payload.specification2);
+    }
+
+    if (payload.unit2 !== undefined) {
+      data.unite2 = this.normalizeOptionalText(payload.unit2);
+    }
+
+    if (payload.priceHt2 !== undefined) {
+      data.prixUHt2 = payload.priceHt2;
+    }
+
+    if (payload.specification3 !== undefined) {
+      data.specification3 = this.normalizeOptionalText(payload.specification3);
+    }
+
+    if (payload.unit3 !== undefined) {
+      data.unite3 = this.normalizeOptionalText(payload.unit3);
+    }
+
+    if (payload.priceHt3 !== undefined) {
+      data.prixUHt3 = payload.priceHt3;
     }
 
     if (payload.image !== undefined) {
@@ -277,6 +335,39 @@ export class ProductsService {
     return trimmed ? trimmed : null;
   }
 
+  private validateSpecificationPayload(payload: {
+    priceHt?: number | null;
+    priceHt2?: number | null;
+    priceHt3?: number | null;
+    specification2?: string | null;
+    specification3?: string | null;
+  }) {
+    const priceFields = [
+      { key: 'priceHt', value: payload.priceHt },
+      { key: 'priceHt2', value: payload.priceHt2 },
+      { key: 'priceHt3', value: payload.priceHt3 },
+    ];
+
+    for (const field of priceFields) {
+      if (field.value !== undefined && field.value !== null) {
+        if (!Number.isFinite(field.value)) {
+          throw new BadRequestException(
+            `${field.key} must be a finite number or null`,
+          );
+        }
+      }
+    }
+
+    const specification2 = this.normalizeOptionalText(payload.specification2);
+    const specification3 = this.normalizeOptionalText(payload.specification3);
+
+    if (specification3 && !specification2) {
+      throw new BadRequestException(
+        'specification2 is required before specification3',
+      );
+    }
+  }
+
   private async ensureSupplierExists(supplierId: number) {
     const supplier = await this.prisma.fournisseur.findUnique({
       where: { id: supplierId },
@@ -288,18 +379,31 @@ export class ProductsService {
     }
   }
 
-  private serializeProduct(product: {
-    id: bigint;
-    supplierId: number;
-    reference: string | null;
-    categorie: string;
-    nomCn: string;
-    designationFr: string | null;
-    specification: string | null;
-    unite: string | null;
-    prixUHt: Prisma.Decimal | null;
-    image: string | null;
-  }) {
+  private serializeProduct(product: ProductRecord) {
+    const specificationSlots = [
+      {
+        slot: 1,
+        specification: product.specification,
+        unit: product.unite,
+        priceHt: this.serializeNullableDecimal(product.prixUHt),
+      },
+      {
+        slot: 2,
+        specification: product.specification2,
+        unit: product.unite2,
+        priceHt: this.serializeNullableDecimal(product.prixUHt2),
+      },
+      {
+        slot: 3,
+        specification: product.specification3,
+        unit: product.unite3,
+        priceHt: this.serializeNullableDecimal(product.prixUHt3),
+      },
+    ].filter((slot) => slot.specification);
+    const requiresSpecificationSelection = specificationSlots.some(
+      (slot) => slot.slot !== 1,
+    );
+
     return {
       id: Number(product.id),
       supplierId: product.supplierId,
@@ -309,8 +413,20 @@ export class ProductsService {
       nameFr: product.designationFr,
       specification: product.specification,
       unit: product.unite,
-      priceHt: product.prixUHt === null ? null : Number(product.prixUHt),
+      priceHt: this.serializeNullableDecimal(product.prixUHt),
+      specification2: product.specification2,
+      unit2: product.unite2,
+      priceHt2: this.serializeNullableDecimal(product.prixUHt2),
+      specification3: product.specification3,
+      unit3: product.unite3,
+      priceHt3: this.serializeNullableDecimal(product.prixUHt3),
+      requiresSpecificationSelection,
+      specifications: specificationSlots,
       image: product.image,
     };
+  }
+
+  private serializeNullableDecimal(value: Prisma.Decimal | null) {
+    return value === null ? null : Number(value);
   }
 }

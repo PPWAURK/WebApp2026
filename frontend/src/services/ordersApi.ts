@@ -19,9 +19,11 @@ type RawOrderSummary = {
 type RawOrderReturnDraftItem = {
   purchaseOrderItemId?: unknown;
   productId?: unknown;
+  specificationSlot?: unknown;
   category?: unknown;
   nameZh?: unknown;
   nameFr?: unknown;
+  specification?: unknown;
   unit?: unknown;
   orderedQuantity?: unknown;
   returnedQuantity?: unknown;
@@ -38,9 +40,11 @@ type RawOrderReturnDraft = {
 };
 
 type RawOrderReturnSummaryItem = {
+  specificationSlot?: unknown;
   quantity?: unknown;
   nameZh?: unknown;
   nameFr?: unknown;
+  specification?: unknown;
   unit?: unknown;
   photos?: unknown;
 };
@@ -100,9 +104,11 @@ export type CreatedOrderResult = {
 export type OrderReturnDraftItem = {
   purchaseOrderItemId: number;
   productId: number;
+  specificationSlot: number | null;
   category: string;
   nameZh: string;
   nameFr: string;
+  specification: string;
   unit: string;
   orderedQuantity: number;
   returnedQuantity: number;
@@ -119,9 +125,11 @@ export type OrderReturnDraft = {
 };
 
 export type OrderReturnSummaryItem = {
+  specificationSlot: number | null;
   quantity: number;
   nameZh: string;
   nameFr: string;
+  specification: string;
   unit: string;
   photos: OrderReturnSummaryPhoto[];
 };
@@ -265,9 +273,15 @@ function normalizeOrderReturnDraftItem(
   return {
     purchaseOrderItemId: toNumber(raw.purchaseOrderItemId, 0),
     productId: toNumber(raw.productId, 0),
+    specificationSlot:
+      raw.specificationSlot === null || raw.specificationSlot === undefined
+        ? null
+        : toNumber(raw.specificationSlot, 0),
     category: typeof raw.category === 'string' ? raw.category : '',
     nameZh: typeof raw.nameZh === 'string' ? raw.nameZh : '',
     nameFr: typeof raw.nameFr === 'string' ? raw.nameFr : '',
+    specification:
+      typeof raw.specification === 'string' ? raw.specification : '',
     unit: typeof raw.unit === 'string' ? raw.unit : '',
     orderedQuantity: toNumber(raw.orderedQuantity, 0),
     returnedQuantity: toNumber(raw.returnedQuantity, 0),
@@ -296,9 +310,15 @@ function normalizeOrderReturnSummaryItem(
   raw: RawOrderReturnSummaryItem,
 ): OrderReturnSummaryItem {
   return {
+    specificationSlot:
+      raw.specificationSlot === null || raw.specificationSlot === undefined
+        ? null
+        : toNumber(raw.specificationSlot, 0),
     quantity: toNumber(raw.quantity, 0),
     nameZh: typeof raw.nameZh === 'string' ? raw.nameZh : '',
     nameFr: typeof raw.nameFr === 'string' ? raw.nameFr : '',
+    specification:
+      typeof raw.specification === 'string' ? raw.specification : '',
     unit: typeof raw.unit === 'string' ? raw.unit : '',
     photos: Array.isArray(raw.photos)
       ? raw.photos.map((photo) =>
@@ -363,6 +383,7 @@ export async function createOrder(
       items: payload.items.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
+        specificationSlot: item.specificationSlot ?? undefined,
       })),
     }),
   });

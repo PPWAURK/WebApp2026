@@ -70,11 +70,24 @@ export function useSupplierManagement({
   const [newProductSpecification, setNewProductSpecification] = useState('');
   const [newProductUnit, setNewProductUnit] = useState('');
   const [newProductPriceHt, setNewProductPriceHt] = useState('');
+  const [newProductSpecification2, setNewProductSpecification2] = useState('');
+  const [newProductUnit2, setNewProductUnit2] = useState('');
+  const [newProductPriceHt2, setNewProductPriceHt2] = useState('');
+  const [newProductSpecification3, setNewProductSpecification3] = useState('');
+  const [newProductUnit3, setNewProductUnit3] = useState('');
+  const [newProductPriceHt3, setNewProductPriceHt3] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editNameZh, setEditNameZh] = useState('');
   const [editNameFr, setEditNameFr] = useState('');
   const [editSpecification, setEditSpecification] = useState('');
+  const [editUnit, setEditUnit] = useState('');
   const [editPriceHt, setEditPriceHt] = useState('');
+  const [editSpecification2, setEditSpecification2] = useState('');
+  const [editUnit2, setEditUnit2] = useState('');
+  const [editPriceHt2, setEditPriceHt2] = useState('');
+  const [editSpecification3, setEditSpecification3] = useState('');
+  const [editUnit3, setEditUnit3] = useState('');
+  const [editPriceHt3, setEditPriceHt3] = useState('');
   const [editImage, setEditImage] = useState('');
 
   // --- Effects ---
@@ -149,7 +162,11 @@ export function useSupplierManagement({
         product.reference,
         product.category,
         product.specification,
+        product.specification2,
+        product.specification3,
         product.unit,
+        product.unit2,
+        product.unit3,
       ];
 
       return fields.some(
@@ -225,7 +242,14 @@ export function useSupplierManagement({
       setEditNameZh('');
       setEditNameFr('');
       setEditSpecification('');
+      setEditUnit('');
       setEditPriceHt('');
+      setEditSpecification2('');
+      setEditUnit2('');
+      setEditPriceHt2('');
+      setEditSpecification3('');
+      setEditUnit3('');
+      setEditPriceHt3('');
       setEditImage('');
       return;
     }
@@ -234,10 +258,25 @@ export function useSupplierManagement({
     setEditNameZh(selectedProduct.nameZh);
     setEditNameFr(selectedProduct.nameFr ?? '');
     setEditSpecification(selectedProduct.specification ?? '');
+    setEditUnit(selectedProduct.unit ?? '');
     setEditPriceHt(
       selectedProduct.priceHt === null
         ? ''
         : selectedProduct.priceHt.toString(),
+    );
+    setEditSpecification2(selectedProduct.specification2 ?? '');
+    setEditUnit2(selectedProduct.unit2 ?? '');
+    setEditPriceHt2(
+      selectedProduct.priceHt2 === null
+        ? ''
+        : selectedProduct.priceHt2.toString(),
+    );
+    setEditSpecification3(selectedProduct.specification3 ?? '');
+    setEditUnit3(selectedProduct.unit3 ?? '');
+    setEditPriceHt3(
+      selectedProduct.priceHt3 === null
+        ? ''
+        : selectedProduct.priceHt3.toString(),
     );
     setEditImage(selectedProduct.image ?? '');
   }, [selectedProduct]);
@@ -305,10 +344,15 @@ export function useSupplierManagement({
       return;
     }
 
-    const parsedPrice = newProductPriceHt.trim()
-      ? Number(newProductPriceHt)
-      : null;
-    if (newProductPriceHt.trim() && !Number.isFinite(parsedPrice)) {
+    const parsedPrice = parseOptionalPrice(newProductPriceHt);
+    const parsedPrice2 = parseOptionalPrice(newProductPriceHt2);
+    const parsedPrice3 = parseOptionalPrice(newProductPriceHt3);
+
+    if (
+      parsedPrice === undefined ||
+      parsedPrice2 === undefined ||
+      parsedPrice3 === undefined
+    ) {
       setError(text.supplierManagement.invalidPrice);
       return;
     }
@@ -330,6 +374,16 @@ export function useSupplierManagement({
           : null,
         unit: newProductUnit.trim() ? newProductUnit.trim() : null,
         priceHt: parsedPrice,
+        specification2: newProductSpecification2.trim()
+          ? newProductSpecification2.trim()
+          : null,
+        unit2: newProductUnit2.trim() ? newProductUnit2.trim() : null,
+        priceHt2: parsedPrice2,
+        specification3: newProductSpecification3.trim()
+          ? newProductSpecification3.trim()
+          : null,
+        unit3: newProductUnit3.trim() ? newProductUnit3.trim() : null,
+        priceHt3: parsedPrice3,
       });
 
       setProducts((current) => [...current, created]);
@@ -343,6 +397,12 @@ export function useSupplierManagement({
       setNewProductSpecification('');
       setNewProductUnit('');
       setNewProductPriceHt('');
+      setNewProductSpecification2('');
+      setNewProductUnit2('');
+      setNewProductPriceHt2('');
+      setNewProductSpecification3('');
+      setNewProductUnit3('');
+      setNewProductPriceHt3('');
     } catch (createError) {
       if (createError instanceof Error && createError.message.trim()) {
         setError(createError.message);
@@ -359,8 +419,15 @@ export function useSupplierManagement({
       return;
     }
 
-    const parsedPrice = editPriceHt.trim() ? Number(editPriceHt) : null;
-    if (editPriceHt.trim() && !Number.isFinite(parsedPrice)) {
+    const parsedPrice = parseOptionalPrice(editPriceHt);
+    const parsedPrice2 = parseOptionalPrice(editPriceHt2);
+    const parsedPrice3 = parseOptionalPrice(editPriceHt3);
+
+    if (
+      parsedPrice === undefined ||
+      parsedPrice2 === undefined ||
+      parsedPrice3 === undefined
+    ) {
       setError(text.supplierManagement.invalidPrice);
       return;
     }
@@ -377,7 +444,18 @@ export function useSupplierManagement({
         specification: editSpecification.trim()
           ? editSpecification.trim()
           : null,
+        unit: editUnit.trim() ? editUnit.trim() : null,
         priceHt: parsedPrice,
+        specification2: editSpecification2.trim()
+          ? editSpecification2.trim()
+          : null,
+        unit2: editUnit2.trim() ? editUnit2.trim() : null,
+        priceHt2: parsedPrice2,
+        specification3: editSpecification3.trim()
+          ? editSpecification3.trim()
+          : null,
+        unit3: editUnit3.trim() ? editUnit3.trim() : null,
+        priceHt3: parsedPrice3,
       });
 
       setProducts((current) =>
@@ -534,6 +612,15 @@ export function useSupplierManagement({
     setIsEditorOpen(true);
   }
 
+  function parseOptionalPrice(value: string) {
+    if (!value.trim()) {
+      return null;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
   return {
     // Data
     suppliers,
@@ -586,6 +673,18 @@ export function useSupplierManagement({
     setNewProductUnit,
     newProductPriceHt,
     setNewProductPriceHt,
+    newProductSpecification2,
+    setNewProductSpecification2,
+    newProductUnit2,
+    setNewProductUnit2,
+    newProductPriceHt2,
+    setNewProductPriceHt2,
+    newProductSpecification3,
+    setNewProductSpecification3,
+    newProductUnit3,
+    setNewProductUnit3,
+    newProductPriceHt3,
+    setNewProductPriceHt3,
 
     // Edit product form
     editCategory,
@@ -596,8 +695,22 @@ export function useSupplierManagement({
     setEditNameFr,
     editSpecification,
     setEditSpecification,
+    editUnit,
+    setEditUnit,
     editPriceHt,
     setEditPriceHt,
+    editSpecification2,
+    setEditSpecification2,
+    editUnit2,
+    setEditUnit2,
+    editPriceHt2,
+    setEditPriceHt2,
+    editSpecification3,
+    setEditSpecification3,
+    editUnit3,
+    setEditUnit3,
+    editPriceHt3,
+    setEditPriceHt3,
     editImage,
 
     // Actions

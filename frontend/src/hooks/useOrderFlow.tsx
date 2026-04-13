@@ -17,8 +17,8 @@ type LatestCreatedOrder = {
 type OrderFlowContextValue = {
   orderRecap: OrderRecapData | null;
   setOrderRecap: Dispatch<SetStateAction<OrderRecapData | null>>;
-  orderQuantities: Record<number, number>;
-  setOrderQuantities: Dispatch<SetStateAction<Record<number, number>>>;
+  orderQuantities: Record<string, number>;
+  setOrderQuantities: Dispatch<SetStateAction<Record<string, number>>>;
   selectedOrderSupplierId: number | 'ALL';
   setSelectedOrderSupplierId: Dispatch<SetStateAction<number | 'ALL'>>;
   selectedOrderCategory: string;
@@ -44,7 +44,7 @@ function getTodayDateString() {
 
 export function OrderFlowProvider({ children }: { children: ReactNode }) {
   const [orderRecap, setOrderRecap] = useState<OrderRecapData | null>(null);
-  const [orderQuantities, setOrderQuantities] = useState<Record<number, number>>(
+  const [orderQuantities, setOrderQuantities] = useState<Record<string, number>>(
     {},
   );
   const [selectedOrderSupplierId, setSelectedOrderSupplierId] = useState<

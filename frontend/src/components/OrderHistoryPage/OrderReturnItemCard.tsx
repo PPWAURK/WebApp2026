@@ -34,17 +34,21 @@ type OrderReturnItemCardProps = {
 function buildItemLabel(item: OrderReturnDraftItem) {
   const nameFr = item.nameFr.trim();
   const nameZh = item.nameZh.trim();
+  const specification = item.specification.trim();
+  const subtitleParts = [specification, item.category, item.unit].filter(
+    (value) => value && value.trim(),
+  );
 
   if (nameFr && nameZh && nameFr !== nameZh) {
     return {
       title: nameZh,
-      subtitle: nameFr,
+      subtitle: [nameFr, ...subtitleParts].join(' · '),
     };
   }
 
   return {
     title: nameZh || nameFr || `${item.productId}`,
-    subtitle: item.category || item.unit,
+    subtitle: subtitleParts.join(' · '),
   };
 }
 

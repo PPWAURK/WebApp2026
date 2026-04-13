@@ -128,21 +128,26 @@ export function ProductCard({
                 {product.nameZh}
               </Text>
             ) : null}
-            {product.specification ? (
-              <Text style={styles.docItemMeta} numberOfLines={1}>
-                {text.supplierManagement.fields.specification}:{' '}
-                {product.specification}
-              </Text>
-            ) : null}
-            {product.unit ? (
-              <Text style={styles.docItemMeta} numberOfLines={1}>
-                {text.supplierManagement.fields.unit}: {product.unit}
-              </Text>
-            ) : null}
-            <Text style={styles.productPriceLabel}>
-              {text.supplierManagement.fields.priceHt}:{' '}
-              {product.priceHt === null ? '—' : product.priceHt.toFixed(2)}
-            </Text>
+            {product.specifications.map((specification) => {
+              const specificationLabel =
+                specification.specification ??
+                `${text.supplierManagement.fields.specification} 1`;
+              const unitLabel = specification.unit ?? '—';
+              const priceLabel =
+                specification.priceHt === null
+                  ? '—'
+                  : specification.priceHt.toFixed(2);
+
+              return (
+                <Text
+                  key={`${product.id}-${specification.slot ?? 'base'}`}
+                  style={styles.docItemMeta}
+                  numberOfLines={1}
+                >
+                  {specificationLabel} · {unitLabel} · {priceLabel}
+                </Text>
+              );
+            })}
             <Text style={styles.productEditHint}>
               {text.supplierManagement.tapToEdit}
             </Text>

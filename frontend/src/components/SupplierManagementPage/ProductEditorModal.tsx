@@ -19,13 +19,27 @@ type ProductEditorModalProps = {
   editNameZh: string;
   editNameFr: string;
   editSpecification: string;
+  editUnit: string;
   editPriceHt: string;
+  editSpecification2: string;
+  editUnit2: string;
+  editPriceHt2: string;
+  editSpecification3: string;
+  editUnit3: string;
+  editPriceHt3: string;
   editImage: string;
   onChangeCategory: (value: string) => void;
   onChangeNameZh: (value: string) => void;
   onChangeNameFr: (value: string) => void;
   onChangeSpecification: (value: string) => void;
+  onChangeUnit: (value: string) => void;
   onChangePriceHt: (value: string) => void;
+  onChangeSpecification2: (value: string) => void;
+  onChangeUnit2: (value: string) => void;
+  onChangePriceHt2: (value: string) => void;
+  onChangeSpecification3: (value: string) => void;
+  onChangeUnit3: (value: string) => void;
+  onChangePriceHt3: (value: string) => void;
   onClose: () => void;
   onSave: () => void;
   onUploadImage: () => void;
@@ -43,13 +57,27 @@ export function ProductEditorModal({
   editNameZh,
   editNameFr,
   editSpecification,
+  editUnit,
   editPriceHt,
+  editSpecification2,
+  editUnit2,
+  editPriceHt2,
+  editSpecification3,
+  editUnit3,
+  editPriceHt3,
   editImage,
   onChangeCategory,
   onChangeNameZh,
   onChangeNameFr,
   onChangeSpecification,
+  onChangeUnit,
   onChangePriceHt,
+  onChangeSpecification2,
+  onChangeUnit2,
+  onChangePriceHt2,
+  onChangeSpecification3,
+  onChangeUnit3,
+  onChangePriceHt3,
   onClose,
   onSave,
   onUploadImage,
@@ -159,6 +187,12 @@ export function ProductEditorModal({
                     fullWidth
                   />
                   <FieldInput
+                    label={text.supplierManagement.fields.unit}
+                    value={editUnit}
+                    onChangeText={onChangeUnit}
+                    isMediumScreen={isMediumScreen}
+                  />
+                  <FieldInput
                     label={text.supplierManagement.fields.category}
                     value={editCategory}
                     onChangeText={onChangeCategory}
@@ -168,6 +202,46 @@ export function ProductEditorModal({
                     label={text.supplierManagement.fields.priceHt}
                     value={editPriceHt}
                     onChangeText={onChangePriceHt}
+                    isMediumScreen={isMediumScreen}
+                    keyboardType="decimal-pad"
+                  />
+                  <FieldInput
+                    label={`${text.supplierManagement.fields.specification} 2`}
+                    value={editSpecification2}
+                    onChangeText={onChangeSpecification2}
+                    isMediumScreen={isMediumScreen}
+                    fullWidth
+                  />
+                  <FieldInput
+                    label={`${text.supplierManagement.fields.unit} 2`}
+                    value={editUnit2}
+                    onChangeText={onChangeUnit2}
+                    isMediumScreen={isMediumScreen}
+                  />
+                  <FieldInput
+                    label={`${text.supplierManagement.fields.priceHt} 2`}
+                    value={editPriceHt2}
+                    onChangeText={onChangePriceHt2}
+                    isMediumScreen={isMediumScreen}
+                    keyboardType="decimal-pad"
+                  />
+                  <FieldInput
+                    label={`${text.supplierManagement.fields.specification} 3`}
+                    value={editSpecification3}
+                    onChangeText={onChangeSpecification3}
+                    isMediumScreen={isMediumScreen}
+                    fullWidth
+                  />
+                  <FieldInput
+                    label={`${text.supplierManagement.fields.unit} 3`}
+                    value={editUnit3}
+                    onChangeText={onChangeUnit3}
+                    isMediumScreen={isMediumScreen}
+                  />
+                  <FieldInput
+                    label={`${text.supplierManagement.fields.priceHt} 3`}
+                    value={editPriceHt3}
+                    onChangeText={onChangePriceHt3}
                     isMediumScreen={isMediumScreen}
                     keyboardType="decimal-pad"
                   />

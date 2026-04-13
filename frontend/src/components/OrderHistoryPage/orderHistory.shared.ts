@@ -63,7 +63,9 @@ export function buildReturnProductsLabel(entry: OrderReturnSummary) {
   const label = entry.items
     .map((item) => {
       const productLabel = item.nameFr.trim() || item.nameZh.trim() || '-';
-      return `${productLabel} x${item.quantity}`;
+      const specificationLabel = item.specification.trim();
+      const detail = specificationLabel ? ` (${specificationLabel})` : '';
+      return `${productLabel}${detail} x${item.quantity}`;
     })
     .join(' / ');
 

@@ -269,7 +269,7 @@ export function OrderRecapPage({
 
                   return (
                     <View
-                      key={`${item.productId}-${item.quantity}`}
+                      key={item.orderItemKey}
                       style={[styles.productCard, productGridItemStyle]}
                     >
                       <View
@@ -313,6 +313,15 @@ export function OrderRecapPage({
                           ]}
                         >
                           <Text style={styles.productTitle}>{productName}</Text>
+                          {item.specification ? (
+                            <Text style={styles.docItemMeta}>
+                              {text.orders.specificationLabel}: {item.specification}
+                            </Text>
+                          ) : null}
+                          <Text style={styles.docItemMeta}>
+                            {text.orders.unitLabel}:{' '}
+                            {item.unit ?? text.orders.unitNotAvailable}
+                          </Text>
                           <Text style={styles.docItemMeta}>
                             {text.orders.quantityLabel}: {item.quantity}
                           </Text>

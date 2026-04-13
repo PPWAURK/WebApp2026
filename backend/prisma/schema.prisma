@@ -97,8 +97,14 @@ model Produit {
   nomCn               String               @map("nom_cn") @db.VarChar(255)
   designationFr       String?              @map("designation_fr") @db.VarChar(255)
   specification       String?              @db.VarChar(100)
+  specification2      String?              @map("specification_2") @db.VarChar(100)
+  specification3      String?              @map("specification_3") @db.VarChar(100)
   unite               String?              @db.VarChar(100)
+  unite2              String?              @map("unit_2") @db.VarChar(100)
+  unite3              String?              @map("unit_3") @db.VarChar(100)
   prixUHt             Decimal?             @map("prix_u_ht") @db.Decimal(10, 2)
+  prixUHt2            Decimal?             @map("prix_u_ht_2") @db.Decimal(10, 2)
+  prixUHt3            Decimal?             @map("prix_u_ht_3") @db.Decimal(10, 2)
   image               String?              @db.Text
   createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt           DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
@@ -149,11 +155,13 @@ model PurchaseOrderItem {
   productId       BigInt               @map("product_id") @db.UnsignedBigInt
   product         Produit              @relation(fields: [productId], references: [id], onDelete: Restrict)
   supplierId      Int                  @map("supplier_id")
+  specificationSlot Int?               @map("specification_slot")
   quantity        Int
   unitPriceHt     Decimal              @map("unit_price_ht") @db.Decimal(10, 2)
   lineTotal       Decimal              @map("line_total") @db.Decimal(10, 2)
   nameZh          String               @map("name_zh") @db.VarChar(255)
   nameFr          String?              @map("name_fr") @db.VarChar(255)
+  specification   String?              @db.VarChar(100)
   unit            String?              @db.VarChar(100)
   category        String               @db.VarChar(20)
   returnItems     PurchaseReturnItem[]
@@ -193,9 +201,11 @@ model PurchaseReturnItem {
   purchaseOrderItem   PurchaseOrderItem         @relation(fields: [purchaseOrderItemId], references: [id], onDelete: Restrict)
   productId           BigInt                    @map("product_id") @db.UnsignedBigInt
   product             Produit                   @relation(fields: [productId], references: [id], onDelete: Restrict)
+  specificationSlot   Int?                      @map("specification_slot")
   quantity            Int
   nameZh              String                    @map("name_zh") @db.VarChar(255)
   nameFr              String?                   @map("name_fr") @db.VarChar(255)
+  specification       String?                   @db.VarChar(100)
   unit                String?                   @db.VarChar(100)
   category            String                    @db.VarChar(20)
   photos              PurchaseReturnItemPhoto[]

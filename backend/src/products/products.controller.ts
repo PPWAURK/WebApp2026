@@ -99,6 +99,12 @@ export class ProductsController {
       specification?: string | null;
       unit?: string | null;
       priceHt?: number | null;
+      specification2?: string | null;
+      unit2?: string | null;
+      priceHt2?: number | null;
+      specification3?: string | null;
+      unit3?: string | null;
+      priceHt3?: number | null;
       image?: string | null;
     },
   ) {
@@ -127,6 +133,12 @@ export class ProductsController {
       specification?: string | null;
       unit?: string | null;
       priceHt?: number | null;
+      specification2?: string | null;
+      unit2?: string | null;
+      priceHt2?: number | null;
+      specification3?: string | null;
+      unit3?: string | null;
+      priceHt3?: number | null;
       image?: string | null;
     },
   ) {
