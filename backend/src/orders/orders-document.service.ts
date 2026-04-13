@@ -46,9 +46,12 @@ export class OrdersDocumentService {
     primary: '#ab1e24',
     primaryDark: '#7f1b21',
     text: '#1f1f1f',
+    textSoft: '#958184',
     muted: '#6b6b6b',
+    mutedSoft: '#b09ea0',
     border: '#e4c3c5',
     rowAlt: '#fdf4f5',
+    rowZero: '#fcf7f7',
     white: '#ffffff',
   };
 
@@ -370,6 +373,13 @@ export class OrdersDocumentService {
     input.items.forEach((item, index) => {
       ensureSpace(rowHeight);
       const y = doc.y;
+      const isZeroQuantityRow = item.quantity === 0;
+      const primaryTextColor = isZeroQuantityRow
+        ? this.pdfColors.textSoft
+        : this.pdfColors.text;
+      const secondaryTextColor = isZeroQuantityRow
+        ? this.pdfColors.mutedSoft
+        : this.pdfColors.muted;
 
       const productNameFr = this.truncateText(
         this.sanitizePlainLabel(item.nameFr),
@@ -385,15 +395,17 @@ export class OrdersDocumentService {
       );
       const orderUnit = this.sanitizeLabel(item.unit?.trim() || '-');
 
-      if (index % 2 === 1) {
+      if (isZeroQuantityRow || index % 2 === 1) {
         doc
           .rect(left, y, contentWidth, rowHeight)
-          .fillColor(this.pdfColors.rowAlt)
+          .fillColor(
+            isZeroQuantityRow ? this.pdfColors.rowZero : this.pdfColors.rowAlt,
+          )
           .fill();
       }
 
       doc
-        .fillColor(this.pdfColors.text)
+        .fillColor(primaryTextColor)
         .font(this.resolveFontForText(productNameFr))
         .fontSize(10)
         .text(productNameFr, left + 8, y + 6, {
@@ -403,7 +415,7 @@ export class OrdersDocumentService {
       doc.font(this.resolveFontForText(productNameZh));
       doc
         .fontSize(9)
-        .fillColor(this.pdfColors.muted)
+        .fillColor(secondaryTextColor)
         .text(productNameZh, left + 8, y + 20, {
           width: colProduct - 12,
         });
@@ -411,7 +423,7 @@ export class OrdersDocumentService {
       doc.font(this.resolveFontForText(productSpecification));
 
       doc
-        .fillColor(this.pdfColors.text)
+        .fillColor(primaryTextColor)
         .fontSize(9)
         .text(productSpecification, left + colProduct + 4, y + 13, {
           width: colSpecification - 8,
@@ -421,7 +433,7 @@ export class OrdersDocumentService {
       doc.font(this.resolveFontForText(orderUnit));
 
       doc
-        .fillColor(this.pdfColors.text)
+        .fillColor(primaryTextColor)
         .fontSize(10)
         .text(orderUnit, left + colProduct + colSpecification + 4, y + 13, {
           width: colOrderUnit - 8,
@@ -430,7 +442,7 @@ export class OrdersDocumentService {
 
       doc
         .font('Helvetica')
-        .fillColor(this.pdfColors.text)
+        .fillColor(primaryTextColor)
         .fontSize(10)
         .text(
           String(item.quantity),
