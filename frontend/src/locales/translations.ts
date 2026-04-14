@@ -138,6 +138,7 @@ export const translations = {
       workplace: 'Poste',
       roleValues: {
         ADMIN: 'Administrateur',
+        REGIONAL_MANAGER: 'Responsable de zone',
         MANAGER: 'Manager',
         EMPLOYEE: 'Membre',
       },
@@ -357,6 +358,10 @@ export const translations = {
       editLevel: 'Modifier le niveau',
       makeManager: 'Définir comme manager',
       removeManagerRole: 'Retirer le rôle manager',
+      makeRegionalManager: 'Définir comme responsable de zone',
+      addRegionalStore: 'Ajouter ce restaurant à la zone',
+      removeRegionalStore: 'Retirer ce restaurant de la zone',
+      convertToManager: 'Revenir en manager',
       deleteAccount: 'Supprimer le compte',
       save: 'Enregistrer les informations',
       saving: 'Enregistrement...',
@@ -911,6 +916,7 @@ export const translations = {
       updateManagerError: 'Impossible de mettre à jour le rôle manager',
       roleValues: {
         ADMIN: 'Administrateur',
+        REGIONAL_MANAGER: 'Responsable de zone',
         MANAGER: 'Manager',
         EMPLOYEE: 'Membre',
       },
@@ -1051,6 +1057,7 @@ export const translations = {
       workplace: '岗位',
       roleValues: {
         ADMIN: '管理员',
+        REGIONAL_MANAGER: '区域经理',
         MANAGER: '经理',
         EMPLOYEE: '伙伴',
       },
@@ -1252,6 +1259,10 @@ export const translations = {
       editLevel: '调整员工等级',
       makeManager: '设为店长',
       removeManagerRole: '取消店长身份',
+      makeRegionalManager: '设为区域经理',
+      addRegionalStore: '把当前门店加入管理范围',
+      removeRegionalStore: '把当前门店移出管理范围',
+      convertToManager: '改为店长',
       deleteAccount: '删除账号',
       save: '保存门店信息',
       saving: '保存中...',
@@ -1756,6 +1767,7 @@ export const translations = {
       updateManagerError: '更新经理角色失败',
       roleValues: {
         ADMIN: '管理员',
+        REGIONAL_MANAGER: '区域经理',
         MANAGER: '经理',
         EMPLOYEE: '伙伴',
       },

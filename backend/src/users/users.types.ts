@@ -1,6 +1,7 @@
 export type RoleScopeActor = {
   actorRole: string;
   actorRestaurantId: number | null;
+  actorManagedRestaurantIds: number[];
 };
 
 export type RoleScopeActorWithId = RoleScopeActor & {

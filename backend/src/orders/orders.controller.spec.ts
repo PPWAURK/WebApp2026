@@ -76,6 +76,7 @@ describe('OrdersController', () => {
         role: 'MANAGER',
         employeeLevel: null,
         restaurantId: 5,
+        managedRestaurantIds: [],
       },
       body,
       req,
@@ -107,6 +108,7 @@ describe('OrdersController', () => {
         role: 'ADMIN',
         employeeLevel: null,
         restaurantId: null,
+        managedRestaurantIds: [],
       },
       {
         supplierId: 11,
@@ -137,6 +139,7 @@ describe('OrdersController', () => {
         role: 'ADMIN',
         employeeLevel: null,
         restaurantId: null,
+        managedRestaurantIds: [],
       },
       req,
     );
@@ -175,6 +178,7 @@ describe('OrdersController', () => {
         role: 'MANAGER',
         employeeLevel: null,
         restaurantId: 2,
+        managedRestaurantIds: [],
       },
       {
         orderId: 19,

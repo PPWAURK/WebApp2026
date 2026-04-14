@@ -113,6 +113,7 @@ describe('UsersTrainingAccessService', () => {
           id: 2,
           name: 'Paris',
         },
+        managedRestaurants: [],
         role: Role.EMPLOYEE,
         workplaceRole: 'BOTH',
         employeeLevel: 'L0_PROBATION',
@@ -127,6 +128,7 @@ describe('UsersTrainingAccessService', () => {
       actorId: 1,
       actorRole: Role.ADMIN,
       actorRestaurantId: null,
+      actorManagedRestaurantIds: [],
     });
 
     expect(result).toEqual([

@@ -65,7 +65,7 @@ export class AuthService {
 
     if (!user.isApproved) {
       throw new UnauthorizedException(
-        user.role === Role.MANAGER
+        user.role === Role.MANAGER || user.role === Role.REGIONAL_MANAGER
           ? 'ACCOUNT_PENDING_ADMIN_APPROVAL'
           : 'ACCOUNT_PENDING_APPROVAL',
       );
@@ -202,7 +202,8 @@ export class AuthService {
     return {
       success: true,
       message:
-        verificationRecord.user.role === Role.MANAGER
+        verificationRecord.user.role === Role.MANAGER ||
+        verificationRecord.user.role === Role.REGIONAL_MANAGER
           ? 'ACCOUNT_PENDING_ADMIN_APPROVAL'
           : 'ACCOUNT_PENDING_APPROVAL',
     };
@@ -413,6 +414,9 @@ export class AuthService {
     workplaceRole: string;
     restaurantId: number | null;
     restaurant: { id: number; name: string; address: string } | null;
+    managedRestaurants?: Array<{
+      restaurant: { id: number; name: string; address: string };
+    }>;
   }) {
     const payload = {
       sub: user.id,
@@ -445,6 +449,9 @@ export class AuthService {
         workplaceRole: user.workplaceRole,
         trainingAccess,
         restaurant: user.restaurant,
+        managedRestaurants: (user.managedRestaurants ?? []).map((entry) => ({
+          ...entry.restaurant,
+        })),
       },
     };
   }
@@ -462,7 +469,7 @@ export class AuthService {
 
     if (!user.isApproved) {
       throw new UnauthorizedException(
-        user.role === Role.MANAGER
+        user.role === Role.MANAGER || user.role === Role.REGIONAL_MANAGER
           ? 'ACCOUNT_PENDING_ADMIN_APPROVAL'
           : 'ACCOUNT_PENDING_APPROVAL',
       );
@@ -476,6 +483,9 @@ export class AuthService {
 
     return {
       ...user,
+      managedRestaurants: (user.managedRestaurants ?? []).map((entry) => ({
+        ...entry.restaurant,
+      })),
       trainingAccess,
     };
   }

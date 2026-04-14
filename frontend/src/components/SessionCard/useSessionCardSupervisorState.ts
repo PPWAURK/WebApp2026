@@ -23,6 +23,10 @@ import type {
   User,
   WorkplaceRole,
 } from '../../types/auth';
+import {
+  getUserScopedRestaurantIds,
+  isManagerLikeRole,
+} from '../../utils/roleAccess';
 import type {
   ConfirmAction,
   RestaurantFilterSection,
@@ -119,7 +123,11 @@ export function useSessionCardSupervisorState({
   isSupervisor,
   text,
 }: UseSessionCardSupervisorStateArgs): SessionCardSupervisorState {
-  const managerRestaurantId = isManager ? (currentUser.restaurant?.id ?? null) : null;
+  const scopedRestaurantIds = useMemo(
+    () => getUserScopedRestaurantIds(currentUser),
+    [currentUser.managedRestaurants, currentUser.restaurant, currentUser.role],
+  );
+  const isRegionalManager = currentUser.role === 'REGIONAL_MANAGER';
   const [users, setUsers] = useState<TrainingAccessUser[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
@@ -199,7 +207,7 @@ export function useSessionCardSupervisorState({
       return;
     }
 
-    if (isManager && !managerRestaurantId) {
+    if (isManager && scopedRestaurantIds.length === 0) {
       setUsers([]);
       setUsersError(text.dashboard.managerRestaurantMissing);
       setUsersLoading(false);
@@ -210,12 +218,7 @@ export function useSessionCardSupervisorState({
     setUsersLoading(true);
     setUsersError(null);
 
-    void fetchTrainingAccessUsers(
-      accessToken,
-      isManager && managerRestaurantId
-        ? { restaurantId: managerRestaurantId }
-        : undefined,
-    )
+    void fetchTrainingAccessUsers(accessToken)
       .then((result) => {
         if (!isActive) {
           return;
@@ -249,7 +252,7 @@ export function useSessionCardSupervisorState({
     currentUser.id,
     isManager,
     isSupervisor,
-    managerRestaurantId,
+    scopedRestaurantIds,
     text.dashboard.managerRestaurantMissing,
     text.dashboard.quickLoadUsersError,
   ]);
@@ -305,7 +308,7 @@ export function useSessionCardSupervisorState({
         (entry) =>
           entry.isEmailVerified &&
           !entry.isApproved &&
-          entry.role === (isAdmin ? 'MANAGER' : 'EMPLOYEE'),
+          (isAdmin ? entry.role !== 'EMPLOYEE' : entry.role === 'EMPLOYEE'),
       )
       .filter((entry) => matchesUserQuery(entry, query));
   }, [approvalSearch, isAdmin, usersFilteredByRestaurant]);
@@ -318,7 +321,7 @@ export function useSessionCardSupervisorState({
         (entry) =>
           !entry.isEmailVerified &&
           !entry.isApproved &&
-          entry.role === (isAdmin ? 'MANAGER' : 'EMPLOYEE'),
+          (isAdmin ? entry.role !== 'EMPLOYEE' : entry.role === 'EMPLOYEE'),
       )
       .filter((entry) => matchesUserQuery(entry, query));
   }, [approvalSearch, isAdmin, usersFilteredByRestaurant]);
@@ -326,7 +329,7 @@ export function useSessionCardSupervisorState({
   const approvedManagerUsers = useMemo(
     () =>
       usersFilteredByRestaurant.filter(
-        (entry) => entry.role === 'MANAGER' && entry.isApproved,
+        (entry) => isManagerLikeRole(entry.role) && entry.isApproved,
       ),
     [usersFilteredByRestaurant],
   );
@@ -358,11 +361,27 @@ export function useSessionCardSupervisorState({
   );
 
   const availableTransferRestaurants = useMemo(
-    () =>
-      restaurants.filter(
-        (restaurant) => restaurant.id !== selectedTransferUser?.restaurantId,
-      ),
-    [restaurants, selectedTransferUser?.restaurantId],
+    () => {
+      const scopeIds = new Set(scopedRestaurantIds);
+
+      return restaurants.filter((restaurant) => {
+        if (restaurant.id === selectedTransferUser?.restaurantId) {
+          return false;
+        }
+
+        if (isRegionalManager) {
+          return scopeIds.has(restaurant.id);
+        }
+
+        return true;
+      });
+    },
+    [
+      isRegionalManager,
+      restaurants,
+      scopedRestaurantIds,
+      selectedTransferUser?.restaurantId,
+    ],
   );
 
   const selectedTransferRestaurant = useMemo(
@@ -466,7 +485,7 @@ export function useSessionCardSupervisorState({
       isAdmin
         ? text.dashboard.quickApproveManagerTitle
         : text.dashboard.quickApproveTitle,
-      entry.role === 'MANAGER'
+      isManagerLikeRole(entry.role)
         ? text.adminTraining.approveManagerAccountMessage
         : text.adminTraining.approveAccountMessage,
       text.adminTraining.approveAccountConfirm,
@@ -493,10 +512,10 @@ export function useSessionCardSupervisorState({
 
   async function handleRejectAccount(entry: TrainingAccessUser) {
     const confirmed = await confirmAction(
-      entry.role === 'MANAGER'
+      isManagerLikeRole(entry.role)
         ? text.adminTraining.rejectManagerAccountTitle
         : text.adminTraining.rejectAccountTitle,
-      entry.role === 'MANAGER'
+      isManagerLikeRole(entry.role)
         ? text.adminTraining.rejectManagerAccountMessage
         : text.adminTraining.rejectAccountMessage,
       text.adminTraining.rejectAccountConfirm,

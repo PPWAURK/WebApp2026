@@ -21,6 +21,7 @@ type Actor = {
   role: string;
   employeeLevel: string | null;
   restaurantId: number | null;
+  managedRestaurantIds?: number[];
 };
 
 type CreateOrderPayload = {
@@ -360,12 +361,7 @@ export class OrdersService {
     this.ensureCanManageOrders(actor);
 
     const orders = await this.prisma.purchaseOrder.findMany({
-      where:
-        actor.role === 'ADMIN'
-          ? undefined
-          : {
-              restaurantId: actor.restaurantId ?? -1,
-            },
+      where: this.buildRestaurantScopeWhere(actor),
       include: {
         supplier: {
           select: {
@@ -405,12 +401,7 @@ export class OrdersService {
     this.ensureCanManageOrders(actor);
 
     const returns = await this.prisma.purchaseReturn.findMany({
-      where:
-        actor.role === 'ADMIN'
-          ? actor.restaurantId
-            ? { restaurantId: actor.restaurantId }
-            : undefined
-          : { restaurantId: actor.restaurantId ?? -1 },
+      where: this.buildRestaurantScopeWhere(actor),
       include: {
         purchaseOrder: {
           select: {
@@ -542,7 +533,7 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    if (actor.role !== 'ADMIN' && order.restaurantId !== actor.restaurantId) {
+    if (!this.canActorAccessRestaurant(actor, order.restaurantId)) {
       throw new ForbiddenException('Order does not belong to your restaurant');
     }
 
@@ -637,7 +628,7 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    if (actor.role !== 'ADMIN' && order.restaurantId !== actor.restaurantId) {
+    if (!this.canActorAccessRestaurant(actor, order.restaurantId)) {
       throw new ForbiddenException('Order does not belong to your restaurant');
     }
 
@@ -874,10 +865,7 @@ export class OrdersService {
       };
     }
 
-    if (
-      actor.role !== 'ADMIN' &&
-      existingReturn.restaurantId !== actor.restaurantId
-    ) {
+    if (!this.canActorAccessRestaurant(actor, existingReturn.restaurantId)) {
       throw new ForbiddenException(
         'Order return does not belong to your restaurant',
       );
@@ -965,7 +953,7 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    if (actor.role !== 'ADMIN' && order.restaurantId !== actor.restaurantId) {
+    if (!this.canActorAccessRestaurant(actor, order.restaurantId)) {
       throw new ForbiddenException('Order does not belong to your restaurant');
     }
 
@@ -1048,19 +1036,11 @@ export class OrdersService {
       }
     }
 
-    const purchaseOrderWhere: {
-      restaurantId?: number;
-      supplierId?: number;
-      deliveryDate?: {
-        gte: Date;
-        lt: Date;
-      };
-    } = {};
+    const purchaseOrderWhere: Prisma.PurchaseOrderWhereInput = {};
 
-    if (actor.role !== 'ADMIN') {
-      purchaseOrderWhere.restaurantId = actor.restaurantId ?? -1;
-    } else if (actor.restaurantId) {
-      purchaseOrderWhere.restaurantId = actor.restaurantId;
+    const restaurantScope = this.buildRestaurantScopeWhere(actor);
+    if (restaurantScope?.restaurantId !== undefined) {
+      purchaseOrderWhere.restaurantId = restaurantScope.restaurantId;
     }
 
     if (supplierId !== undefined) {
@@ -1223,23 +1203,13 @@ export class OrdersService {
       }
     }
 
-    const whereClause =
-      actor.role === 'ADMIN'
-        ? actor.restaurantId
-          ? {
-              restaurantId: actor.restaurantId,
-              ...(supplierId !== undefined ? { supplierId } : {}),
-            }
-          : supplierId !== undefined
-            ? { supplierId }
-            : undefined
-        : {
-            restaurantId: actor.restaurantId ?? -1,
-            ...(supplierId !== undefined ? { supplierId } : {}),
-          };
+    const whereClause = {
+      ...(this.buildRestaurantScopeWhere(actor) ?? {}),
+      ...(supplierId !== undefined ? { supplierId } : {}),
+    };
 
     const orders = await this.prisma.purchaseOrder.findMany({
-      where: whereClause,
+      where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
       select: {
         deliveryDate: true,
       },
@@ -1503,7 +1473,7 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    if (actor.role !== 'ADMIN' && order.restaurantId !== actor.restaurantId) {
+    if (!this.canActorAccessRestaurant(actor, order.restaurantId)) {
       throw new ForbiddenException('Order does not belong to your restaurant');
     }
 
@@ -1644,10 +1614,9 @@ export class OrdersService {
   ): Prisma.PurchaseOrderWhereInput {
     const where: Prisma.PurchaseOrderWhereInput = {};
 
-    if (actor.role !== 'ADMIN') {
-      where.restaurantId = actor.restaurantId ?? -1;
-    } else if (actor.restaurantId) {
-      where.restaurantId = actor.restaurantId;
+    const restaurantScope = this.buildRestaurantScopeWhere(actor);
+    if (restaurantScope?.restaurantId !== undefined) {
+      where.restaurantId = restaurantScope.restaurantId;
     }
 
     if (supplierId !== undefined) {
@@ -1939,7 +1908,11 @@ export class OrdersService {
   }
 
   private ensureCanManageOrders(actor: Actor) {
-    if (actor.role === 'ADMIN' || actor.role === 'MANAGER') {
+    if (
+      actor.role === 'ADMIN' ||
+      actor.role === 'MANAGER' ||
+      actor.role === 'REGIONAL_MANAGER'
+    ) {
       return;
     }
 
@@ -1961,6 +1934,42 @@ export class OrdersService {
     }
 
     throw new ForbiddenException('Insufficient level to access orders');
+  }
+
+  private buildRestaurantScopeWhere(
+    actor: Actor,
+  ): { restaurantId: number | { in: number[] } } | undefined {
+    if (actor.role === 'ADMIN') {
+      return actor.restaurantId ? { restaurantId: actor.restaurantId } : undefined;
+    }
+
+    const scopedRestaurantIds = this.getScopedRestaurantIds(actor);
+    if (scopedRestaurantIds.length === 0) {
+      return { restaurantId: -1 };
+    }
+
+    return scopedRestaurantIds.length === 1
+      ? { restaurantId: scopedRestaurantIds[0] }
+      : { restaurantId: { in: scopedRestaurantIds } };
+  }
+
+  private canActorAccessRestaurant(
+    actor: Actor,
+    restaurantId: number,
+  ): boolean {
+    if (actor.role === 'ADMIN') {
+      return actor.restaurantId ? actor.restaurantId === restaurantId : true;
+    }
+
+    return this.getScopedRestaurantIds(actor).includes(restaurantId);
+  }
+
+  private getScopedRestaurantIds(actor: Actor): number[] {
+    if (actor.role === 'REGIONAL_MANAGER') {
+      return Array.from(new Set(actor.managedRestaurantIds ?? []));
+    }
+
+    return actor.restaurantId ? [actor.restaurantId] : [];
   }
 
   private parseDeliveryDate(raw: string) {

@@ -19,10 +19,11 @@ import {
   fetchTrainingAccessUsers,
   rejectUserAccount,
   updateUserLevel,
-  updateUserManagerRole,
+  updateUserSupervisorRole,
   type TrainingAccessUser,
 } from '../../services/usersApi';
 import type { EmployeeLevel, Restaurant } from '../../types/auth';
+import { isManagerLikeRole } from '../../utils/roleAccess';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { styles } from './StoreManagementPage.styles';
 
@@ -51,6 +52,39 @@ function getDisplayName(
   }
 
   return user.email.split('@')[0]?.trim() || fallbackName;
+}
+
+function isLinkedToRestaurant(
+  user: TrainingAccessUser,
+  restaurantId: number | null,
+) {
+  if (!restaurantId) {
+    return false;
+  }
+
+  if (user.restaurant?.id === restaurantId) {
+    return true;
+  }
+
+  return user.managedRestaurants.some(
+    (restaurant) => restaurant.id === restaurantId,
+  );
+}
+
+function getRoleSortPriority(role: TrainingAccessUser['role']) {
+  if (role === 'REGIONAL_MANAGER') {
+    return 0;
+  }
+
+  if (role === 'MANAGER') {
+    return 1;
+  }
+
+  if (role === 'EMPLOYEE') {
+    return 2;
+  }
+
+  return 3;
 }
 
 export function StoreManagementPage({
@@ -137,13 +171,13 @@ export function StoreManagementPage({
       users
         .filter(
           (entry) =>
-            entry.restaurant?.id === selectedRestaurantId &&
+            isLinkedToRestaurant(entry, selectedRestaurantId) &&
             entry.role !== 'ADMIN' &&
             entry.isApproved,
         )
         .sort((left, right) => {
           if (left.role !== right.role) {
-            return left.role === 'MANAGER' ? -1 : 1;
+            return getRoleSortPriority(left.role) - getRoleSortPriority(right.role);
           }
 
           return getDisplayName(
@@ -259,13 +293,17 @@ export function StoreManagementPage({
     }
   }
 
-  async function handleToggleManagerRole(entry: TrainingAccessUser) {
+  async function handleSetManagerRole(
+    entry: TrainingAccessUser,
+    nextRole: 'EMPLOYEE' | 'MANAGER',
+  ) {
     setIsUpdatingUserId(entry.id);
     setError(null);
 
     try {
-      const updated = await updateUserManagerRole(accessToken, entry.id, {
-        isManager: entry.role !== 'MANAGER',
+      const updated = await updateUserSupervisorRole(accessToken, entry.id, {
+        role: nextRole,
+        primaryRestaurantId: selectedRestaurantId ?? entry.restaurant?.id ?? undefined,
       });
 
       setUsers((currentValue) =>
@@ -276,6 +314,9 @@ export function StoreManagementPage({
                 role: updated.role,
                 employeeLevel: updated.employeeLevel,
                 isOnProbation: updated.isOnProbation,
+                restaurant: updated.restaurant,
+                restaurantId: updated.restaurantId,
+                managedRestaurants: updated.managedRestaurants,
               }
             : userEntry,
         ),
@@ -283,6 +324,60 @@ export function StoreManagementPage({
       if (levelEditorUser?.id === entry.id) {
         setLevelEditorUser(null);
       }
+    } catch (updateError) {
+      setError(
+        updateError instanceof Error
+          ? updateError.message
+          : text.storeManagement.roleUpdateError,
+      );
+    } finally {
+      setIsUpdatingUserId(null);
+    }
+  }
+
+  async function handleToggleRegionalRole(entry: TrainingAccessUser) {
+    if (!selectedRestaurantId) {
+      return;
+    }
+
+    setIsUpdatingUserId(entry.id);
+    setError(null);
+
+    const currentManagedIds = entry.managedRestaurants.map(
+      (restaurant) => restaurant.id,
+    );
+    const alreadyAssigned = currentManagedIds.includes(selectedRestaurantId);
+    const nextManagedIds = alreadyAssigned
+      ? currentManagedIds.filter((restaurantId) => restaurantId !== selectedRestaurantId)
+      : [...currentManagedIds, selectedRestaurantId];
+
+    try {
+      const updated = await updateUserSupervisorRole(accessToken, entry.id, {
+        role: nextManagedIds.length === 0 ? 'MANAGER' : 'REGIONAL_MANAGER',
+        primaryRestaurantId:
+          nextManagedIds.length === 0
+            ? selectedRestaurantId
+            : entry.restaurant?.id && nextManagedIds.includes(entry.restaurant.id)
+              ? entry.restaurant.id
+              : nextManagedIds[0],
+        managedRestaurantIds: nextManagedIds,
+      });
+
+      setUsers((currentValue) =>
+        currentValue.map((userEntry) =>
+          userEntry.id === entry.id
+            ? {
+                ...userEntry,
+                role: updated.role,
+                employeeLevel: updated.employeeLevel,
+                isOnProbation: updated.isOnProbation,
+                restaurant: updated.restaurant,
+                restaurantId: updated.restaurantId,
+                managedRestaurants: updated.managedRestaurants,
+              }
+            : userEntry,
+        ),
+      );
     } catch (updateError) {
       setError(
         updateError instanceof Error
@@ -643,6 +738,15 @@ export function StoreManagementPage({
                       {`${text.storeManagement.levelLabel}: ${text.dashboard.levels[entry.employeeLevel]}`}
                     </Text>
                   </View>
+                  {entry.managedRestaurants.length > 0 ? (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailText}>
+                        {entry.managedRestaurants
+                          .map((restaurant) => restaurant.name)
+                          .join(' · ')}
+                      </Text>
+                    </View>
+                  ) : null}
 
                   <View style={styles.actionsWrap}>
                     {entry.role === 'EMPLOYEE' ? (
@@ -657,17 +761,55 @@ export function StoreManagementPage({
                       </Pressable>
                     ) : null}
 
+                    {entry.role !== 'REGIONAL_MANAGER' ? (
+                      <Pressable
+                        style={styles.secondaryButton}
+                        disabled={isUpdatingUserId === entry.id}
+                        onPress={() => {
+                          void handleSetManagerRole(
+                            entry,
+                            entry.role === 'MANAGER' ? 'EMPLOYEE' : 'MANAGER',
+                          );
+                        }}
+                      >
+                        <Text style={styles.secondaryButtonText}>
+                          {entry.role === 'MANAGER'
+                            ? text.storeManagement.removeManagerRole
+                            : text.storeManagement.makeManager}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+
+                    {entry.role === 'REGIONAL_MANAGER' ? (
+                      <Pressable
+                        style={styles.secondaryButton}
+                        disabled={isUpdatingUserId === entry.id}
+                        onPress={() => {
+                          void handleSetManagerRole(entry, 'MANAGER');
+                        }}
+                      >
+                        <Text style={styles.secondaryButtonText}>
+                          {text.storeManagement.convertToManager}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+
                     <Pressable
                       style={styles.secondaryButton}
-                      disabled={isUpdatingUserId === entry.id}
+                      disabled={isUpdatingUserId === entry.id || !selectedRestaurantId}
                       onPress={() => {
-                        void handleToggleManagerRole(entry);
+                        void handleToggleRegionalRole(entry);
                       }}
                     >
                       <Text style={styles.secondaryButtonText}>
-                        {entry.role === 'MANAGER'
-                          ? text.storeManagement.removeManagerRole
-                          : text.storeManagement.makeManager}
+                        {entry.role === 'REGIONAL_MANAGER' &&
+                        entry.managedRestaurants.some(
+                          (restaurant) => restaurant.id === selectedRestaurantId,
+                        )
+                          ? text.storeManagement.removeRegionalStore
+                          : isManagerLikeRole(entry.role)
+                            ? text.storeManagement.addRegionalStore
+                            : text.storeManagement.makeRegionalManager}
                       </Text>
                     </Pressable>
 

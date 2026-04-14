@@ -7,7 +7,10 @@ import {
 import { EmployeeLevel, Prisma, Role } from '@prisma/client';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ensureAdminOrManagerScope } from './users-scope';
+import {
+  canActorManageRestaurant,
+  ensureAdminOrManagerScope,
+} from './users-scope';
 import type { RoleScopeActor, RoleScopeActorWithId } from './users.types';
 
 @Injectable()
@@ -41,8 +44,8 @@ export class UsersApprovalService {
     }
 
     if (
-      actor.actorRole === Role.MANAGER &&
-      user.restaurantId !== actor.actorRestaurantId
+      actor.actorRole !== Role.ADMIN &&
+      !canActorManageRestaurant(actor, user.restaurantId)
     ) {
       throw new BadRequestException(
         'Manager can only update users in own restaurant',
@@ -92,7 +95,7 @@ export class UsersApprovalService {
       throw new NotFoundException('User not found');
     }
 
-    if (actor.actorRole === Role.MANAGER && user.role !== Role.EMPLOYEE) {
+    if (actor.actorRole !== Role.ADMIN && user.role !== Role.EMPLOYEE) {
       throw new BadRequestException(
         'Manager can only approve EMPLOYEE accounts',
       );
@@ -100,17 +103,18 @@ export class UsersApprovalService {
 
     if (
       actor.actorRole === Role.ADMIN &&
+      user.role !== Role.REGIONAL_MANAGER &&
       user.role !== Role.MANAGER &&
       user.role !== Role.EMPLOYEE
     ) {
       throw new BadRequestException(
-        'Admin can only approve MANAGER or EMPLOYEE accounts',
+        'Admin can only approve REGIONAL_MANAGER, MANAGER, or EMPLOYEE accounts',
       );
     }
 
     if (
-      actor.actorRole === Role.MANAGER &&
-      user.restaurantId !== actor.actorRestaurantId
+      actor.actorRole !== Role.ADMIN &&
+      !canActorManageRestaurant(actor, user.restaurantId)
     ) {
       throw new BadRequestException(
         'Manager can only approve users in own restaurant',
@@ -131,7 +135,7 @@ export class UsersApprovalService {
       where: { id: userId },
       data: {
         isApproved: true,
-        ...(user.role === Role.MANAGER
+        ...(user.role === Role.MANAGER || user.role === Role.REGIONAL_MANAGER
           ? {
               employeeLevel: EmployeeLevel.L7_D,
               isOnProbation: false,
@@ -194,7 +198,7 @@ export class UsersApprovalService {
       );
     }
 
-    if (actor.actorRole === Role.MANAGER && user.role !== Role.EMPLOYEE) {
+    if (actor.actorRole !== Role.ADMIN && user.role !== Role.EMPLOYEE) {
       throw new BadRequestException(
         'Manager can only reject EMPLOYEE accounts',
       );
@@ -202,17 +206,18 @@ export class UsersApprovalService {
 
     if (
       actor.actorRole === Role.ADMIN &&
+      user.role !== Role.REGIONAL_MANAGER &&
       user.role !== Role.MANAGER &&
       user.role !== Role.EMPLOYEE
     ) {
       throw new BadRequestException(
-        'Admin can only reject MANAGER or EMPLOYEE accounts',
+        'Admin can only reject REGIONAL_MANAGER, MANAGER, or EMPLOYEE accounts',
       );
     }
 
     if (
-      actor.actorRole === Role.MANAGER &&
-      user.restaurantId !== actor.actorRestaurantId
+      actor.actorRole !== Role.ADMIN &&
+      !canActorManageRestaurant(actor, user.restaurantId)
     ) {
       throw new BadRequestException(
         'Manager can only reject users in own restaurant',
@@ -249,15 +254,15 @@ export class UsersApprovalService {
       throw new BadRequestException('ADMIN accounts cannot be deleted');
     }
 
-    if (actor.actorRole === Role.MANAGER && user.role !== Role.EMPLOYEE) {
+    if (actor.actorRole !== Role.ADMIN && user.role !== Role.EMPLOYEE) {
       throw new BadRequestException(
         'Manager can only delete EMPLOYEE accounts',
       );
     }
 
     if (
-      actor.actorRole === Role.MANAGER &&
-      user.restaurantId !== actor.actorRestaurantId
+      actor.actorRole !== Role.ADMIN &&
+      !canActorManageRestaurant(actor, user.restaurantId)
     ) {
       throw new BadRequestException(
         'Manager can only delete users in own restaurant',

@@ -1,4 +1,5 @@
 import type { EmployeeLevel, User } from '../types/auth';
+import { isManagerLikeRole } from './roleAccess';
 
 const ORDER_ACCESS_LEVELS: EmployeeLevel[] = [
   'L5_PAM',
@@ -12,7 +13,7 @@ const ORDER_ACCESS_LEVELS: EmployeeLevel[] = [
 export function canUserAccessOrders(
   user: Pick<User, 'role' | 'employeeLevel'>,
 ): boolean {
-  if (user.role === 'ADMIN' || user.role === 'MANAGER') {
+  if (user.role === 'ADMIN' || isManagerLikeRole(user.role)) {
     return true;
   }
 

@@ -47,6 +47,7 @@ export class SuppliersController {
     const level = req.user?.employeeLevel;
     const canAccess =
       role === 'ADMIN' ||
+      role === 'REGIONAL_MANAGER' ||
       role === 'MANAGER' ||
       (role === 'EMPLOYEE' &&
         level !== undefined &&

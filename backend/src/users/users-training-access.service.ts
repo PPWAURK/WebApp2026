@@ -6,7 +6,11 @@ import {
 import { EmployeeLevel, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from './users.service';
-import { ensureAdminOrManagerScope } from './users-scope';
+import {
+  canActorManageRestaurant,
+  ensureAdminOrManagerScope,
+  getActorRestaurantScopeIds,
+} from './users-scope';
 import {
   ensureAdminRole,
   getAllTrainingSections,
@@ -35,17 +39,35 @@ export class UsersTrainingAccessService {
 
     await this.usersService.deleteExpiredPendingEmailVerificationUsers();
 
-    const effectiveRestaurantId =
-      actor.actorRole === Role.ADMIN ? restaurantId : actor.actorRestaurantId;
+    const scopedRestaurantIds = getActorRestaurantScopeIds(actor);
+
+    if (
+      actor.actorRole !== Role.ADMIN &&
+      restaurantId !== undefined &&
+      !scopedRestaurantIds.includes(restaurantId)
+    ) {
+      throw new BadRequestException(
+        'Requested restaurant is outside your scope',
+      );
+    }
 
     const users = await this.prisma.user.findMany({
       where: {
         role: {
           not: Role.ADMIN,
         },
-        ...(effectiveRestaurantId
-          ? { restaurantId: effectiveRestaurantId }
-          : {}),
+        ...(actor.actorRole === Role.ADMIN
+          ? restaurantId
+            ? { restaurantId }
+            : {}
+          : {
+              restaurantId:
+                restaurantId !== undefined
+                  ? restaurantId
+                  : {
+                      in: scopedRestaurantIds,
+                    },
+            }),
       },
       orderBy: {
         createdAt: 'asc',
@@ -60,6 +82,17 @@ export class UsersTrainingAccessService {
           select: {
             id: true,
             name: true,
+          },
+        },
+        managedRestaurants: {
+          select: {
+            restaurant: {
+              select: {
+                id: true,
+                name: true,
+                address: true,
+              },
+            },
           },
         },
         role: true,
@@ -78,6 +111,9 @@ export class UsersTrainingAccessService {
 
       return {
         ...restUser,
+        managedRestaurants: user.managedRestaurants.map((entry) => ({
+          ...entry.restaurant,
+        })),
         isEmailVerified: emailVerifiedAt !== null,
         trainingAccess: levelAccessMap.get(user.employeeLevel) ?? [],
       };
@@ -251,15 +287,18 @@ export class UsersTrainingAccessService {
       throw new BadRequestException('Cannot update ADMIN training access');
     }
 
-    if (actor.actorRole === Role.MANAGER && user.role !== Role.EMPLOYEE) {
+    if (
+      actor.actorRole !== Role.ADMIN &&
+      user.role !== Role.EMPLOYEE
+    ) {
       throw new BadRequestException(
         'Manager can only update EMPLOYEE training access',
       );
     }
 
     if (
-      actor.actorRole === Role.MANAGER &&
-      user.restaurantId !== actor.actorRestaurantId
+      actor.actorRole !== Role.ADMIN &&
+      !canActorManageRestaurant(actor, user.restaurantId)
     ) {
       throw new BadRequestException(
         'Manager can only update users in own restaurant',
@@ -284,6 +323,17 @@ export class UsersTrainingAccessService {
             name: true,
           },
         },
+        managedRestaurants: {
+          select: {
+            restaurant: {
+              select: {
+                id: true,
+                name: true,
+                address: true,
+              },
+            },
+          },
+        },
         role: true,
         employeeLevel: true,
         isApproved: true,
@@ -294,6 +344,9 @@ export class UsersTrainingAccessService {
 
     return {
       ...updatedUser,
+      managedRestaurants: updatedUser.managedRestaurants.map((entry) => ({
+        ...entry.restaurant,
+      })),
       trainingAccess: normalizeTrainingAccess(updatedUser.trainingAccess),
     };
   }

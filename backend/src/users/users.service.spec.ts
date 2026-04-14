@@ -7,6 +7,7 @@ describe('UsersWorkforceService', () => {
   let prisma: {
     restaurant: {
       findUnique: jest.Mock;
+      findMany: jest.Mock;
     };
     user: {
       findUnique: jest.Mock;
@@ -18,6 +19,7 @@ describe('UsersWorkforceService', () => {
     prisma = {
       restaurant: {
         findUnique: jest.fn(),
+        findMany: jest.fn(),
       },
       user: {
         findUnique: jest.fn(),
@@ -49,6 +51,7 @@ describe('UsersWorkforceService', () => {
       actorId: 7,
       actorRole: Role.MANAGER,
       actorRestaurantId: 2,
+      actorManagedRestaurantIds: [],
     });
 
     expect(prisma.user.update).toHaveBeenCalledWith({
@@ -88,6 +91,7 @@ describe('UsersWorkforceService', () => {
         actorId: 7,
         actorRole: Role.MANAGER,
         actorRestaurantId: 2,
+        actorManagedRestaurantIds: [],
       }),
     ).rejects.toThrow(
       new BadRequestException(
@@ -109,6 +113,7 @@ describe('UsersWorkforceService', () => {
         actorId: 7,
         actorRole: Role.MANAGER,
         actorRestaurantId: 2,
+        actorManagedRestaurantIds: [],
       }),
     ).rejects.toThrow(
       new BadRequestException('Manager can only move EMPLOYEE accounts'),
@@ -135,6 +140,7 @@ describe('UsersWorkforceService', () => {
         actorId: 1,
         actorRole: Role.ADMIN,
         actorRestaurantId: null,
+        actorManagedRestaurantIds: [],
       },
     );
 
@@ -172,6 +178,7 @@ describe('UsersWorkforceService', () => {
         actorId: 1,
         actorRole: Role.ADMIN,
         actorRestaurantId: null,
+        actorManagedRestaurantIds: [],
       }),
     ).rejects.toThrow(
       new BadRequestException(
@@ -180,5 +187,35 @@ describe('UsersWorkforceService', () => {
     );
 
     expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('allows a regional manager to move an employee between assigned restaurants', async () => {
+    prisma.restaurant.findUnique.mockResolvedValue({ id: 4 });
+    prisma.user.findUnique.mockResolvedValue({
+      id: 12,
+      role: Role.EMPLOYEE,
+      restaurantId: 2,
+    });
+    prisma.user.update.mockResolvedValue({
+      id: 12,
+      restaurantId: 4,
+      restaurant: {
+        id: 4,
+        name: 'Lyon',
+        address: 'Rue de Lyon',
+      },
+    });
+
+    const result = await service.assignUserRestaurant(12, 4, {
+      actorId: 9,
+      actorRole: Role.REGIONAL_MANAGER,
+      actorRestaurantId: 2,
+      actorManagedRestaurantIds: [2, 4],
+    });
+
+    expect(result).toMatchObject({
+      id: 12,
+      restaurantId: 4,
+    });
   });
 });

@@ -523,14 +523,14 @@ export class NewsService {
 
   private getAudienceRoles(audience: NewsAudience): Role[] {
     if (audience === NewsAudience.MANAGERS) {
-      return [Role.MANAGER];
+      return [Role.MANAGER, Role.REGIONAL_MANAGER];
     }
 
     if (audience === NewsAudience.EMPLOYEES) {
       return [Role.EMPLOYEE];
     }
 
-    return [Role.MANAGER, Role.EMPLOYEE];
+    return [Role.REGIONAL_MANAGER, Role.MANAGER, Role.EMPLOYEE];
   }
 
   private ensureCanReadPost(
@@ -553,7 +553,10 @@ export class NewsService {
 
     const where: Prisma.NewsPostWhereInput = {};
 
-    if (context.role === 'MANAGER') {
+    if (
+      context.role === 'MANAGER' ||
+      context.role === 'REGIONAL_MANAGER'
+    ) {
       where.audience = {
         in: [NewsAudience.ALL, NewsAudience.MANAGERS],
       };
@@ -631,7 +634,7 @@ export class NewsService {
       return true;
     }
 
-    if (role === 'MANAGER') {
+    if (role === 'MANAGER' || role === 'REGIONAL_MANAGER') {
       return (
         audience === NewsAudience.ALL || audience === NewsAudience.MANAGERS
       );
@@ -913,7 +916,12 @@ export class NewsService {
   }
 
   private ensureSupportedRole(role: string) {
-    if (role !== 'ADMIN' && role !== 'MANAGER' && role !== 'EMPLOYEE') {
+    if (
+      role !== 'ADMIN' &&
+      role !== 'REGIONAL_MANAGER' &&
+      role !== 'MANAGER' &&
+      role !== 'EMPLOYEE'
+    ) {
       throw new ForbiddenException('Unsupported role');
     }
   }

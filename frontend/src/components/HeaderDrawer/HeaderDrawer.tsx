@@ -6,6 +6,7 @@ import type { Language } from '../../types/language';
 import type { MenuPage } from '../../types/menu';
 import type { User } from '../../types/auth';
 import { canUserAccessOrders } from '../../utils/orderAccess';
+import { isSupervisorRole } from '../../utils/roleAccess';
 
 type HeaderDrawerProps = {
   isOpen: boolean;
@@ -30,8 +31,7 @@ export function HeaderDrawer(props: HeaderDrawerProps) {
   );
   const menuItems: Array<{ key: MenuPage; label: string }> = [
     { key: 'dashboard', label: props.text.drawer.dashboard },
-    ...(props.currentUser.role === 'ADMIN' ||
-    props.currentUser.role === 'MANAGER'
+    ...(isSupervisorRole(props.currentUser.role)
       ? [
           {
             key: 'teamOverview' as MenuPage,

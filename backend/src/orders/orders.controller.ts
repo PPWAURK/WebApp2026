@@ -42,6 +42,9 @@ export class OrdersController {
       role: user.role,
       employeeLevel: user.employeeLevel ?? null,
       restaurantId: user.restaurantId ?? null,
+      managedRestaurantIds: (user.managedRestaurants ?? []).map(
+        (restaurant) => restaurant.id,
+      ),
     };
   }
 

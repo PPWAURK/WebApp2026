@@ -21,6 +21,7 @@ model User {
   profilePhoto        String?                     @map("profile_photo") @db.Text
   restaurantId        Int?
   restaurant          Restaurant?                 @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+  managedRestaurants  UserManagedRestaurant[]
   role                Role                        @default(EMPLOYEE)
   employeeLevel       EmployeeLevel               @default(L0_PROBATION)
   isApproved          Boolean                     @default(true)
@@ -83,10 +84,23 @@ model Restaurant {
   name            String           @unique
   address         String
   users           User[]
+  managedByUsers  UserManagedRestaurant[]
   purchaseOrders  PurchaseOrder[]
   purchaseReturns PurchaseReturn[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+}
+
+model UserManagedRestaurant {
+  userId       Int        @map("user_id")
+  restaurantId Int        @map("restaurant_id")
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@id([userId, restaurantId])
+  @@index([restaurantId])
+  @@map("user_managed_restaurants")
 }
 
 model Produit {
@@ -315,6 +329,7 @@ model TrainingQuizLink {
 
 enum Role {
   ADMIN
+  REGIONAL_MANAGER
   MANAGER
   EMPLOYEE
 }

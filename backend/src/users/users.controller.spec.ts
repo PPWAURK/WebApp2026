@@ -17,6 +17,7 @@ describe('UsersController', () => {
   let usersWorkforceService: {
     assignUserRestaurant: jest.Mock;
     updateEmployeeLevel: jest.Mock;
+    updateSupervisorRole: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -28,6 +29,7 @@ describe('UsersController', () => {
     usersWorkforceService = {
       assignUserRestaurant: jest.fn(),
       updateEmployeeLevel: jest.fn(),
+      updateSupervisorRole: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -175,6 +177,7 @@ describe('UsersController', () => {
         actorId: 8,
         actorRole: Role.MANAGER,
         actorRestaurantId: 3,
+        actorManagedRestaurantIds: [],
       },
     );
     expect(result).toBe(expected);
@@ -194,7 +197,9 @@ describe('UsersController', () => {
         5,
       ),
     ).toThrow(
-      new ForbiddenException('Only ADMIN and MANAGER can access this resource'),
+      new ForbiddenException(
+        'Only ADMIN, MANAGER, and REGIONAL_MANAGER can access this resource',
+      ),
     );
 
     expect(usersWorkforceService.assignUserRestaurant).not.toHaveBeenCalled();
@@ -226,6 +231,7 @@ describe('UsersController', () => {
         actorId: 1,
         actorRole: Role.ADMIN,
         actorRestaurantId: null,
+        actorManagedRestaurantIds: [],
       },
     );
     expect(result).toBe(expected);

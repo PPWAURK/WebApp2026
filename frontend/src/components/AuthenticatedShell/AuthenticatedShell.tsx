@@ -17,6 +17,10 @@ import type { MenuPage } from '../../types/menu';
 import type { AppTheme } from '../../types/theme';
 import { canUserAccessOrders } from '../../utils/orderAccess';
 import {
+  getUserScopedRestaurants,
+  isSupervisorRole,
+} from '../../utils/roleAccess';
+import {
   createStyles,
   DESKTOP_BREAKPOINT,
   getShellPalette,
@@ -110,8 +114,12 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
   const displayName =
     props.currentUser.name?.trim() || props.text.dashboard.fallbackName;
   const roleLabel = props.text.dashboard.roleValues[props.currentUser.role];
+  const scopedRestaurants = getUserScopedRestaurants(props.currentUser);
   const restaurantLabel =
-    props.currentUser.restaurant?.name || props.text.profile.noRestaurant;
+    props.currentUser.role === 'REGIONAL_MANAGER'
+      ? scopedRestaurants.map((restaurant) => restaurant.name).join(' · ') ||
+        props.text.profile.noRestaurant
+      : props.currentUser.restaurant?.name || props.text.profile.noRestaurant;
   const activePageLabel = getActivePageLabel(props.text, props.activePage);
   const statusLabel = props.language === 'zh' ? '当前状态' : 'Statut';
   const brandValueLines =
@@ -123,8 +131,7 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
           'La persévérance crée la valeur',
         ];
   const canAccessOrders = canUserAccessOrders(props.currentUser);
-  const canAccessTeamOverview =
-    props.currentUser.role === 'ADMIN' || props.currentUser.role === 'MANAGER';
+  const canAccessTeamOverview = isSupervisorRole(props.currentUser.role);
   const primaryItems: PrimaryNavItem[] = [
     {
       key: 'dashboard',

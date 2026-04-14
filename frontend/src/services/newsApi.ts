@@ -43,7 +43,7 @@ export type NewsReadTrackingUser = {
   id: number;
   name: string | null;
   email: string;
-  role: 'MANAGER' | 'EMPLOYEE';
+  role: 'REGIONAL_MANAGER' | 'MANAGER' | 'EMPLOYEE';
   employeeLevel: EmployeeLevel;
 };
 

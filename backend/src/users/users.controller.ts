@@ -25,7 +25,9 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UpdateOwnEmailDto } from './dto/update-own-email.dto';
 import { UpdateOwnPasswordDto } from './dto/update-own-password.dto';
+import { UpdateSupervisorRoleDto } from './dto/update-supervisor-role.dto';
 import { UsersApprovalService } from './users-approval.service';
+import { isSupervisorRole } from './users-scope';
 import { UsersService } from './users.service';
 import { UsersTrainingAccessService } from './users-training-access.service';
 import { UsersWorkforceService } from './users-workforce.service';
@@ -52,6 +54,11 @@ type AuthenticatedRequest = Request & {
     id: number;
     role: string;
     restaurantId: number | null;
+    managedRestaurants?: Array<{
+      id: number;
+      name: string;
+      address: string;
+    }>;
   };
 };
 
@@ -65,6 +72,27 @@ export class UsersController {
     private readonly usersApprovalService: UsersApprovalService,
   ) {}
 
+  private ensureSupervisorAccess(actor: AuthenticatedRequest['user']) {
+    if (!actor || !isSupervisorRole(actor.role)) {
+      throw new ForbiddenException(
+        'Only ADMIN, MANAGER, and REGIONAL_MANAGER can access this resource',
+      );
+    }
+
+    return actor;
+  }
+
+  private toRoleScopeActor(actor: NonNullable<AuthenticatedRequest['user']>) {
+    return {
+      actorId: actor.id,
+      actorRole: actor.role,
+      actorRestaurantId: actor.restaurantId,
+      actorManagedRestaurantIds: (actor.managedRestaurants ?? []).map(
+        (restaurant) => restaurant.id,
+      ),
+    };
+  }
+
   @ApiOperation({ summary: 'List users with training access configuration' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
@@ -73,13 +101,7 @@ export class UsersController {
     @Req() req: AuthenticatedRequest,
     @Query('restaurantId') restaurantIdRaw: string | undefined,
   ) {
-    const actor = req.user;
-
-    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException(
-        'Only ADMIN and MANAGER can access this resource',
-      );
-    }
+    const actor = this.ensureSupervisorAccess(req.user);
 
     const restaurantId = restaurantIdRaw ? Number(restaurantIdRaw) : undefined;
 
@@ -92,11 +114,7 @@ export class UsersController {
 
     return this.usersTrainingAccessService.listUsersTrainingAccess(
       restaurantId,
-      {
-        actorId: actor.id,
-        actorRole: actor.role,
-        actorRestaurantId: actor.restaurantId,
-      },
+      this.toRoleScopeActor(actor),
     );
   }
 
@@ -109,22 +127,12 @@ export class UsersController {
     @Param('id', ParseIntPipe) userId: number,
     @Body('sections') sections: string[] | undefined,
   ) {
-    const actor = req.user;
-
-    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException(
-        'Only ADMIN and MANAGER can access this resource',
-      );
-    }
+    const actor = this.ensureSupervisorAccess(req.user);
 
     return this.usersTrainingAccessService.updateTrainingAccess(
       userId,
       sections,
-      {
-        actorId: actor.id,
-        actorRole: actor.role,
-        actorRestaurantId: actor.restaurantId,
-      },
+      this.toRoleScopeActor(actor),
     );
   }
 
@@ -245,22 +253,12 @@ export class UsersController {
     @Param('id', ParseIntPipe) userId: number,
     @Body('restaurantId', ParseIntPipe) restaurantId: number,
   ) {
-    const actor = req.user;
-
-    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException(
-        'Only ADMIN and MANAGER can access this resource',
-      );
-    }
+    const actor = this.ensureSupervisorAccess(req.user);
 
     return this.usersWorkforceService.assignUserRestaurant(
       userId,
       restaurantId,
-      {
-        actorId: actor.id,
-        actorRole: actor.role,
-        actorRestaurantId: actor.restaurantId,
-      },
+      this.toRoleScopeActor(actor),
     );
   }
 
@@ -299,6 +297,29 @@ export class UsersController {
   }
 
   @ApiOperation({
+    summary: 'Set one supervisor role for one user (admin only)',
+  })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/supervisor-role')
+  updateSupervisorRole(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) userId: number,
+    @Body() body: UpdateSupervisorRoleDto,
+  ) {
+    if (req.user?.role !== 'ADMIN') {
+      throw new ForbiddenException('Admin only');
+    }
+
+    return this.usersWorkforceService.updateSupervisorRole(userId, {
+      role: body.role,
+      primaryRestaurantId: body.primaryRestaurantId,
+      managedRestaurantIds: body.managedRestaurantIds,
+      actorId: req.user.id,
+    });
+  }
+
+  @ApiOperation({
     summary: 'Confirm employee probation status (admin/manager)',
   })
   @ApiBearerAuth()
@@ -308,19 +329,12 @@ export class UsersController {
     @Req() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) userId: number,
   ) {
-    const actor = req.user;
+    const actor = this.ensureSupervisorAccess(req.user);
 
-    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException(
-        'Only ADMIN and MANAGER can access this resource',
-      );
-    }
-
-    return this.usersApprovalService.confirmEmployeeProbation(userId, {
-      actorId: actor.id,
-      actorRole: actor.role,
-      actorRestaurantId: actor.restaurantId,
-    });
+    return this.usersApprovalService.confirmEmployeeProbation(
+      userId,
+      this.toRoleScopeActor(actor),
+    );
   }
 
   @ApiOperation({ summary: 'Approve pending account request (admin/manager)' })
@@ -331,18 +345,12 @@ export class UsersController {
     @Req() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) userId: number,
   ) {
-    const actor = req.user;
+    const actor = this.ensureSupervisorAccess(req.user);
 
-    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException(
-        'Only ADMIN and MANAGER can access this resource',
-      );
-    }
-
-    return this.usersApprovalService.approveEmployeeAccount(userId, {
-      actorRole: actor.role,
-      actorRestaurantId: actor.restaurantId,
-    });
+    return this.usersApprovalService.approveEmployeeAccount(
+      userId,
+      this.toRoleScopeActor(actor),
+    );
   }
 
   @ApiOperation({
@@ -355,18 +363,12 @@ export class UsersController {
     @Req() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) userId: number,
   ) {
-    const actor = req.user;
+    const actor = this.ensureSupervisorAccess(req.user);
 
-    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException(
-        'Only ADMIN and MANAGER can access this resource',
-      );
-    }
-
-    return this.usersApprovalService.deleteEmployeeAccount(userId, {
-      actorRole: actor.role,
-      actorRestaurantId: actor.restaurantId,
-    });
+    return this.usersApprovalService.deleteEmployeeAccount(
+      userId,
+      this.toRoleScopeActor(actor),
+    );
   }
 
   @ApiOperation({ summary: 'Reject pending account request (admin/manager)' })
@@ -377,18 +379,12 @@ export class UsersController {
     @Req() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) userId: number,
   ) {
-    const actor = req.user;
+    const actor = this.ensureSupervisorAccess(req.user);
 
-    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException(
-        'Only ADMIN and MANAGER can access this resource',
-      );
-    }
-
-    return this.usersApprovalService.rejectAccountRequest(userId, {
-      actorRole: actor.role,
-      actorRestaurantId: actor.restaurantId,
-    });
+    return this.usersApprovalService.rejectAccountRequest(
+      userId,
+      this.toRoleScopeActor(actor),
+    );
   }
 
   @ApiOperation({ summary: 'Update employee level (admin/manager)' })
@@ -400,13 +396,7 @@ export class UsersController {
     @Param('id', ParseIntPipe) userId: number,
     @Body('level') levelRaw: string | undefined,
   ) {
-    const actor = req.user;
-
-    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException(
-        'Only ADMIN and MANAGER can access this resource',
-      );
-    }
+    const actor = this.ensureSupervisorAccess(req.user);
 
     if (
       !levelRaw ||
@@ -418,11 +408,7 @@ export class UsersController {
     return this.usersWorkforceService.updateEmployeeLevel(
       userId,
       levelRaw as EmployeeLevel,
-      {
-        actorId: actor.id,
-        actorRole: actor.role,
-        actorRestaurantId: actor.restaurantId,
-      },
+      this.toRoleScopeActor(actor),
     );
   }
 
@@ -435,13 +421,7 @@ export class UsersController {
     @Param('id', ParseIntPipe) userId: number,
     @Body('workplaceRole') workplaceRoleRaw: string | undefined,
   ) {
-    const actor = req.user;
-
-    if (!actor || (actor.role !== 'ADMIN' && actor.role !== 'MANAGER')) {
-      throw new ForbiddenException(
-        'Only ADMIN and MANAGER can access this resource',
-      );
-    }
+    const actor = this.ensureSupervisorAccess(req.user);
 
     if (
       !workplaceRoleRaw ||
@@ -453,11 +433,7 @@ export class UsersController {
     return this.usersWorkforceService.updateEmployeeWorkplaceRole(
       userId,
       workplaceRoleRaw as WorkplaceRole,
-      {
-        actorId: actor.id,
-        actorRole: actor.role,
-        actorRestaurantId: actor.restaurantId,
-      },
+      this.toRoleScopeActor(actor),
     );
   }
 

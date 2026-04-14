@@ -43,6 +43,7 @@ describe('UsersApprovalService', () => {
       service.approveEmployeeAccount(12, {
         actorRole: Role.MANAGER,
         actorRestaurantId: 5,
+        actorManagedRestaurantIds: [],
       }),
     ).rejects.toThrow(
       new BadRequestException('Email must be verified before account review'),
@@ -66,6 +67,7 @@ describe('UsersApprovalService', () => {
       service.deleteEmployeeAccount(24, {
         actorRole: Role.ADMIN,
         actorRestaurantId: null,
+        actorManagedRestaurantIds: [],
       }),
     ).resolves.toEqual({
       success: true,
@@ -94,6 +96,7 @@ describe('UsersApprovalService', () => {
       service.approveEmployeeAccount(24, {
         actorRole: Role.ADMIN,
         actorRestaurantId: null,
+        actorManagedRestaurantIds: [],
       }),
     ).resolves.toEqual({
       id: 24,
@@ -128,6 +131,7 @@ describe('UsersApprovalService', () => {
       service.deleteEmployeeAccount(2, {
         actorRole: Role.ADMIN,
         actorRestaurantId: null,
+        actorManagedRestaurantIds: [],
       }),
     ).rejects.toThrow(
       new BadRequestException('ADMIN accounts cannot be deleted'),

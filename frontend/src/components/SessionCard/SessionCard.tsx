@@ -21,6 +21,11 @@ import { SessionCardWhatsNewPanel } from './SessionCardWhatsNewPanel';
 import { useSessionCardConfirmDialog } from './useSessionCardConfirmDialog';
 import { useSessionCardSupervisorState } from './useSessionCardSupervisorState';
 import { useSessionCardWhatsNewState } from './useSessionCardWhatsNewState';
+import {
+  getUserScopedRestaurants,
+  isManagerLikeRole,
+  isSupervisorRole,
+} from '../../utils/roleAccess';
 
 export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   const { width } = useWindowDimensions();
@@ -30,8 +35,8 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   const isCompactDashboardCards = width < 820;
   const isAdmin = user.role === 'ADMIN';
   const isCompactAdminCardLayout = width < 760 || (isAdmin && isWideLayout);
-  const isManager = user.role === 'MANAGER';
-  const isSupervisor = isManager || isAdmin;
+  const isManager = isManagerLikeRole(user.role);
+  const isSupervisor = isSupervisorRole(user.role);
 
   const confirmDialogState = useSessionCardConfirmDialog(text);
   const orderInsights = useDashboardOrderInsights({
@@ -62,8 +67,14 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
 
   const roleLabel = text.dashboard.roleValues[user.role];
   const workplaceLabel = text.dashboard.workplaceValues[user.workplaceRole];
-  const restaurantLabel = user.restaurant?.name ?? text.profile.noRestaurant;
-  const addressLabel = user.restaurant?.address ?? text.profile.noAddress;
+  const scopedRestaurants = getUserScopedRestaurants(user);
+  const restaurantLabel =
+    user.role === 'REGIONAL_MANAGER'
+      ? scopedRestaurants.map((restaurant) => restaurant.name).join(' · ') ||
+        text.profile.noRestaurant
+      : user.restaurant?.name ?? text.profile.noRestaurant;
+  const addressLabel =
+    user.restaurant?.address ?? text.profile.noAddress;
   const unreadNewsCount = isAdmin
     ? 0
     : newsFeedState.newsFeed.filter(

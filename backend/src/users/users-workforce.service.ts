@@ -3,12 +3,45 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EmployeeLevel, Role, WorkplaceRole } from '@prisma/client';
+import { EmployeeLevel, Prisma, Role, WorkplaceRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { ensureAdminOrManagerScope } from './users-scope';
+import {
+  canActorManageRestaurant,
+  ensureAdminOrManagerScope,
+} from './users-scope';
 import { normalizeTrainingAccess } from './users-training-access.utils';
 import type { RoleScopeActorWithId } from './users.types';
 import { deriveRoleFromLevel } from './users-workforce.utils';
+
+const SUPERVISOR_PROFILE_SELECT = {
+  id: true,
+  email: true,
+  name: true,
+  role: true,
+  employeeLevel: true,
+  restaurantId: true,
+  isApproved: true,
+  isOnProbation: true,
+  trainingAccess: true,
+  restaurant: {
+    select: {
+      id: true,
+      name: true,
+      address: true,
+    },
+  },
+  managedRestaurants: {
+    select: {
+      restaurant: {
+        select: {
+          id: true,
+          name: true,
+          address: true,
+        },
+      },
+    },
+  },
+} as const;
 
 @Injectable()
 export class UsersWorkforceService {
@@ -43,6 +76,7 @@ export class UsersWorkforceService {
       actorId: 0,
       actorRole: Role.ADMIN,
       actorRestaurantId: null,
+      actorManagedRestaurantIds: [],
     };
 
     ensureAdminOrManagerScope(effectiveActor);
@@ -89,6 +123,26 @@ export class UsersWorkforceService {
       }
     }
 
+    if (effectiveActor.actorRole === Role.REGIONAL_MANAGER) {
+      if (user.role !== Role.EMPLOYEE) {
+        throw new BadRequestException(
+          'Regional manager can only move EMPLOYEE accounts',
+        );
+      }
+
+      if (!canActorManageRestaurant(effectiveActor, user.restaurantId)) {
+        throw new BadRequestException(
+          'Regional manager can only move employees from assigned restaurants',
+        );
+      }
+
+      if (!canActorManageRestaurant(effectiveActor, restaurantId)) {
+        throw new BadRequestException(
+          'Regional manager can only move employees to assigned restaurants',
+        );
+      }
+    }
+
     return this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -119,6 +173,23 @@ export class UsersWorkforceService {
       actorId: number;
     },
   ) {
+    return this.updateSupervisorRole(userId, {
+      role: params.isManager ? Role.MANAGER : Role.EMPLOYEE,
+      primaryRestaurantId: params.restaurantId,
+      managedRestaurantIds: [],
+      actorId: params.actorId,
+    });
+  }
+
+  async updateSupervisorRole(
+    userId: number,
+    params: {
+      role: Role;
+      primaryRestaurantId?: number;
+      managedRestaurantIds?: number[];
+      actorId: number;
+    },
+  ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -142,18 +213,61 @@ export class UsersWorkforceService {
       );
     }
 
-    const nextRestaurantId = params.restaurantId ?? user.restaurantId;
-    if (params.isManager && !nextRestaurantId) {
+    if (
+      params.role !== Role.EMPLOYEE &&
+      params.role !== Role.MANAGER &&
+      params.role !== Role.REGIONAL_MANAGER
+    ) {
+      throw new BadRequestException('Unsupported supervisor role');
+    }
+
+    const primaryRestaurantId = params.primaryRestaurantId ?? user.restaurantId;
+    const managedRestaurantIds = this.normalizeManagedRestaurantIds(
+      params.managedRestaurantIds,
+    );
+
+    if (params.role === Role.MANAGER && !primaryRestaurantId) {
       throw new BadRequestException('Manager must be assigned to a restaurant');
     }
 
-    if (nextRestaurantId) {
-      const restaurant = await this.prisma.restaurant.findUnique({
-        where: { id: nextRestaurantId },
+    if (
+      params.role === Role.REGIONAL_MANAGER &&
+      managedRestaurantIds.length === 0
+    ) {
+      throw new BadRequestException(
+        'Regional manager must be assigned to at least one restaurant',
+      );
+    }
+
+    if (
+      params.role === Role.REGIONAL_MANAGER &&
+      (!primaryRestaurantId ||
+        !managedRestaurantIds.includes(primaryRestaurantId))
+    ) {
+      throw new BadRequestException(
+        'Regional manager primary restaurant must belong to assigned restaurants',
+      );
+    }
+
+    const restaurantIdsToValidate = new Set<number>();
+    if (primaryRestaurantId) {
+      restaurantIdsToValidate.add(primaryRestaurantId);
+    }
+    for (const restaurantId of managedRestaurantIds) {
+      restaurantIdsToValidate.add(restaurantId);
+    }
+
+    if (restaurantIdsToValidate.size > 0) {
+      const restaurants = await this.prisma.restaurant.findMany({
+        where: {
+          id: {
+            in: Array.from(restaurantIdsToValidate),
+          },
+        },
         select: { id: true },
       });
 
-      if (!restaurant) {
+      if (restaurants.length !== restaurantIdsToValidate.size) {
         throw new NotFoundException('Restaurant not found');
       }
     }
@@ -161,33 +275,31 @@ export class UsersWorkforceService {
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: {
-        role: params.isManager ? Role.MANAGER : Role.EMPLOYEE,
-        ...(params.restaurantId ? { restaurantId: params.restaurantId } : {}),
+        role: params.role,
+        restaurantId:
+          params.role === Role.REGIONAL_MANAGER || params.role === Role.MANAGER
+            ? (primaryRestaurantId ?? null)
+            : params.primaryRestaurantId !== undefined
+              ? params.primaryRestaurantId
+              : user.restaurantId,
+        managedRestaurants:
+          params.role === Role.REGIONAL_MANAGER
+            ? {
+                deleteMany: {},
+                create: managedRestaurantIds.map((restaurantId) => ({
+                  restaurant: {
+                    connect: { id: restaurantId },
+                  },
+                })),
+              }
+            : {
+                deleteMany: {},
+              },
       },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        employeeLevel: true,
-        restaurantId: true,
-        isApproved: true,
-        isOnProbation: true,
-        trainingAccess: true,
-        restaurant: {
-          select: {
-            id: true,
-            name: true,
-            address: true,
-          },
-        },
-      },
+      select: SUPERVISOR_PROFILE_SELECT,
     });
 
-    return {
-      ...updatedUser,
-      trainingAccess: normalizeTrainingAccess(updatedUser.trainingAccess),
-    };
+    return this.formatSupervisorProfile(updatedUser);
   }
 
   async updateEmployeeLevel(
@@ -232,8 +344,8 @@ export class UsersWorkforceService {
     }
 
     if (
-      actor.actorRole === Role.MANAGER &&
-      user.restaurantId !== actor.actorRestaurantId
+      actor.actorRole !== Role.ADMIN &&
+      !canActorManageRestaurant(actor, user.restaurantId)
     ) {
       throw new BadRequestException(
         'Manager can only update users in own restaurant',
@@ -283,8 +395,8 @@ export class UsersWorkforceService {
     }
 
     if (
-      actor.actorRole === Role.MANAGER &&
-      user.restaurantId !== actor.actorRestaurantId
+      actor.actorRole !== Role.ADMIN &&
+      !canActorManageRestaurant(actor, user.restaurantId)
     ) {
       throw new BadRequestException(
         'Manager can only update users in own restaurant',
@@ -301,5 +413,61 @@ export class UsersWorkforceService {
         workplaceRole: true,
       },
     });
+  }
+
+  private normalizeManagedRestaurantIds(
+    restaurantIds: number[] | undefined,
+  ): number[] {
+    if (!restaurantIds) {
+      return [];
+    }
+
+    if (
+      !Array.isArray(restaurantIds) ||
+      restaurantIds.some(
+        (restaurantId) =>
+          !Number.isInteger(restaurantId) || restaurantId <= 0,
+      )
+    ) {
+      throw new BadRequestException(
+        'managedRestaurantIds must contain positive integers only',
+      );
+    }
+
+    return Array.from(new Set(restaurantIds));
+  }
+
+  private formatSupervisorProfile(
+    user: {
+      id: number;
+      email: string;
+      name: string | null;
+      role: Role;
+      employeeLevel: EmployeeLevel;
+      restaurantId: number | null;
+      isApproved: boolean;
+      isOnProbation: boolean;
+      trainingAccess: Prisma.JsonValue;
+      restaurant: {
+        id: number;
+        name: string;
+        address: string;
+      } | null;
+      managedRestaurants: Array<{
+        restaurant: {
+          id: number;
+          name: string;
+          address: string;
+        };
+      }>;
+    },
+  ) {
+    return {
+      ...user,
+      managedRestaurants: user.managedRestaurants.map((entry) => ({
+        ...entry.restaurant,
+      })),
+      trainingAccess: normalizeTrainingAccess(user.trainingAccess),
+    };
   }
 }

@@ -27,6 +27,17 @@ const USER_DETAILS_SELECT = {
       address: true,
     },
   },
+  managedRestaurants: {
+    select: {
+      restaurant: {
+        select: {
+          id: true,
+          name: true,
+          address: true,
+        },
+      },
+    },
+  },
   role: true,
   employeeLevel: true,
   isApproved: true,
@@ -56,13 +67,32 @@ const MUTABLE_PROFILE_SELECT = {
       address: true,
     },
   },
+  managedRestaurants: {
+    select: {
+      restaurant: {
+        select: {
+          id: true,
+          name: true,
+          address: true,
+        },
+      },
+    },
+  },
 } as const;
 
 type MutableProfileRecord = Prisma.UserGetPayload<{
   select: typeof MUTABLE_PROFILE_SELECT;
 }>;
 
-type MutableProfileResponse = Omit<MutableProfileRecord, 'trainingAccess'> & {
+type MutableProfileResponse = Omit<
+  MutableProfileRecord,
+  'managedRestaurants' | 'trainingAccess'
+> & {
+  managedRestaurants: Array<{
+    id: number;
+    name: string;
+    address: string;
+  }>;
   trainingAccess: ReturnType<typeof normalizeTrainingAccess>;
 };
 
@@ -328,6 +358,9 @@ export class UsersService {
   ): MutableProfileResponse {
     return {
       ...profile,
+      managedRestaurants: profile.managedRestaurants.map((entry) => ({
+        ...entry.restaurant,
+      })),
       trainingAccess: normalizeTrainingAccess(profile.trainingAccess),
     };
   }

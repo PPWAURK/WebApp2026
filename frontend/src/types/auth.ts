@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+export type Role = 'ADMIN' | 'REGIONAL_MANAGER' | 'MANAGER' | 'EMPLOYEE';
 
 export type WorkplaceRole = 'SALLE' | 'CUISINE' | 'BOTH';
 
@@ -43,6 +43,7 @@ export type User = {
   workplaceRole: WorkplaceRole;
   trainingAccess: TrainingSection[];
   restaurant: Restaurant | null;
+  managedRestaurants: Restaurant[];
 };
 
 export type AuthResponse = {

@@ -21,6 +21,10 @@ import type {
   User,
   WorkplaceRole,
 } from '../../types/auth';
+import {
+  getUserScopedRestaurants,
+  isManagerLikeRole,
+} from '../../utils/roleAccess';
 import { styles } from './TeamOverviewPage.styles';
 
 type TeamOverviewPageProps = {
@@ -93,11 +97,15 @@ function getRolePriority(role: TrainingAccessUser['role']) {
     return 0;
   }
 
-  if (role === 'MANAGER') {
+  if (role === 'REGIONAL_MANAGER') {
     return 1;
   }
 
-  return 2;
+  if (role === 'MANAGER') {
+    return 2;
+  }
+
+  return 3;
 }
 
 export function TeamOverviewPage({
@@ -113,6 +121,10 @@ export function TeamOverviewPage({
   const rosterRowsPerColumn = 5;
   const rosterItemsPerPage = rosterColumnCount * rosterRowsPerColumn;
   const rosterColumnWidth = rosterColumnCount === 2 ? '48.8%' : '100%';
+  const scopedUserRestaurants = getUserScopedRestaurants(currentUser);
+  const scopedRestaurantIds = scopedUserRestaurants.map(
+    (restaurant) => restaurant.id,
+  );
   const [users, setUsers] = useState<TrainingAccessUser[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -186,18 +198,20 @@ export function TeamOverviewPage({
   );
 
   const scopedUsers = useMemo(() => {
-    if (currentUser.role !== 'MANAGER') {
+    if (!isManagerLikeRole(currentUser.role)) {
       return approvedUsers;
     }
 
-    if (!currentUser.restaurant?.id) {
+    if (scopedRestaurantIds.length === 0) {
       return [];
     }
 
     return approvedUsers.filter(
-      (entry) => entry.restaurant?.id === currentUser.restaurant?.id,
+      (entry) =>
+        entry.restaurant?.id !== undefined &&
+        scopedRestaurantIds.includes(entry.restaurant.id),
     );
-  }, [approvedUsers, currentUser.restaurant?.id, currentUser.role]);
+  }, [approvedUsers, currentUser.role, scopedRestaurantIds]);
 
   const restaurantDirectory = useMemo(() => {
     const next = new Map<number, Restaurant>();
@@ -206,30 +220,29 @@ export function TeamOverviewPage({
       next.set(restaurant.id, restaurant);
     }
 
-    if (currentUser.restaurant) {
-      next.set(currentUser.restaurant.id, currentUser.restaurant);
+    for (const restaurant of scopedUserRestaurants) {
+      next.set(restaurant.id, restaurant);
     }
 
     return next;
-  }, [currentUser.restaurant, restaurants]);
+  }, [restaurants, scopedUserRestaurants]);
 
   const scopedRestaurants = useMemo(() => {
-    if (currentUser.role === 'MANAGER') {
-      if (!currentUser.restaurant) {
+    if (isManagerLikeRole(currentUser.role)) {
+      if (scopedRestaurantIds.length === 0) {
         return [];
       }
 
-      const scopedRestaurant =
-        restaurantDirectory.get(currentUser.restaurant.id) ??
-        currentUser.restaurant;
-
-      return [scopedRestaurant];
+      return scopedRestaurantIds
+        .map((restaurantId) => restaurantDirectory.get(restaurantId) ?? null)
+        .filter((restaurant): restaurant is Restaurant => restaurant !== null)
+        .sort((left, right) => left.name.localeCompare(right.name));
     }
 
     return Array.from(restaurantDirectory.values()).sort((left, right) =>
       left.name.localeCompare(right.name),
     );
-  }, [currentUser.restaurant, currentUser.role, restaurantDirectory]);
+  }, [currentUser.role, restaurantDirectory, scopedRestaurantIds]);
 
   const storeSummaries = useMemo(() => {
     const next = new Map<string, StoreSummary>();
@@ -284,7 +297,7 @@ export function TeamOverviewPage({
       summary.workplaceCounts[entry.workplaceRole] += 1;
       summary.roster.push(entry);
 
-      if (entry.role === 'ADMIN' || entry.role === 'MANAGER') {
+      if (entry.role === 'ADMIN' || isManagerLikeRole(entry.role)) {
         summary.managementCount += 1;
       } else {
         summary.memberCount += 1;
@@ -342,7 +355,7 @@ export function TeamOverviewPage({
   const restaurantCount = scopedRestaurants.length;
   const teamCount = scopedUsers.length;
   const managementCount = scopedUsers.filter(
-    (entry) => entry.role === 'ADMIN' || entry.role === 'MANAGER',
+    (entry) => entry.role === 'ADMIN' || isManagerLikeRole(entry.role),
   ).length;
   const probationCount = scopedUsers.filter(
     (entry) => entry.isOnProbation,
@@ -370,11 +383,12 @@ export function TeamOverviewPage({
   );
 
   const scopeValue =
-    currentUser.role === 'MANAGER'
-      ? (currentUser.restaurant?.name ?? text.profile.noRestaurant)
-      : text.teamOverview.scopeAllValue;
+    currentUser.role === 'ADMIN'
+      ? text.teamOverview.scopeAllValue
+      : scopedRestaurants.map((restaurant) => restaurant.name).join(' · ') ||
+        text.profile.noRestaurant;
   const emptyMessage =
-    currentUser.role === 'MANAGER' && !currentUser.restaurant
+    isManagerLikeRole(currentUser.role) && scopedRestaurants.length === 0
       ? text.dashboard.managerRestaurantMissing
       : text.teamOverview.empty;
   const sectionCardWidth = !isMediumLayout
@@ -499,7 +513,7 @@ export function TeamOverviewPage({
 
         <View style={styles.scopeCard}>
           <Text style={styles.scopeLabel}>
-            {currentUser.role === 'MANAGER'
+            {currentUser.role !== 'ADMIN'
               ? text.teamOverview.scopeCurrentRestaurant
               : text.teamOverview.scopeAllRestaurants}
           </Text>
@@ -568,7 +582,7 @@ export function TeamOverviewPage({
                 const managerNames = summary.roster
                   .filter(
                     (entry) =>
-                      entry.role === 'ADMIN' || entry.role === 'MANAGER',
+                      entry.role === 'ADMIN' || isManagerLikeRole(entry.role),
                   )
                   .map((entry) =>
                     getDisplayName(entry, text.dashboard.fallbackName),

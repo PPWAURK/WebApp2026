@@ -44,7 +44,12 @@ export class NewsController {
   }
 
   private ensureSupportedRole(role: string) {
-    if (role !== 'ADMIN' && role !== 'MANAGER' && role !== 'EMPLOYEE') {
+    if (
+      role !== 'ADMIN' &&
+      role !== 'REGIONAL_MANAGER' &&
+      role !== 'MANAGER' &&
+      role !== 'EMPLOYEE'
+    ) {
       throw new ForbiddenException('Unsupported role');
     }
   }

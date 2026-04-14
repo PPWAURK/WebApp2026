@@ -13,7 +13,7 @@ export type TrainingAccessUser = {
   email: string;
   name: string | null;
   profilePhoto?: string | null;
-  role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+  role: 'ADMIN' | 'REGIONAL_MANAGER' | 'MANAGER' | 'EMPLOYEE';
   workplaceRole: WorkplaceRole;
   employeeLevel: EmployeeLevel;
   isApproved: boolean;
@@ -22,6 +22,7 @@ export type TrainingAccessUser = {
   trainingAccess: TrainingSection[];
   restaurantId?: number | null;
   restaurant?: Pick<Restaurant, 'id' | 'name'> | null;
+  managedRestaurants: Restaurant[];
 };
 
 export type TrainingAccessByLevelProfile = {
@@ -41,7 +42,7 @@ export type UnassignedUser = {
   id: number;
   email: string;
   name: string | null;
-  role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+  role: 'ADMIN' | 'REGIONAL_MANAGER' | 'MANAGER' | 'EMPLOYEE';
 };
 
 export async function fetchTrainingAccessUsers(
@@ -310,6 +311,41 @@ export async function updateUserManagerRole(
     const message = Array.isArray(errorData.message)
       ? errorData.message.join(', ')
       : (errorData.message ?? 'Failed to update manager role');
+    throw new Error(message);
+  }
+
+  return data as TrainingAccessUser;
+}
+
+export async function updateUserSupervisorRole(
+  token: string,
+  userId: number,
+  payload: {
+    role: 'EMPLOYEE' | 'MANAGER' | 'REGIONAL_MANAGER';
+    primaryRestaurantId?: number;
+    managedRestaurantIds?: number[];
+  },
+): Promise<TrainingAccessUser> {
+  const response = await fetch(`${API_URL}/users/${userId}/supervisor-role`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await response.json()) as
+    | TrainingAccessUser
+    | { message?: string | string[] };
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : (errorData.message ?? 'Failed to update supervisor role');
     throw new Error(message);
   }
 
@@ -585,7 +621,7 @@ export async function updateUserLevel(
 ): Promise<{
   id: number;
   employeeLevel: EmployeeLevel;
-  role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+  role: 'ADMIN' | 'REGIONAL_MANAGER' | 'MANAGER' | 'EMPLOYEE';
   isOnProbation: boolean;
 }> {
   const response = await fetch(`${API_URL}/users/${userId}/level`, {
@@ -629,8 +665,11 @@ export async function updateUserLevel(
         : level,
     role:
       typeof (data as { role?: unknown }).role === 'string'
-        ? ((data as { role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE' }).role as
+        ? ((data as {
+            role: 'ADMIN' | 'REGIONAL_MANAGER' | 'MANAGER' | 'EMPLOYEE';
+          }).role as
             | 'ADMIN'
+            | 'REGIONAL_MANAGER'
             | 'MANAGER'
             | 'EMPLOYEE')
         : 'EMPLOYEE',
