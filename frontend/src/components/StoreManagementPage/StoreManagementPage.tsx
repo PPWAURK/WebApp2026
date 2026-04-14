@@ -22,6 +22,7 @@ import {
   updateUserSupervisorRole,
   type TrainingAccessUser,
 } from '../../services/usersApi';
+import { EMPLOYEE_LEVELS } from '../../features/dashboard/lib/dashboardShared';
 import type { EmployeeLevel, Restaurant } from '../../types/auth';
 import { isManagerLikeRole } from '../../utils/roleAccess';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -31,16 +32,6 @@ type StoreManagementPageProps = {
   text: AppText;
   accessToken: string;
 };
-
-const EDITABLE_EMPLOYEE_LEVELS: EmployeeLevel[] = [
-  'L0_PROBATION',
-  'L1_PARTNER',
-  'L2_PARTNER',
-  'L3_PARTNER',
-  'L4_EXCELLENT',
-  'L5_PAM',
-  'L5_AM',
-];
 
 function getDisplayName(
   user: Pick<TrainingAccessUser, 'name' | 'email'>,
@@ -117,6 +108,13 @@ export function StoreManagementPage({
     useState<TrainingAccessUser | null>(null);
   const [rejectingUser, setRejectingUser] =
     useState<TrainingAccessUser | null>(null);
+  const [regionalScopeUser, setRegionalScopeUser] =
+    useState<TrainingAccessUser | null>(null);
+  const [regionalScopeManagedIds, setRegionalScopeManagedIds] = useState<
+    number[]
+  >([]);
+  const [regionalScopePrimaryRestaurantId, setRegionalScopePrimaryRestaurantId] =
+    useState<number | null>(null);
 
   useEffect(() => {
     void loadData();
@@ -293,6 +291,59 @@ export function StoreManagementPage({
     }
   }
 
+  function replaceUserEntry(updated: TrainingAccessUser) {
+    setUsers((currentValue) =>
+      currentValue.map((entry) =>
+        entry.id === updated.id ? { ...entry, ...updated } : entry,
+      ),
+    );
+  }
+
+  function openRegionalScopeEditor(entry: TrainingAccessUser) {
+    const managedRestaurantIds =
+      entry.role === 'REGIONAL_MANAGER'
+        ? entry.managedRestaurants.map((restaurant) => restaurant.id)
+        : [
+            entry.restaurant?.id ??
+              selectedRestaurantId ??
+              restaurants[0]?.id,
+          ].filter((restaurantId): restaurantId is number => restaurantId != null);
+
+    const primaryRestaurantId =
+      entry.restaurant?.id && managedRestaurantIds.includes(entry.restaurant.id)
+        ? entry.restaurant.id
+        : managedRestaurantIds[0] ?? null;
+
+    setRegionalScopeUser(entry);
+    setRegionalScopeManagedIds(managedRestaurantIds);
+    setRegionalScopePrimaryRestaurantId(primaryRestaurantId);
+  }
+
+  function toggleRegionalScopeRestaurant(restaurantId: number) {
+    setRegionalScopeManagedIds((currentValue) => {
+      const nextValue = currentValue.includes(restaurantId)
+        ? currentValue.filter((entry) => entry !== restaurantId)
+        : [...currentValue, restaurantId];
+
+      setRegionalScopePrimaryRestaurantId((currentPrimaryRestaurantId) => {
+        if (nextValue.length === 0) {
+          return null;
+        }
+
+        if (
+          currentPrimaryRestaurantId !== null &&
+          nextValue.includes(currentPrimaryRestaurantId)
+        ) {
+          return currentPrimaryRestaurantId;
+        }
+
+        return nextValue[0] ?? null;
+      });
+
+      return nextValue;
+    });
+  }
+
   async function handleSetManagerRole(
     entry: TrainingAccessUser,
     nextRole: 'EMPLOYEE' | 'MANAGER',
@@ -306,23 +357,12 @@ export function StoreManagementPage({
         primaryRestaurantId: selectedRestaurantId ?? entry.restaurant?.id ?? undefined,
       });
 
-      setUsers((currentValue) =>
-        currentValue.map((userEntry) =>
-          userEntry.id === entry.id
-            ? {
-                ...userEntry,
-                role: updated.role,
-                employeeLevel: updated.employeeLevel,
-                isOnProbation: updated.isOnProbation,
-                restaurant: updated.restaurant,
-                restaurantId: updated.restaurantId,
-                managedRestaurants: updated.managedRestaurants,
-              }
-            : userEntry,
-        ),
-      );
+      replaceUserEntry(updated);
       if (levelEditorUser?.id === entry.id) {
         setLevelEditorUser(null);
+      }
+      if (regionalScopeUser?.id === entry.id) {
+        setRegionalScopeUser(null);
       }
     } catch (updateError) {
       setError(
@@ -335,49 +375,46 @@ export function StoreManagementPage({
     }
   }
 
-  async function handleToggleRegionalRole(entry: TrainingAccessUser) {
-    if (!selectedRestaurantId) {
+  async function handleSaveRegionalScope() {
+    if (!regionalScopeUser) {
       return;
     }
 
-    setIsUpdatingUserId(entry.id);
+    if (regionalScopeManagedIds.length === 0) {
+      setError(text.storeManagement.regionalScopeEmpty);
+      return;
+    }
+
+    const primaryRestaurantId =
+      regionalScopePrimaryRestaurantId !== null &&
+      regionalScopeManagedIds.includes(regionalScopePrimaryRestaurantId)
+        ? regionalScopePrimaryRestaurantId
+        : regionalScopeManagedIds[0];
+
+    if (!primaryRestaurantId) {
+      setError(text.storeManagement.regionalScopePrimaryEmpty);
+      return;
+    }
+
+    setIsUpdatingUserId(regionalScopeUser.id);
     setError(null);
 
-    const currentManagedIds = entry.managedRestaurants.map(
-      (restaurant) => restaurant.id,
-    );
-    const alreadyAssigned = currentManagedIds.includes(selectedRestaurantId);
-    const nextManagedIds = alreadyAssigned
-      ? currentManagedIds.filter((restaurantId) => restaurantId !== selectedRestaurantId)
-      : [...currentManagedIds, selectedRestaurantId];
-
     try {
-      const updated = await updateUserSupervisorRole(accessToken, entry.id, {
-        role: nextManagedIds.length === 0 ? 'MANAGER' : 'REGIONAL_MANAGER',
-        primaryRestaurantId:
-          nextManagedIds.length === 0
-            ? selectedRestaurantId
-            : entry.restaurant?.id && nextManagedIds.includes(entry.restaurant.id)
-              ? entry.restaurant.id
-              : nextManagedIds[0],
-        managedRestaurantIds: nextManagedIds,
-      });
-
-      setUsers((currentValue) =>
-        currentValue.map((userEntry) =>
-          userEntry.id === entry.id
-            ? {
-                ...userEntry,
-                role: updated.role,
-                employeeLevel: updated.employeeLevel,
-                isOnProbation: updated.isOnProbation,
-                restaurant: updated.restaurant,
-                restaurantId: updated.restaurantId,
-                managedRestaurants: updated.managedRestaurants,
-              }
-            : userEntry,
-        ),
+      const updated = await updateUserSupervisorRole(
+        accessToken,
+        regionalScopeUser.id,
+        {
+          role: 'REGIONAL_MANAGER',
+          primaryRestaurantId,
+          managedRestaurantIds: regionalScopeManagedIds,
+        },
       );
+
+      replaceUserEntry(updated);
+      setRegionalScopeUser(null);
+      if (selectedRestaurantId === null) {
+        setSelectedRestaurantId(primaryRestaurantId);
+      }
     } catch (updateError) {
       setError(
         updateError instanceof Error
@@ -387,6 +424,155 @@ export function StoreManagementPage({
     } finally {
       setIsUpdatingUserId(null);
     }
+  }
+
+  function renderRegionalScopeEditor() {
+    if (!regionalScopeUser) {
+      return null;
+    }
+
+    const selectedRestaurants = restaurants.filter((entry) =>
+      regionalScopeManagedIds.includes(entry.id),
+    );
+
+    return (
+      <Modal
+        visible
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (isUpdatingUserId === null) {
+            setRegionalScopeUser(null);
+          }
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {text.storeManagement.regionalScopeModalTitle.replace(
+                  '{name}',
+                  getDisplayName(regionalScopeUser, text.dashboard.fallbackName),
+                )}
+              </Text>
+              <Pressable
+                style={styles.secondaryButton}
+                disabled={isUpdatingUserId !== null}
+                onPress={() => setRegionalScopeUser(null)}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  {text.storeManagement.levelModalClose}
+                </Text>
+              </Pressable>
+            </View>
+
+            <Text style={styles.cardSubtitle}>
+              {text.storeManagement.regionalScopeModalSubtitle}
+            </Text>
+
+            <View style={styles.modalSection}>
+              <Text style={styles.fieldLabel}>
+                {text.storeManagement.regionalScopeManagedLabel}
+              </Text>
+              <View style={styles.restaurantSelectorWrap}>
+                {restaurants.map((entry) => {
+                  const isSelected = regionalScopeManagedIds.includes(entry.id);
+
+                  return (
+                    <Pressable
+                      key={entry.id}
+                      style={[
+                        styles.restaurantChip,
+                        isSelected && styles.restaurantChipActive,
+                      ]}
+                      disabled={isUpdatingUserId !== null}
+                      onPress={() => toggleRegionalScopeRestaurant(entry.id)}
+                    >
+                      <Text
+                        style={[
+                          styles.restaurantChipText,
+                          isSelected && styles.restaurantChipTextActive,
+                        ]}
+                      >
+                        {entry.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.modalSection}>
+              <Text style={styles.fieldLabel}>
+                {text.storeManagement.regionalScopePrimaryLabel}
+              </Text>
+
+              {selectedRestaurants.length === 0 ? (
+                <Text style={styles.emptyText}>
+                  {text.storeManagement.regionalScopeEmpty}
+                </Text>
+              ) : (
+                <View style={styles.restaurantSelectorWrap}>
+                  {selectedRestaurants.map((entry) => {
+                    const isPrimary =
+                      regionalScopePrimaryRestaurantId === entry.id;
+
+                    return (
+                      <Pressable
+                        key={entry.id}
+                        style={[
+                          styles.primarySelectionCard,
+                          isPrimary && styles.primarySelectionCardActive,
+                        ]}
+                        disabled={isUpdatingUserId !== null}
+                        onPress={() =>
+                          setRegionalScopePrimaryRestaurantId(entry.id)
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.primarySelectionTitle,
+                            isPrimary && styles.primarySelectionTitleActive,
+                          ]}
+                        >
+                          {entry.name}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.primarySelectionSubtitle,
+                            isPrimary && styles.primarySelectionSubtitleActive,
+                          ]}
+                        >
+                          {entry.address}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+
+            <Pressable
+              style={[
+                styles.primaryButton,
+                (isUpdatingUserId !== null || selectedRestaurants.length === 0) &&
+                  styles.primaryButtonDisabled,
+              ]}
+              disabled={isUpdatingUserId !== null || selectedRestaurants.length === 0}
+              onPress={() => {
+                void handleSaveRegionalScope();
+              }}
+            >
+              <Text style={styles.primaryButtonText}>
+                {isUpdatingUserId === regionalScopeUser.id
+                  ? text.storeManagement.saving
+                  : text.storeManagement.regionalScopeSave}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    );
   }
 
   async function handleDeleteUser() {
@@ -404,6 +590,9 @@ export function StoreManagementPage({
       );
       if (levelEditorUser?.id === deletingUser.id) {
         setLevelEditorUser(null);
+      }
+      if (regionalScopeUser?.id === deletingUser.id) {
+        setRegionalScopeUser(null);
       }
       setDeletingUser(null);
     } catch (deleteError) {
@@ -796,20 +985,13 @@ export function StoreManagementPage({
 
                     <Pressable
                       style={styles.secondaryButton}
-                      disabled={isUpdatingUserId === entry.id || !selectedRestaurantId}
-                      onPress={() => {
-                        void handleToggleRegionalRole(entry);
-                      }}
+                      disabled={isUpdatingUserId === entry.id}
+                      onPress={() => openRegionalScopeEditor(entry)}
                     >
                       <Text style={styles.secondaryButtonText}>
-                        {entry.role === 'REGIONAL_MANAGER' &&
-                        entry.managedRestaurants.some(
-                          (restaurant) => restaurant.id === selectedRestaurantId,
-                        )
-                          ? text.storeManagement.removeRegionalStore
-                          : isManagerLikeRole(entry.role)
-                            ? text.storeManagement.addRegionalStore
-                            : text.storeManagement.makeRegionalManager}
+                        {isManagerLikeRole(entry.role)
+                          ? text.storeManagement.editRegionalScope
+                          : text.storeManagement.makeRegionalManager}
                       </Text>
                     </Pressable>
 
@@ -863,7 +1045,7 @@ export function StoreManagementPage({
             </View>
 
             <ScrollView contentContainerStyle={styles.levelList}>
-              {EDITABLE_EMPLOYEE_LEVELS.map((level) => (
+              {EMPLOYEE_LEVELS.map((level) => (
                 <Pressable
                   key={level}
                   style={[
@@ -891,6 +1073,8 @@ export function StoreManagementPage({
           </View>
         </View>
       </Modal>
+
+      {renderRegionalScopeEditor()}
 
       <ConfirmDialog
         visible={deletingUser !== null}

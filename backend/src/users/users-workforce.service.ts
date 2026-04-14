@@ -330,15 +330,6 @@ export class UsersWorkforceService {
       throw new BadRequestException('Only EMPLOYEE level can be updated');
     }
 
-    if (
-      actor.actorRole === Role.ADMIN &&
-      deriveRoleFromLevel(level) === Role.MANAGER
-    ) {
-      throw new BadRequestException(
-        'Admin must use manager role update for manager accounts',
-      );
-    }
-
     if (actor.actorId === userId) {
       throw new BadRequestException('Cannot update own level');
     }

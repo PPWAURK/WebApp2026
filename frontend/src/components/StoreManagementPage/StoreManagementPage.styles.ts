@@ -260,6 +260,9 @@ export const styles = StyleSheet.create({
     padding: 18,
     gap: 14,
   },
+  modalSection: {
+    gap: 10,
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -294,5 +297,37 @@ export const styles = StyleSheet.create({
   },
   levelOptionTextActive: {
     color: '#fff8f6',
+  },
+  primarySelectionCard: {
+    minWidth: 180,
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e6d5cc',
+    backgroundColor: '#fff8f4',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 4,
+  },
+  primarySelectionCardActive: {
+    borderColor: '#b5484d',
+    backgroundColor: '#7f1b21',
+  },
+  primarySelectionTitle: {
+    color: '#7f1b21',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  primarySelectionTitleActive: {
+    color: '#fff8f6',
+  },
+  primarySelectionSubtitle: {
+    color: '#8f6a65',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  primarySelectionSubtitleActive: {
+    color: '#f6ddd2',
   },
 });

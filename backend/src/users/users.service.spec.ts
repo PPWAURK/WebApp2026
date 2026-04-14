@@ -166,27 +166,46 @@ describe('UsersWorkforceService', () => {
     });
   });
 
-  it('rejects admins updating a manager level', async () => {
+  it('allows admins to promote an employee to manager level', async () => {
     prisma.user.findUnique.mockResolvedValue({
       id: 14,
       role: Role.EMPLOYEE,
       restaurantId: 9,
     });
+    prisma.user.update.mockResolvedValue({
+      id: 14,
+      role: Role.MANAGER,
+      employeeLevel: EmployeeLevel.L6_MA,
+      isOnProbation: false,
+    });
 
-    await expect(
-      service.updateEmployeeLevel(14, EmployeeLevel.L6_MA, {
-        actorId: 1,
-        actorRole: Role.ADMIN,
-        actorRestaurantId: null,
-        actorManagedRestaurantIds: [],
-      }),
-    ).rejects.toThrow(
-      new BadRequestException(
-        'Admin must use manager role update for manager accounts',
-      ),
-    );
+    const result = await service.updateEmployeeLevel(14, EmployeeLevel.L6_MA, {
+      actorId: 1,
+      actorRole: Role.ADMIN,
+      actorRestaurantId: null,
+      actorManagedRestaurantIds: [],
+    });
 
-    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 14 },
+      data: {
+        employeeLevel: EmployeeLevel.L6_MA,
+        role: Role.MANAGER,
+        isOnProbation: false,
+      },
+      select: {
+        id: true,
+        role: true,
+        employeeLevel: true,
+        isOnProbation: true,
+      },
+    });
+    expect(result).toMatchObject({
+      id: 14,
+      role: Role.MANAGER,
+      employeeLevel: EmployeeLevel.L6_MA,
+      isOnProbation: false,
+    });
   });
 
   it('allows a regional manager to move an employee between assigned restaurants', async () => {
