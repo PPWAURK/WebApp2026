@@ -358,7 +358,7 @@ export class UsersService {
   ): MutableProfileResponse {
     return {
       ...profile,
-      managedRestaurants: profile.managedRestaurants.map((entry) => ({
+      managedRestaurants: (profile.managedRestaurants ?? []).map((entry) => ({
         ...entry.restaurant,
       })),
       trainingAccess: normalizeTrainingAccess(profile.trainingAccess),

@@ -44,6 +44,7 @@ describe('UsersService credential updates', () => {
       workplaceRole: 'BOTH',
       trainingAccess: [],
       restaurant: null,
+      managedRestaurants: [],
     });
 
     const result = await service.updateOwnEmail(7, {
@@ -74,11 +75,23 @@ describe('UsersService credential updates', () => {
             address: true,
           },
         },
+        managedRestaurants: {
+          select: {
+            restaurant: {
+              select: {
+                id: true,
+                name: true,
+                address: true,
+              },
+            },
+          },
+        },
       },
     });
     expect(result).toMatchObject({
       id: 7,
       email: 'new@example.com',
+      managedRestaurants: [],
       trainingAccess: [],
     });
   });
