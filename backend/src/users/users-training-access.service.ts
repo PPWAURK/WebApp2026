@@ -287,10 +287,7 @@ export class UsersTrainingAccessService {
       throw new BadRequestException('Cannot update ADMIN training access');
     }
 
-    if (
-      actor.actorRole !== Role.ADMIN &&
-      user.role !== Role.EMPLOYEE
-    ) {
+    if (actor.actorRole !== Role.ADMIN && user.role !== Role.EMPLOYEE) {
       throw new BadRequestException(
         'Manager can only update EMPLOYEE training access',
       );

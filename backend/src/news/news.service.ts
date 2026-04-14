@@ -553,10 +553,7 @@ export class NewsService {
 
     const where: Prisma.NewsPostWhereInput = {};
 
-    if (
-      context.role === 'MANAGER' ||
-      context.role === 'REGIONAL_MANAGER'
-    ) {
+    if (context.role === 'MANAGER' || context.role === 'REGIONAL_MANAGER') {
       where.audience = {
         in: [NewsAudience.ALL, NewsAudience.MANAGERS],
       };

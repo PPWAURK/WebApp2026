@@ -1940,7 +1940,9 @@ export class OrdersService {
     actor: Actor,
   ): { restaurantId: number | { in: number[] } } | undefined {
     if (actor.role === 'ADMIN') {
-      return actor.restaurantId ? { restaurantId: actor.restaurantId } : undefined;
+      return actor.restaurantId
+        ? { restaurantId: actor.restaurantId }
+        : undefined;
     }
 
     const scopedRestaurantIds = this.getScopedRestaurantIds(actor);

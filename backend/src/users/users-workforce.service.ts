@@ -425,8 +425,7 @@ export class UsersWorkforceService {
     if (
       !Array.isArray(restaurantIds) ||
       restaurantIds.some(
-        (restaurantId) =>
-          !Number.isInteger(restaurantId) || restaurantId <= 0,
+        (restaurantId) => !Number.isInteger(restaurantId) || restaurantId <= 0,
       )
     ) {
       throw new BadRequestException(
@@ -437,31 +436,29 @@ export class UsersWorkforceService {
     return Array.from(new Set(restaurantIds));
   }
 
-  private formatSupervisorProfile(
-    user: {
+  private formatSupervisorProfile(user: {
+    id: number;
+    email: string;
+    name: string | null;
+    role: Role;
+    employeeLevel: EmployeeLevel;
+    restaurantId: number | null;
+    isApproved: boolean;
+    isOnProbation: boolean;
+    trainingAccess: Prisma.JsonValue;
+    restaurant: {
       id: number;
-      email: string;
-      name: string | null;
-      role: Role;
-      employeeLevel: EmployeeLevel;
-      restaurantId: number | null;
-      isApproved: boolean;
-      isOnProbation: boolean;
-      trainingAccess: Prisma.JsonValue;
+      name: string;
+      address: string;
+    } | null;
+    managedRestaurants: Array<{
       restaurant: {
         id: number;
         name: string;
         address: string;
-      } | null;
-      managedRestaurants: Array<{
-        restaurant: {
-          id: number;
-          name: string;
-          address: string;
-        };
-      }>;
-    },
-  ) {
+      };
+    }>;
+  }) {
     return {
       ...user,
       managedRestaurants: user.managedRestaurants.map((entry) => ({
