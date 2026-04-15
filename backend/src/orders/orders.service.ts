@@ -1988,6 +1988,10 @@ export class OrdersService {
     const requestedRestaurantId = options?.requestedRestaurantId;
 
     if (requestedRestaurantId !== undefined) {
+      if (actor.role === 'ADMIN' && options?.allowAdminAllRestaurants) {
+        return { restaurantId: requestedRestaurantId };
+      }
+
       if (!this.canActorAccessRestaurant(actor, requestedRestaurantId)) {
         throw new ForbiddenException(
           'Requested restaurant is outside your scope',

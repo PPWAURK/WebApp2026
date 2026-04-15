@@ -404,6 +404,54 @@ describe('OrdersService', () => {
     expect(prisma.purchaseOrder.findMany).not.toHaveBeenCalled();
   });
 
+  it('allows admins to list orders for any requested restaurant', async () => {
+    prisma.purchaseOrder.findMany.mockResolvedValue([]);
+
+    await service.listOrders(
+      {
+        id: 1,
+        role: 'ADMIN',
+        employeeLevel: null,
+        restaurantId: 9,
+      },
+      {
+        protocol: 'https',
+        get: jest.fn(),
+      },
+      {
+        restaurantId: 3,
+      },
+    );
+
+    expect(prisma.purchaseOrder.findMany).toHaveBeenCalledWith({
+      where: { restaurantId: 3 },
+      include: {
+        supplier: {
+          select: {
+            id: true,
+            nom: true,
+          },
+        },
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        createdByUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  });
+
   it('includes zero-quantity supplier catalog rows when supplier requires full order templates', async () => {
     const tx = {
       purchaseOrder: {
