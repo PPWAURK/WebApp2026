@@ -2676,7 +2676,7 @@ export const styles = StyleSheet.create({
   },
   storeSwitcherContainer: {
     flexDirection: 'row',
-    backgroundColor: '#e9e9eb',
+    backgroundColor: 'rgba(171, 30, 36, 0.08)',
     borderRadius: 9,
     padding: 2,
   },
@@ -2688,28 +2688,28 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   storeSwitcherSegmentActive: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#ab1e24',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: '#ab1e24',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.12,
+        shadowOpacity: 0.2,
         shadowRadius: 2,
       },
       android: {
         elevation: 2,
       },
       web: {
-        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+        boxShadow: '0 1px 3px rgba(171,30,36,0.25)',
       },
     }),
   },
   storeSwitcherSegmentText: {
     fontFamily: 'Manrope_600SemiBold',
     fontSize: 13,
-    color: '#8e8e93',
+    color: 'rgba(171, 30, 36, 0.55)',
   },
   storeSwitcherSegmentTextActive: {
-    color: '#1c1c1e',
+    color: '#ffffff',
   },
 });
