@@ -1,4 +1,4 @@
-import { useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { AdminRestaurantPanel } from '../AdminRestaurantPanel';
 import { AdminTrainingAccessPanel } from '../AdminTrainingAccessPanel';
 import { AdminUploadPanel } from '../AdminUploadPanel';
@@ -39,17 +39,6 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   const isSupervisor = isSupervisorRole(user.role);
 
   const confirmDialogState = useSessionCardConfirmDialog(text);
-  const orderInsights = useDashboardOrderInsights({
-    accessToken,
-    isSupervisor,
-    text,
-  });
-  const newsFeedState = useDashboardNewsFeed({
-    accessToken,
-    confirmAction: confirmDialogState.confirmAction,
-    isAdmin,
-    text,
-  });
   const supervisorState = useSessionCardSupervisorState({
     accessToken,
     confirmAction: confirmDialogState.confirmAction,
@@ -57,6 +46,22 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
     isAdmin,
     isManager,
     isSupervisor,
+    text,
+  });
+  const selectedRestaurantId =
+    typeof supervisorState.selectedEmployeeRestaurantFilter === 'number'
+      ? supervisorState.selectedEmployeeRestaurantFilter
+      : undefined;
+  const orderInsights = useDashboardOrderInsights({
+    accessToken,
+    isSupervisor,
+    restaurantId: user.role === 'REGIONAL_MANAGER' ? selectedRestaurantId : undefined,
+    text,
+  });
+  const newsFeedState = useDashboardNewsFeed({
+    accessToken,
+    confirmAction: confirmDialogState.confirmAction,
+    isAdmin,
     text,
   });
   const whatsNewState = useSessionCardWhatsNewState({
@@ -70,11 +75,16 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   const scopedRestaurants = getUserScopedRestaurants(user);
   const restaurantLabel =
     user.role === 'REGIONAL_MANAGER'
-      ? scopedRestaurants.map((restaurant) => restaurant.name).join(' · ') ||
-        text.profile.noRestaurant
+      ? (scopedRestaurants.find(
+          (r) => r.id === supervisorState.selectedEmployeeRestaurantFilter,
+        )?.name ?? text.profile.noRestaurant)
       : user.restaurant?.name ?? text.profile.noRestaurant;
   const addressLabel =
-    user.restaurant?.address ?? text.profile.noAddress;
+    user.role === 'REGIONAL_MANAGER'
+      ? (scopedRestaurants.find(
+          (r) => r.id === supervisorState.selectedEmployeeRestaurantFilter,
+        )?.address ?? '')
+      : user.restaurant?.address ?? text.profile.noAddress;
   const unreadNewsCount = isAdmin
     ? 0
     : newsFeedState.newsFeed.filter(
@@ -318,6 +328,44 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
               topProductsLoading={orderInsights.topProductsLoading}
             />
           </View>
+
+          {user.role === 'REGIONAL_MANAGER' &&
+          supervisorState.regionalManagerStoreOptions.length > 1 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.storeSwitcherRow}
+            >
+              {supervisorState.regionalManagerStoreOptions.map((store) => {
+                const isActive =
+                  supervisorState.selectedEmployeeRestaurantFilter === store.id;
+
+                return (
+                  <Pressable
+                    key={store.id}
+                    style={[
+                      styles.storeSwitcherButton,
+                      isActive && styles.storeSwitcherButtonActive,
+                    ]}
+                    onPress={() =>
+                      supervisorState.selectRestaurantFilter(store.id)
+                    }
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isActive }}
+                  >
+                    <Text
+                      style={[
+                        styles.storeSwitcherButtonText,
+                        isActive && styles.storeSwitcherButtonTextActive,
+                      ]}
+                    >
+                      {store.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          ) : null}
 
           <SessionCardManagerToolsGrid
             isWideLayout={isWideLayout}

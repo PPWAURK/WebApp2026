@@ -2668,4 +2668,29 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 14,
   },
+  storeSwitcherRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  storeSwitcherButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(171, 30, 36, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(171, 30, 36, 0.14)',
+  },
+  storeSwitcherButtonActive: {
+    backgroundColor: '#ab1e24',
+    borderColor: '#ab1e24',
+  },
+  storeSwitcherButtonText: {
+    fontFamily: 'Manrope_600SemiBold',
+    fontSize: 13,
+    color: '#ab1e24',
+  },
+  storeSwitcherButtonTextActive: {
+    color: '#fff',
+  },
 });

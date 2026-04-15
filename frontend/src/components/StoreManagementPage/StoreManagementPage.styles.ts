@@ -94,6 +94,52 @@ export const styles = StyleSheet.create({
   restaurantChipTextActive: {
     color: '#fff7f5',
   },
+  restaurantList: {
+    maxHeight: 320,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#ead7cb',
+    overflow: 'hidden',
+  },
+  restaurantListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: '#ffffff',
+    gap: 10,
+  },
+  restaurantListItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0ddd5',
+  },
+  restaurantListItemActive: {
+    backgroundColor: '#fff5f1',
+  },
+  restaurantListItemAccent: {
+    width: 3,
+    alignSelf: 'stretch',
+    borderRadius: 99,
+    backgroundColor: '#7f1b21',
+  },
+  restaurantListItemBody: {
+    flex: 1,
+    gap: 2,
+  },
+  restaurantListItemName: {
+    color: '#472a2c',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 14,
+  },
+  restaurantListItemNameActive: {
+    color: '#7f1b21',
+  },
+  restaurantListItemAddress: {
+    color: '#8f6a65',
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+  },
   fieldGroup: {
     gap: 8,
   },
@@ -225,6 +271,10 @@ export const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
+  actionsButton: {
+    flex: 1,
+    minWidth: 120,
+  },
   secondaryButton: {
     borderRadius: 12,
     borderWidth: 1,
@@ -252,12 +302,21 @@ export const styles = StyleSheet.create({
     padding: 18,
   },
   modalCard: {
-    maxHeight: '80%',
+    maxHeight: '85%',
+    maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
     borderRadius: 22,
     borderWidth: 1,
     borderColor: '#ead7cb',
     backgroundColor: '#fffdfb',
     padding: 18,
+    gap: 14,
+  },
+  modalScrollBody: {
+    flexShrink: 1,
+  },
+  modalScrollContent: {
     gap: 14,
   },
   modalSection: {

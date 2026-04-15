@@ -654,6 +654,7 @@ export async function fetchTopOrderedProductsBySupplier(
   token: string,
   supplierId?: number,
   month?: string,
+  restaurantId?: number,
 ): Promise<TopOrderedProduct[]> {
   const query = new URLSearchParams();
   if (
@@ -665,6 +666,13 @@ export async function fetchTopOrderedProductsBySupplier(
   }
   if (typeof month === 'string' && /^\d{4}-\d{2}$/.test(month)) {
     query.set('month', month);
+  }
+  if (
+    typeof restaurantId === 'number' &&
+    Number.isInteger(restaurantId) &&
+    restaurantId > 0
+  ) {
+    query.set('restaurantId', String(restaurantId));
   }
   const queryString = query.toString();
 
@@ -697,6 +705,7 @@ export async function fetchTopOrderedProductsBySupplier(
 export async function fetchTopOrderedProductMonths(
   token: string,
   supplierId?: number,
+  restaurantId?: number,
 ): Promise<string[]> {
   const query = new URLSearchParams();
   if (
@@ -705,6 +714,13 @@ export async function fetchTopOrderedProductMonths(
     supplierId > 0
   ) {
     query.set('supplierId', String(supplierId));
+  }
+  if (
+    typeof restaurantId === 'number' &&
+    Number.isInteger(restaurantId) &&
+    restaurantId > 0
+  ) {
+    query.set('restaurantId', String(restaurantId));
   }
 
   const queryString = query.toString();

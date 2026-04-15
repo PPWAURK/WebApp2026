@@ -17,6 +17,13 @@ export class SupplierScopedQueryDto {
   @IsInt()
   @Min(1)
   supplierId?: number;
+
+  @ApiPropertyOptional({ example: 3 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  restaurantId?: number;
 }
 
 export class HistoryScopeQueryDto {
@@ -38,13 +45,6 @@ export class SupplierMonthQueryDto extends SupplierScopedQueryDto {
 }
 
 export class HistoryAnalyticsQueryDto extends SupplierScopedQueryDto {
-  @ApiPropertyOptional({ example: 3 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  restaurantId?: number;
-
   @ApiPropertyOptional({
     enum: HISTORY_PERIODS,
     example: 'this_month',

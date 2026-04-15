@@ -131,6 +131,7 @@ export class OrdersController {
       this.getActor(req),
       query.supplierId,
       query.month,
+      query.restaurantId,
     );
   }
 
@@ -145,6 +146,7 @@ export class OrdersController {
     return this.ordersService.getTopOrderedProductMonths(
       this.getActor(req),
       query.supplierId,
+      query.restaurantId,
     );
   }
 

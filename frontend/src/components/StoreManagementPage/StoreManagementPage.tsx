@@ -83,7 +83,7 @@ export function StoreManagementPage({
   accessToken,
 }: StoreManagementPageProps) {
   const { width } = useWindowDimensions();
-  const isWideLayout = width >= 1120;
+  const isWideLayout = width >= 768;
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [users, setUsers] = useState<TrainingAccessUser[]>([]);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(
@@ -466,91 +466,97 @@ export function StoreManagementPage({
               </Pressable>
             </View>
 
-            <Text style={styles.cardSubtitle}>
-              {text.storeManagement.regionalScopeModalSubtitle}
-            </Text>
-
-            <View style={styles.modalSection}>
-              <Text style={styles.fieldLabel}>
-                {text.storeManagement.regionalScopeManagedLabel}
-              </Text>
-              <View style={styles.restaurantSelectorWrap}>
-                {restaurants.map((entry) => {
-                  const isSelected = regionalScopeManagedIds.includes(entry.id);
-
-                  return (
-                    <Pressable
-                      key={entry.id}
-                      style={[
-                        styles.restaurantChip,
-                        isSelected && styles.restaurantChipActive,
-                      ]}
-                      disabled={isUpdatingUserId !== null}
-                      onPress={() => toggleRegionalScopeRestaurant(entry.id)}
-                    >
-                      <Text
-                        style={[
-                          styles.restaurantChipText,
-                          isSelected && styles.restaurantChipTextActive,
-                        ]}
-                      >
-                        {entry.name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View style={styles.modalSection}>
-              <Text style={styles.fieldLabel}>
-                {text.storeManagement.regionalScopePrimaryLabel}
+            <ScrollView
+              style={styles.modalScrollBody}
+              contentContainerStyle={styles.modalScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.cardSubtitle}>
+                {text.storeManagement.regionalScopeModalSubtitle}
               </Text>
 
-              {selectedRestaurants.length === 0 ? (
-                <Text style={styles.emptyText}>
-                  {text.storeManagement.regionalScopeEmpty}
+              <View style={styles.modalSection}>
+                <Text style={styles.fieldLabel}>
+                  {text.storeManagement.regionalScopeManagedLabel}
                 </Text>
-              ) : (
                 <View style={styles.restaurantSelectorWrap}>
-                  {selectedRestaurants.map((entry) => {
-                    const isPrimary =
-                      regionalScopePrimaryRestaurantId === entry.id;
+                  {restaurants.map((entry) => {
+                    const isSelected = regionalScopeManagedIds.includes(entry.id);
 
                     return (
                       <Pressable
                         key={entry.id}
                         style={[
-                          styles.primarySelectionCard,
-                          isPrimary && styles.primarySelectionCardActive,
+                          styles.restaurantChip,
+                          isSelected && styles.restaurantChipActive,
                         ]}
                         disabled={isUpdatingUserId !== null}
-                        onPress={() =>
-                          setRegionalScopePrimaryRestaurantId(entry.id)
-                        }
+                        onPress={() => toggleRegionalScopeRestaurant(entry.id)}
                       >
                         <Text
                           style={[
-                            styles.primarySelectionTitle,
-                            isPrimary && styles.primarySelectionTitleActive,
+                            styles.restaurantChipText,
+                            isSelected && styles.restaurantChipTextActive,
                           ]}
                         >
                           {entry.name}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.primarySelectionSubtitle,
-                            isPrimary && styles.primarySelectionSubtitleActive,
-                          ]}
-                        >
-                          {entry.address}
                         </Text>
                       </Pressable>
                     );
                   })}
                 </View>
-              )}
-            </View>
+              </View>
+
+              <View style={styles.modalSection}>
+                <Text style={styles.fieldLabel}>
+                  {text.storeManagement.regionalScopePrimaryLabel}
+                </Text>
+
+                {selectedRestaurants.length === 0 ? (
+                  <Text style={styles.emptyText}>
+                    {text.storeManagement.regionalScopeEmpty}
+                  </Text>
+                ) : (
+                  <View style={styles.restaurantSelectorWrap}>
+                    {selectedRestaurants.map((entry) => {
+                      const isPrimary =
+                        regionalScopePrimaryRestaurantId === entry.id;
+
+                      return (
+                        <Pressable
+                          key={entry.id}
+                          style={[
+                            styles.primarySelectionCard,
+                            isPrimary && styles.primarySelectionCardActive,
+                          ]}
+                          disabled={isUpdatingUserId !== null}
+                          onPress={() =>
+                            setRegionalScopePrimaryRestaurantId(entry.id)
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.primarySelectionTitle,
+                              isPrimary && styles.primarySelectionTitleActive,
+                            ]}
+                          >
+                            {entry.name}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.primarySelectionSubtitle,
+                              isPrimary && styles.primarySelectionSubtitleActive,
+                            ]}
+                          >
+                            {entry.address}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            </ScrollView>
 
             <Pressable
               style={[
@@ -682,29 +688,44 @@ export function StoreManagementPage({
                 {text.storeManagement.noRestaurants}
               </Text>
             ) : (
-              <View style={styles.restaurantSelectorWrap}>
-                {restaurants.map((entry) => (
-                  <Pressable
-                    key={entry.id}
-                    style={[
-                      styles.restaurantChip,
-                      selectedRestaurantId === entry.id &&
-                        styles.restaurantChipActive,
-                    ]}
-                    onPress={() => setSelectedRestaurantId(entry.id)}
-                  >
-                    <Text
+              <ScrollView
+                style={styles.restaurantList}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
+              >
+                {restaurants.map((entry, index) => {
+                  const isActive = selectedRestaurantId === entry.id;
+                  return (
+                    <Pressable
+                      key={entry.id}
                       style={[
-                        styles.restaurantChipText,
-                        selectedRestaurantId === entry.id &&
-                          styles.restaurantChipTextActive,
+                        styles.restaurantListItem,
+                        index < restaurants.length - 1 &&
+                          styles.restaurantListItemBorder,
+                        isActive && styles.restaurantListItemActive,
                       ]}
+                      onPress={() => setSelectedRestaurantId(entry.id)}
                     >
-                      {entry.name}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+                      {isActive ? (
+                        <View style={styles.restaurantListItemAccent} />
+                      ) : null}
+                      <View style={styles.restaurantListItemBody}>
+                        <Text
+                          style={[
+                            styles.restaurantListItemName,
+                            isActive && styles.restaurantListItemNameActive,
+                          ]}
+                        >
+                          {entry.name}
+                        </Text>
+                        <Text style={styles.restaurantListItemAddress}>
+                          {entry.address}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
             )}
           </View>
 
@@ -814,7 +835,7 @@ export function StoreManagementPage({
 
                         <View style={styles.actionsWrap}>
                           <Pressable
-                            style={[styles.secondaryButton, styles.dangerButton]}
+                            style={[styles.secondaryButton, styles.dangerButton, styles.actionsButton]}
                             disabled={
                               isApprovingUserId === entry.id ||
                               isRejectingUserId === entry.id
@@ -834,6 +855,7 @@ export function StoreManagementPage({
                             style={[
                               styles.primaryButton,
                               styles.inlinePrimaryButton,
+                              styles.actionsButton,
                               (isApprovingUserId === entry.id ||
                                 isRejectingUserId === entry.id) &&
                                 styles.primaryButtonDisabled,
@@ -940,7 +962,7 @@ export function StoreManagementPage({
                   <View style={styles.actionsWrap}>
                     {entry.role === 'EMPLOYEE' ? (
                       <Pressable
-                        style={styles.secondaryButton}
+                        style={[styles.secondaryButton, styles.actionsButton]}
                         disabled={isUpdatingUserId === entry.id}
                         onPress={() => setLevelEditorUser(entry)}
                       >
@@ -952,7 +974,7 @@ export function StoreManagementPage({
 
                     {entry.role !== 'REGIONAL_MANAGER' ? (
                       <Pressable
-                        style={styles.secondaryButton}
+                        style={[styles.secondaryButton, styles.actionsButton]}
                         disabled={isUpdatingUserId === entry.id}
                         onPress={() => {
                           void handleSetManagerRole(
@@ -971,7 +993,7 @@ export function StoreManagementPage({
 
                     {entry.role === 'REGIONAL_MANAGER' ? (
                       <Pressable
-                        style={styles.secondaryButton}
+                        style={[styles.secondaryButton, styles.actionsButton]}
                         disabled={isUpdatingUserId === entry.id}
                         onPress={() => {
                           void handleSetManagerRole(entry, 'MANAGER');
@@ -984,7 +1006,7 @@ export function StoreManagementPage({
                     ) : null}
 
                     <Pressable
-                      style={styles.secondaryButton}
+                      style={[styles.secondaryButton, styles.actionsButton]}
                       disabled={isUpdatingUserId === entry.id}
                       onPress={() => openRegionalScopeEditor(entry)}
                     >
@@ -996,7 +1018,7 @@ export function StoreManagementPage({
                     </Pressable>
 
                     <Pressable
-                      style={[styles.secondaryButton, styles.dangerButton]}
+                      style={[styles.secondaryButton, styles.dangerButton, styles.actionsButton]}
                       disabled={isUpdatingUserId === entry.id}
                       onPress={() => setDeletingUser(entry)}
                     >

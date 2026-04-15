@@ -20,12 +20,14 @@ import { canEmbedWebDocument } from '../lib/dashboardShared';
 type UseDashboardOrderInsightsArgs = {
   accessToken: string;
   isSupervisor: boolean;
+  restaurantId?: number;
   text: AppText;
 };
 
 export function useDashboardOrderInsights({
   accessToken,
   isSupervisor,
+  restaurantId,
   text,
 }: UseDashboardOrderInsightsArgs) {
   const [latestOrder, setLatestOrder] = useState<OrderSummary | null>(null);
@@ -60,7 +62,7 @@ export function useDashboardOrderInsights({
     setOrderLoading(true);
     setOrderError(null);
 
-    void fetchOrders(accessToken)
+    void fetchOrders(accessToken, restaurantId ? { restaurantId } : undefined)
       .then((orders) => {
         if (isActive) {
           setLatestOrder(orders[0] ?? null);
@@ -81,7 +83,7 @@ export function useDashboardOrderInsights({
     return () => {
       isActive = false;
     };
-  }, [accessToken, isSupervisor, text.dashboard.quickLoadOrderError]);
+  }, [accessToken, isSupervisor, restaurantId, text.dashboard.quickLoadOrderError]);
 
   useEffect(() => {
     if (!isSupervisor) {
@@ -92,7 +94,7 @@ export function useDashboardOrderInsights({
     setReturnsLoading(true);
     setReturnsError(null);
 
-    void fetchOrderReturns(accessToken)
+    void fetchOrderReturns(accessToken, restaurantId ? { restaurantId } : undefined)
       .then((result) => {
         if (isActive) {
           setRecentReturns(result);
@@ -113,7 +115,7 @@ export function useDashboardOrderInsights({
     return () => {
       isActive = false;
     };
-  }, [accessToken, isSupervisor, text.dashboard.returnSummaryLoadError]);
+  }, [accessToken, isSupervisor, restaurantId, text.dashboard.returnSummaryLoadError]);
 
   useEffect(() => {
     if (!isSupervisor) {
@@ -162,7 +164,7 @@ export function useDashboardOrderInsights({
 
     let isActive = true;
 
-    void fetchTopOrderedProductMonths(accessToken, selectedChartSupplierId)
+    void fetchTopOrderedProductMonths(accessToken, selectedChartSupplierId, restaurantId)
       .then((months) => {
         if (!isActive) {
           return;
@@ -187,7 +189,7 @@ export function useDashboardOrderInsights({
     return () => {
       isActive = false;
     };
-  }, [accessToken, isSupervisor, selectedChartSupplierId]);
+  }, [accessToken, isSupervisor, restaurantId, selectedChartSupplierId]);
 
   useEffect(() => {
     if (!isSupervisor) {
@@ -209,6 +211,7 @@ export function useDashboardOrderInsights({
       accessToken,
       selectedChartSupplierId,
       selectedChartMonth,
+      restaurantId,
     )
       .then((result) => {
         if (isActive) {
@@ -233,6 +236,7 @@ export function useDashboardOrderInsights({
   }, [
     accessToken,
     isSupervisor,
+    restaurantId,
     selectedChartMonth,
     selectedChartSupplierId,
     text.dashboard.topProductsLoadError,

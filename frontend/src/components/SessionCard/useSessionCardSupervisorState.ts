@@ -78,6 +78,7 @@ export type SessionCardSupervisorState = {
   levelUsers: TrainingAccessUser[];
   openLevelEditor: (entry: TrainingAccessUser) => void;
   openRestaurantFilterFor: RestaurantFilterSection | null;
+  regionalManagerStoreOptions: RestaurantOption[];
   selectRestaurantFilter: (value: RestaurantFilterValue) => void;
   selectedEmployeeRestaurantFilter: RestaurantFilterValue;
   selectedRestaurantFilterLabel: string;
@@ -169,7 +170,11 @@ export function useSessionCardSupervisorState({
   const [
     selectedEmployeeRestaurantFilter,
     setSelectedEmployeeRestaurantFilter,
-  ] = useState<RestaurantFilterValue>('ALL');
+  ] = useState<RestaurantFilterValue>(() =>
+    currentUser.role === 'REGIONAL_MANAGER'
+      ? (currentUser.managedRestaurants[0]?.id ?? 'ALL')
+      : 'ALL',
+  );
 
   useEffect(() => {
     if (!isManager && !isAdmin) {
@@ -271,8 +276,22 @@ export function useSessionCardSupervisorState({
       .sort((left, right) => left.name.localeCompare(right.name));
   }, [users]);
 
+  const regionalManagerStoreOptions = useMemo(() => {
+    if (!isRegionalManager) {
+      return [];
+    }
+
+    return [...currentUser.managedRestaurants]
+      .map((restaurant) => ({ id: restaurant.id, name: restaurant.name }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }, [isRegionalManager, currentUser.managedRestaurants]);
+
   const usersFilteredByRestaurant = useMemo(() => {
-    if (!isAdmin || selectedEmployeeRestaurantFilter === 'ALL') {
+    if (selectedEmployeeRestaurantFilter === 'ALL') {
+      return users;
+    }
+
+    if (!isAdmin && !isRegionalManager) {
       return users;
     }
 
@@ -283,10 +302,28 @@ export function useSessionCardSupervisorState({
     return users.filter(
       (entry) => entry.restaurantId === selectedEmployeeRestaurantFilter,
     );
-  }, [isAdmin, selectedEmployeeRestaurantFilter, users]);
+  }, [isAdmin, isRegionalManager, selectedEmployeeRestaurantFilter, users]);
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!isAdmin && !isRegionalManager) {
+      return;
+    }
+
+    if (isRegionalManager) {
+      if (regionalManagerStoreOptions.length === 0) {
+        return;
+      }
+
+      if (
+        selectedEmployeeRestaurantFilter === 'ALL' ||
+        selectedEmployeeRestaurantFilter === 'NONE' ||
+        !regionalManagerStoreOptions.some(
+          (restaurant) => restaurant.id === selectedEmployeeRestaurantFilter,
+        )
+      ) {
+        setSelectedEmployeeRestaurantFilter(regionalManagerStoreOptions[0].id);
+      }
+
       return;
     }
 
@@ -298,7 +335,13 @@ export function useSessionCardSupervisorState({
     ) {
       setSelectedEmployeeRestaurantFilter('ALL');
     }
-  }, [employeeRestaurantOptions, isAdmin, selectedEmployeeRestaurantFilter]);
+  }, [
+    employeeRestaurantOptions,
+    isAdmin,
+    isRegionalManager,
+    regionalManagerStoreOptions,
+    selectedEmployeeRestaurantFilter,
+  ]);
 
   const accountApprovalUsers = useMemo(() => {
     const query = approvalSearch.trim().toLowerCase();
@@ -441,13 +484,19 @@ export function useSessionCardSupervisorState({
       return text.dashboard.quickRestaurantFilterUnassigned;
     }
 
+    const options = isRegionalManager
+      ? regionalManagerStoreOptions
+      : employeeRestaurantOptions;
+
     return (
-      employeeRestaurantOptions.find(
+      options.find(
         (restaurant) => restaurant.id === selectedEmployeeRestaurantFilter,
       )?.name ?? text.dashboard.quickRestaurantFilterAll
     );
   }, [
     employeeRestaurantOptions,
+    isRegionalManager,
+    regionalManagerStoreOptions,
     selectedEmployeeRestaurantFilter,
     text.dashboard.quickRestaurantFilterAll,
     text.dashboard.quickRestaurantFilterUnassigned,
@@ -724,6 +773,7 @@ export function useSessionCardSupervisorState({
     levelUsers,
     openLevelEditor,
     openRestaurantFilterFor,
+    regionalManagerStoreOptions,
     selectRestaurantFilter,
     selectedEmployeeRestaurantFilter,
     selectedRestaurantFilterLabel,

@@ -1057,6 +1057,7 @@ export class OrdersService {
     actor: Actor,
     supplierId?: number,
     month?: string,
+    restaurantId?: number,
   ): Promise<TopProductAggregate[]> {
     this.ensureCanManageOrders(actor);
 
@@ -1073,7 +1074,10 @@ export class OrdersService {
 
     const purchaseOrderWhere: Prisma.PurchaseOrderWhereInput = {};
 
-    const restaurantScope = this.buildRestaurantScopeWhere(actor);
+    const restaurantScope = this.buildRestaurantScopeWhere(actor, {
+      requestedRestaurantId: restaurantId,
+      allowAdminAllRestaurants: true,
+    });
     if (restaurantScope?.restaurantId !== undefined) {
       purchaseOrderWhere.restaurantId = restaurantScope.restaurantId;
     }
@@ -1224,6 +1228,7 @@ export class OrdersService {
   async getTopOrderedProductMonths(
     actor: Actor,
     supplierId?: number,
+    restaurantId?: number,
   ): Promise<string[]> {
     this.ensureCanManageOrders(actor);
 
@@ -1239,7 +1244,10 @@ export class OrdersService {
     }
 
     const whereClause = {
-      ...(this.buildRestaurantScopeWhere(actor) ?? {}),
+      ...(this.buildRestaurantScopeWhere(actor, {
+        requestedRestaurantId: restaurantId,
+        allowAdminAllRestaurants: true,
+      }) ?? {}),
       ...(supplierId !== undefined ? { supplierId } : {}),
     };
 
