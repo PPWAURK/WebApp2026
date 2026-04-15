@@ -27,6 +27,7 @@ import type { EmployeeLevel, Restaurant } from '../../types/auth';
 import { isManagerLikeRole } from '../../utils/roleAccess';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { styles } from './StoreManagementPage.styles';
+import { BREAKPOINT_TABLET } from '../../constants/breakpoints';
 
 type StoreManagementPageProps = {
   text: AppText;
@@ -83,7 +84,7 @@ export function StoreManagementPage({
   accessToken,
 }: StoreManagementPageProps) {
   const { width } = useWindowDimensions();
-  const isWideLayout = width >= 768;
+  const isWideLayout = width >= BREAKPOINT_TABLET;
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [users, setUsers] = useState<TrainingAccessUser[]>([]);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(

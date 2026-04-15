@@ -1,6 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { COLORS } from '../../constants/colors';
+import {
+  BREAKPOINT_COMPACT,
+  BREAKPOINT_WIDE,
+  BREAKPOINT_ULTRA_WIDE,
+} from '../../constants/breakpoints';
 import type { AppText } from '../../locales/translations';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { ProductCreateCard } from './ProductCreateCard';
@@ -20,10 +25,10 @@ export function SupplierManagementPage({
   accessToken,
 }: SupplierManagementPageProps) {
   const { width } = useWindowDimensions();
-  const isSmallScreen = width < 560;
+  const isSmallScreen = width < BREAKPOINT_COMPACT;
   const isMediumScreen = width >= 760;
-  const isWideLayout = width >= 1400;
-  const useSingleColumnProductGrid = width < 1180;
+  const isWideLayout = width >= BREAKPOINT_ULTRA_WIDE;
+  const useSingleColumnProductGrid = width < BREAKPOINT_WIDE;
 
   const state = useSupplierManagement({ text, accessToken });
 

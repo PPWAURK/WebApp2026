@@ -19,6 +19,11 @@ import { fetchSuppliers, type SupplierItem } from '../../services/suppliersApi';
 import { styles } from './OrdersPage.styles';
 import type { Language } from '../../types/language';
 import type { OrderRecapData } from '../../types/order';
+import {
+  BREAKPOINT_COMPACT,
+  BREAKPOINT_TABLET,
+  BREAKPOINT_WIDE,
+} from '../../constants/breakpoints';
 
 type OrdersPageProps = {
   text: AppText;
@@ -225,10 +230,10 @@ export function OrdersPage({
   onSubmitOrder,
 }: OrdersPageProps) {
   const { width } = useWindowDimensions();
-  const isSmallScreen = width < 560;
-  const isWideLayout = width >= 1180;
+  const isSmallScreen = width < BREAKPOINT_COMPACT;
+  const isWideLayout = width >= BREAKPOINT_WIDE;
   const useSingleColumnGrid = width < 900;
-  const shouldMoveSummaryCardToBottom = width >= 768 && width < 1180;
+  const shouldMoveSummaryCardToBottom = width >= BREAKPOINT_TABLET && width < BREAKPOINT_WIDE;
 
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);

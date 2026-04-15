@@ -26,10 +26,11 @@ import {
   isManagerLikeRole,
   isSupervisorRole,
 } from '../../utils/roleAccess';
+import { BREAKPOINT_WIDE } from '../../constants/breakpoints';
 
 export function SessionCard({ user, accessToken, text }: SessionCardProps) {
   const { width } = useWindowDimensions();
-  const isWideLayout = width >= 1180;
+  const isWideLayout = width >= BREAKPOINT_WIDE;
   const isTwoColumnFeatureLayout = width >= 900;
   const isInsightGridWide = width >= 960;
   const isCompactDashboardCards = width < 820;

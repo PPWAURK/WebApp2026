@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
   page: {
@@ -41,6 +41,13 @@ export const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 4,
     paddingBottom: 32,
+    ...Platform.select({
+      // On wide web screens, cap content width so it doesn't stretch beyond readable limits.
+      // maxWidth alone (without margin auto) anchors content to the left, which is intentional
+      // since the sidebar is on the left — asymmetric margins would look odd.
+      web: { maxWidth: 1600 } as never,
+      default: {},
+    }),
   },
   pageTransitionLayer: {
     flex: 1,

@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { COLORS } from '../../constants/colors';
+import { BREAKPOINT_TABLET, BREAKPOINT_WIDE } from '../../constants/breakpoints';
 import type { AppText } from '../../locales/translations';
 import type { User } from '../../types/auth';
 import type { Language } from '../../types/language';
@@ -48,8 +49,8 @@ export function TrainingPage({
   });
 
   const isWebPlatform = Platform.OS === 'web';
-  const isTabletBrowserWidth = windowWidth >= 768 && windowWidth < 1180;
-  const showSidePreview = isWebPlatform && windowWidth >= 1180;
+  const isTabletBrowserWidth = windowWidth >= BREAKPOINT_TABLET && windowWidth < BREAKPOINT_WIDE;
+  const showSidePreview = isWebPlatform && windowWidth >= BREAKPOINT_WIDE;
   const previewFrameHeight = showSidePreview
     ? Math.max(360, Math.min(windowHeight - 320, 560))
     : isTabletBrowserWidth

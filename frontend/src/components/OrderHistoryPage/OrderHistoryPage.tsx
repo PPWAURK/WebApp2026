@@ -15,6 +15,7 @@ import { OrderHistoryToolbar } from './OrderHistoryToolbar';
 import { OrderReturnModal } from './OrderReturnModal';
 import { useOrderHistory } from './useOrderHistory';
 import { useOrderReturnFlow } from './useOrderReturnFlow';
+import { BREAKPOINT_WIDE } from '../../constants/breakpoints';
 
 type OrderHistoryPageProps = {
   text: AppText;
@@ -57,7 +58,7 @@ export function OrderHistoryPage({
 }: OrderHistoryPageProps) {
   const { width } = useWindowDimensions();
   const isMediumScreen = width >= 820;
-  const isWideLayout = width >= 1180;
+  const isWideLayout = width >= BREAKPOINT_WIDE;
   const [pendingDeleteReturn, setPendingDeleteReturn] =
     useState<OrderReturnSummary | null>(null);
   const [deletingReturnId, setDeletingReturnId] = useState<number | null>(null);

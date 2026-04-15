@@ -12,6 +12,7 @@ import type { AppText } from '../../locales/translations';
 import { styles } from './OrderRecapPage.styles';
 import type { Language } from '../../types/language';
 import type { OrderRecapData } from '../../types/order';
+import { BREAKPOINT_COMPACT, BREAKPOINT_WIDE } from '../../constants/breakpoints';
 
 type OrderRecapPageProps = {
   text: AppText;
@@ -47,8 +48,8 @@ export function OrderRecapPage({
   onBack,
 }: OrderRecapPageProps) {
   const { width } = useWindowDimensions();
-  const isSmallScreen = width < 560;
-  const isWideLayout = width >= 1180;
+  const isSmallScreen = width < BREAKPOINT_COMPACT;
+  const isWideLayout = width >= BREAKPOINT_WIDE;
   const useSingleColumnGrid = width < 920;
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 

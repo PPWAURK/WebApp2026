@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import type { AppTheme } from '../../types/theme';
 
 export const SIDEBAR_WIDTH = 296;
@@ -470,6 +470,12 @@ export function createStyles(theme: AppTheme) {
       paddingHorizontal: 16,
       paddingVertical: 18,
       gap: 16,
+      // On very wide web screens (> 1600px), prevent content from stretching too far.
+      // Since the sidebar anchors content from the left, we only cap at maxWidth.
+      ...Platform.select({
+        web: { maxWidth: 1600 } as never,
+        default: {},
+      }),
     },
     topBar: {
       borderRadius: 28,

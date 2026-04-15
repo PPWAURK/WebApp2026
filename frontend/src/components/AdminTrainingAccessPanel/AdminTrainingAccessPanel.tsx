@@ -23,6 +23,7 @@ import {
   type TrainingQuizLinkLanguage,
 } from '../../services/usersApi';
 import { styles } from './AdminTrainingAccessPanel.styles';
+import { BREAKPOINT_COMPACT, BREAKPOINT_TABLET } from '../../constants/breakpoints';
 import type { EmployeeLevel, TrainingSection, User } from '../../types/auth';
 
 type AdminTrainingAccessPanelProps = {
@@ -51,10 +52,10 @@ export function AdminTrainingAccessPanel({
   const { width, height } = useWindowDimensions();
   const isWideLayout = width >= 1340;
   const isDenseLayout = width < 980;
-  const isPhoneLayout = width < 560;
+  const isPhoneLayout = width < BREAKPOINT_COMPACT;
   const isCompactLayout = width < 980;
   const isCompactSurfaceHeader = width < 820;
-  const isTabletLayout = width >= 768 && width < 1340;
+  const isTabletLayout = width >= BREAKPOINT_TABLET && width < 1340;
   const tabletCardMaxHeight = Math.min(Math.max(height * 0.72, 520), 760);
   const tabletLevelListMaxHeight = Math.min(Math.max(height * 0.26, 180), 280);
   const scenarios = useMemo(() => getTrainingScenarios(text), [text]);
