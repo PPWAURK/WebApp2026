@@ -11,7 +11,11 @@ describe('OrdersService', () => {
     produit: { findMany: jest.Mock };
     fournisseur: { findUnique: jest.Mock };
     restaurant: { findUnique: jest.Mock };
-    purchaseOrder: { findMany: jest.Mock; findUnique: jest.Mock; delete: jest.Mock };
+    purchaseOrder: {
+      findMany: jest.Mock;
+      findUnique: jest.Mock;
+      delete: jest.Mock;
+    };
     purchaseOrderItem: {
       createMany: jest.Mock;
       findMany: jest.Mock;
