@@ -19,6 +19,15 @@ export class SupplierScopedQueryDto {
   supplierId?: number;
 }
 
+export class HistoryScopeQueryDto {
+  @ApiPropertyOptional({ example: 3 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  restaurantId?: number;
+}
+
 export class SupplierMonthQueryDto extends SupplierScopedQueryDto {
   @ApiPropertyOptional({ example: '2026-03' })
   @IsOptional()
@@ -29,6 +38,13 @@ export class SupplierMonthQueryDto extends SupplierScopedQueryDto {
 }
 
 export class HistoryAnalyticsQueryDto extends SupplierScopedQueryDto {
+  @ApiPropertyOptional({ example: 3 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  restaurantId?: number;
+
   @ApiPropertyOptional({
     enum: HISTORY_PERIODS,
     example: 'this_month',

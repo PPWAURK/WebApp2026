@@ -19,6 +19,7 @@ type UseOrderHistoryParams = {
   accessToken: string;
   orders: OrderSummary[];
   orderReturns: OrderReturnSummary[];
+  selectedRestaurantId: number | null;
   text: AppText;
 };
 
@@ -26,6 +27,7 @@ export function useOrderHistory({
   accessToken,
   orders,
   orderReturns,
+  selectedRestaurantId,
   text,
 }: UseOrderHistoryParams) {
   const [selectedSupplierKey, setSelectedSupplierKey] = useState<string | null>(
@@ -100,6 +102,7 @@ export function useOrderHistory({
 
     void fetchOrderHistoryAnalytics(accessToken, {
       supplierId: selectedSupplierGroup.supplierId,
+      restaurantId: selectedRestaurantId ?? undefined,
       period,
     })
       .then((result) => {
@@ -131,6 +134,7 @@ export function useOrderHistory({
   }, [
     accessToken,
     period,
+    selectedRestaurantId,
     selectedSupplierGroup,
     text.orders.analyticsLoadError,
   ]);

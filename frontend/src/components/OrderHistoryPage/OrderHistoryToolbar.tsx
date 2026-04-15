@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { COLORS } from '../../constants/colors';
 import type { AppText } from '../../locales/translations';
+import type { Restaurant } from '../../types/auth';
 import {
   PERIODS,
   SORTS,
@@ -14,11 +15,16 @@ import { styles } from './OrderHistoryPage.styles';
 type OrderHistoryToolbarProps = {
   text: AppText;
   groupedOrders: SupplierOrderGroup[];
+  restaurantOptions: Restaurant[];
+  selectedRestaurantId: number | null;
+  allRestaurantsLabel: string;
+  canSelectAllRestaurants: boolean;
   selectedSupplierKey: string | null;
   search: string;
   period: PeriodKey;
   sortBy: SortKey;
   isMediumScreen: boolean;
+  onSelectRestaurant: (restaurantId: number | null) => void;
   onSelectSupplier: (supplierKey: string) => void;
   onChangeSearch: (value: string) => void;
   onChangePeriod: (period: PeriodKey) => void;
@@ -28,75 +34,151 @@ type OrderHistoryToolbarProps = {
 export function OrderHistoryToolbar({
   text,
   groupedOrders,
+  restaurantOptions,
+  selectedRestaurantId,
+  allRestaurantsLabel,
+  canSelectAllRestaurants,
   selectedSupplierKey,
   search,
   period,
   sortBy,
   isMediumScreen,
+  onSelectRestaurant,
   onSelectSupplier,
   onChangeSearch,
   onChangePeriod,
   onChangeSort,
 }: OrderHistoryToolbarProps) {
-  if (groupedOrders.length === 0) {
+  const showRestaurantFilters =
+    restaurantOptions.length > 1 ||
+    (restaurantOptions.length > 0 && canSelectAllRestaurants);
+
+  if (groupedOrders.length === 0 && !showRestaurantFilters) {
     return null;
   }
 
   return (
     <View style={styles.toolbarCard}>
-      <View style={styles.toolSection}>
-        <Text style={styles.toolSectionTitle}>
-          {text.orders.supplierTabsTitle}
-        </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRail}
-        >
-          {groupedOrders.map((supplierGroup) => {
-            const isActive = supplierGroup.supplierKey === selectedSupplierKey;
-
-            return (
+      {showRestaurantFilters ? (
+        <View style={styles.toolSection}>
+          <Text style={styles.toolSectionTitle}>
+            {text.orders.restaurantFilterTitle}
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRail}
+          >
+            {canSelectAllRestaurants ? (
               <Pressable
-                key={`supplier-${supplierGroup.supplierKey}`}
                 style={[
                   styles.supplierChip,
-                  isActive && styles.supplierChipActive,
+                  selectedRestaurantId === null && styles.supplierChipActive,
                 ]}
-                onPress={() => onSelectSupplier(supplierGroup.supplierKey)}
+                onPress={() => onSelectRestaurant(null)}
                 accessibilityRole="button"
-                accessibilityLabel={supplierGroup.supplierName}
-                accessibilityState={{ selected: isActive }}
+                accessibilityLabel={allRestaurantsLabel}
+                accessibilityState={{ selected: selectedRestaurantId === null }}
               >
                 <Text
                   style={[
                     styles.supplierChipText,
-                    isActive && styles.supplierChipTextActive,
+                    selectedRestaurantId === null &&
+                      styles.supplierChipTextActive,
                   ]}
                   numberOfLines={1}
                 >
-                  {supplierGroup.supplierName}
+                  {allRestaurantsLabel}
                 </Text>
-                <View
+              </Pressable>
+            ) : null}
+
+            {restaurantOptions.map((restaurant) => {
+              const isActive = restaurant.id === selectedRestaurantId;
+
+              return (
+                <Pressable
+                  key={`restaurant-${restaurant.id}`}
                   style={[
-                    styles.supplierChipCount,
-                    isActive && styles.supplierChipCountActive,
+                    styles.supplierChip,
+                    isActive && styles.supplierChipActive,
                   ]}
+                  onPress={() => onSelectRestaurant(restaurant.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={restaurant.name}
+                  accessibilityState={{ selected: isActive }}
                 >
                   <Text
                     style={[
-                      styles.supplierChipCountText,
-                      isActive && styles.supplierChipCountTextActive,
+                      styles.supplierChipText,
+                      isActive && styles.supplierChipTextActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {restaurant.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
+
+      {groupedOrders.length > 0 ? (
+        <View style={styles.toolSection}>
+          <Text style={styles.toolSectionTitle}>
+            {text.orders.supplierTabsTitle}
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRail}
+          >
+            {groupedOrders.map((supplierGroup) => {
+              const isActive = supplierGroup.supplierKey === selectedSupplierKey;
+
+              return (
+                <Pressable
+                  key={`supplier-${supplierGroup.supplierKey}`}
+                  style={[
+                    styles.supplierChip,
+                    isActive && styles.supplierChipActive,
+                  ]}
+                  onPress={() => onSelectSupplier(supplierGroup.supplierKey)}
+                  accessibilityRole="button"
+                  accessibilityLabel={supplierGroup.supplierName}
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <Text
+                    style={[
+                      styles.supplierChipText,
+                      isActive && styles.supplierChipTextActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {supplierGroup.supplierName}
+                  </Text>
+                  <View
+                    style={[
+                      styles.supplierChipCount,
+                      isActive && styles.supplierChipCountActive,
                     ]}
                   >
-                    {supplierGroup.orders.length}
-                  </Text>
-                </View>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+                    <Text
+                      style={[
+                        styles.supplierChipCountText,
+                        isActive && styles.supplierChipCountTextActive,
+                      ]}
+                    >
+                      {supplierGroup.orders.length}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
 
       <View
         style={[styles.toolbarGrid, isMediumScreen && styles.toolbarGridWide]}

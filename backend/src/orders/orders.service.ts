@@ -65,6 +65,7 @@ type HistoryAnalyticsPeriod =
 type HistoryAnalyticsQuery = {
   supplierId?: number;
   period?: string;
+  restaurantId?: number;
 };
 
 type HistoryAnalyticsTotals = {
@@ -357,16 +358,36 @@ export class OrdersService {
     }
   }
 
-  async listOrders(actor: Actor, req: OrdersRequestContext) {
+  async listOrders(
+    actor: Actor,
+    req: OrdersRequestContext,
+    query?: { restaurantId?: number },
+  ) {
     this.ensureCanManageOrders(actor);
 
     const orders = await this.prisma.purchaseOrder.findMany({
-      where: this.buildRestaurantScopeWhere(actor),
+      where: this.buildRestaurantScopeWhere(actor, {
+        requestedRestaurantId: query?.restaurantId,
+        allowAdminAllRestaurants: true,
+      }),
       include: {
         supplier: {
           select: {
             id: true,
             nom: true,
+          },
+        },
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        createdByUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
           },
         },
       },
@@ -386,6 +407,8 @@ export class OrdersService {
         number: order.number,
         supplierId: order.supplierId,
         supplierName: order.supplier.nom,
+        restaurantId: order.restaurant.id,
+        restaurantName: order.restaurant.name,
         deliveryDate: order.deliveryDate.toISOString().slice(0, 10),
         deliveryAddress: order.deliveryAddress,
         totalItems: order.totalItems,
@@ -393,15 +416,27 @@ export class OrdersService {
         bonUrl: commandeUrl,
         commandeUrl,
         createdAt: order.createdAt,
+        createdBy: {
+          id: order.createdByUser.id,
+          name: order.createdByUser.name,
+          email: order.createdByUser.email,
+        },
       };
     });
   }
 
-  async listOrderReturns(actor: Actor, req: OrdersRequestContext) {
+  async listOrderReturns(
+    actor: Actor,
+    req: OrdersRequestContext,
+    query?: { restaurantId?: number },
+  ) {
     this.ensureCanManageOrders(actor);
 
     const returns = await this.prisma.purchaseReturn.findMany({
-      where: this.buildRestaurantScopeWhere(actor),
+      where: this.buildRestaurantScopeWhere(actor, {
+        requestedRestaurantId: query?.restaurantId,
+        allowAdminAllRestaurants: true,
+      }),
       include: {
         purchaseOrder: {
           select: {
@@ -1250,12 +1285,14 @@ export class OrdersService {
       supplierId,
       start,
       end,
+      query.restaurantId,
     );
     const previousWhere = this.buildOrderAnalyticsWhere(
       actor,
       supplierId,
       previousStart,
       previousEnd,
+      query.restaurantId,
     );
 
     const [
@@ -1328,6 +1365,7 @@ export class OrdersService {
             ),
           ),
           undefined,
+          query.restaurantId,
         ),
         select: {
           deliveryDate: true,
@@ -1611,10 +1649,14 @@ export class OrdersService {
     supplierId?: number,
     start?: Date,
     end?: Date,
+    restaurantId?: number,
   ): Prisma.PurchaseOrderWhereInput {
     const where: Prisma.PurchaseOrderWhereInput = {};
 
-    const restaurantScope = this.buildRestaurantScopeWhere(actor);
+    const restaurantScope = this.buildRestaurantScopeWhere(actor, {
+      requestedRestaurantId: restaurantId,
+      allowAdminAllRestaurants: true,
+    });
     if (restaurantScope?.restaurantId !== undefined) {
       where.restaurantId = restaurantScope.restaurantId;
     }
@@ -1938,8 +1980,28 @@ export class OrdersService {
 
   private buildRestaurantScopeWhere(
     actor: Actor,
+    options?: {
+      requestedRestaurantId?: number;
+      allowAdminAllRestaurants?: boolean;
+    },
   ): { restaurantId: number | { in: number[] } } | undefined {
+    const requestedRestaurantId = options?.requestedRestaurantId;
+
+    if (requestedRestaurantId !== undefined) {
+      if (!this.canActorAccessRestaurant(actor, requestedRestaurantId)) {
+        throw new ForbiddenException(
+          'Requested restaurant is outside your scope',
+        );
+      }
+
+      return { restaurantId: requestedRestaurantId };
+    }
+
     if (actor.role === 'ADMIN') {
+      if (options?.allowAdminAllRestaurants) {
+        return undefined;
+      }
+
       return actor.restaurantId
         ? { restaurantId: actor.restaurantId }
         : undefined;

@@ -5,6 +5,7 @@ import type {
   OrderReturnSummary,
   OrderSummary,
 } from '../../services/ordersApi';
+import type { Restaurant } from '../../types/auth';
 import { deleteOrderReturn } from '../../services/ordersApi';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { OrderHistoryAnalytics } from './OrderHistoryAnalytics';
@@ -20,8 +21,13 @@ type OrderHistoryPageProps = {
   accessToken: string;
   orders: OrderSummary[];
   orderReturns: OrderReturnSummary[];
+  restaurantOptions: Restaurant[];
+  selectedRestaurantId: number | null;
+  allRestaurantsLabel: string;
+  canSelectAllRestaurants: boolean;
   isLoading: boolean;
   deletingOrderId: number | null;
+  onSelectRestaurantId: (restaurantId: number | null) => void;
   onRefresh: () => Promise<void>;
   onDeleteReturnSuccess: (returnId: number) => void;
   onDownloadOrderBon: (order: {
@@ -37,8 +43,13 @@ export function OrderHistoryPage({
   accessToken,
   orders,
   orderReturns,
+  restaurantOptions,
+  selectedRestaurantId,
+  allRestaurantsLabel,
+  canSelectAllRestaurants,
   isLoading,
   deletingOrderId,
+  onSelectRestaurantId,
   onRefresh,
   onDeleteReturnSuccess,
   onDownloadOrderBon,
@@ -64,6 +75,7 @@ export function OrderHistoryPage({
     accessToken,
     orders,
     orderReturns,
+    selectedRestaurantId,
     text,
   });
 
@@ -128,11 +140,16 @@ export function OrderHistoryPage({
         <OrderHistoryToolbar
           text={text}
           groupedOrders={history.groupedOrders}
+          restaurantOptions={restaurantOptions}
+          selectedRestaurantId={selectedRestaurantId}
+          allRestaurantsLabel={allRestaurantsLabel}
+          canSelectAllRestaurants={canSelectAllRestaurants}
           selectedSupplierKey={history.selectedSupplierKey}
           search={history.search}
           period={history.period}
           sortBy={history.sortBy}
           isMediumScreen={isMediumScreen}
+          onSelectRestaurant={onSelectRestaurantId}
           onSelectSupplier={history.setSelectedSupplierKey}
           onChangeSearch={history.setSearch}
           onChangePeriod={history.setPeriod}

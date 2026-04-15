@@ -7,6 +7,8 @@ type RawOrderSummary = {
   number?: unknown;
   supplierId?: unknown;
   supplierName?: unknown;
+  restaurantId?: unknown;
+  restaurantName?: unknown;
   deliveryDate?: unknown;
   deliveryAddress?: unknown;
   totalItems?: unknown;
@@ -14,6 +16,13 @@ type RawOrderSummary = {
   bonUrl?: unknown;
   commandeUrl?: unknown;
   createdAt?: unknown;
+  createdBy?: unknown;
+};
+
+type RawOrderCreatedBy = {
+  id?: unknown;
+  name?: unknown;
+  email?: unknown;
 };
 
 type RawOrderReturnDraftItem = {
@@ -76,12 +85,19 @@ export type OrderSummary = {
   number: string;
   supplierId: number;
   supplierName: string;
+  restaurantId: number;
+  restaurantName: string;
   deliveryDate: string;
   deliveryAddress: string;
   totalItems: number;
   totalAmount: number;
   bonUrl: string;
   createdAt: string;
+  createdBy: {
+    id: number;
+    name: string | null;
+    email: string;
+  };
 };
 
 export type TopOrderedProduct = {
@@ -257,6 +273,9 @@ function normalizeOrderSummary(raw: RawOrderSummary): OrderSummary {
     number: typeof raw.number === 'string' ? raw.number : '',
     supplierId: toNumber(raw.supplierId, 0),
     supplierName: typeof raw.supplierName === 'string' ? raw.supplierName : '',
+    restaurantId: toNumber(raw.restaurantId, 0),
+    restaurantName:
+      typeof raw.restaurantName === 'string' ? raw.restaurantName : '',
     deliveryDate: typeof raw.deliveryDate === 'string' ? raw.deliveryDate : '',
     deliveryAddress:
       typeof raw.deliveryAddress === 'string' ? raw.deliveryAddress : '',
@@ -264,6 +283,15 @@ function normalizeOrderSummary(raw: RawOrderSummary): OrderSummary {
     totalAmount: toNumber(raw.totalAmount, 0),
     bonUrl: commandeUrl,
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : '',
+    createdBy: normalizeOrderCreatedBy(raw.createdBy as RawOrderCreatedBy),
+  };
+}
+
+function normalizeOrderCreatedBy(raw: RawOrderCreatedBy | undefined) {
+  return {
+    id: toNumber(raw?.id, 0),
+    name: typeof raw?.name === 'string' ? raw.name : null,
+    email: typeof raw?.email === 'string' ? raw.email : '',
   };
 }
 
@@ -411,12 +439,28 @@ export async function createOrder(
   };
 }
 
-export async function fetchOrders(token: string): Promise<OrderSummary[]> {
-  const response = await fetch(`${API_URL}/orders`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+export async function fetchOrders(
+  token: string,
+  options?: { restaurantId?: number },
+): Promise<OrderSummary[]> {
+  const query = new URLSearchParams();
+  if (
+    options?.restaurantId !== undefined &&
+    Number.isInteger(options.restaurantId) &&
+    options.restaurantId > 0
+  ) {
+    query.set('restaurantId', String(options.restaurantId));
+  }
+
+  const queryString = query.toString();
+  const response = await fetch(
+    `${API_URL}/orders${queryString ? `?${queryString}` : ''}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 
   const data = (await response.json()) as unknown;
 
@@ -564,12 +608,26 @@ export async function deleteOrderReturn(
 
 export async function fetchOrderReturns(
   token: string,
+  options?: { restaurantId?: number },
 ): Promise<OrderReturnSummary[]> {
-  const response = await fetch(`${API_URL}/orders/returns`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+  const query = new URLSearchParams();
+  if (
+    options?.restaurantId !== undefined &&
+    Number.isInteger(options.restaurantId) &&
+    options.restaurantId > 0
+  ) {
+    query.set('restaurantId', String(options.restaurantId));
+  }
+
+  const queryString = query.toString();
+  const response = await fetch(
+    `${API_URL}/orders/returns${queryString ? `?${queryString}` : ''}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 
   const data = (await response.json()) as unknown;
 
@@ -686,6 +744,7 @@ export async function fetchOrderHistoryAnalytics(
   token: string,
   options?: {
     supplierId?: number;
+    restaurantId?: number;
     period?: '7d' | '30d' | 'this_month' | 'last_month' | 'all';
   },
 ): Promise<OrderHistoryAnalytics> {
@@ -699,6 +758,13 @@ export async function fetchOrderHistoryAnalytics(
   }
   if (options?.period) {
     query.set('period', options.period);
+  }
+  if (
+    options?.restaurantId !== undefined &&
+    Number.isInteger(options.restaurantId) &&
+    options.restaurantId > 0
+  ) {
+    query.set('restaurantId', String(options.restaurantId));
   }
 
   const queryString = query.toString();

@@ -10,6 +10,7 @@ describe('OrdersController', () => {
     createOrderReturn: jest.Mock;
     getOrderHistoryAnalytics: jest.Mock;
     getOrderReturnDraft: jest.Mock;
+    listOrders: jest.Mock;
     listOrderReturns: jest.Mock;
   };
 
@@ -19,6 +20,7 @@ describe('OrdersController', () => {
       createOrderReturn: jest.fn(),
       getOrderHistoryAnalytics: jest.fn(),
       getOrderReturnDraft: jest.fn(),
+      listOrders: jest.fn(),
       listOrderReturns: jest.fn(),
     };
 
@@ -99,6 +101,7 @@ describe('OrdersController', () => {
       {
         supplierId: 11,
         period: 'this_month',
+        restaurantId: 3,
       },
     );
 
@@ -113,6 +116,39 @@ describe('OrdersController', () => {
       {
         supplierId: 11,
         period: 'this_month',
+        restaurantId: 3,
+      },
+    );
+    expect(result).toBe(expected);
+  });
+
+  it('forwards order listing filters to the service', () => {
+    const req = {
+      protocol: 'https',
+      get: jest.fn(),
+      user: {
+        id: 4,
+        role: 'REGIONAL_MANAGER',
+        restaurantId: 2,
+        managedRestaurants: [{ id: 2 }, { id: 5 }],
+      },
+    } as never;
+    const expected = [{ id: 31, number: 'PO-20260415-0031' }];
+    ordersService.listOrders.mockReturnValue(expected);
+
+    const result = controller.listOrders(req, { restaurantId: 5 });
+
+    expect(ordersService.listOrders).toHaveBeenCalledWith(
+      {
+        id: 4,
+        role: 'REGIONAL_MANAGER',
+        employeeLevel: null,
+        restaurantId: 2,
+        managedRestaurantIds: [2, 5],
+      },
+      req,
+      {
+        restaurantId: 5,
       },
     );
     expect(result).toBe(expected);
@@ -131,7 +167,7 @@ describe('OrdersController', () => {
     const expected = [{ id: 18, orderNumber: 'PO-20260324-0018' }];
     ordersService.listOrderReturns.mockReturnValue(expected);
 
-    const result = controller.listOrderReturns(req);
+    const result = controller.listOrderReturns(req, { restaurantId: 6 });
 
     expect(ordersService.listOrderReturns).toHaveBeenCalledWith(
       {
@@ -142,6 +178,9 @@ describe('OrdersController', () => {
         managedRestaurantIds: [],
       },
       req,
+      {
+        restaurantId: 6,
+      },
     );
     expect(result).toBe(expected);
   });

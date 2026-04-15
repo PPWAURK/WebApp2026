@@ -42,6 +42,8 @@ export function OrderHistoryOrderCard({
   onDeleteOrder,
   onDeleteReturn,
 }: OrderHistoryOrderCardProps) {
+  const createdByLabel = order.createdBy.name?.trim() || order.createdBy.email;
+
   return (
     <View style={styles.orderCard}>
       <View style={styles.orderCardHeader}>
@@ -79,6 +81,22 @@ export function OrderHistoryOrderCard({
             {text.orders.deliveryDateLabel}
           </Text>
           <Text style={styles.orderMetaValue}>{order.deliveryDate}</Text>
+        </View>
+        <View style={styles.orderMetaItem}>
+          <Text style={styles.orderMetaLabel}>
+            {text.orders.restaurantLabel}
+          </Text>
+          <Text style={styles.orderMetaValue} numberOfLines={2}>
+            {order.restaurantName || '-'}
+          </Text>
+        </View>
+        <View style={styles.orderMetaItem}>
+          <Text style={styles.orderMetaLabel}>
+            {text.orders.orderedByLabel}
+          </Text>
+          <Text style={styles.orderMetaValue} numberOfLines={2}>
+            {createdByLabel || text.orders.orderCreatorUnknown}
+          </Text>
         </View>
       </View>
 

@@ -20,6 +20,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { CreateOrderReturnDto } from './dto/create-order-return.dto';
 import {
   HistoryAnalyticsQueryDto,
+  HistoryScopeQueryDto,
   SupplierMonthQueryDto,
   SupplierScopedQueryDto,
 } from './dto/order-query.dto';
@@ -60,16 +61,26 @@ export class OrdersController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get()
-  listOrders(@Req() req: AuthenticatedRequest) {
-    return this.ordersService.listOrders(this.getActor(req), req);
+  listOrders(
+    @Req() req: AuthenticatedRequest,
+    @Query() query: HistoryScopeQueryDto,
+  ) {
+    return this.ordersService.listOrders(this.getActor(req), req, {
+      restaurantId: query.restaurantId,
+    });
   }
 
   @ApiOperation({ summary: 'List purchase returns (restaurant scoped)' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('returns')
-  listOrderReturns(@Req() req: AuthenticatedRequest) {
-    return this.ordersService.listOrderReturns(this.getActor(req), req);
+  listOrderReturns(
+    @Req() req: AuthenticatedRequest,
+    @Query() query: HistoryScopeQueryDto,
+  ) {
+    return this.ordersService.listOrderReturns(this.getActor(req), req, {
+      restaurantId: query.restaurantId,
+    });
   }
 
   @ApiOperation({ summary: 'Load one order as a return draft' })
@@ -148,6 +159,7 @@ export class OrdersController {
     return this.ordersService.getOrderHistoryAnalytics(this.getActor(req), {
       supplierId: query.supplierId,
       period: query.period,
+      restaurantId: query.restaurantId,
     });
   }
 

@@ -1,10 +1,11 @@
 import { Redirect } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import { OrderHistoryPage } from '../../src/components/OrderHistoryPage';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useLanguage } from '../../src/hooks/useLanguage';
 import { useOrderBonDownloader } from '../../src/hooks/useOrderBonDownloader';
+import { fetchRestaurants } from '../../src/services/restaurantsApi';
 import {
   deleteOrder,
   fetchOrders,
@@ -12,6 +13,7 @@ import {
   type OrderReturnSummary,
   type OrderSummary,
 } from '../../src/services/ordersApi';
+import type { Restaurant } from '../../src/types/auth';
 import { canUserAccessOrders } from '../../src/utils/orderAccess';
 
 function showFeedback(title: string, message: string) {
@@ -31,13 +33,22 @@ export default function OrderHistoryScreen() {
   const downloadOrderBon = useOrderBonDownloader(auth.session?.accessToken);
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [orderReturns, setOrderReturns] = useState<OrderReturnSummary[]>([]);
+  const [restaurantOptions, setRestaurantOptions] = useState<Restaurant[]>([]);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
 
-  async function loadHistoryData(accessToken: string) {
+  async function loadHistoryData(
+    accessToken: string,
+    restaurantId: number | null,
+  ) {
     const [ordersResult, returnsResult] = await Promise.allSettled([
-      fetchOrders(accessToken),
-      fetchOrderReturns(accessToken),
+      fetchOrders(accessToken, { restaurantId: restaurantId ?? undefined }),
+      fetchOrderReturns(accessToken, {
+        restaurantId: restaurantId ?? undefined,
+      }),
     ]);
 
     return {
@@ -46,6 +57,81 @@ export default function OrderHistoryScreen() {
         returnsResult.status === 'fulfilled' ? returnsResult.value : [],
     };
   }
+
+  const canSelectAllRestaurants =
+    auth.session?.user.role === 'ADMIN' ||
+    auth.session?.user.role === 'REGIONAL_MANAGER';
+
+  const allRestaurantsLabel =
+    auth.session?.user.role === 'REGIONAL_MANAGER'
+      ? language.text.orders.allManagedRestaurantsOption
+      : language.text.orders.allRestaurantsOption;
+
+  const scopedRestaurantOptions = useMemo(() => {
+    if (!auth.session) {
+      return [];
+    }
+
+    if (auth.session.user.role === 'ADMIN') {
+      return restaurantOptions;
+    }
+
+    if (auth.session.user.role === 'REGIONAL_MANAGER') {
+      return auth.session.user.managedRestaurants;
+    }
+
+    return auth.session.user.restaurant ? [auth.session.user.restaurant] : [];
+  }, [auth.session, restaurantOptions]);
+
+  useEffect(() => {
+    if (!auth.session || auth.session.user.role !== 'ADMIN') {
+      setRestaurantOptions([]);
+      return;
+    }
+
+    let isActive = true;
+
+    void fetchRestaurants()
+      .then((result) => {
+        if (isActive) {
+          setRestaurantOptions(result);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setRestaurantOptions([]);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [auth.session]);
+
+  useEffect(() => {
+    if (!auth.session) {
+      setSelectedRestaurantId(null);
+      return;
+    }
+
+    if (canSelectAllRestaurants) {
+      setSelectedRestaurantId((currentValue) => {
+        if (
+          currentValue !== null &&
+          scopedRestaurantOptions.some(
+            (restaurant) => restaurant.id === currentValue,
+          )
+        ) {
+          return currentValue;
+        }
+
+        return null;
+      });
+      return;
+    }
+
+    setSelectedRestaurantId(scopedRestaurantOptions[0]?.id ?? null);
+  }, [auth.session, canSelectAllRestaurants, scopedRestaurantOptions]);
 
   useEffect(() => {
     if (!auth.session || !canUserAccessOrders(auth.session.user)) {
@@ -59,7 +145,7 @@ export default function OrderHistoryScreen() {
     let isActive = true;
     setIsLoading(true);
 
-    void loadHistoryData(auth.session.accessToken)
+    void loadHistoryData(auth.session.accessToken, selectedRestaurantId)
       .then((result) => {
         if (isActive) {
           setOrders(result.orders);
@@ -81,7 +167,7 @@ export default function OrderHistoryScreen() {
     return () => {
       isActive = false;
     };
-  }, [auth.session]);
+  }, [auth.session, selectedRestaurantId]);
 
   if (!auth.session) {
     return null;
@@ -97,7 +183,10 @@ export default function OrderHistoryScreen() {
     setIsLoading(true);
 
     try {
-      const result = await loadHistoryData(session.accessToken);
+      const result = await loadHistoryData(
+        session.accessToken,
+        selectedRestaurantId,
+      );
       setOrders(result.orders);
       setOrderReturns(result.orderReturns);
     } catch {
@@ -167,8 +256,13 @@ export default function OrderHistoryScreen() {
       accessToken={session.accessToken}
       orders={orders}
       orderReturns={orderReturns}
+      restaurantOptions={scopedRestaurantOptions}
+      selectedRestaurantId={selectedRestaurantId}
+      allRestaurantsLabel={allRestaurantsLabel}
+      canSelectAllRestaurants={canSelectAllRestaurants}
       isLoading={isLoading}
       deletingOrderId={deletingOrderId}
+      onSelectRestaurantId={setSelectedRestaurantId}
       onRefresh={loadOrderHistory}
       onDeleteReturnSuccess={handleDeleteReturnSuccess}
       onDownloadOrderBon={(order) => {

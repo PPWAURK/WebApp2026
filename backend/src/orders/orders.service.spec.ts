@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { UploadCategory } from '@prisma/client';
 import { OrdersDocumentService } from './orders-document.service';
 import { OrdersService } from './orders.service';
@@ -11,7 +11,7 @@ describe('OrdersService', () => {
     produit: { findMany: jest.Mock };
     fournisseur: { findUnique: jest.Mock };
     restaurant: { findUnique: jest.Mock };
-    purchaseOrder: { findUnique: jest.Mock; delete: jest.Mock };
+    purchaseOrder: { findMany: jest.Mock; findUnique: jest.Mock; delete: jest.Mock };
     purchaseOrderItem: {
       createMany: jest.Mock;
       findMany: jest.Mock;
@@ -62,6 +62,7 @@ describe('OrdersService', () => {
         findUnique: jest.fn(),
       },
       purchaseOrder: {
+        findMany: jest.fn(),
         findUnique: jest.fn(),
         delete: jest.fn(),
       },
@@ -291,6 +292,112 @@ describe('OrdersService', () => {
         ],
       }),
     );
+  });
+
+  it('filters listed orders by the requested restaurant within regional scope', async () => {
+    prisma.purchaseOrder.findMany.mockResolvedValue([
+      {
+        id: 31,
+        number: 'PO-20260415-0031',
+        supplierId: 7,
+        supplier: { id: 7, nom: 'Supplier' },
+        restaurant: { id: 5, name: 'Lille' },
+        createdByUser: {
+          id: 12,
+          name: 'Alice',
+          email: 'alice@example.com',
+        },
+        deliveryDate: new Date('2026-04-15T00:00:00.000Z'),
+        deliveryAddress: '5 Rue Lille',
+        totalItems: 8,
+        totalAmount: 125.5,
+        createdAt: new Date('2026-04-14T09:00:00.000Z'),
+      },
+    ]);
+
+    const result = await service.listOrders(
+      {
+        id: 9,
+        role: 'REGIONAL_MANAGER',
+        employeeLevel: 'L6_MA',
+        restaurantId: 2,
+        managedRestaurantIds: [2, 5],
+      },
+      {
+        protocol: 'https',
+        get: jest.fn((name: string) =>
+          name === 'host' ? 'api.example.com' : undefined,
+        ),
+      },
+      {
+        restaurantId: 5,
+      },
+    );
+
+    expect(prisma.purchaseOrder.findMany).toHaveBeenCalledWith({
+      where: { restaurantId: 5 },
+      include: {
+        supplier: {
+          select: {
+            id: true,
+            nom: true,
+          },
+        },
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        createdByUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    expect(result).toMatchObject([
+      {
+        id: 31,
+        restaurantId: 5,
+        restaurantName: 'Lille',
+        createdBy: {
+          id: 12,
+          name: 'Alice',
+          email: 'alice@example.com',
+        },
+      },
+    ]);
+  });
+
+  it('rejects listing orders outside the regional manager scope', async () => {
+    await expect(
+      service.listOrders(
+        {
+          id: 9,
+          role: 'REGIONAL_MANAGER',
+          employeeLevel: 'L6_MA',
+          restaurantId: 2,
+          managedRestaurantIds: [2, 5],
+        },
+        {
+          protocol: 'https',
+          get: jest.fn(),
+        },
+        {
+          restaurantId: 7,
+        },
+      ),
+    ).rejects.toThrow(
+      new ForbiddenException('Requested restaurant is outside your scope'),
+    );
+
+    expect(prisma.purchaseOrder.findMany).not.toHaveBeenCalled();
   });
 
   it('includes zero-quantity supplier catalog rows when supplier requires full order templates', async () => {
