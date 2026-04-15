@@ -169,8 +169,53 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
     });
   }
 
+  const showStoreSwitcher =
+    user.role === 'REGIONAL_MANAGER' &&
+    supervisorState.regionalManagerStoreOptions.length > 1;
+
   return (
     <View style={styles.dashboardStack}>
+      {showStoreSwitcher ? (
+        <View style={styles.storeSwitcherWrap}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.storeSwitcherScrollContent}
+          >
+            <View style={styles.storeSwitcherContainer}>
+              {supervisorState.regionalManagerStoreOptions.map((store) => {
+                const isActive =
+                  supervisorState.selectedEmployeeRestaurantFilter === store.id;
+
+                return (
+                  <Pressable
+                    key={store.id}
+                    style={[
+                      styles.storeSwitcherSegment,
+                      isActive && styles.storeSwitcherSegmentActive,
+                    ]}
+                    onPress={() =>
+                      supervisorState.selectRestaurantFilter(store.id)
+                    }
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isActive }}
+                  >
+                    <Text
+                      style={[
+                        styles.storeSwitcherSegmentText,
+                        isActive && styles.storeSwitcherSegmentTextActive,
+                      ]}
+                    >
+                      {store.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
+      ) : null}
+
       <DashboardHighlights
         highlights={dashboardHighlights}
         isWideLayout={isWideLayout}
@@ -328,44 +373,6 @@ export function SessionCard({ user, accessToken, text }: SessionCardProps) {
               topProductsLoading={orderInsights.topProductsLoading}
             />
           </View>
-
-          {user.role === 'REGIONAL_MANAGER' &&
-          supervisorState.regionalManagerStoreOptions.length > 1 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.storeSwitcherRow}
-            >
-              {supervisorState.regionalManagerStoreOptions.map((store) => {
-                const isActive =
-                  supervisorState.selectedEmployeeRestaurantFilter === store.id;
-
-                return (
-                  <Pressable
-                    key={store.id}
-                    style={[
-                      styles.storeSwitcherButton,
-                      isActive && styles.storeSwitcherButtonActive,
-                    ]}
-                    onPress={() =>
-                      supervisorState.selectRestaurantFilter(store.id)
-                    }
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isActive }}
-                  >
-                    <Text
-                      style={[
-                        styles.storeSwitcherButtonText,
-                        isActive && styles.storeSwitcherButtonTextActive,
-                      ]}
-                    >
-                      {store.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          ) : null}
 
           <SessionCardManagerToolsGrid
             isWideLayout={isWideLayout}

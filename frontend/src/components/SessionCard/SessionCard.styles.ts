@@ -2668,29 +2668,48 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 14,
   },
-  storeSwitcherRow: {
+  storeSwitcherWrap: {
+    marginBottom: 4,
+  },
+  storeSwitcherScrollContent: {
     flexDirection: 'row',
-    gap: 8,
-    paddingVertical: 4,
   },
-  storeSwitcherButton: {
+  storeSwitcherContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#e9e9eb',
+    borderRadius: 9,
+    padding: 2,
+  },
+  storeSwitcherSegment: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(171, 30, 36, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(171, 30, 36, 0.14)',
+    paddingVertical: 7,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  storeSwitcherButtonActive: {
-    backgroundColor: '#ab1e24',
-    borderColor: '#ab1e24',
+  storeSwitcherSegmentActive: {
+    backgroundColor: '#ffffff',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.12,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+      },
+    }),
   },
-  storeSwitcherButtonText: {
+  storeSwitcherSegmentText: {
     fontFamily: 'Manrope_600SemiBold',
     fontSize: 13,
-    color: '#ab1e24',
+    color: '#8e8e93',
   },
-  storeSwitcherButtonTextActive: {
-    color: '#fff',
+  storeSwitcherSegmentTextActive: {
+    color: '#1c1c1e',
   },
 });
