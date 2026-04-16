@@ -285,7 +285,10 @@ export class OrdersService {
           draftOrder.id,
           draftOrder.createdAt,
         );
-        const orderFileName = `commande-${orderNumber}.pdf`;
+        const safeRestaurantName = restaurant.name
+          .replace(/[/\\?%*:|"<>]/g, '')
+          .trim();
+        const orderFileName = `${safeRestaurantName} ${payload.deliveryDate}.pdf`;
 
         await tx.purchaseOrder.update({
           where: { id: draftOrder.id },
