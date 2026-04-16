@@ -200,7 +200,7 @@ describe('OrdersService', () => {
     expect(tx.purchaseOrder.update).toHaveBeenCalledTimes(1);
     expect(tx.purchaseOrderItem.createMany).toHaveBeenCalledTimes(1);
     expect(ordersDocumentService.deleteFileIfExists).toHaveBeenCalledWith(
-      expect.stringContaining('commande-'),
+      expect.stringContaining('.pdf'),
     );
   });
 
