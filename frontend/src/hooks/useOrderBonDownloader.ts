@@ -133,6 +133,39 @@ function scheduleObjectUrlRevoke(objectUrl: string, delayMs: number) {
   }, delayMs);
 }
 
+async function shareOrderBonFileOnIosWeb(
+  blob: Blob,
+  fileName: string,
+): Promise<boolean> {
+  if (
+    typeof navigator === 'undefined' ||
+    typeof navigator.share !== 'function' ||
+    typeof File === 'undefined'
+  ) {
+    return false;
+  }
+
+  const file = new File([blob], fileName, { type: 'application/pdf' });
+  const shareData = {
+    files: [file],
+    title: fileName,
+  };
+
+  if (
+    typeof navigator.canShare === 'function' &&
+    !navigator.canShare(shareData)
+  ) {
+    return false;
+  }
+
+  try {
+    await navigator.share(shareData);
+    return true;
+  } catch (error) {
+    return error instanceof DOMException && error.name === 'AbortError';
+  }
+}
+
 export function useOrderBonDownloader(accessToken: string | null | undefined) {
   const language = useLanguage();
 
@@ -176,6 +209,17 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
           fallbackFileName,
         );
         const blob = await response.blob();
+
+        if (
+          isIosWebBrowser() &&
+          (await shareOrderBonFileOnIosWeb(blob, downloadFileName))
+        ) {
+          if (pendingWindow && !pendingWindow.closed) {
+            pendingWindow.close();
+          }
+          return;
+        }
+
         const objectUrl = window.URL.createObjectURL(blob);
 
         if (pendingWindow && !pendingWindow.closed) {
