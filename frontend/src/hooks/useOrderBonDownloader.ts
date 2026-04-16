@@ -15,6 +15,90 @@ type OrderBonDownloadOptions = {
   pendingWindow?: Window | null;
 };
 
+function buildFallbackOrderBonFileName(order: OrderBonDownloadTarget): string {
+  return `${order.number ?? `order-${order.id}`}.pdf`;
+}
+
+function sanitizeDownloadFileName(fileName: string): string {
+  const trimmedFileName = fileName.trim();
+  if (!trimmedFileName) {
+    return '';
+  }
+
+  return trimmedFileName.replace(/[/\\?%*:|"<>]/g, '');
+}
+
+function extractContentDispositionFileName(
+  contentDisposition: string | null,
+): string | null {
+  if (!contentDisposition) {
+    return null;
+  }
+
+  const encodedFileNameMatch = contentDisposition.match(
+    /filename\*\s*=\s*UTF-8''([^;]+)/i,
+  );
+
+  if (encodedFileNameMatch?.[1]) {
+    try {
+      const decodedFileName = decodeURIComponent(encodedFileNameMatch[1]);
+      const safeFileName = sanitizeDownloadFileName(decodedFileName);
+
+      if (safeFileName) {
+        return safeFileName;
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  const quotedFileNameMatch = contentDisposition.match(
+    /filename\s*=\s*"([^"]+)"/i,
+  );
+
+  if (quotedFileNameMatch?.[1]) {
+    const safeFileName = sanitizeDownloadFileName(quotedFileNameMatch[1]);
+
+    if (safeFileName) {
+      return safeFileName;
+    }
+  }
+
+  const bareFileNameMatch = contentDisposition.match(/filename\s*=\s*([^;]+)/i);
+
+  if (!bareFileNameMatch?.[1]) {
+    return null;
+  }
+
+  const safeFileName = sanitizeDownloadFileName(bareFileNameMatch[1]);
+
+  return safeFileName || null;
+}
+
+function getHeaderValue(
+  headers: Record<string, string>,
+  headerName: string,
+): string | null {
+  const normalizedHeaderName = headerName.toLowerCase();
+
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === normalizedHeaderName) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function resolveOrderBonFileName(
+  contentDisposition: string | null,
+  fallbackFileName: string,
+): string {
+  return (
+    extractContentDispositionFileName(contentDisposition) ?? fallbackFileName
+  );
+}
+
 function isIosWebBrowser(): boolean {
   if (Platform.OS !== 'web' || typeof navigator === 'undefined') {
     return false;
@@ -57,7 +141,7 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
     options?: OrderBonDownloadOptions,
   ) {
     const url = buildOrderBonUrl(order.id);
-    const fileName = `${order.number ?? `order-${order.id}`}.pdf`;
+    const fallbackFileName = buildFallbackOrderBonFileName(order);
 
     if (!accessToken) {
       if (typeof window !== 'undefined' && typeof window.alert === 'function') {
@@ -87,6 +171,10 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
           throw new Error('ORDER_BON_DOWNLOAD_FAILED');
         }
 
+        const downloadFileName = resolveOrderBonFileName(
+          response.headers.get('content-disposition'),
+          fallbackFileName,
+        );
         const blob = await response.blob();
         const objectUrl = window.URL.createObjectURL(blob);
 
@@ -104,7 +192,7 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
 
         const anchor = window.document.createElement('a');
         anchor.href = objectUrl;
-        anchor.setAttribute('download', '');
+        anchor.setAttribute('download', downloadFileName);
         window.document.body.append(anchor);
         anchor.click();
         anchor.remove();
@@ -131,24 +219,39 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
         throw new Error('CACHE_DIRECTORY_UNAVAILABLE');
       }
 
-      const targetPath = `${cacheDir}${fileName}`;
-      const downloadResult = await FileSystem.downloadAsync(url, targetPath, {
+      const temporaryPath = `${cacheDir}order-bon-${order.id}-${Date.now()}.pdf`;
+      const downloadResult = await FileSystem.downloadAsync(url, temporaryPath, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       });
+      const downloadFileName = resolveOrderBonFileName(
+        getHeaderValue(downloadResult.headers, 'content-disposition'),
+        fallbackFileName,
+      );
+      const targetPath = `${cacheDir}${downloadFileName}`;
+      let fileUri = downloadResult.uri;
+
+      if (downloadResult.uri !== targetPath) {
+        await FileSystem.deleteAsync(targetPath, { idempotent: true });
+        await FileSystem.moveAsync({
+          from: downloadResult.uri,
+          to: targetPath,
+        });
+        fileUri = targetPath;
+      }
 
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
-        await Sharing.shareAsync(downloadResult.uri, {
-          dialogTitle: fileName,
+        await Sharing.shareAsync(fileUri, {
+          dialogTitle: downloadFileName,
           mimeType: 'application/pdf',
           UTI: 'com.adobe.pdf',
         });
         return;
       }
 
-      await Linking.openURL(downloadResult.uri);
+      await Linking.openURL(fileUri);
     } catch {
       Alert.alert(
         language.text.orders.downloadBonButton,
