@@ -109,6 +109,43 @@ function scheduleObjectUrlRevoke(objectUrl: string, delayMs: number) {
   }, delayMs);
 }
 
+async function shareOrderBonFile(
+  blob: Blob,
+  fileName: string,
+): Promise<'shared' | 'cancelled' | 'unsupported' | 'failed'> {
+  if (
+    typeof navigator === 'undefined' ||
+    typeof navigator.share !== 'function' ||
+    typeof File === 'undefined'
+  ) {
+    return 'unsupported';
+  }
+
+  const file = new File([blob], fileName, { type: 'application/pdf' });
+  const shareData = {
+    files: [file],
+    title: fileName,
+  };
+
+  if (
+    typeof navigator.canShare === 'function' &&
+    !navigator.canShare(shareData)
+  ) {
+    return 'unsupported';
+  }
+
+  try {
+    await navigator.share(shareData);
+    return 'shared';
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return 'cancelled';
+    }
+
+    return 'failed';
+  }
+}
+
 export function openPendingOrderBonWindow(): Window | null {
   if (Platform.OS !== 'web' || typeof window === 'undefined') {
     return null;
@@ -159,6 +196,17 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
           fallbackFileName,
         );
         const blob = await response.blob();
+        const shareResult = options?.pendingWindow
+          ? await shareOrderBonFile(blob, downloadFileName)
+          : 'unsupported';
+
+        if (shareResult === 'shared' || shareResult === 'cancelled') {
+          if (pendingWindow && !pendingWindow.closed) {
+            pendingWindow.close();
+          }
+          return;
+        }
+
         const objectUrl = window.URL.createObjectURL(blob);
         const anchor = window.document.createElement('a');
         anchor.href = objectUrl;
