@@ -110,7 +110,11 @@ function scheduleObjectUrlRevoke(objectUrl: string, delayMs: number) {
 }
 
 export function openPendingOrderBonWindow(): Window | null {
-  return null;
+  if (Platform.OS !== 'web' || typeof window === 'undefined') {
+    return null;
+  }
+
+  return window.open('about:blank', '_blank');
 }
 
 export function useOrderBonDownloader(accessToken: string | null | undefined) {
@@ -118,7 +122,7 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
 
   return async function downloadOrderBon(
     order: OrderBonDownloadTarget,
-    _options?: OrderBonDownloadOptions,
+    options?: OrderBonDownloadOptions,
   ) {
     const url = buildOrderBonUrl(order.id);
     const fallbackFileName = buildFallbackOrderBonFileName(order);
@@ -136,6 +140,8 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
     }
 
     if (Platform.OS === 'web') {
+      const pendingWindow = options?.pendingWindow ?? null;
+
       try {
         const response = await fetch(url, {
           headers: {
@@ -160,8 +166,17 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
         window.document.body.append(anchor);
         anchor.click();
         anchor.remove();
+
+        if (pendingWindow && !pendingWindow.closed) {
+          pendingWindow.location.href = objectUrl;
+        }
+
         scheduleObjectUrlRevoke(objectUrl, 60000);
       } catch {
+        if (pendingWindow && !pendingWindow.closed) {
+          pendingWindow.close();
+        }
+
         if (
           typeof window !== 'undefined' &&
           typeof window.alert === 'function'
