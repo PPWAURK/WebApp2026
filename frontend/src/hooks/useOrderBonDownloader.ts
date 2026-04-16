@@ -99,30 +99,6 @@ function resolveOrderBonFileName(
   );
 }
 
-function isIosWebBrowser(): boolean {
-  if (Platform.OS !== 'web' || typeof navigator === 'undefined') {
-    return false;
-  }
-
-  const userAgent = navigator.userAgent;
-  const isTouchMac =
-    navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
-
-  return /iPad|iPhone|iPod/i.test(userAgent) || isTouchMac;
-}
-
-export function openPendingOrderBonWindow(): Window | null {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') {
-    return null;
-  }
-
-  if (!isIosWebBrowser()) {
-    return null;
-  }
-
-  return window.open('about:blank', '_blank');
-}
-
 function scheduleObjectUrlRevoke(objectUrl: string, delayMs: number) {
   if (typeof window === 'undefined') {
     return;
@@ -133,37 +109,8 @@ function scheduleObjectUrlRevoke(objectUrl: string, delayMs: number) {
   }, delayMs);
 }
 
-async function shareOrderBonFileOnIosWeb(
-  blob: Blob,
-  fileName: string,
-): Promise<boolean> {
-  if (
-    typeof navigator === 'undefined' ||
-    typeof navigator.share !== 'function' ||
-    typeof File === 'undefined'
-  ) {
-    return false;
-  }
-
-  const file = new File([blob], fileName, { type: 'application/pdf' });
-  const shareData = {
-    files: [file],
-    title: fileName,
-  };
-
-  if (
-    typeof navigator.canShare === 'function' &&
-    !navigator.canShare(shareData)
-  ) {
-    return false;
-  }
-
-  try {
-    await navigator.share(shareData);
-    return true;
-  } catch (error) {
-    return error instanceof DOMException && error.name === 'AbortError';
-  }
+export function openPendingOrderBonWindow(): Window | null {
+  return null;
 }
 
 export function useOrderBonDownloader(accessToken: string | null | undefined) {
@@ -171,7 +118,7 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
 
   return async function downloadOrderBon(
     order: OrderBonDownloadTarget,
-    options?: OrderBonDownloadOptions,
+    _options?: OrderBonDownloadOptions,
   ) {
     const url = buildOrderBonUrl(order.id);
     const fallbackFileName = buildFallbackOrderBonFileName(order);
@@ -189,9 +136,6 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
     }
 
     if (Platform.OS === 'web') {
-      const pendingWindow =
-        options?.pendingWindow ?? openPendingOrderBonWindow();
-
       try {
         const response = await fetch(url, {
           headers: {
@@ -209,43 +153,15 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
           fallbackFileName,
         );
         const blob = await response.blob();
-
-        if (
-          isIosWebBrowser() &&
-          (await shareOrderBonFileOnIosWeb(blob, downloadFileName))
-        ) {
-          if (pendingWindow && !pendingWindow.closed) {
-            pendingWindow.close();
-          }
-          return;
-        }
-
         const objectUrl = window.URL.createObjectURL(blob);
-
-        if (pendingWindow && !pendingWindow.closed) {
-          pendingWindow.location.href = objectUrl;
-          scheduleObjectUrlRevoke(objectUrl, 60000);
-          return;
-        }
-
-        if (isIosWebBrowser()) {
-          window.location.assign(objectUrl);
-          scheduleObjectUrlRevoke(objectUrl, 60000);
-          return;
-        }
-
         const anchor = window.document.createElement('a');
         anchor.href = objectUrl;
         anchor.setAttribute('download', downloadFileName);
         window.document.body.append(anchor);
         anchor.click();
         anchor.remove();
-        scheduleObjectUrlRevoke(objectUrl, 1000);
+        scheduleObjectUrlRevoke(objectUrl, 60000);
       } catch {
-        if (pendingWindow && !pendingWindow.closed) {
-          pendingWindow.close();
-        }
-
         if (
           typeof window !== 'undefined' &&
           typeof window.alert === 'function'
