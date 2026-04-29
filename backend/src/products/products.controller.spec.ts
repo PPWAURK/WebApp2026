@@ -1,6 +1,5 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ProductsController } from './products.controller';
-import { ProductsService } from './products.service';
 
 describe('ProductsController', () => {
   let controller: ProductsController;

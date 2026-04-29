@@ -104,8 +104,8 @@ describe('ProductsService', () => {
       }),
     );
 
-    await expect(
-      service.updateProductAvailability(404, false),
-    ).rejects.toThrow(new NotFoundException('Product not found'));
+    await expect(service.updateProductAvailability(404, false)).rejects.toThrow(
+      new NotFoundException('Product not found'),
+    );
   });
 });

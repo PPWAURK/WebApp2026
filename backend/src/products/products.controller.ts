@@ -217,7 +217,9 @@ export class ProductsController {
   ) {
     const role = req.user?.role;
     if (role !== 'ADMIN') {
-      throw new ForbiddenException('Only ADMIN can update product availability');
+      throw new ForbiddenException(
+        'Only ADMIN can update product availability',
+      );
     }
 
     if (typeof body.isActive !== 'boolean') {
