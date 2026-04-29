@@ -14,7 +14,8 @@ export class UpdateSupplierOrderSettingsDto {
     required: false,
     maxLength: 500,
     example: '下单前请确认规格、单位和送货日期。',
-    description: 'Supplier-specific ordering notice displayed on the product order page.',
+    description:
+      'Supplier-specific ordering notice displayed on the product order page.',
   })
   @IsOptional()
   @IsString()
