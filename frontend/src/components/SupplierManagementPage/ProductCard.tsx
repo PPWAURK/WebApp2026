@@ -11,9 +11,9 @@ type ProductCardProps = {
   isSelected: boolean;
   isSmallScreen: boolean;
   useSingleColumnGrid: boolean;
-  deletingProductId: number | null;
+  updatingProductAvailabilityId: number | null;
   onSelectProduct: (productId: number) => void;
-  onDeleteProduct: (product: ProductItem) => void;
+  onToggleProductAvailability: (product: ProductItem) => void;
 };
 
 export function ProductCard({
@@ -22,9 +22,9 @@ export function ProductCard({
   isSelected,
   isSmallScreen,
   useSingleColumnGrid,
-  deletingProductId,
+  updatingProductAvailabilityId,
   onSelectProduct,
-  onDeleteProduct,
+  onToggleProductAvailability,
 }: ProductCardProps) {
   const infoRowStyle = isSmallScreen
     ? styles.productInfoRowSmall
@@ -44,6 +44,13 @@ export function ProductCard({
     >
       <View style={styles.productCardHeader}>
         <View style={styles.productBadgeRow}>
+          {!product.isActive ? (
+            <View style={styles.productInactiveBadge}>
+              <Text style={styles.productInactiveBadgeText} numberOfLines={1}>
+                {text.supplierManagement.inactiveProductBadge}
+              </Text>
+            </View>
+          ) : null}
           <View style={styles.productBadge}>
             <Text style={styles.productBadgeText} numberOfLines={1}>
               {product.category}
@@ -59,22 +66,30 @@ export function ProductCard({
         </View>
 
         <Pressable
-          style={styles.productDeleteIconButton}
-          disabled={deletingProductId === product.id}
+          accessibilityLabel={
+            product.isActive
+              ? text.supplierManagement.deactivateProductButton
+              : text.supplierManagement.activateProductButton
+          }
+          style={[
+            styles.productAvailabilityIconButton,
+            !product.isActive && styles.productActivateIconButton,
+          ]}
+          disabled={updatingProductAvailabilityId === product.id}
           onPress={() => {
-            void onDeleteProduct(product);
+            void onToggleProductAvailability(product);
           }}
         >
-          {deletingProductId === product.id ? (
+          {updatingProductAvailabilityId === product.id ? (
             <Text style={styles.productDeleteLoading}>…</Text>
           ) : (
-            <View style={styles.trashIcon}>
-              <View style={styles.trashLid} />
-              <View style={styles.trashBody}>
-                <View style={styles.trashBar} />
-                <View style={styles.trashBar} />
-              </View>
-            </View>
+            <Ionicons
+              name={
+                product.isActive ? 'archive-outline' : 'arrow-up-circle-outline'
+              }
+              size={18}
+              color={product.isActive ? '#8f141b' : '#0f766e'}
+            />
           )}
         </Pressable>
       </View>
@@ -149,7 +164,9 @@ export function ProductCard({
               );
             })}
             <Text style={styles.productEditHint}>
-              {text.supplierManagement.tapToEdit}
+              {product.isActive
+                ? text.supplierManagement.tapToEdit
+                : text.supplierManagement.inactiveProductHint}
             </Text>
           </View>
         </View>

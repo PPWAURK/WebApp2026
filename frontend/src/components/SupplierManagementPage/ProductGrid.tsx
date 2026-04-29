@@ -18,13 +18,13 @@ type ProductGridProps = {
   productFilter: string;
   currentPage: number;
   totalPages: number;
-  deletingProductId: number | null;
+  updatingProductAvailabilityId: number | null;
   isSmallScreen: boolean;
   useSingleColumnProductGrid: boolean;
   onChangeFilter: (value: string) => void;
   onChangePage: (updater: (previous: number) => number) => void;
   onSelectProduct: (productId: number) => void;
-  onDeleteProduct: (product: ProductItem) => void;
+  onToggleProductAvailability: (product: ProductItem) => void;
 };
 
 export function ProductGrid({
@@ -38,13 +38,13 @@ export function ProductGrid({
   productFilter,
   currentPage,
   totalPages,
-  deletingProductId,
+  updatingProductAvailabilityId,
   isSmallScreen,
   useSingleColumnProductGrid,
   onChangeFilter,
   onChangePage,
   onSelectProduct,
-  onDeleteProduct,
+  onToggleProductAvailability,
 }: ProductGridProps) {
   const productsPerPage = 8;
 
@@ -119,9 +119,9 @@ export function ProductGrid({
               isSelected={selectedProductId === product.id}
               isSmallScreen={isSmallScreen}
               useSingleColumnGrid={useSingleColumnProductGrid}
-              deletingProductId={deletingProductId}
+              updatingProductAvailabilityId={updatingProductAvailabilityId}
               onSelectProduct={onSelectProduct}
-              onDeleteProduct={onDeleteProduct}
+              onToggleProductAvailability={onToggleProductAvailability}
             />
           ))
         )}

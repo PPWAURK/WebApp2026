@@ -187,14 +187,16 @@ export function SupplierManagementPage({
               productFilter={state.productFilter}
               currentPage={state.currentPage}
               totalPages={state.totalPages}
-              deletingProductId={state.deletingProductId}
+              updatingProductAvailabilityId={
+                state.updatingProductAvailabilityId
+              }
               isSmallScreen={isSmallScreen}
               useSingleColumnProductGrid={useSingleColumnProductGrid}
               onChangeFilter={state.setProductFilter}
               onChangePage={state.setCurrentPage}
               onSelectProduct={state.selectProductForEditing}
-              onDeleteProduct={(product) => {
-                void state.handleDeleteProduct(product);
+              onToggleProductAvailability={(product) => {
+                void state.handleToggleProductAvailability(product);
               }}
             />
           </View>
@@ -245,10 +247,10 @@ export function SupplierManagementPage({
 
       <ConfirmDialog
         visible={state.confirmDialogVisible}
-        title={text.supplierManagement.deleteProductButton}
-        message={text.supplierManagement.deleteProductConfirm}
-        cancelLabel={text.supplierManagement.deleteProductCancel}
-        confirmLabel={text.supplierManagement.deleteProductConfirmButton}
+        title={text.supplierManagement.deactivateProductButton}
+        message={text.supplierManagement.deactivateProductConfirm}
+        cancelLabel={text.supplierManagement.deactivateProductCancel}
+        confirmLabel={text.supplierManagement.deactivateProductConfirmButton}
         destructive
         onCancel={() => state.closeDeleteProductDialog(false)}
         onConfirm={() => state.closeDeleteProductDialog(true)}

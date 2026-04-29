@@ -3,10 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AppText } from '../../locales/translations';
 import {
   createProduct,
-  deleteProduct,
   fetchProducts,
   uploadProductImage,
   updateProduct,
+  updateProductAvailability,
   type ProductItem,
 } from '../../services/productsApi';
 import {
@@ -49,18 +49,17 @@ export function useSupplierManagement({
     useState(false);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [deletingProductId, setDeletingProductId] = useState<number | null>(
-    null,
-  );
+  const [updatingProductAvailabilityId, setUpdatingProductAvailabilityId] =
+    useState<number | null>(null);
   const [deletingSupplierId, setDeletingSupplierId] = useState<number | null>(
     null,
   );
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
-  const confirmDeleteResolverRef = useRef<((value: boolean) => void) | null>(
-    null,
-  );
+  const confirmDeactivateResolverRef = useRef<
+    ((value: boolean) => void) | null
+  >(null);
   const [confirmSupplierDialogVisible, setConfirmSupplierDialogVisible] =
     useState(false);
   const confirmDeleteSupplierResolverRef = useRef<
@@ -101,7 +100,10 @@ export function useSupplierManagement({
     setIsLoading(true);
     setError(null);
 
-    void Promise.all([fetchSuppliers(accessToken), fetchProducts(accessToken)])
+    void Promise.all([
+      fetchSuppliers(accessToken),
+      fetchProducts(accessToken, { includeInactive: true }),
+    ])
       .then(([supplierResult, productResult]) => {
         if (!isActive) {
           return;
@@ -530,36 +532,39 @@ export function useSupplierManagement({
     }
   }
 
-  async function handleDeleteProduct(product: ProductItem) {
-    const confirmed = await new Promise<boolean>((resolve) => {
-      confirmDeleteResolverRef.current = resolve;
-      setConfirmDialogVisible(true);
-    });
+  async function handleToggleProductAvailability(product: ProductItem) {
+    if (product.isActive) {
+      const confirmed = await new Promise<boolean>((resolve) => {
+        confirmDeactivateResolverRef.current = resolve;
+        setConfirmDialogVisible(true);
+      });
 
-    if (!confirmed) {
-      return;
+      if (!confirmed) {
+        return;
+      }
     }
 
-    setDeletingProductId(product.id);
+    const nextIsActive = !product.isActive;
+    setUpdatingProductAvailabilityId(product.id);
     setError(null);
 
     try {
-      await deleteProduct(accessToken, product.id);
-      setProducts((current) =>
-        current.filter((entry) => entry.id !== product.id),
+      const updated = await updateProductAvailability(
+        accessToken,
+        product.id,
+        nextIsActive,
       );
-      if (selectedProductId === product.id) {
-        setSelectedProductId(null);
-        setIsEditorOpen(false);
-      }
-    } catch (deleteError) {
-      if (deleteError instanceof Error && deleteError.message.trim()) {
-        setError(deleteError.message);
+      setProducts((current) =>
+        current.map((entry) => (entry.id === updated.id ? updated : entry)),
+      );
+    } catch (updateError) {
+      if (updateError instanceof Error && updateError.message.trim()) {
+        setError(updateError.message);
       } else {
-        setError(text.supplierManagement.deleteProductError);
+        setError(text.supplierManagement.updateProductAvailabilityError);
       }
     } finally {
-      setDeletingProductId(null);
+      setUpdatingProductAvailabilityId(null);
     }
   }
 
@@ -686,9 +691,9 @@ export function useSupplierManagement({
   }
 
   function closeDeleteProductDialog(value: boolean) {
-    if (confirmDeleteResolverRef.current) {
-      confirmDeleteResolverRef.current(value);
-      confirmDeleteResolverRef.current = null;
+    if (confirmDeactivateResolverRef.current) {
+      confirmDeactivateResolverRef.current(value);
+      confirmDeactivateResolverRef.current = null;
     }
     setConfirmDialogVisible(false);
   }
@@ -744,7 +749,7 @@ export function useSupplierManagement({
     isUpdatingSupplierOrderSettings,
     isCreatingProduct,
     isUploadingImage,
-    deletingProductId,
+    updatingProductAvailabilityId,
     deletingSupplierId,
     isEditorOpen,
     error,
@@ -824,7 +829,7 @@ export function useSupplierManagement({
     handleCreateProduct,
     handleSaveProduct,
     handleUploadProductImage,
-    handleDeleteProduct,
+    handleToggleProductAvailability,
     handleDeleteSupplier,
     closeDeleteProductDialog,
     closeDeleteSupplierDialog,

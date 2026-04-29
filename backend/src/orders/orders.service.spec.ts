@@ -298,6 +298,125 @@ describe('OrdersService', () => {
     );
   });
 
+  it('rejects new orders for inactive products', async () => {
+    prisma.produit.findMany.mockResolvedValue([]);
+
+    await expect(
+      service.createOrder(
+        {
+          id: 8,
+          role: 'MANAGER',
+          restaurantId: 5,
+        },
+        {
+          deliveryDate: '2026-03-21',
+          items: [{ productId: 2, quantity: 2 }],
+        },
+        {
+          protocol: 'https',
+          get: jest.fn(),
+        },
+      ),
+    ).rejects.toThrow(
+      new BadRequestException(
+        'Some selected products are not available for ordering',
+      ),
+    );
+
+    expect(prisma.produit.findMany).toHaveBeenCalledWith({
+      where: {
+        id: {
+          in: [BigInt(2)],
+        },
+        isActive: true,
+      },
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('includes only active catalog products when supplier orders include all products', async () => {
+    const tx = {
+      purchaseOrder: {
+        create: jest.fn().mockResolvedValue({
+          id: 53,
+          createdAt: new Date('2026-03-22T10:00:00.000Z'),
+        }),
+        update: jest.fn().mockResolvedValue(undefined),
+      },
+      purchaseOrderItem: {
+        createMany: jest.fn().mockResolvedValue(undefined),
+      },
+    };
+    const selectedProduct = {
+      id: BigInt(2),
+      supplierId: 7,
+      prixUHt: 12.5,
+      nomCn: 'Produit CN',
+      designationFr: 'Produit FR',
+      specification: '1kg',
+      specification2: null,
+      specification3: null,
+      unite: 'piece',
+      unite2: null,
+      unite3: null,
+      categorie: 'fresh',
+      isActive: true,
+    };
+
+    prisma.$transaction.mockImplementation(
+      async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
+    );
+    prisma.produit.findMany
+      .mockResolvedValueOnce([selectedProduct])
+      .mockResolvedValueOnce([selectedProduct]);
+    prisma.fournisseur.findUnique.mockResolvedValue({
+      id: 7,
+      nom: 'Supplier',
+      includeAllProductsInOrder: true,
+    });
+    prisma.restaurant.findUnique.mockResolvedValue({
+      id: 5,
+      name: 'Restaurant',
+      address: '12 Rue Exemple',
+    });
+
+    await service.createOrder(
+      {
+        id: 8,
+        role: 'MANAGER',
+        restaurantId: 5,
+      },
+      {
+        deliveryDate: '2026-03-22',
+        items: [{ productId: 2, quantity: 2 }],
+      },
+      {
+        protocol: 'https',
+        get: jest.fn((name: string) =>
+          name === 'host' ? 'api.example.com' : undefined,
+        ),
+      },
+    );
+
+    expect(prisma.produit.findMany).toHaveBeenNthCalledWith(2, {
+      where: {
+        supplierId: 7,
+        isActive: true,
+      },
+      orderBy: {
+        id: 'asc',
+      },
+    });
+    expect(tx.purchaseOrderItem.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          productId: BigInt(2),
+          quantity: 2,
+        }),
+      ],
+    });
+  });
+
   it('filters listed orders by the requested restaurant within regional scope', async () => {
     prisma.purchaseOrder.findMany.mockResolvedValue([
       {

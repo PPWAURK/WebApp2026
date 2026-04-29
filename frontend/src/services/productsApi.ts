@@ -20,6 +20,7 @@ export type ProductItem = {
   requiresSpecificationSelection: boolean;
   specifications: ProductSpecificationItem[];
   image: string | null;
+  isActive: boolean;
 };
 
 export type ProductSpecificationItem = {
@@ -48,6 +49,7 @@ type RawProduct = {
   requiresSpecificationSelection?: unknown;
   specifications?: unknown;
   image?: unknown;
+  isActive?: unknown;
 };
 
 type PickedFile = {
@@ -201,11 +203,16 @@ function normalizeProduct(raw: RawProduct, index: number): ProductItem {
             },
           ],
     image: typeof raw.image === 'string' ? raw.image : null,
+    isActive: typeof raw.isActive === 'boolean' ? raw.isActive : true,
   };
 }
 
-export async function fetchProducts(token: string): Promise<ProductItem[]> {
-  const response = await fetch(`${API_URL}/products`, {
+export async function fetchProducts(
+  token: string,
+  options: { includeInactive?: boolean } = {},
+): Promise<ProductItem[]> {
+  const query = options.includeInactive ? '?includeInactive=true' : '';
+  const response = await fetch(`${API_URL}/products${query}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -301,6 +308,34 @@ export async function createProduct(
     const message = Array.isArray(data.message)
       ? data.message.join(', ')
       : data.message ?? 'PRODUCTS_CREATE_FAILED';
+    throw new Error(message);
+  }
+
+  const data = (await response.json()) as RawProduct;
+  return normalizeProduct(data, 0);
+}
+
+export async function updateProductAvailability(
+  token: string,
+  productId: number,
+  isActive: boolean,
+): Promise<ProductItem> {
+  const response = await fetch(`${API_URL}/products/${productId}/availability`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ isActive }),
+  });
+
+  throwIfUnauthorized(response);
+
+  if (!response.ok) {
+    const data = (await response.json()) as { message?: string | string[] };
+    const message = Array.isArray(data.message)
+      ? data.message.join(', ')
+      : data.message ?? 'PRODUCT_AVAILABILITY_UPDATE_FAILED';
     throw new Error(message);
   }
 

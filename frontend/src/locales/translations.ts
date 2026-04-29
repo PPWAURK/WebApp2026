@@ -804,6 +804,17 @@ export const translations = {
       deleteProductCancel: 'Annuler',
       deleteProductConfirmButton: 'Supprimer',
       deleteProductError: 'Impossible de supprimer le produit',
+      inactiveProductBadge: 'Hors ligne',
+      inactiveProductHint:
+        'Produit masqué de la page de commande. Appuyer pour modifier.',
+      deactivateProductButton: 'Mettre hors ligne',
+      activateProductButton: 'Remettre en ligne',
+      deactivateProductConfirm:
+        'Mettre ce produit hors ligne ? Il restera visible ici et dans l’historique, mais ne pourra plus être commandé.',
+      deactivateProductCancel: 'Annuler',
+      deactivateProductConfirmButton: 'Mettre hors ligne',
+      updateProductAvailabilityError:
+        'Impossible de mettre à jour le statut du produit',
       paginationPrevious: 'Précédent',
       paginationNext: 'Suivant',
       paginationPageLabel: 'Page',
@@ -1682,6 +1693,15 @@ export const translations = {
       deleteProductCancel: '取消',
       deleteProductConfirmButton: '删除',
       deleteProductError: '删除商品失败',
+      inactiveProductBadge: '已下架',
+      inactiveProductHint: '该商品不会出现在下单页，点按仍可编辑。',
+      deactivateProductButton: '下架商品',
+      activateProductButton: '上架商品',
+      deactivateProductConfirm:
+        '确认下架该商品？它仍会保留在这里和历史订单中，但不能再被新订单选择。',
+      deactivateProductCancel: '取消',
+      deactivateProductConfirmButton: '下架',
+      updateProductAvailabilityError: '更新商品上下架状态失败',
       paginationPrevious: '上一页',
       paginationNext: '下一页',
       paginationPageLabel: '第',

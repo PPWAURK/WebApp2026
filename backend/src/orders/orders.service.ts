@@ -99,6 +99,7 @@ type OrderLineProduct = {
   specification3?: string | null;
   unite3?: string | null;
   prixUHt3?: Prisma.Decimal | number | null;
+  isActive: boolean;
 };
 
 type PreparedOrderItem = {
@@ -170,11 +171,14 @@ export class OrdersService {
         id: {
           in: distinctProductIds.map((id) => BigInt(id)),
         },
+        isActive: true,
       },
     });
 
     if (products.length !== distinctProductIds.length) {
-      throw new BadRequestException('Some selected products do not exist');
+      throw new BadRequestException(
+        'Some selected products are not available for ordering',
+      );
     }
 
     const productById = new Map(
@@ -1743,6 +1747,7 @@ export class OrdersService {
     const supplierProducts = await this.prisma.produit.findMany({
       where: {
         supplierId,
+        isActive: true,
       },
       orderBy: {
         id: 'asc',

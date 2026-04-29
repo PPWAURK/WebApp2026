@@ -473,6 +473,19 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 10,
   },
+  productInactiveBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(15, 118, 110, 0.2)',
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  productInactiveBadgeText: {
+    color: '#0f766e',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
+  },
   productCardContentPressable: {
     width: '100%',
   },
@@ -551,7 +564,7 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 11,
   },
-  productDeleteIconButton: {
+  productAvailabilityIconButton: {
     width: 34,
     height: 34,
     borderRadius: 12,
@@ -560,6 +573,10 @@ export const styles = StyleSheet.create({
     backgroundColor: '#fff9f7',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  productActivateIconButton: {
+    borderColor: 'rgba(15, 118, 110, 0.2)',
+    backgroundColor: '#ecfdf5',
   },
   productDeleteLoading: {
     color: '#8f141b',

@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
@@ -66,7 +67,10 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get()
-  listProducts(@Req() req: AuthenticatedRequest) {
+  listProducts(
+    @Req() req: AuthenticatedRequest,
+    @Query('includeInactive') includeInactive?: string,
+  ) {
     const role = req.user?.role;
     const level = req.user?.employeeLevel;
     const canAccess =
@@ -81,7 +85,14 @@ export class ProductsController {
       throw new ForbiddenException('Insufficient level to access products');
     }
 
-    return this.productsService.listProducts();
+    const shouldIncludeInactive = includeInactive === 'true';
+    if (shouldIncludeInactive && role !== 'ADMIN') {
+      throw new ForbiddenException('Only ADMIN can list inactive products');
+    }
+
+    return this.productsService.listProducts({
+      includeInactive: shouldIncludeInactive,
+    });
   }
 
   @ApiOperation({ summary: 'Create one product' })
@@ -193,6 +204,30 @@ export class ProductsController {
     }
 
     return this.productsService.updateProductImage(productId, file, req);
+  }
+
+  @ApiOperation({ summary: 'Update product availability' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/availability')
+  updateProductAvailability(
+    @Req() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) productId: number,
+    @Body() body: { isActive?: boolean },
+  ) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') {
+      throw new ForbiddenException('Only ADMIN can update product availability');
+    }
+
+    if (typeof body.isActive !== 'boolean') {
+      throw new BadRequestException('isActive must be a boolean');
+    }
+
+    return this.productsService.updateProductAvailability(
+      productId,
+      body.isActive,
+    );
   }
 
   @ApiOperation({ summary: 'Delete one product' })

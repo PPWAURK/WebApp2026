@@ -42,6 +42,10 @@ type UpdateProductPayload = {
   image?: string | null;
 };
 
+type ListProductsOptions = {
+  includeInactive?: boolean;
+};
+
 type ProductRecord = {
   id: bigint;
   supplierId: number;
@@ -59,6 +63,7 @@ type ProductRecord = {
   unite3: string | null;
   prixUHt3: Prisma.Decimal | null;
   image: string | null;
+  isActive: boolean;
 };
 
 @Injectable()
@@ -67,8 +72,9 @@ export class ProductsService {
 
   private readonly publicApiBaseUrl = process.env.PUBLIC_API_BASE_URL;
 
-  async listProducts() {
+  async listProducts(options: ListProductsOptions = {}) {
     const products = await this.prisma.produit.findMany({
+      where: options.includeInactive ? undefined : { isActive: true },
       orderBy: {
         id: 'asc',
       },
@@ -226,6 +232,26 @@ export class ProductsService {
       where: { id: BigInt(productId) },
       data,
     });
+
+    return this.serializeProduct(updated);
+  }
+
+  async updateProductAvailability(productId: number, isActive: boolean) {
+    const updated = await this.prisma.produit
+      .update({
+        where: { id: BigInt(productId) },
+        data: { isActive },
+      })
+      .catch((error: unknown) => {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2025'
+        ) {
+          throw new NotFoundException('Product not found');
+        }
+
+        throw error;
+      });
 
     return this.serializeProduct(updated);
   }
@@ -423,6 +449,7 @@ export class ProductsService {
       requiresSpecificationSelection,
       specifications: specificationSlots,
       image: product.image,
+      isActive: product.isActive,
     };
   }
 
