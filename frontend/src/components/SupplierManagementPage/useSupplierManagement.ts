@@ -40,6 +40,7 @@ export function useSupplierManagement({
   const [currentPage, setCurrentPage] = useState(1);
   const [productFilter, setProductFilter] = useState('');
   const [newSupplierName, setNewSupplierName] = useState('');
+  const [orderNoticeDraft, setOrderNoticeDraft] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isCreatingSupplier, setIsCreatingSupplier] = useState(false);
   const [isReorderingSuppliers, setIsReorderingSuppliers] = useState(false);
@@ -218,6 +219,8 @@ export function useSupplierManagement({
   const canMoveSelectedSupplierDown =
     selectedSupplierIndex >= 0 && selectedSupplierIndex < suppliers.length - 1;
   const selectedSupplierProductCount = supplierProducts.length;
+  const isOrderNoticeDirty =
+    orderNoticeDraft.trim() !== (selectedSupplier?.orderNotice.trim() ?? '');
 
   // --- Sync effects ---
 
@@ -229,6 +232,10 @@ export function useSupplierManagement({
 
   useEffect(() => {
     setCurrentPage(1);
+  }, [selectedSupplierId]);
+
+  useEffect(() => {
+    setOrderNoticeDraft(selectedSupplier?.orderNotice ?? '');
   }, [selectedSupplierId]);
 
   useEffect(() => {
@@ -641,6 +648,43 @@ export function useSupplierManagement({
     }
   }
 
+  async function handleSaveSupplierOrderNotice() {
+    if (!selectedSupplier) {
+      return;
+    }
+
+    const previousSupplier = selectedSupplier;
+    const nextOrderNotice = orderNoticeDraft.trim();
+    setIsUpdatingSupplierOrderSettings(true);
+    setError(null);
+
+    try {
+      const updated = await updateSupplierOrderSettings(
+        accessToken,
+        previousSupplier.id,
+        {
+          includeAllProductsInOrder:
+            previousSupplier.includeAllProductsInOrder,
+          orderNotice: nextOrderNotice,
+        },
+      );
+      setSuppliers((current) =>
+        current.map((supplier) =>
+          supplier.id === updated.id ? updated : supplier,
+        ),
+      );
+      setOrderNoticeDraft(updated.orderNotice);
+    } catch (updateError) {
+      if (updateError instanceof Error && updateError.message.trim()) {
+        setError(updateError.message);
+      } else {
+        setError(text.supplierManagement.updateSupplierOrderSettingsError);
+      }
+    } finally {
+      setIsUpdatingSupplierOrderSettings(false);
+    }
+  }
+
   function closeDeleteProductDialog(value: boolean) {
     if (confirmDeleteResolverRef.current) {
       confirmDeleteResolverRef.current(value);
@@ -687,6 +731,8 @@ export function useSupplierManagement({
     currentPage,
     totalPages,
     productFilter,
+    orderNoticeDraft,
+    isOrderNoticeDirty,
     canMoveSelectedSupplierUp,
     canMoveSelectedSupplierDown,
 
@@ -708,6 +754,7 @@ export function useSupplierManagement({
     // New supplier form
     newSupplierName,
     setNewSupplierName,
+    setOrderNoticeDraft,
 
     // New product form
     newProductReference,
@@ -773,6 +820,7 @@ export function useSupplierManagement({
     handleCreateSupplier,
     handleMoveSelectedSupplier,
     handleToggleSupplierOrderTemplate,
+    handleSaveSupplierOrderNotice,
     handleCreateProduct,
     handleSaveProduct,
     handleUploadProductImage,

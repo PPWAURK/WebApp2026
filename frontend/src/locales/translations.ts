@@ -597,6 +597,7 @@ export const translations = {
       subtitle:
         'Choisissez les produits puis indiquez les quantités à commander.',
       supplierLabel: 'Fournisseur',
+      orderNoticeTitle: 'Consignes de commande',
       filterLabel: 'Type de produits',
       searchProductsPlaceholder:
         'Rechercher un produit (nom, référence, spécification)',
@@ -754,6 +755,12 @@ export const translations = {
       orderTemplateTitle: 'Gabarit de commande',
       orderTemplateHint:
         'Choisissez si les nouvelles commandes de ce fournisseur doivent aussi inclure les produits non commandés avec une quantité à 0.',
+      orderNoticeTitle: 'Consignes de commande',
+      orderNoticeHint:
+        'Ce texte s’affiche sous le nom du fournisseur sur la page de commande.',
+      orderNoticePlaceholder:
+        'Ex. commander avant 16h, vérifier les unités, préciser les besoins spéciaux...',
+      saveOrderNoticeButton: 'Enregistrer les consignes',
       includeAllProductsInOrderLabel:
         'Inclure tous les produits dans la commande',
       includeAllProductsInOrderHint:
@@ -1494,6 +1501,7 @@ export const translations = {
       title: '产品下单',
       subtitle: '选好商品，再填写要下单的数量。',
       supplierLabel: '供应商',
+      orderNoticeTitle: '下单须知',
       filterLabel: '产品类型',
       searchProductsPlaceholder: '搜索商品（名称 / 编码 / 规格）',
       scrollToTopButton: '顶部',
@@ -1633,6 +1641,10 @@ export const translations = {
       orderTemplateTitle: '下单模板',
       orderTemplateHint:
         '设置该供应商的新订单是否要把未下单商品也带出来，并显示为 0 数量。',
+      orderNoticeTitle: '下单须知',
+      orderNoticeHint: '这段文字会显示在下单页面的供应商名称下方。',
+      orderNoticePlaceholder: '例如：请在 16:00 前下单，核对单位，特殊需求请备注。',
+      saveOrderNoticeButton: '保存下单须知',
       includeAllProductsInOrderLabel: '下单时包含全部商品',
       includeAllProductsInOrderHint: '未选择的商品行仍会显示，数量保持为 0。',
       savingSupplierOrderSettings: '更新中...',

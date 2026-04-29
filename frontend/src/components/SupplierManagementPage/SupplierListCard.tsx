@@ -12,6 +12,8 @@ type SupplierListCardProps = {
   selectedSupplier: SupplierItem | null;
   supplierProductCountById: Map<number, number>;
   newSupplierName: string;
+  orderNoticeDraft: string;
+  isOrderNoticeDirty: boolean;
   isCreatingSupplier: boolean;
   isReorderingSuppliers: boolean;
   isUpdatingSupplierOrderSettings: boolean;
@@ -21,8 +23,10 @@ type SupplierListCardProps = {
   isMediumScreen: boolean;
   onSelectSupplier: (supplierId: number) => void;
   onChangeNewSupplierName: (value: string) => void;
+  onChangeOrderNoticeDraft: (value: string) => void;
   onCreateSupplier: () => void;
   onToggleSupplierOrderTemplate: (nextValue: boolean) => void;
+  onSaveSupplierOrderNotice: () => void;
   onMoveSupplier: (direction: -1 | 1) => void;
   onDeleteSupplier: (supplier: SupplierItem) => void;
 };
@@ -34,6 +38,8 @@ export function SupplierListCard({
   selectedSupplier,
   supplierProductCountById,
   newSupplierName,
+  orderNoticeDraft,
+  isOrderNoticeDirty,
   isCreatingSupplier,
   isReorderingSuppliers,
   isUpdatingSupplierOrderSettings,
@@ -43,8 +49,10 @@ export function SupplierListCard({
   isMediumScreen,
   onSelectSupplier,
   onChangeNewSupplierName,
+  onChangeOrderNoticeDraft,
   onCreateSupplier,
   onToggleSupplierOrderTemplate,
+  onSaveSupplierOrderNotice,
   onMoveSupplier,
   onDeleteSupplier,
 }: SupplierListCardProps) {
@@ -232,6 +240,58 @@ export function SupplierListCard({
             />
           </View>
         </Pressable>
+
+        <View style={styles.noticeEditor}>
+          <View style={styles.noticeEditorHeader}>
+            <View style={styles.settingHeaderCopy}>
+              <Text style={styles.fieldLabel}>
+                {text.supplierManagement.orderNoticeTitle}
+              </Text>
+              <Text style={styles.helperText}>
+                {text.supplierManagement.orderNoticeHint}
+              </Text>
+            </View>
+            <Text style={styles.noticeCounter}>
+              {orderNoticeDraft.length}/500
+            </Text>
+          </View>
+
+          <TextInput
+            style={[styles.input, styles.noticeInput]}
+            placeholder={text.supplierManagement.orderNoticePlaceholder}
+            placeholderTextColor={COLORS.placeholder}
+            value={orderNoticeDraft}
+            onChangeText={onChangeOrderNoticeDraft}
+            editable={
+              Boolean(selectedSupplier) && !isUpdatingSupplierOrderSettings
+            }
+            multiline
+            maxLength={500}
+            textAlignVertical="top"
+          />
+
+          <Pressable
+            style={[
+              styles.primaryButton,
+              (!selectedSupplier ||
+                !isOrderNoticeDirty ||
+                isUpdatingSupplierOrderSettings) &&
+                styles.buttonDisabled,
+            ]}
+            disabled={
+              !selectedSupplier ||
+              !isOrderNoticeDirty ||
+              isUpdatingSupplierOrderSettings
+            }
+            onPress={onSaveSupplierOrderNotice}
+          >
+            <Text style={styles.primaryButtonText}>
+              {isUpdatingSupplierOrderSettings
+                ? text.supplierManagement.savingSupplierOrderSettings
+                : text.supplierManagement.saveOrderNoticeButton}
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       <View

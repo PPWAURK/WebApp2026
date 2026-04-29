@@ -350,6 +350,25 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
   },
+  noticeEditor: {
+    gap: 10,
+  },
+  noticeEditorHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  noticeCounter: {
+    color: MUTED,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  noticeInput: {
+    minHeight: 96,
+    lineHeight: 20,
+  },
   emptyCard: {
     width: '100%',
     borderRadius: 18,

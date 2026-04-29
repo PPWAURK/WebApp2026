@@ -11,6 +11,7 @@ type SupplierRecord = {
   nom: string;
   sortOrder: number;
   includeAllProductsInOrder: boolean;
+  orderNotice: string | null;
 };
 
 type PrismaExecutor = Prisma.TransactionClient | PrismaService;
@@ -41,12 +42,14 @@ export class SuppliersService {
           nom: trimmedName,
           sortOrder: (lastSupplier?.sortOrder ?? 0) + 1,
           includeAllProductsInOrder: false,
+          orderNotice: null,
         },
         select: {
           id: true,
           nom: true,
           sortOrder: true,
           includeAllProductsInOrder: true,
+          orderNotice: true,
         },
       });
     });
@@ -56,7 +59,7 @@ export class SuppliersService {
 
   async updateSupplierOrderSettings(
     supplierId: number,
-    payload: { includeAllProductsInOrder: boolean },
+    payload: { includeAllProductsInOrder: boolean; orderNotice?: string },
   ) {
     const existing = await this.prisma.fournisseur.findUnique({
       where: { id: supplierId },
@@ -67,16 +70,27 @@ export class SuppliersService {
       throw new NotFoundException('Supplier not found');
     }
 
+    const data: {
+      includeAllProductsInOrder: boolean;
+      orderNotice?: string | null;
+    } = {
+      includeAllProductsInOrder: payload.includeAllProductsInOrder,
+    };
+
+    if (payload.orderNotice !== undefined) {
+      const trimmedOrderNotice = payload.orderNotice.trim();
+      data.orderNotice = trimmedOrderNotice || null;
+    }
+
     const updated = await this.prisma.fournisseur.update({
       where: { id: supplierId },
-      data: {
-        includeAllProductsInOrder: payload.includeAllProductsInOrder,
-      },
+      data,
       select: {
         id: true,
         nom: true,
         sortOrder: true,
         includeAllProductsInOrder: true,
+        orderNotice: true,
       },
     });
 
@@ -203,6 +217,7 @@ export class SuppliersService {
         nom: true,
         sortOrder: true,
         includeAllProductsInOrder: true,
+        orderNotice: true,
       },
     });
   }
@@ -228,6 +243,7 @@ export class SuppliersService {
       id: supplier.id,
       name: supplier.nom,
       includeAllProductsInOrder: supplier.includeAllProductsInOrder,
+      orderNotice: supplier.orderNotice ?? '',
     };
   }
 }

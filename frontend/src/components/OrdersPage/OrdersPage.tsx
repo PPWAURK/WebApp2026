@@ -446,15 +446,23 @@ export function OrdersPage({
   }, [productSearch, selectedCategory, supplierProducts]);
 
   const selectedSupplierName = useMemo(() => {
+    return selectedSupplierId === 'ALL'
+      ? text.orders.supplierLabel
+      : (suppliers.find((supplier) => supplier.id === selectedSupplierId)?.name ??
+          text.orders.supplierLabel);
+  }, [selectedSupplierId, suppliers, text.orders.supplierLabel]);
+
+  const selectedSupplierOrderNotice = useMemo(() => {
     if (selectedSupplierId === 'ALL') {
-      return text.orders.supplierLabel;
+      return '';
     }
 
     return (
-      suppliers.find((supplier) => supplier.id === selectedSupplierId)?.name ??
-      text.orders.supplierLabel
+      suppliers
+        .find((supplier) => supplier.id === selectedSupplierId)
+        ?.orderNotice.trim() ?? ''
     );
-  }, [selectedSupplierId, suppliers, text.orders.supplierLabel]);
+  }, [selectedSupplierId, suppliers]);
 
   const handleSubmitOrder = useCallback(() => {
     onSubmitOrder({
@@ -724,6 +732,16 @@ export function OrdersPage({
                   <Text style={styles.surfaceTitle}>
                     {selectedSupplierName}
                   </Text>
+                  {selectedSupplierOrderNotice ? (
+                    <View style={styles.orderNoticeBox}>
+                      <Text style={styles.orderNoticeLabel}>
+                        {text.orders.orderNoticeTitle}
+                      </Text>
+                      <Text style={styles.orderNoticeText}>
+                        {selectedSupplierOrderNotice}
+                      </Text>
+                    </View>
+                  ) : null}
                   <Text style={styles.surfaceSubtitle}>
                     {selectedCategory === 'ALL'
                       ? text.orders.allTypes

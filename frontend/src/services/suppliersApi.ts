@@ -5,12 +5,14 @@ export type SupplierItem = {
   id: number;
   name: string;
   includeAllProductsInOrder: boolean;
+  orderNotice: string;
 };
 
 type RawSupplier = {
   id?: unknown;
   name?: unknown;
   includeAllProductsInOrder?: unknown;
+  orderNotice?: unknown;
 };
 
 function normalizeSupplier(raw: RawSupplier): SupplierItem | null {
@@ -25,6 +27,7 @@ function normalizeSupplier(raw: RawSupplier): SupplierItem | null {
     id,
     name,
     includeAllProductsInOrder: raw.includeAllProductsInOrder === true,
+    orderNotice: typeof raw.orderNotice === 'string' ? raw.orderNotice : '',
   };
 }
 
@@ -137,7 +140,7 @@ export async function deleteSupplier(token: string, supplierId: number): Promise
 export async function updateSupplierOrderSettings(
   token: string,
   supplierId: number,
-  payload: { includeAllProductsInOrder: boolean },
+  payload: { includeAllProductsInOrder: boolean; orderNotice?: string },
 ): Promise<SupplierItem> {
   const response = await fetch(
     `${API_URL}/suppliers/${supplierId}/order-settings`,

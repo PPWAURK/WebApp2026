@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateSupplierOrderSettingsDto {
   @ApiProperty({
@@ -9,4 +9,15 @@ export class UpdateSupplierOrderSettingsDto {
   })
   @IsBoolean()
   includeAllProductsInOrder!: boolean;
+
+  @ApiProperty({
+    required: false,
+    maxLength: 500,
+    example: '下单前请确认规格、单位和送货日期。',
+    description: 'Supplier-specific ordering notice displayed on the product order page.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  orderNotice?: string;
 }

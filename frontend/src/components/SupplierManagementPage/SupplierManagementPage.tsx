@@ -101,6 +101,8 @@ export function SupplierManagementPage({
               selectedSupplier={state.selectedSupplier}
               supplierProductCountById={state.supplierProductCountById}
               newSupplierName={state.newSupplierName}
+              orderNoticeDraft={state.orderNoticeDraft}
+              isOrderNoticeDirty={state.isOrderNoticeDirty}
               isCreatingSupplier={state.isCreatingSupplier}
               isReorderingSuppliers={state.isReorderingSuppliers}
               isUpdatingSupplierOrderSettings={
@@ -112,11 +114,15 @@ export function SupplierManagementPage({
               isMediumScreen={isMediumScreen}
               onSelectSupplier={state.setSelectedSupplierId}
               onChangeNewSupplierName={state.setNewSupplierName}
+              onChangeOrderNoticeDraft={state.setOrderNoticeDraft}
               onCreateSupplier={() => {
                 void state.handleCreateSupplier();
               }}
               onToggleSupplierOrderTemplate={(nextValue) => {
                 void state.handleToggleSupplierOrderTemplate(nextValue);
+              }}
+              onSaveSupplierOrderNotice={() => {
+                void state.handleSaveSupplierOrderNotice();
               }}
               onMoveSupplier={(direction) => {
                 void state.handleMoveSelectedSupplier(direction);
