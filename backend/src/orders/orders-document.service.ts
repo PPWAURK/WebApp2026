@@ -313,8 +313,8 @@ export class OrdersDocumentService {
     const contentWidth =
       doc.page.width - doc.page.margins.left - doc.page.margins.right;
     const colProduct = Math.floor(contentWidth * 0.52);
-    const colOrderUnit = Math.floor(contentWidth * 0.12);
     const colQty = Math.floor(contentWidth * 0.1);
+    const colOrderUnit = Math.floor(contentWidth * 0.12);
     const colUnitPrice = contentWidth - colProduct - colOrderUnit - colQty;
     const rowHeight = 38;
 
@@ -328,12 +328,12 @@ export class OrdersDocumentService {
         .fillColor(this.pdfColors.white)
         .fontSize(10)
         .text('Produit FR / ZH', left + 8, y + 7, { width: colProduct - 12 })
-        .text('Unite', left + colProduct + 4, y + 7, {
-          width: colOrderUnit - 8,
+        .text('Qte', left + colProduct + 4, y + 7, {
+          width: colQty - 8,
           align: 'center',
         })
-        .text('Qte', left + colProduct + colOrderUnit + 4, y + 7, {
-          width: colQty - 8,
+        .text('Unite', left + colProduct + colQty + 4, y + 7, {
+          width: colOrderUnit - 8,
           align: 'center',
         })
         .text('PU HT', left + colProduct + colOrderUnit + colQty + 4, y + 7, {
@@ -400,12 +400,21 @@ export class OrdersDocumentService {
           width: colProduct - 12,
         });
 
+      doc
+        .font('Helvetica')
+        .fillColor(primaryTextColor)
+        .fontSize(10)
+        .text(String(item.quantity), left + colProduct + 4, y + 13, {
+          width: colQty - 8,
+          align: 'center',
+        });
+
       doc.font(this.resolveFontForText(orderUnit));
 
       doc
         .fillColor(primaryTextColor)
         .fontSize(10)
-        .text(orderUnit, left + colProduct + 4, y + 13, {
+        .text(orderUnit, left + colProduct + colQty + 4, y + 13, {
           width: colOrderUnit - 8,
           align: 'center',
         });
@@ -414,15 +423,6 @@ export class OrdersDocumentService {
         .font('Helvetica')
         .fillColor(primaryTextColor)
         .fontSize(10)
-        .text(
-          String(item.quantity),
-          left + colProduct + colOrderUnit + 4,
-          y + 13,
-          {
-            width: colQty - 8,
-            align: 'center',
-          },
-        )
         .text(
           item.unitPrice.toFixed(2),
           left + colProduct + colOrderUnit + colQty + 4,
