@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
@@ -29,9 +30,9 @@ type RecruitmentRequestsPageProps = {
 type StatusFilter = RecruitmentRequestStatus | 'ALL';
 
 const RECRUITMENT_POSITION_OPTIONS = [
-  'Cuisine',
-  'Serveur',
-  'Assistant Cuisine',
+  'Cuisinier / Cuisinière',
+  'Serveur / Serveuse',
+  'Assistant / Assistante cuisine',
 ] as const;
 
 type RecruitmentPosition = (typeof RECRUITMENT_POSITION_OPTIONS)[number];
@@ -43,15 +44,15 @@ type PositionNeed = {
 
 function createDefaultPositionNeeds(): Record<RecruitmentPosition, PositionNeed> {
   return {
-    Cuisine: {
+    'Cuisinier / Cuisinière': {
       FULL_TIME: '0',
       PART_TIME: '0',
     },
-    Serveur: {
+    'Serveur / Serveuse': {
       FULL_TIME: '0',
       PART_TIME: '0',
     },
-    'Assistant Cuisine': {
+    'Assistant / Assistante cuisine': {
       FULL_TIME: '0',
       PART_TIME: '0',
     },
@@ -399,10 +400,15 @@ export function RecruitmentRequestsPage({
       <View key={request.id} style={styles.requestCard}>
         <View style={styles.requestHeader}>
           <View style={styles.requestTitleWrap}>
+            <View style={styles.requestRestaurant}>
+              <Ionicons name="business-outline" size={13} color="#7f1b21" />
+              <Text style={styles.requestRestaurantText} numberOfLines={1}>
+                {request.restaurant.name}
+              </Text>
+            </View>
             <Text style={styles.requestTitle}>{request.position}</Text>
             <Text style={styles.requestMeta}>
-              {request.restaurant.name} · {creatorName} ·{' '}
-              {formatDateTime(request.createdAt)}
+              {creatorName} · {formatDateTime(request.createdAt)}
             </Text>
           </View>
           <View style={[styles.badge, isProcessed && styles.badgeProcessed]}>
@@ -417,27 +423,59 @@ export function RecruitmentRequestsPage({
           </View>
         </View>
 
-        <View style={styles.detailRow}>
-          <Text style={styles.detailText}>
-            {copy.contractTypeLabel}: {getContractTypeText(text, request.contractType)}
-          </Text>
-          <Text style={styles.detailText}>
-            {copy.headcountLabel}: {request.headcount}
-          </Text>
+        <View style={styles.requestMetricGrid}>
+          <View style={styles.requestMetricCard}>
+            <View style={styles.requestMetricLabelRow}>
+              <Ionicons name="time-outline" size={14} color="#8f6a65" />
+              <Text style={styles.requestMetricLabel}>
+                {copy.contractTypeLabel}
+              </Text>
+            </View>
+            <Text style={styles.requestMetricValue}>
+              {getContractTypeText(text, request.contractType)}
+            </Text>
+          </View>
+          <View style={styles.requestMetricCard}>
+            <View style={styles.requestMetricLabelRow}>
+              <Ionicons name="people-outline" size={14} color="#8f6a65" />
+              <Text style={styles.requestMetricLabel}>
+                {copy.headcountLabel}
+              </Text>
+            </View>
+            <Text style={styles.requestMetricValue}>{request.headcount}</Text>
+          </View>
         </View>
 
         <View style={styles.notesBox}>
+          <View style={styles.notesLabelRow}>
+            <Ionicons name="reader-outline" size={14} color="#8f6a65" />
+            <Text style={styles.notesLabel}>{copy.notesLabel}</Text>
+          </View>
           <Text style={styles.notesText}>
             {request.notes.trim() || copy.noNotes}
           </Text>
         </View>
 
         {request.processedBy && request.processedAt ? (
-          <Text style={styles.requestMeta}>
-            {copy.processedByLabel}:{' '}
-            {getDisplayName(request.processedBy, text.dashboard.fallbackName)} ·{' '}
-            {formatDateTime(request.processedAt)}
-          </Text>
+          <View style={styles.processedBox}>
+            <View style={styles.processedRow}>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={14}
+                color="#256d3f"
+              />
+              <Text style={styles.processedText}>
+                {copy.processedByLabel}:{' '}
+                {getDisplayName(
+                  request.processedBy,
+                  text.dashboard.fallbackName,
+                )}
+              </Text>
+            </View>
+            <Text style={styles.processedText}>
+              {formatDateTime(request.processedAt)}
+            </Text>
+          </View>
         ) : null}
 
         <Pressable

@@ -761,24 +761,16 @@
 <claude-mem-context>
 # Memory Context
 
-# [WebApp2026] recent context, 2026-04-30 9:19am GMT+2
+# [WebApp2026] recent context, 2026-04-30 5:00pm GMT+2
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 33 obs (7,476t read) | 546,892t work | 99% savings
+Stats: 50 obs (15,385t read) | 548,703t work | 97% savings
 
 ### Apr 28, 2026
-133 1:51p 🔵 下单页面 (Order Placement Page) — codebase structure confirmed
-134 " 🟣 Order notice box added to ProductGrid in SupplierManagementPage
-135 " ✅ i18n translations added for order notice box (FR + ZH)
-136 1:52p 🔵 Large batch of uncommitted changes across order, training, and news UI
-137 " 🟣 WeChat share prompt translations added for order PDF sharing flow
-138 " 🟣 News feed expand/collapse button translations added (FR + ZH)
-139 " 🟣 orderNoticeBox styles implemented in SupplierManagementPage.styles.ts
-140 1:54p 🔵 Supplier access control — ORDER_ACCESS_LEVELS gates ordering feature by employee level
-141 " 🟣 orderNotice field added to Fournisseur schema — per-supplier custom order notice
+141 1:54p 🟣 orderNotice field added to Fournisseur schema — per-supplier custom order notice
 142 " 🟣 Backend orderNotice fully wired into suppliers service and DTO
 143 1:55p 🟣 Frontend suppliersApi and ProductGrid wired to dynamic per-supplier orderNotice
 145 1:56p ⚖️ Order notice moved from SupplierManagementPage to OrdersPage (下单页面)
@@ -804,6 +796,32 @@ Stats: 33 obs (7,476t read) | 546,892t work | 99% savings
 165 10:09a 🔵 后端 ESLint 发现 3 处提交后遗留错误需修复
 166 " 🔴 后端 lint 错误修复 — 移除未使用导入和 prettier 格式修正
 167 10:12a ✅ Git push — frontend order/training/dashboard changes staged
+### Apr 30, 2026
+180 11:07a 🟣 招聘请求功能 — 店长表单与管理员视图
+181 " 🔵 Frontend navigation architecture mapped for recruitment request feature
+182 11:08a 🔵 Full-stack architecture mapped for recruitment request feature implementation
+184 11:10a 🔵 Backend implementation blueprint finalized for recruitment request module
+185 11:11a 🔵 Reusable role-scope utilities in users-scope.ts confirm recruitment authorization pattern
+186 11:12a ⚖️ Recruitment request feature implementation plan locked — 4-phase approach
+187 11:13a 🟣 Backend recruitment-requests module scaffolded — DTOs and types created
+188 " 🟣 RecruitmentRequestsService implemented with role-scoped submission and admin-only list/update
+189 11:14a 🟣 RecruitmentRequestsModule created and registered in NestJS AppModule
+190 " 🟣 Frontend recruitmentRequestsApi.ts service created with typed mappers
+191 11:15a 🟣 RecruitmentRequestsPage styles created matching project design system
+192 11:16a 🟣 RecruitmentRequestsPage component implemented — dual-mode UI for managers and admins
+193 11:19a 🟣 Recruitment requests translations added to both FR and ZH locales
+194 " 🟣 AuthenticatedShell wired with recruitmentRequests nav item and active label
+195 " 🟣 Backend service spec for RecruitmentRequestsService — 6 unit tests
+196 " 🟣 Backend controller spec for RecruitmentRequestsController — 4 unit tests
+197 " ✅ Prisma client regenerated after schema additions for recruitment requests
+198 " 🟣 Recruitment requests feature — full test suite green, backend typecheck clean
+199 " 🔴 Prettier lint errors fixed in recruitment-requests service and specs
+200 11:20a 🔴 Service spec no-unsafe-member-access fixed by exporting recruitmentRequestSelect
+201 11:21a 🟣 Recruitment requests feature — all checks fully green
+202 " 🔵 Recruitment requests migration file confirmed present in migrations directory
+203 11:29a 🟣 Recruitment form gains preset position option chips
+205 11:31a 🔵 Recruitment requests feature is fully built across stack
+206 " 🟣 Position field gains hint text and fieldHint style
 
-Access 547k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 549k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>
