@@ -30,6 +30,10 @@ export function pathnameToMenuPage(pathname: string): MenuPage | null {
     return 'restaurantForms';
   }
 
+  if (normalized === '/recruitment-requests') {
+    return 'recruitmentRequests';
+  }
+
   if (normalized === '/store-management') {
     return 'storeManagement';
   }
@@ -72,6 +76,10 @@ export function menuPageToPath(page: MenuPage): string {
 
   if (page === 'restaurantForms') {
     return '/restaurant-forms';
+  }
+
+  if (page === 'recruitmentRequests') {
+    return '/recruitment-requests';
   }
 
   if (page === 'storeManagement') {

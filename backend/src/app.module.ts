@@ -13,6 +13,7 @@ import { ProductsModule } from './products/products.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { OrdersModule } from './orders/orders.module';
 import { NewsModule } from './news/news.module';
+import { RecruitmentRequestsModule } from './recruitment-requests/recruitment-requests.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { NewsModule } from './news/news.module';
     SuppliersModule,
     OrdersModule,
     NewsModule,
+    RecruitmentRequestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

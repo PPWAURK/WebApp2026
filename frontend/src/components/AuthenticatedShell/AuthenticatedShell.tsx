@@ -66,6 +66,10 @@ function getActivePageLabel(text: AppText, page: MenuPage): string {
     return text.drawer.restaurantForms;
   }
 
+  if (page === 'recruitmentRequests') {
+    return text.drawer.recruitmentRequests;
+  }
+
   if (page === 'orders') {
     return text.drawer.ordersPlace;
   }
@@ -132,6 +136,7 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
         ];
   const canAccessOrders = canUserAccessOrders(props.currentUser);
   const canAccessTeamOverview = isSupervisorRole(props.currentUser.role);
+  const canAccessRecruitmentRequests = isSupervisorRole(props.currentUser.role);
   const primaryItems: PrimaryNavItem[] = [
     {
       key: 'dashboard',
@@ -162,6 +167,15 @@ export function AuthenticatedShell(props: AuthenticatedShellProps) {
       label: props.text.drawer.restaurantForms,
       icon: 'document-text-outline',
     },
+    ...(canAccessRecruitmentRequests
+      ? [
+          {
+            key: 'recruitmentRequests' as const,
+            label: props.text.drawer.recruitmentRequests,
+            icon: 'person-add-outline' as keyof typeof Ionicons.glyphMap,
+          },
+        ]
+      : []),
   ];
 
   if (props.currentUser.role === 'ADMIN') {

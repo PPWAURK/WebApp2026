@@ -34,6 +34,8 @@ model User {
   documents           Document[]
   newsPostsCreated    NewsPost[]                  @relation("NewsPostCreator")
   newsPostReads       NewsPostRead[]
+  recruitmentRequestsCreated RecruitmentRequest[]  @relation("RecruitmentRequestCreator")
+  recruitmentRequestsProcessed RecruitmentRequest[] @relation("RecruitmentRequestProcessor")
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens PasswordResetToken[]
   purchaseOrders      PurchaseOrder[]             @relation("CreatedByUser")
@@ -87,6 +89,7 @@ model Restaurant {
   managedByUsers  UserManagedRestaurant[]
   purchaseOrders  PurchaseOrder[]
   purchaseReturns PurchaseReturn[]
+  recruitmentRequests RecruitmentRequest[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 }
@@ -317,6 +320,30 @@ model NewsPostRead {
   @@map("news_post_reads")
 }
 
+model RecruitmentRequest {
+  id                  Int                      @id @default(autoincrement())
+  restaurantId        Int                      @map("restaurant_id")
+  restaurant          Restaurant               @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  createdByUserId     Int                      @map("created_by_user_id")
+  createdByUser       User                     @relation("RecruitmentRequestCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  position            String                   @db.VarChar(191)
+  contractType        RecruitmentContractType  @map("contract_type")
+  headcount           Int
+  notes               String?                  @db.Text
+  status              RecruitmentRequestStatus @default(PENDING)
+  processedByUserId   Int?                     @map("processed_by_user_id")
+  processedByUser     User?                    @relation("RecruitmentRequestProcessor", fields: [processedByUserId], references: [id], onDelete: SetNull)
+  processedAt         DateTime?                @map("processed_at")
+  createdAt           DateTime                 @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt           DateTime                 @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([restaurantId, createdAt])
+  @@index([status, createdAt])
+  @@index([createdByUserId])
+  @@index([processedByUserId])
+  @@map("recruitment_requests")
+}
+
 model TrainingQuizLink {
   id        Int           @id @default(autoincrement())
   section   UploadSection
@@ -392,4 +419,14 @@ enum NewsAudience {
   ALL
   MANAGERS
   EMPLOYEES
+}
+
+enum RecruitmentContractType {
+  PART_TIME
+  FULL_TIME
+}
+
+enum RecruitmentRequestStatus {
+  PENDING
+  PROCESSED
 }
