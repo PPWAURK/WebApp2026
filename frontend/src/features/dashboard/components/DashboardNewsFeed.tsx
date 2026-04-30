@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import type { AppText } from '../../../locales/translations';
@@ -70,10 +71,34 @@ export function DashboardNewsFeed({
     ? newsFeedMonths
     : [];
   const effectiveNewsFeedTags = Array.isArray(newsFeedTags) ? newsFeedTags : [];
+  const [expandedPostIds, setExpandedPostIds] = useState<
+    Record<number, boolean>
+  >({});
   const unreadCount = isAdmin
     ? 0
     : effectiveNewsFeed.filter((item) => !isNewsReadForViewer(item)).length;
   const totalCount = effectiveNewsFeed.length;
+
+  function handleTogglePostExpansion(postId: number) {
+    setExpandedPostIds((currentState) => ({
+      ...currentState,
+      [postId]: !currentState[postId],
+    }));
+  }
+
+  function isPostMessageCollapsible(message: string): boolean {
+    const normalizedMessage = message.trim();
+    if (!normalizedMessage) {
+      return false;
+    }
+
+    const lineBreakCount = normalizedMessage.split(/\r?\n/).length;
+    if (lineBreakCount > 4) {
+      return true;
+    }
+
+    return normalizedMessage.length > 140;
+  }
   const laneConfigs: Array<{
     key: NewsLane;
     label: string;
@@ -401,6 +426,10 @@ export function DashboardNewsFeed({
                 ) : (
                   lanePosts[laneConfig.key].map((post) => {
                     const isPostRead = isNewsReadForViewer(post);
+                    const isPostExpanded = expandedPostIds[post.id] ?? false;
+                    const isPostCollapsible = isPostMessageCollapsible(
+                      post.message,
+                    );
 
                     return (
                       <Pressable
@@ -540,10 +569,30 @@ export function DashboardNewsFeed({
                               styles.newsPostBodyText,
                               !isPostRead && styles.newsPostBodyTextUnread,
                             ]}
-                            numberOfLines={4}
+                            numberOfLines={isPostExpanded ? undefined : 4}
                           >
                             {post.message}
                           </Text>
+                          {isPostCollapsible ? (
+                            <Pressable
+                              style={styles.newsPostExpandButton}
+                              accessibilityLabel={
+                                isPostExpanded
+                                  ? text.dashboard.newsCollapseButton
+                                  : text.dashboard.newsExpandButton
+                              }
+                              onPress={(event) => {
+                                event.stopPropagation?.();
+                                handleTogglePostExpansion(post.id);
+                              }}
+                            >
+                              <Text style={styles.newsPostExpandButtonText}>
+                                {isPostExpanded
+                                  ? text.dashboard.newsCollapseButton
+                                  : text.dashboard.newsExpandButton}
+                              </Text>
+                            </Pressable>
+                          ) : null}
                         </View>
 
                         <View style={styles.newsPostFooterBlock}>

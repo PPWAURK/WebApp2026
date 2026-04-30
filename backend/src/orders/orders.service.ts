@@ -248,10 +248,6 @@ export class OrdersService {
 
       const zhRaw = this.ordersDocumentService.recoverUtf8(item.product.nomCn);
       const nameZh = this.ordersDocumentService.sanitizeLabel(zhRaw);
-      const specification = this.ordersDocumentService.sanitizeLabel(
-        this.ordersDocumentService.recoverUtf8(item.specification),
-      );
-
       const unit = this.ordersDocumentService.sanitizeLabel(
         item.unit?.trim() || '-',
       );
@@ -259,7 +255,6 @@ export class OrdersService {
       return {
         nameFr,
         nameZh,
-        specification,
         unit,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
@@ -1025,12 +1020,6 @@ export class OrdersService {
             item.product.nomCn,
           ),
         );
-        const specification = this.ordersDocumentService.sanitizeLabel(
-          this.ordersDocumentService.recoverUtf8(
-            item.specification ?? item.product.specification,
-          ),
-        );
-
         const unitCandidate =
           (item.unit ?? '').trim() || (item.product.unite ?? '').trim() || '-';
         const unit = this.ordersDocumentService.sanitizeLabel(unitCandidate);
@@ -1038,7 +1027,6 @@ export class OrdersService {
         return {
           nameFr,
           nameZh,
-          specification,
           unit,
           quantity: item.quantity,
           unitPrice: Number(item.unitPriceHt),

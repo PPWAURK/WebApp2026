@@ -65,7 +65,32 @@ type TrainingPdfPageViewerProps = {
   loadingLabel: string;
   errorLabel: string;
   onDocumentLoadSuccess?: (numPages: number) => void;
+  watermarkText?: string;
 };
+
+function drawWatermark(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  text: string,
+): void {
+  const fontSize = Math.max(14, Math.floor(width / 28));
+  ctx.save();
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = '#000000';
+  ctx.font = `${fontSize}px sans-serif`;
+  ctx.translate(width / 2, height / 2);
+  ctx.rotate(-Math.PI / 6);
+  const textWidth = ctx.measureText(text).width;
+  const colSpacing = textWidth + 80;
+  const rowSpacing = fontSize * 3.5;
+  for (let row = -height; row < height; row += rowSpacing) {
+    for (let col = -width; col < width; col += colSpacing) {
+      ctx.fillText(text, col, row);
+    }
+  }
+  ctx.restore();
+}
 
 export function TrainingPdfPageViewer({
   src,
@@ -73,6 +98,7 @@ export function TrainingPdfPageViewer({
   loadingLabel,
   errorLabel,
   onDocumentLoadSuccess,
+  watermarkText,
 }: TrainingPdfPageViewerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRefs = useRef<Array<HTMLCanvasElement | null>>([]);
@@ -183,6 +209,10 @@ export function TrainingPdfPageViewer({
           await renderTask.promise.finally(() => {
             page.cleanup?.();
           });
+
+          if (isActive && watermarkText) {
+            drawWatermark(context, canvas.width, canvas.height, watermarkText);
+          }
         },
       ),
     )
@@ -204,7 +234,7 @@ export function TrainingPdfPageViewer({
         task.cancel?.();
       });
     };
-  }, [containerWidth, pageCount, pdfDocument]);
+  }, [containerWidth, pageCount, pdfDocument, watermarkText]);
 
   return (
     <div

@@ -13,7 +13,16 @@ type OrderBonDownloadTarget = {
 
 type OrderBonDownloadOptions = {
   pendingWindow?: Window | null;
+  preferShare?: boolean;
 };
+
+export type OrderBonDownloadResult =
+  | 'shared'
+  | 'cancelled'
+  | 'unsupported'
+  | 'downloaded'
+  | 'opened'
+  | 'failed';
 
 function buildFallbackOrderBonFileName(order: OrderBonDownloadTarget): string {
   return `${order.number ?? `order-${order.id}`}.pdf`;
@@ -160,7 +169,7 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
   return async function downloadOrderBon(
     order: OrderBonDownloadTarget,
     options?: OrderBonDownloadOptions,
-  ) {
+  ): Promise<OrderBonDownloadResult> {
     const url = buildOrderBonUrl(order.id);
     const fallbackFileName = buildFallbackOrderBonFileName(order);
 
@@ -173,7 +182,7 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
           language.text.orders.downloadBonError,
         );
       }
-      return;
+      return 'failed';
     }
 
     if (Platform.OS === 'web') {
@@ -196,7 +205,7 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
           fallbackFileName,
         );
         const blob = await response.blob();
-        const shareResult = options?.pendingWindow
+        const shareResult = options?.preferShare
           ? await shareOrderBonFile(blob, downloadFileName)
           : 'unsupported';
 
@@ -204,7 +213,7 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
           if (pendingWindow && !pendingWindow.closed) {
             pendingWindow.close();
           }
-          return;
+          return shareResult;
         }
 
         const objectUrl = window.URL.createObjectURL(blob);
@@ -217,9 +226,11 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
 
         if (pendingWindow && !pendingWindow.closed) {
           pendingWindow.location.href = objectUrl;
+          return 'opened';
         }
 
         scheduleObjectUrlRevoke(objectUrl, 60000);
+        return 'downloaded';
       } catch {
         if (pendingWindow && !pendingWindow.closed) {
           pendingWindow.close();
@@ -231,9 +242,9 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
         ) {
           window.alert(language.text.orders.downloadBonError);
         }
-      }
 
-      return;
+        return 'failed';
+      }
     }
 
     try {
@@ -271,15 +282,17 @@ export function useOrderBonDownloader(accessToken: string | null | undefined) {
           mimeType: 'application/pdf',
           UTI: 'com.adobe.pdf',
         });
-        return;
+        return 'shared';
       }
 
       await Linking.openURL(fileUri);
+      return 'opened';
     } catch {
       Alert.alert(
         language.text.orders.downloadBonButton,
         language.text.orders.downloadBonError,
       );
+      return 'failed';
     }
   };
 }

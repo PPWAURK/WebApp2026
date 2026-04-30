@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
+import { useAuth } from '../../hooks/useAuth';
 import type { AppText } from '../../locales/translations';
 import type { LibraryFileItem } from '../../services/uploadsApi';
 import { TrainingPdfPageViewer } from './TrainingPdfPageViewer';
@@ -24,9 +25,14 @@ export function TrainingDocumentPreview({
   previewFrameHeight,
   showTabletPageControls = false,
 }: TrainingDocumentPreviewProps) {
+  const { session } = useAuth();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [previewPage, setPreviewPage] = useState(1);
   const [pageCount, setPageCount] = useState<number | null>(null);
+
+  const watermarkText = session?.user
+    ? `${session.user.name ?? ''}  ${session.user.email}  ${new Date().toISOString().slice(0, 10)}`
+    : undefined;
 
   useEffect(() => {
     setPreviewPage(1);
@@ -147,6 +153,7 @@ export function TrainingDocumentPreview({
                 loadingLabel={text.training.loadingLibrary}
                 errorLabel={text.training.loadError}
                 onDocumentLoadSuccess={setPageCount}
+                watermarkText={watermarkText}
               />
             ) : webPreviewLoading ? (
               <View style={styles.previewEmptyWrap}>
@@ -208,6 +215,7 @@ export function TrainingDocumentPreview({
                   loadingLabel={text.training.loadingLibrary}
                   errorLabel={text.training.loadError}
                   onDocumentLoadSuccess={setPageCount}
+                  watermarkText={watermarkText}
                 />
               ) : webPreviewLoading ? (
                 <View style={styles.previewEmptyWrap}>

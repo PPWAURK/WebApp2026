@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { ReactNode } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { COLORS } from '../../constants/colors';
 import type { AppText } from '../../locales/translations';
@@ -11,6 +12,28 @@ import {
   type SupplierOrderGroup,
 } from './orderHistory.shared';
 import { styles } from './OrderHistoryPage.styles';
+
+function ChipLayout({
+  wrap,
+  children,
+}: {
+  wrap: boolean;
+  children: ReactNode;
+}) {
+  if (wrap) {
+    return <View style={styles.chipWrap}>{children}</View>;
+  }
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.chipRail}
+    >
+      {children}
+    </ScrollView>
+  );
+}
 
 type OrderHistoryToolbarProps = {
   text: AppText;
@@ -64,11 +87,7 @@ export function OrderHistoryToolbar({
           <Text style={styles.toolSectionTitle}>
             {text.orders.restaurantFilterTitle}
           </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipRail}
-          >
+          <ChipLayout wrap={!isMediumScreen}>
             {canSelectAllRestaurants ? (
               <Pressable
                 style={[
@@ -120,7 +139,7 @@ export function OrderHistoryToolbar({
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </ChipLayout>
         </View>
       ) : null}
 
@@ -129,11 +148,7 @@ export function OrderHistoryToolbar({
           <Text style={styles.toolSectionTitle}>
             {text.orders.supplierTabsTitle}
           </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipRail}
-          >
+          <ChipLayout wrap={!isMediumScreen}>
             {groupedOrders.map((supplierGroup) => {
               const isActive = supplierGroup.supplierKey === selectedSupplierKey;
 
@@ -176,7 +191,7 @@ export function OrderHistoryToolbar({
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </ChipLayout>
         </View>
       ) : null}
 
@@ -248,6 +263,7 @@ export function OrderHistoryToolbar({
                   key={`sort-${sortOption.key}`}
                   style={[
                     styles.filterChip,
+                    !isMediumScreen && styles.sortFilterChipCompact,
                     isActive && styles.filterChipActive,
                   ]}
                   onPress={() => onChangeSort(sortOption.key)}
@@ -258,8 +274,10 @@ export function OrderHistoryToolbar({
                   <Text
                     style={[
                       styles.filterChipText,
+                      !isMediumScreen && styles.sortFilterChipTextCompact,
                       isActive && styles.filterChipTextActive,
                     ]}
+                    numberOfLines={isMediumScreen ? 1 : 2}
                   >
                     {text.orders[sortOption.textKey]}
                   </Text>

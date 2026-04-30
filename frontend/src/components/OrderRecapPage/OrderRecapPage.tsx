@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import {
   Image,
+  Modal,
   Pressable,
   ScrollView,
   Text,
@@ -23,9 +24,12 @@ type OrderRecapPageProps = {
   isSubmittingOrder: boolean;
   submitError: string | null;
   latestCreatedOrder: { id: number; number: string; bonUrl: string } | null;
+  sharePromptVisible: boolean;
   onDeliveryDateChange: (value: string) => void;
   onSubmitOrder: () => void;
+  onShareOrderBon: (order: { id: number; bonUrl: string }) => void;
   onDownloadOrderBon: (order: { id: number; bonUrl: string }) => void;
+  onCloseSharePrompt: () => void;
   onBack: () => void;
 };
 
@@ -42,9 +46,12 @@ export function OrderRecapPage({
   isSubmittingOrder,
   submitError,
   latestCreatedOrder,
+  sharePromptVisible,
   onDeliveryDateChange,
   onSubmitOrder,
+  onShareOrderBon,
   onDownloadOrderBon,
+  onCloseSharePrompt,
   onBack,
 }: OrderRecapPageProps) {
   const { width } = useWindowDimensions();
@@ -71,6 +78,54 @@ export function OrderRecapPage({
 
   return (
     <View style={styles.pageRoot}>
+      <Modal
+        visible={sharePromptVisible && latestCreatedOrder !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={onCloseSharePrompt}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalIconWrap}>
+                <Ionicons name="paper-plane-outline" size={22} color="#ab1e24" />
+              </View>
+              <View style={styles.modalCopy}>
+                <Text style={styles.modalTitle}>
+                  {text.orders.sharePromptTitle}
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  {text.orders.sharePromptSubtitle}
+                </Text>
+              </View>
+            </View>
+
+            {latestCreatedOrder ? (
+              <Text style={styles.modalMeta}>
+                {text.orders.orderNumberLabel}: {latestCreatedOrder.number}
+              </Text>
+            ) : null}
+
+            {latestCreatedOrder ? (
+              <Pressable
+                style={styles.primaryButton}
+                onPress={() => onShareOrderBon(latestCreatedOrder)}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {text.orders.shareToWechatButton}
+                </Text>
+              </Pressable>
+            ) : null}
+
+            <Pressable style={styles.secondaryButton} onPress={onCloseSharePrompt}>
+              <Text style={styles.secondaryButtonText}>
+                {text.orders.shareLaterButton}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       <ScrollView
         style={styles.pageScroll}
         contentContainerStyle={styles.pageContent}
@@ -315,8 +370,8 @@ export function OrderRecapPage({
                         >
                           <Text style={styles.productTitle}>{productName}</Text>
                           {item.specification ? (
-                            <Text style={styles.docItemMeta}>
-                              {text.orders.specificationLabel}: {item.specification}
+                            <Text style={styles.productSpecificationText}>
+                              {item.specification}
                             </Text>
                           ) : null}
                           <Text style={styles.docItemMeta}>

@@ -28,6 +28,14 @@ type OrderHistoryAnalyticsProps = {
   onRefresh: () => void;
 };
 
+function getComparisonBarWidth(value: number, max: number): `${number}%` {
+  if (value <= 0 || max <= 0) {
+    return '0%';
+  }
+
+  return `${(value / max) * 100}%`;
+}
+
 export function OrderHistoryAnalytics({
   text,
   analytics,
@@ -248,16 +256,23 @@ export function OrderHistoryAnalytics({
                     {analytics.current.totalItems}
                   </Text>
                 </View>
-                <View style={styles.comparisonTrack}>
-                  <View
-                    style={[
-                      styles.comparisonBarCurrent,
-                      {
-                        width: `${(analytics.current.totalItems / comparisonMax) * 100}%`,
-                      },
-                    ]}
-                  />
-                </View>
+                {analytics.current.totalItems > 0 ? (
+                  <View style={styles.comparisonTrack}>
+                    <View
+                      style={[
+                        styles.comparisonBarCurrent,
+                        {
+                          width: getComparisonBarWidth(
+                            analytics.current.totalItems,
+                            comparisonMax,
+                          ),
+                        },
+                      ]}
+                    />
+                  </View>
+                ) : (
+                  <View style={styles.comparisonTrackEmpty} />
+                )}
               </View>
 
               <View style={styles.comparisonBlock}>
@@ -269,16 +284,23 @@ export function OrderHistoryAnalytics({
                     {analytics.previous.totalItems}
                   </Text>
                 </View>
-                <View style={styles.comparisonTrack}>
-                  <View
-                    style={[
-                      styles.comparisonBarPrevious,
-                      {
-                        width: `${(analytics.previous.totalItems / comparisonMax) * 100}%`,
-                      },
-                    ]}
-                  />
-                </View>
+                {analytics.previous.totalItems > 0 ? (
+                  <View style={styles.comparisonTrack}>
+                    <View
+                      style={[
+                        styles.comparisonBarPrevious,
+                        {
+                          width: getComparisonBarWidth(
+                            analytics.previous.totalItems,
+                            comparisonMax,
+                          ),
+                        },
+                      ]}
+                    />
+                  </View>
+                ) : (
+                  <View style={styles.comparisonTrackEmpty} />
+                )}
               </View>
 
               <Text style={styles.comparisonDelta}>

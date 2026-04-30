@@ -192,6 +192,12 @@ export const styles = StyleSheet.create({
     gap: 8,
     paddingRight: 10,
   },
+  chipWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   supplierChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -271,6 +277,14 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
+  sortFilterChipCompact: {
+    width: '47%',
+    maxWidth: '47%',
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
   filterChipActive: {
     borderColor: BRAND,
     backgroundColor: BRAND_SOFT,
@@ -279,6 +293,10 @@ export const styles = StyleSheet.create({
     color: TEXT,
     fontFamily: 'Manrope_700Bold',
     fontSize: 12,
+  },
+  sortFilterChipTextCompact: {
+    textAlign: 'center',
+    lineHeight: 16,
   },
   filterChipTextActive: {
     color: BRAND,
@@ -436,14 +454,15 @@ export const styles = StyleSheet.create({
     backgroundColor: '#f3e3e1',
     overflow: 'hidden',
   },
+  comparisonTrackEmpty: {
+    height: 10,
+  },
   comparisonBarCurrent: {
     height: '100%',
-    minWidth: 8,
     backgroundColor: BRAND,
   },
   comparisonBarPrevious: {
     height: '100%',
-    minWidth: 8,
     backgroundColor: '#d8a4a7',
   },
   comparisonDelta: {

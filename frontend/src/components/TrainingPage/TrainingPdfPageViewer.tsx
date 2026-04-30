@@ -5,6 +5,7 @@ type TrainingPdfPageViewerProps = {
   loadingLabel: string;
   errorLabel: string;
   onDocumentLoadSuccess?: (numPages: number) => void;
+  watermarkText?: string;
 };
 
 export function TrainingPdfPageViewer({
@@ -14,6 +15,7 @@ export function TrainingPdfPageViewer({
   loadingLabel,
   errorLabel,
   onDocumentLoadSuccess,
+  watermarkText,
 }: TrainingPdfPageViewerProps) {
   void src;
   void pageNumber;
@@ -21,6 +23,7 @@ export function TrainingPdfPageViewer({
   void loadingLabel;
   void errorLabel;
   void onDocumentLoadSuccess;
+  void watermarkText;
 
   return null;
 }

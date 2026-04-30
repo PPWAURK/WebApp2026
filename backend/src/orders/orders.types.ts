@@ -6,7 +6,6 @@ export type OrdersRequestContext = {
 export type OrderDocumentItem = {
   nameFr: string;
   nameZh: string;
-  specification: string;
   unit: string;
   quantity: number;
   unitPrice: number;

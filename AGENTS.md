@@ -757,3 +757,53 @@
 2. 为什么无法避免
 3. 风险是什么
 4. 后续可如何拆分或修正
+
+<claude-mem-context>
+# Memory Context
+
+# [WebApp2026] recent context, 2026-04-30 9:19am GMT+2
+
+Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision
+Format: ID TIME TYPE TITLE
+Fetch details: get_observations([IDs]) | Search: mem-search skill
+
+Stats: 33 obs (7,476t read) | 546,892t work | 99% savings
+
+### Apr 28, 2026
+133 1:51p 🔵 下单页面 (Order Placement Page) — codebase structure confirmed
+134 " 🟣 Order notice box added to ProductGrid in SupplierManagementPage
+135 " ✅ i18n translations added for order notice box (FR + ZH)
+136 1:52p 🔵 Large batch of uncommitted changes across order, training, and news UI
+137 " 🟣 WeChat share prompt translations added for order PDF sharing flow
+138 " 🟣 News feed expand/collapse button translations added (FR + ZH)
+139 " 🟣 orderNoticeBox styles implemented in SupplierManagementPage.styles.ts
+140 1:54p 🔵 Supplier access control — ORDER_ACCESS_LEVELS gates ordering feature by employee level
+141 " 🟣 orderNotice field added to Fournisseur schema — per-supplier custom order notice
+142 " 🟣 Backend orderNotice fully wired into suppliers service and DTO
+143 1:55p 🟣 Frontend suppliersApi and ProductGrid wired to dynamic per-supplier orderNotice
+145 1:56p ⚖️ Order notice moved from SupplierManagementPage to OrdersPage (下单页面)
+146 " 🔵 orders.service.ts fetches fournisseur without explicit select — orderNotice auto-included post-migration
+147 1:57p 🔴 updateSupplierOrderSettings uses undefined-guard pattern to preserve existing orderNotice
+### Apr 29, 2026
+148 9:55a ⚖️ 产品下架功能替代删除方案讨论
+149 " ⚖️ 产品删除改为下架功能 — 设计方向确立
+150 " ⚖️ 商品下架功能取代删除 — 设计方向确立
+151 9:56a 🔵 商品删除功能现有架构全貌 — 前后端代码路径梳理
+152 " ⚖️ 商品下架功能取代删除功能的需求提出
+153 9:57a 🔵 产品删除受订单约束 — 计划改为下架功能
+154 9:58a 🔵 商品删除限制问题 — 计划改为下架功能
+155 9:59a 🟣 商品上下架功能 — 后端完整实现
+156 10:00a 🟣 商品上下架功能 — 前端完整实现
+157 " ✅ 商品上下架多语言文案新增 — 中法双语完整覆盖
+158 10:01a ✅ 商品上下架功能 — 后端单元测试新增
+159 10:02a ✅ 商品上下架功能验证通过 — 测试、类型检查、Prisma 生成均成功
+161 " 🔵 前端 TypeScript 类型检查发现预存在错误 — 与本次功能无关
+162 10:03a 🟣 商品上下架功能全部完成 — 四阶段实现计划标记完毕
+163 10:05a 🔵 WebApp2026 仓库有两个远端 — GitHub 和 GitLab 双推送
+164 " 🟣 商品上下架功能提交到 main 分支 — commit 518625a
+165 10:09a 🔵 后端 ESLint 发现 3 处提交后遗留错误需修复
+166 " 🔴 后端 lint 错误修复 — 移除未使用导入和 prettier 格式修正
+167 10:12a ✅ Git push — frontend order/training/dashboard changes staged
+
+Access 547k tokens of past work via get_observations([IDs]) or mem-search skill.
+</claude-mem-context>

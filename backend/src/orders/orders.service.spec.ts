@@ -288,7 +288,6 @@ describe('OrdersService', () => {
       expect.objectContaining({
         items: [
           expect.objectContaining({
-            specification: '2kg',
             unit: 'box',
             unitPrice: 20,
             lineTotal: 40,

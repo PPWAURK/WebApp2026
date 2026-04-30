@@ -1699,6 +1699,17 @@ export const styles = StyleSheet.create({
     backgroundColor: '#fffaf8',
     paddingHorizontal: 10,
     paddingVertical: 9,
+    gap: 8,
+  },
+  newsPostExpandButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+  },
+  newsPostExpandButtonText: {
+    color: '#ab1e24',
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+    lineHeight: 16,
   },
   newsPostFooterBlock: {
     gap: 6,

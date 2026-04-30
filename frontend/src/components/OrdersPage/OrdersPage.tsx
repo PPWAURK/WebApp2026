@@ -49,10 +49,9 @@ function buildOrderItemKey(productId: number, specificationSlot: number | null) 
 }
 
 function formatSpecificationLabel(
-  text: AppText,
   specification: ProductSpecificationItem,
-) {
-  return specification.specification ?? text.orders.defaultSpecificationLabel;
+): string | null {
+  return specification.specification?.trim() || null;
 }
 
 type ProductCardProps = {
@@ -62,7 +61,7 @@ type ProductCardProps = {
   quantities: Record<string, number>;
   text: AppText;
   useSingleColumnGrid: boolean;
-  onChangeQuantity: (orderItemKey: string, delta: number) => void;
+  onSetQuantity: (orderItemKey: string, nextQuantity: number) => void;
 };
 
 const ProductCard = memo(function ProductCard({
@@ -72,13 +71,16 @@ const ProductCard = memo(function ProductCard({
   quantities,
   text,
   useSingleColumnGrid,
-  onChangeQuantity,
+  onSetQuantity,
 }: ProductCardProps) {
   const productName =
     language === 'zh' ? product.nameZh : (product.nameFr ?? product.nameZh);
   const productGridItemStyle = useSingleColumnGrid
     ? styles.productGridItemSmall
     : styles.productGridItem;
+  const specificationLabels = product.specifications
+    .map((specification) => formatSpecificationLabel(specification))
+    .filter((label): label is string => label !== null);
 
   return (
     <View style={[styles.productCard, productGridItemStyle]}>
@@ -131,15 +133,20 @@ const ProductCard = memo(function ProductCard({
             isSmallScreen && styles.productInfoColumnSmall,
           ]}
         >
-          <Text style={styles.productTitle}>{productName}</Text>
-          <Text style={styles.docItemMeta}>
-            {text.orders.specificationCountLabel}: {product.specifications.length}
-          </Text>
-          {product.requiresSpecificationSelection ? (
-            <Text style={styles.docItemMeta}>
-              {text.orders.multiSpecificationHint}
-            </Text>
-          ) : null}
+          <View style={styles.productTitleBlock}>
+            <Text style={styles.productTitle}>{productName}</Text>
+            <View style={styles.productSpecificationList}>
+              {specificationLabels.map((label, index) => (
+                <Text
+                  key={`${product.id}-specification-label-${index}`}
+                  style={styles.productSpecificationText}
+                  numberOfLines={1}
+                >
+                  {label}
+                </Text>
+              ))}
+            </View>
+          </View>
         </View>
       </View>
 
@@ -147,7 +154,7 @@ const ProductCard = memo(function ProductCard({
         {product.specifications.map((specification) => {
           const orderItemKey = buildOrderItemKey(product.id, specification.slot);
           const quantity = quantities[orderItemKey] ?? 0;
-          const specificationLabel = formatSpecificationLabel(text, specification);
+          const specificationLabel = formatSpecificationLabel(specification);
 
           return (
             <View
@@ -157,55 +164,65 @@ const ProductCard = memo(function ProductCard({
                 quantity > 0 && styles.specificationCardActive,
               ]}
             >
-              <View style={styles.specificationCopy}>
-                <Text style={styles.specificationValue}>
-                  {specificationLabel}
-                </Text>
-                <Text style={styles.docItemMeta}>
-                  {text.orders.unitLabel}:{' '}
-                  {specification.unit ?? text.orders.unitNotAvailable}
-                </Text>
-                <Text style={styles.priceText}>
-                  {text.orders.priceLabel}:{' '}
-                  {specification.priceHt === null
-                    ? text.orders.priceNotAvailable
-                    : formatAmount(specification.priceHt)}
-                </Text>
+              <View style={styles.specificationMetaRow}>
+                <View style={styles.specificationMetaItem}>
+                  <Text style={styles.specificationMetaLabel}>
+                    {text.orders.unitLabel}
+                  </Text>
+                  <Text style={styles.specificationMetaValue}>
+                    {specification.unit ?? text.orders.unitNotAvailable}
+                  </Text>
+                </View>
+                <View style={styles.specificationMetaItem}>
+                  <Text style={styles.specificationMetaLabel}>
+                    {text.orders.priceLabel}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.specificationMetaValue,
+                      styles.specificationPriceValue,
+                    ]}
+                  >
+                    {specification.priceHt === null
+                      ? text.orders.priceNotAvailable
+                      : formatAmount(specification.priceHt)}
+                  </Text>
+                </View>
               </View>
 
-              <View style={styles.quantityBar}>
-                <Pressable
-                  style={styles.quantityButton}
-                  onPress={() => onChangeQuantity(orderItemKey, -1)}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    language === 'zh'
-                      ? `减少${productName}${specificationLabel}数量`
-                      : `Réduire la quantité de ${productName} ${specificationLabel}`
-                  }
-                >
-                  <Text style={styles.quantityButtonText}>-</Text>
-                </Pressable>
-
-                <View style={styles.quantityValuePill}>
-                  <Text style={styles.quantityValueLabel}>
-                    {text.orders.quantityLabel}
+              <View style={styles.quantitySection}>
+                <Text style={styles.quantityLabel}>
+                  {text.orders.quantityLabel}
+                </Text>
+                <View style={styles.quantityBar}>
+                  <View style={styles.quantityInputWrap}>
+                    <TextInput
+                      style={styles.quantityInput}
+                      value={String(quantity)}
+                      onChangeText={(value) => {
+                        const digitsOnly = value.replace(/\D+/g, '');
+                        const nextQuantity =
+                          digitsOnly.length > 0 ? Number(digitsOnly) : 0;
+                        onSetQuantity(orderItemKey, nextQuantity);
+                      }}
+                      keyboardType="number-pad"
+                      inputMode="numeric"
+                      selectTextOnFocus
+                      maxLength={4}
+                      textAlign="center"
+                      accessibilityLabel={
+                        language === 'zh'
+                          ? `${productName}${specificationLabel ?? ''}数量输入框`
+                          : `Champ de quantité pour ${productName} ${
+                              specificationLabel ?? ''
+                            }`
+                      }
+                    />
+                  </View>
+                  <Text style={styles.quantityUnitText}>
+                    {specification.unit ?? text.orders.unitNotAvailable}
                   </Text>
-                  <Text style={styles.quantityValueText}>{quantity}</Text>
                 </View>
-
-                <Pressable
-                  style={styles.quantityButton}
-                  onPress={() => onChangeQuantity(orderItemKey, 1)}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    language === 'zh'
-                      ? `增加${productName}${specificationLabel}数量`
-                      : `Augmenter la quantité de ${productName} ${specificationLabel}`
-                  }
-                >
-                  <Text style={styles.quantityButtonText}>+</Text>
-                </Pressable>
               </View>
             </View>
           );
@@ -312,10 +329,9 @@ export function OrdersPage({
     suppliers,
   ]);
 
-  const changeQuantity = useCallback(
-    (orderItemKey: string, delta: number) => {
-      const next = (quantities[orderItemKey] ?? 0) + delta;
-      const clamped = Math.max(0, next);
+  const setQuantity = useCallback(
+    (orderItemKey: string, nextQuantity: number) => {
+      const clamped = Math.max(0, Math.floor(nextQuantity));
       onQuantitiesChange({
         ...quantities,
         [orderItemKey]: clamped,
@@ -788,7 +804,7 @@ export function OrdersPage({
                       text={text}
                       isSmallScreen={isSmallScreen}
                       useSingleColumnGrid={useSingleColumnGrid}
-                      onChangeQuantity={changeQuantity}
+                      onSetQuantity={setQuantity}
                     />
                   );
                 })}

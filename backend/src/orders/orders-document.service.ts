@@ -312,12 +312,10 @@ export class OrdersDocumentService {
     const left = doc.page.margins.left;
     const contentWidth =
       doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const colProduct = Math.floor(contentWidth * 0.38);
-    const colSpecification = Math.floor(contentWidth * 0.18);
+    const colProduct = Math.floor(contentWidth * 0.52);
     const colOrderUnit = Math.floor(contentWidth * 0.12);
     const colQty = Math.floor(contentWidth * 0.1);
-    const colUnitPrice =
-      contentWidth - colProduct - colSpecification - colOrderUnit - colQty;
+    const colUnitPrice = contentWidth - colProduct - colOrderUnit - colQty;
     const rowHeight = 38;
 
     const drawHeaderRow = () => {
@@ -330,32 +328,18 @@ export class OrdersDocumentService {
         .fillColor(this.pdfColors.white)
         .fontSize(10)
         .text('Produit FR / ZH', left + 8, y + 7, { width: colProduct - 12 })
-        .text('Specification', left + colProduct + 4, y + 7, {
-          width: colSpecification - 8,
-          align: 'center',
-        })
-        .text('Unite', left + colProduct + colSpecification + 4, y + 7, {
+        .text('Unite', left + colProduct + 4, y + 7, {
           width: colOrderUnit - 8,
           align: 'center',
         })
-        .text(
-          'Qte',
-          left + colProduct + colSpecification + colOrderUnit + 4,
-          y + 7,
-          {
-            width: colQty - 8,
-            align: 'center',
-          },
-        )
-        .text(
-          'PU HT',
-          left + colProduct + colSpecification + colOrderUnit + colQty + 4,
-          y + 7,
-          {
-            width: colUnitPrice - 8,
-            align: 'right',
-          },
-        );
+        .text('Qte', left + colProduct + colOrderUnit + 4, y + 7, {
+          width: colQty - 8,
+          align: 'center',
+        })
+        .text('PU HT', left + colProduct + colOrderUnit + colQty + 4, y + 7, {
+          width: colUnitPrice - 8,
+          align: 'right',
+        });
       doc.y = y + rowHeight;
     };
 
@@ -389,10 +373,6 @@ export class OrdersDocumentService {
         this.sanitizeLabel(item.nameZh),
         44,
       );
-      const productSpecification = this.truncateText(
-        this.sanitizeLabel(item.specification),
-        26,
-      );
       const orderUnit = this.sanitizeLabel(item.unit?.trim() || '-');
 
       if (isZeroQuantityRow || index % 2 === 1) {
@@ -420,22 +400,12 @@ export class OrdersDocumentService {
           width: colProduct - 12,
         });
 
-      doc.font(this.resolveFontForText(productSpecification));
-
-      doc
-        .fillColor(primaryTextColor)
-        .fontSize(9)
-        .text(productSpecification, left + colProduct + 4, y + 13, {
-          width: colSpecification - 8,
-          align: 'center',
-        });
-
       doc.font(this.resolveFontForText(orderUnit));
 
       doc
         .fillColor(primaryTextColor)
         .fontSize(10)
-        .text(orderUnit, left + colProduct + colSpecification + 4, y + 13, {
+        .text(orderUnit, left + colProduct + 4, y + 13, {
           width: colOrderUnit - 8,
           align: 'center',
         });
@@ -446,7 +416,7 @@ export class OrdersDocumentService {
         .fontSize(10)
         .text(
           String(item.quantity),
-          left + colProduct + colSpecification + colOrderUnit + 4,
+          left + colProduct + colOrderUnit + 4,
           y + 13,
           {
             width: colQty - 8,
@@ -455,7 +425,7 @@ export class OrdersDocumentService {
         )
         .text(
           item.unitPrice.toFixed(2),
-          left + colProduct + colSpecification + colOrderUnit + colQty + 4,
+          left + colProduct + colOrderUnit + colQty + 4,
           y + 13,
           {
             width: colUnitPrice - 8,
