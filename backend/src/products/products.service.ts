@@ -8,8 +8,9 @@ import { PrismaService } from '../prisma/prisma.service';
 
 type ProductPayload = {
   supplierId: number;
+  categoryId?: number | null;
   reference?: string | null;
-  category: string;
+  category?: string;
   nameZh: string;
   nameFr?: string | null;
   specification?: string | null;
@@ -26,6 +27,7 @@ type ProductPayload = {
 
 type UpdateProductPayload = {
   supplierId?: number;
+  categoryId?: number | null;
   reference?: string | null;
   category?: string;
   nameZh?: string;
@@ -49,6 +51,8 @@ type ListProductsOptions = {
 type ProductRecord = {
   id: bigint;
   supplierId: number;
+  productCategoryId: number | null;
+  productCategory?: ProductCategoryRecord | null;
   reference: string | null;
   categorie: string;
   nomCn: string;
@@ -66,6 +70,39 @@ type ProductRecord = {
   isActive: boolean;
 };
 
+type ProductCategoryRecord = {
+  id: number;
+  supplierId: number;
+  nameZh: string;
+  nameFr: string;
+  sortOrder: number;
+  isPreset: boolean;
+};
+
+type ProductCategoryPayload = {
+  supplierId: number;
+  nameZh: string;
+  nameFr: string;
+};
+
+type UpdateProductCategoryPayload = {
+  nameZh?: string;
+  nameFr?: string;
+  sortOrder?: number;
+};
+
+const PRODUCT_CATEGORY_PRESETS = [
+  { nameZh: '蔬菜水果', nameFr: 'Fruits & legumes', sortOrder: 10 },
+  { nameZh: '肉类海鲜', nameFr: 'Viandes & poissons', sortOrder: 20 },
+  { nameZh: '冷冻冷藏', nameFr: 'Surgeles & frais', sortOrder: 30 },
+  { nameZh: '干货粮油', nameFr: 'Epicerie seche', sortOrder: 40 },
+  { nameZh: '调料酱料', nameFr: 'Condiments', sortOrder: 50 },
+  { nameZh: '饮料酒水', nameFr: 'Boissons', sortOrder: 60 },
+  { nameZh: '包材耗材', nameFr: 'Emballages', sortOrder: 70 },
+  { nameZh: '清洁用品', nameFr: 'Hygiene', sortOrder: 80 },
+  { nameZh: '其他', nameFr: 'Autres', sortOrder: 90 },
+] as const;
+
 @Injectable()
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -75,12 +112,156 @@ export class ProductsService {
   async listProducts(options: ListProductsOptions = {}) {
     const products = await this.prisma.produit.findMany({
       where: options.includeInactive ? undefined : { isActive: true },
+      include: {
+        productCategory: true,
+      },
       orderBy: {
         id: 'asc',
       },
     });
 
     return products.map((product) => this.serializeProduct(product));
+  }
+
+  async listProductCategories(supplierId: number) {
+    if (!Number.isInteger(supplierId) || supplierId <= 0) {
+      throw new BadRequestException('supplierId must be a positive integer');
+    }
+
+    await this.ensureSupplierExists(supplierId);
+    await this.ensureDefaultCategoriesForSupplier(supplierId);
+
+    const categories = await this.prisma.productCategory.findMany({
+      where: { supplierId },
+      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    });
+
+    return categories.map((category) =>
+      this.serializeProductCategory(category),
+    );
+  }
+
+  async createProductCategory(payload: ProductCategoryPayload) {
+    if (!Number.isInteger(payload.supplierId) || payload.supplierId <= 0) {
+      throw new BadRequestException('supplierId must be a positive integer');
+    }
+
+    await this.ensureSupplierExists(payload.supplierId);
+
+    const nameZh = payload.nameZh.trim();
+    const nameFr = payload.nameFr.trim();
+    if (!nameZh || !nameFr) {
+      throw new BadRequestException('category names cannot be empty');
+    }
+
+    const lastCategory = await this.prisma.productCategory.findFirst({
+      where: { supplierId: payload.supplierId },
+      orderBy: { sortOrder: 'desc' },
+      select: { sortOrder: true },
+    });
+
+    const created = await this.prisma.productCategory.create({
+      data: {
+        supplierId: payload.supplierId,
+        nameZh,
+        nameFr,
+        sortOrder: (lastCategory?.sortOrder ?? 0) + 10,
+        isPreset: false,
+      },
+    });
+
+    return this.serializeProductCategory(created);
+  }
+
+  async updateProductCategory(
+    categoryId: number,
+    payload: UpdateProductCategoryPayload,
+  ) {
+    if (!Number.isInteger(categoryId) || categoryId <= 0) {
+      throw new BadRequestException('categoryId must be a positive integer');
+    }
+
+    const existing = await this.prisma.productCategory.findUnique({
+      where: { id: categoryId },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Product category not found');
+    }
+
+    const data: {
+      nameZh?: string;
+      nameFr?: string;
+      sortOrder?: number;
+    } = {};
+
+    if (payload.nameZh !== undefined) {
+      const nameZh = payload.nameZh.trim();
+      if (!nameZh) {
+        throw new BadRequestException('nameZh cannot be empty');
+      }
+      data.nameZh = nameZh;
+    }
+
+    if (payload.nameFr !== undefined) {
+      const nameFr = payload.nameFr.trim();
+      if (!nameFr) {
+        throw new BadRequestException('nameFr cannot be empty');
+      }
+      data.nameFr = nameFr;
+    }
+
+    if (payload.sortOrder !== undefined) {
+      if (!Number.isInteger(payload.sortOrder)) {
+        throw new BadRequestException('sortOrder must be an integer');
+      }
+      data.sortOrder = payload.sortOrder;
+    }
+
+    const updated = await this.prisma.productCategory.update({
+      where: { id: categoryId },
+      data,
+    });
+
+    if (data.nameZh !== undefined && data.nameZh !== existing.nameZh) {
+      await this.prisma.produit.updateMany({
+        where: { productCategoryId: categoryId },
+        data: { categorie: data.nameZh },
+      });
+    }
+
+    return this.serializeProductCategory(updated);
+  }
+
+  async deleteProductCategory(categoryId: number) {
+    if (!Number.isInteger(categoryId) || categoryId <= 0) {
+      throw new BadRequestException('categoryId must be a positive integer');
+    }
+
+    const existing = await this.prisma.productCategory.findUnique({
+      where: { id: categoryId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Product category not found');
+    }
+
+    const linkedProducts = await this.prisma.produit.count({
+      where: { productCategoryId: categoryId },
+    });
+
+    if (linkedProducts > 0) {
+      throw new BadRequestException(
+        'Product category cannot be deleted while products use it',
+      );
+    }
+
+    await this.prisma.productCategory.delete({
+      where: { id: categoryId },
+    });
+
+    return { success: true, id: categoryId };
   }
 
   async createProduct(payload: ProductPayload) {
@@ -90,10 +271,11 @@ export class ProductsService {
 
     await this.ensureSupplierExists(payload.supplierId);
 
-    const normalizedCategory = payload.category.trim();
-    if (!normalizedCategory) {
-      throw new BadRequestException('category cannot be empty');
-    }
+    const resolvedCategory = await this.resolveProductCategory({
+      category: payload.category,
+      categoryId: payload.categoryId,
+      supplierId: payload.supplierId,
+    });
 
     const normalizedNameZh = payload.nameZh.trim();
     if (!normalizedNameZh) {
@@ -105,8 +287,9 @@ export class ProductsService {
     const created = await this.prisma.produit.create({
       data: {
         supplierId: payload.supplierId,
+        productCategoryId: resolvedCategory.categoryId,
         reference: this.normalizeOptionalText(payload.reference),
-        categorie: normalizedCategory,
+        categorie: resolvedCategory.categoryName,
         nomCn: normalizedNameZh,
         designationFr: this.normalizeOptionalText(payload.nameFr),
         specification: this.normalizeOptionalText(payload.specification),
@@ -122,13 +305,15 @@ export class ProductsService {
       },
     });
 
-    return this.serializeProduct(created);
+    return this.serializeProduct(
+      await this.findProductForSerialization(Number(created.id)),
+    );
   }
 
   async updateProduct(productId: number, payload: UpdateProductPayload) {
     const existing = await this.prisma.produit.findUnique({
       where: { id: BigInt(productId) },
-      select: { id: true },
+      select: { id: true, supplierId: true },
     });
 
     if (!existing) {
@@ -137,6 +322,7 @@ export class ProductsService {
 
     const data: {
       supplierId?: number;
+      productCategoryId?: number | null;
       reference?: string | null;
       categorie?: string;
       nomCn?: string;
@@ -154,6 +340,7 @@ export class ProductsService {
     } = {};
 
     this.validateSpecificationPayload(payload);
+    const nextSupplierId = payload.supplierId ?? existing.supplierId;
 
     if (payload.supplierId !== undefined) {
       if (!Number.isInteger(payload.supplierId) || payload.supplierId <= 0) {
@@ -168,12 +355,15 @@ export class ProductsService {
       data.reference = this.normalizeOptionalText(payload.reference);
     }
 
-    if (payload.category !== undefined) {
-      if (!payload.category.trim()) {
-        throw new BadRequestException('category cannot be empty');
-      }
+    if (payload.categoryId !== undefined || payload.category !== undefined) {
+      const resolvedCategory = await this.resolveProductCategory({
+        category: payload.category,
+        categoryId: payload.categoryId,
+        supplierId: nextSupplierId,
+      });
 
-      data.categorie = payload.category.trim();
+      data.productCategoryId = resolvedCategory.categoryId;
+      data.categorie = resolvedCategory.categoryName;
     }
 
     if (payload.nameZh !== undefined) {
@@ -233,7 +423,9 @@ export class ProductsService {
       data,
     });
 
-    return this.serializeProduct(updated);
+    return this.serializeProduct(
+      await this.findProductForSerialization(Number(updated.id)),
+    );
   }
 
   async updateProductAvailability(productId: number, isActive: boolean) {
@@ -405,6 +597,73 @@ export class ProductsService {
     }
   }
 
+  private async ensureDefaultCategoriesForSupplier(supplierId: number) {
+    const existingCount = await this.prisma.productCategory.count({
+      where: { supplierId },
+    });
+
+    if (existingCount > 0) {
+      return;
+    }
+
+    await this.prisma.productCategory.createMany({
+      data: PRODUCT_CATEGORY_PRESETS.map((preset) => ({
+        supplierId,
+        nameZh: preset.nameZh,
+        nameFr: preset.nameFr,
+        sortOrder: preset.sortOrder,
+        isPreset: true,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  private async resolveProductCategory(input: {
+    supplierId: number;
+    categoryId?: number | null;
+    category?: string;
+  }): Promise<{ categoryId: number | null; categoryName: string }> {
+    if (input.categoryId !== undefined && input.categoryId !== null) {
+      const category = await this.prisma.productCategory.findUnique({
+        where: { id: input.categoryId },
+      });
+
+      if (!category || category.supplierId !== input.supplierId) {
+        throw new BadRequestException(
+          'categoryId must belong to the selected supplier',
+        );
+      }
+
+      return {
+        categoryId: category.id,
+        categoryName: category.nameZh,
+      };
+    }
+
+    const categoryName = input.category?.trim();
+    if (!categoryName) {
+      throw new BadRequestException('category cannot be empty');
+    }
+
+    return {
+      categoryId: null,
+      categoryName,
+    };
+  }
+
+  private async findProductForSerialization(productId: number) {
+    const product = await this.prisma.produit.findUnique({
+      where: { id: BigInt(productId) },
+      include: { productCategory: true },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    return product;
+  }
+
   private serializeProduct(product: ProductRecord) {
     const specificationSlots = [
       {
@@ -433,8 +692,12 @@ export class ProductsService {
     return {
       id: Number(product.id),
       supplierId: product.supplierId,
+      categoryId: product.productCategoryId,
       reference: product.reference,
       category: product.categorie,
+      categoryNameZh: product.productCategory?.nameZh ?? product.categorie,
+      categoryNameFr: product.productCategory?.nameFr ?? product.categorie,
+      categorySortOrder: product.productCategory?.sortOrder ?? null,
       nameZh: product.nomCn,
       nameFr: product.designationFr,
       specification: product.specification,
@@ -455,5 +718,16 @@ export class ProductsService {
 
   private serializeNullableDecimal(value: Prisma.Decimal | null) {
     return value === null ? null : Number(value);
+  }
+
+  private serializeProductCategory(category: ProductCategoryRecord) {
+    return {
+      id: category.id,
+      supplierId: category.supplierId,
+      nameZh: category.nameZh,
+      nameFr: category.nameFr,
+      sortOrder: category.sortOrder,
+      isPreset: category.isPreset,
+    };
   }
 }

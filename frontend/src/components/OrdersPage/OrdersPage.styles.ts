@@ -23,6 +23,7 @@ const WEB_INPUT_RESET = Platform.select({
 export const styles = StyleSheet.create({
   pageRoot: {
     flex: 1,
+    position: 'relative',
   },
   pageScroll: {
     flex: 1,
@@ -31,6 +32,10 @@ export const styles = StyleSheet.create({
     gap: 18,
     paddingBottom: 24,
   },
+  pageContentWithMobileSummary: {
+    gap: 10,
+    paddingBottom: 112,
+  },
   heroCard: {
     borderRadius: 28,
     borderWidth: 1,
@@ -38,6 +43,11 @@ export const styles = StyleSheet.create({
     backgroundColor: CARD,
     padding: 20,
     gap: 16,
+  },
+  mobileHeroCard: {
+    borderRadius: 18,
+    padding: 12,
+    gap: 8,
   },
   heroHeader: {
     flexDirection: 'row',
@@ -57,11 +67,19 @@ export const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 34,
   },
+  mobileTitle: {
+    fontSize: 22,
+    lineHeight: 27,
+  },
   subtitle: {
     color: MUTED,
     fontFamily: 'Manrope_400Regular',
     fontSize: 13,
     lineHeight: 19,
+  },
+  mobileSubtitle: {
+    fontSize: 12,
+    lineHeight: 17,
   },
   heroBadge: {
     maxWidth: '100%',
@@ -125,6 +143,9 @@ export const styles = StyleSheet.create({
     minWidth: 0,
     gap: 18,
   },
+  mobileContentStack: {
+    gap: 10,
+  },
   surfaceCard: {
     borderRadius: 26,
     borderWidth: 1,
@@ -132,6 +153,16 @@ export const styles = StyleSheet.create({
     backgroundColor: CARD,
     padding: 18,
     gap: 16,
+  },
+  mobileSurfaceCard: {
+    borderRadius: 18,
+    padding: 12,
+    gap: 10,
+  },
+  mobileFilterPanel: {
+    borderRadius: 18,
+    padding: 12,
+    gap: 10,
   },
   surfaceHeader: {
     flexDirection: 'row',
@@ -186,6 +217,10 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
+  mobileOrderNoticeBox: {
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
   surfaceCountPill: {
     minWidth: 44,
     alignItems: 'center',
@@ -212,6 +247,13 @@ export const styles = StyleSheet.create({
     backgroundColor: PANEL,
     padding: 14,
   },
+  mobileSupplierChip: {
+    minWidth: 132,
+    maxWidth: 190,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
   supplierCardActive: {
     borderColor: BRAND,
     backgroundColor: BRAND_SOFT,
@@ -228,6 +270,9 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 14,
   },
+  mobileSupplierChipText: {
+    fontSize: 12,
+  },
   supplierCardTitleActive: {
     color: BRAND,
   },
@@ -235,6 +280,13 @@ export const styles = StyleSheet.create({
     color: TEXT,
     fontFamily: 'Manrope_700Bold',
     fontSize: 16,
+  },
+  mobileSupplierChipCount: {
+    fontSize: 13,
+  },
+  mobileChipScrollerContent: {
+    gap: 8,
+    paddingRight: 4,
   },
   supplierCardCountActive: {
     color: BRAND,
@@ -273,6 +325,11 @@ export const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     paddingHorizontal: 10,
     paddingVertical: 7,
+  },
+  mobileCategoryChip: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
   },
   categoryChipActive: {
     borderColor: BRAND,
@@ -323,6 +380,11 @@ export const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
+  mobileProductGrid: {
+    flexDirection: 'column',
+    flexWrap: 'nowrap',
+    gap: 8,
+  },
   listBlock: {
     gap: 12,
   },
@@ -339,6 +401,15 @@ export const styles = StyleSheet.create({
     backgroundColor: PANEL,
     padding: 14,
     gap: 12,
+  },
+  mobileProductCard: {
+    width: '100%',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: PANEL,
+    padding: 10,
+    gap: 8,
   },
   productCardHeader: {
     gap: 8,
@@ -378,6 +449,37 @@ export const styles = StyleSheet.create({
   productInfoColumnSmall: {
     width: '100%',
   },
+  mobileProductHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  mobileProductTitleColumn: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  mobileProductNameRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  mobileCartonReferenceBlock: {
+    gap: 1,
+  },
+  mobileCartonReferenceLabel: {
+    color: MUTED,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
+    lineHeight: 14,
+  },
+  mobileCartonReferenceText: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+    lineHeight: 16,
+  },
   productTitleBlock: {
     gap: 6,
   },
@@ -391,6 +493,12 @@ export const styles = StyleSheet.create({
   productImageFrameSmall: {
     width: '100%',
     height: 190,
+  },
+  mobileProductImageFrame: {
+    width: 68,
+    height: 68,
+    borderRadius: 12,
+    flexShrink: 0,
   },
   productImagePlaceholder: {
     width: 118,
@@ -412,6 +520,14 @@ export const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 24,
   },
+  mobileProductTitle: {
+    flexShrink: 1,
+    minWidth: 0,
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 15,
+    lineHeight: 20,
+  },
   productSpecificationList: {
     gap: 3,
   },
@@ -424,6 +540,9 @@ export const styles = StyleSheet.create({
   specificationList: {
     gap: 12,
   },
+  mobileSpecificationList: {
+    gap: 6,
+  },
   specificationCard: {
     borderRadius: 18,
     borderWidth: 1,
@@ -435,6 +554,36 @@ export const styles = StyleSheet.create({
   specificationCardActive: {
     borderColor: BRAND,
     backgroundColor: '#fff4ef',
+  },
+  mobileSpecificationRow: {
+    minHeight: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(171, 30, 36, 0.12)',
+    backgroundColor: '#fffaf7',
+    paddingLeft: 10,
+    paddingRight: 6,
+    paddingVertical: 5,
+  },
+  mobileSpecificationCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  mobileSpecificationTitle: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  mobileSpecificationMeta: {
+    color: MUTED,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+    lineHeight: 16,
   },
   specificationMetaRow: {
     flexDirection: 'row',
@@ -511,6 +660,51 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  mobileQuantityStepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+    gap: 4,
+  },
+  mobileQuantityButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(171, 30, 36, 0.16)',
+    backgroundColor: '#ffffff',
+  },
+  mobileQuantityButtonText: {
+    color: BRAND,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  mobileQuantityInputWrap: {
+    width: 48,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(171, 30, 36, 0.16)',
+    backgroundColor: '#ffffff',
+  },
+  mobileQuantityInput: {
+    ...WEB_INPUT_RESET,
+    width: '100%',
+    height: '100%',
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 15,
+    lineHeight: 44,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+  },
   emptyCard: {
     width: '100%',
     borderRadius: 18,
@@ -549,5 +743,68 @@ export const styles = StyleSheet.create({
     color: '#ffffff',
     fontFamily: 'Manrope_700Bold',
     fontSize: 13,
+  },
+  mobileSummaryBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    backgroundColor: '#fffdfb',
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 14,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 -12px 28px rgba(95, 28, 33, 0.12)',
+      } as never,
+      default: {
+        shadowColor: '#5f1c21',
+        shadowOpacity: 0.12,
+        shadowRadius: 14,
+        shadowOffset: { width: 0, height: -6 },
+        elevation: 8,
+      },
+    }),
+  },
+  mobileSummaryMetrics: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  mobileSummaryMetric: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  mobileSummaryLabel: {
+    color: MUTED,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
+    lineHeight: 14,
+  },
+  mobileSummaryValue: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 15,
+    lineHeight: 19,
+  },
+  mobileSummaryButton: {
+    minWidth: 118,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#97161c',
+    backgroundColor: BRAND,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
 });

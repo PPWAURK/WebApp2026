@@ -7,8 +7,10 @@ import {
   BREAKPOINT_ULTRA_WIDE,
 } from '../../constants/breakpoints';
 import type { AppText } from '../../locales/translations';
+import type { Language } from '../../types/language';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { ProductCreateCard } from './ProductCreateCard';
+import { ProductCategoryManagementCard } from './ProductCategoryManagementCard';
 import { ProductEditorModal } from './ProductEditorModal';
 import { ProductGrid } from './ProductGrid';
 import { SupplierListCard } from './SupplierListCard';
@@ -17,11 +19,13 @@ import { useSupplierManagement } from './useSupplierManagement';
 
 type SupplierManagementPageProps = {
   text: AppText;
+  language: Language;
   accessToken: string;
 };
 
 export function SupplierManagementPage({
   text,
+  language,
   accessToken,
 }: SupplierManagementPageProps) {
   const { width } = useWindowDimensions();
@@ -134,12 +138,14 @@ export function SupplierManagementPage({
 
             <ProductCreateCard
               text={text}
+              language={language}
               selectedSupplier={state.selectedSupplier}
               selectedSupplierId={state.selectedSupplierId}
+              productCategories={state.productCategories}
+              selectedCategoryId={state.newProductCategoryId}
               isMediumScreen={isMediumScreen}
               isCreatingProduct={state.isCreatingProduct}
               newProductReference={state.newProductReference}
-              newProductCategory={state.newProductCategory}
               newProductNameZh={state.newProductNameZh}
               newProductNameFr={state.newProductNameFr}
               newProductSpecification={state.newProductSpecification}
@@ -152,7 +158,7 @@ export function SupplierManagementPage({
               newProductUnit3={state.newProductUnit3}
               newProductPriceHt3={state.newProductPriceHt3}
               onChangeReference={state.setNewProductReference}
-              onChangeCategory={state.setNewProductCategory}
+              onSelectCategory={state.setNewProductCategoryId}
               onChangeNameZh={state.setNewProductNameZh}
               onChangeNameFr={state.setNewProductNameFr}
               onChangeSpecification={state.setNewProductSpecification}
@@ -166,6 +172,36 @@ export function SupplierManagementPage({
               onChangePriceHt3={state.setNewProductPriceHt3}
               onCreateProduct={() => {
                 void state.handleCreateProduct();
+              }}
+            />
+
+            <ProductCategoryManagementCard
+              text={text}
+              language={language}
+              selectedSupplier={state.selectedSupplier}
+              categories={state.productCategories}
+              selectedCategoryId={state.managedProductCategoryId}
+              newCategoryNameZh={state.newCategoryNameZh}
+              newCategoryNameFr={state.newCategoryNameFr}
+              editCategoryNameZh={state.editCategoryNameZh}
+              editCategoryNameFr={state.editCategoryNameFr}
+              updatingCategoryId={state.updatingCategoryId}
+              onSelectCategory={state.setManagedProductCategoryId}
+              onChangeNewCategoryNameZh={state.setNewCategoryNameZh}
+              onChangeNewCategoryNameFr={state.setNewCategoryNameFr}
+              onChangeEditCategoryNameZh={state.setEditCategoryNameZh}
+              onChangeEditCategoryNameFr={state.setEditCategoryNameFr}
+              onCreateCategory={() => {
+                void state.handleCreateProductCategory();
+              }}
+              onSaveCategory={() => {
+                void state.handleSaveProductCategory();
+              }}
+              onMoveCategory={(categoryId, direction) => {
+                void state.handleMoveProductCategory(categoryId, direction);
+              }}
+              onDeleteCategory={(categoryId) => {
+                void state.handleDeleteProductCategory(categoryId);
               }}
             />
           </View>
@@ -205,13 +241,15 @@ export function SupplierManagementPage({
 
       <ProductEditorModal
         text={text}
+        language={language}
         visible={state.isEditorOpen && Boolean(state.selectedProduct)}
         selectedProduct={state.selectedProduct}
         selectedSupplier={state.selectedSupplier}
+        productCategories={state.productCategories}
+        selectedCategoryId={state.editProductCategoryId}
         isMediumScreen={isMediumScreen}
         isSavingProduct={state.isSavingProduct}
         isUploadingImage={state.isUploadingImage}
-        editCategory={state.editCategory}
         editNameZh={state.editNameZh}
         editNameFr={state.editNameFr}
         editSpecification={state.editSpecification}
@@ -224,7 +262,7 @@ export function SupplierManagementPage({
         editUnit3={state.editUnit3}
         editPriceHt3={state.editPriceHt3}
         editImage={state.editImage}
-        onChangeCategory={state.setEditCategory}
+        onSelectCategory={state.setEditProductCategoryId}
         onChangeNameZh={state.setEditNameZh}
         onChangeNameFr={state.setEditNameFr}
         onChangeSpecification={state.setEditSpecification}

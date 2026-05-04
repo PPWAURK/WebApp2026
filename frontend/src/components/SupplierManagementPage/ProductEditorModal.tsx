@@ -2,20 +2,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { COLORS } from '../../constants/colors';
 import type { AppText } from '../../locales/translations';
-import type { ProductItem } from '../../services/productsApi';
+import type {
+  ProductCategoryItem,
+  ProductItem,
+} from '../../services/productsApi';
 import type { SupplierItem } from '../../services/suppliersApi';
+import type { Language } from '../../types/language';
 import { FieldInput } from './FieldInput';
+import { ProductCategorySelect } from './ProductCategorySelect';
 import { styles } from './SupplierManagementPage.styles';
 
 type ProductEditorModalProps = {
   text: AppText;
+  language: Language;
   visible: boolean;
   selectedProduct: ProductItem | null;
   selectedSupplier: SupplierItem | null;
+  productCategories: ProductCategoryItem[];
+  selectedCategoryId: number | null;
   isMediumScreen: boolean;
   isSavingProduct: boolean;
   isUploadingImage: boolean;
-  editCategory: string;
   editNameZh: string;
   editNameFr: string;
   editSpecification: string;
@@ -28,7 +35,7 @@ type ProductEditorModalProps = {
   editUnit3: string;
   editPriceHt3: string;
   editImage: string;
-  onChangeCategory: (value: string) => void;
+  onSelectCategory: (categoryId: number) => void;
   onChangeNameZh: (value: string) => void;
   onChangeNameFr: (value: string) => void;
   onChangeSpecification: (value: string) => void;
@@ -47,13 +54,15 @@ type ProductEditorModalProps = {
 
 export function ProductEditorModal({
   text,
+  language,
   visible,
   selectedProduct,
   selectedSupplier,
+  productCategories,
+  selectedCategoryId,
   isMediumScreen,
   isSavingProduct,
   isUploadingImage,
-  editCategory,
   editNameZh,
   editNameFr,
   editSpecification,
@@ -66,7 +75,7 @@ export function ProductEditorModal({
   editUnit3,
   editPriceHt3,
   editImage,
-  onChangeCategory,
+  onSelectCategory,
   onChangeNameZh,
   onChangeNameFr,
   onChangeSpecification,
@@ -192,11 +201,12 @@ export function ProductEditorModal({
                     onChangeText={onChangeUnit}
                     isMediumScreen={isMediumScreen}
                   />
-                  <FieldInput
-                    label={text.supplierManagement.fields.category}
-                    value={editCategory}
-                    onChangeText={onChangeCategory}
-                    isMediumScreen={isMediumScreen}
+                  <ProductCategorySelect
+                    text={text}
+                    language={language}
+                    categories={productCategories}
+                    selectedCategoryId={selectedCategoryId}
+                    onSelectCategory={onSelectCategory}
                   />
                   <FieldInput
                     label={text.supplierManagement.fields.priceHt}

@@ -4,8 +4,12 @@ import { throwIfUnauthorized } from './authSession';
 export type ProductItem = {
   id: number;
   supplierId: number;
+  categoryId: number | null;
   reference: string | null;
   category: string;
+  categoryNameZh: string;
+  categoryNameFr: string;
+  categorySortOrder: number | null;
   nameZh: string;
   nameFr: string | null;
   specification: string | null;
@@ -23,6 +27,15 @@ export type ProductItem = {
   isActive: boolean;
 };
 
+export type ProductCategoryItem = {
+  id: number;
+  supplierId: number;
+  nameZh: string;
+  nameFr: string;
+  sortOrder: number;
+  isPreset: boolean;
+};
+
 export type ProductSpecificationItem = {
   slot: number | null;
   specification: string | null;
@@ -33,8 +46,12 @@ export type ProductSpecificationItem = {
 type RawProduct = {
   id?: unknown;
   supplierId?: unknown;
+  categoryId?: unknown;
   reference?: unknown;
   category?: unknown;
+  categoryNameZh?: unknown;
+  categoryNameFr?: unknown;
+  categorySortOrder?: unknown;
   nameZh?: unknown;
   nameFr?: unknown;
   specification?: unknown;
@@ -50,6 +67,15 @@ type RawProduct = {
   specifications?: unknown;
   image?: unknown;
   isActive?: unknown;
+};
+
+type RawProductCategory = {
+  id?: unknown;
+  supplierId?: unknown;
+  nameZh?: unknown;
+  nameFr?: unknown;
+  sortOrder?: unknown;
+  isPreset?: unknown;
 };
 
 type PickedFile = {
@@ -174,8 +200,28 @@ function normalizeProduct(raw: RawProduct, index: number): ProductItem {
   return {
     id,
     supplierId: toNumber(raw.supplierId, 0),
+    categoryId:
+      raw.categoryId === null || raw.categoryId === undefined
+        ? null
+        : toNumber(raw.categoryId, 0),
     reference: typeof raw.reference === 'string' ? raw.reference : null,
     category: typeof raw.category === 'string' ? raw.category : '',
+    categoryNameZh:
+      typeof raw.categoryNameZh === 'string'
+        ? raw.categoryNameZh
+        : typeof raw.category === 'string'
+          ? raw.category
+          : '',
+    categoryNameFr:
+      typeof raw.categoryNameFr === 'string'
+        ? raw.categoryNameFr
+        : typeof raw.category === 'string'
+          ? raw.category
+          : '',
+    categorySortOrder:
+      raw.categorySortOrder === null || raw.categorySortOrder === undefined
+        ? null
+        : toNumber(raw.categorySortOrder, 0),
     nameZh,
     nameFr,
     specification: fallbackSpecification,
@@ -204,6 +250,17 @@ function normalizeProduct(raw: RawProduct, index: number): ProductItem {
           ],
     image: typeof raw.image === 'string' ? raw.image : null,
     isActive: typeof raw.isActive === 'boolean' ? raw.isActive : true,
+  };
+}
+
+function normalizeProductCategory(raw: RawProductCategory): ProductCategoryItem {
+  return {
+    id: toNumber(raw.id, 0),
+    supplierId: toNumber(raw.supplierId, 0),
+    nameZh: typeof raw.nameZh === 'string' ? raw.nameZh : '',
+    nameFr: typeof raw.nameFr === 'string' ? raw.nameFr : '',
+    sortOrder: toNumber(raw.sortOrder, 0),
+    isPreset: raw.isPreset === true,
   };
 }
 
@@ -237,6 +294,7 @@ export async function updateProduct(
   productId: number,
   payload: {
     supplierId?: number;
+    categoryId?: number | null;
     reference?: string | null;
     category?: string;
     nameZh?: string;
@@ -276,8 +334,9 @@ export async function createProduct(
   token: string,
   payload: {
     supplierId: number;
+    categoryId?: number | null;
     reference?: string | null;
-    category: string;
+    category?: string;
     nameZh: string;
     nameFr?: string | null;
     specification?: string | null;
@@ -313,6 +372,135 @@ export async function createProduct(
 
   const data = (await response.json()) as RawProduct;
   return normalizeProduct(data, 0);
+}
+
+export async function fetchProductCategories(
+  token: string,
+  supplierId: number,
+): Promise<ProductCategoryItem[]> {
+  const response = await fetch(
+    `${API_URL}/products/categories?supplierId=${supplierId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  throwIfUnauthorized(response);
+
+  const data = (await response.json()) as
+    | RawProductCategory[]
+    | { message?: string | string[] };
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : (errorData.message ?? 'PRODUCT_CATEGORIES_FETCH_FAILED');
+    throw new Error(message);
+  }
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.map((entry) =>
+    normalizeProductCategory(entry as RawProductCategory),
+  );
+}
+
+export async function createProductCategory(
+  token: string,
+  payload: {
+    supplierId: number;
+    nameZh: string;
+    nameFr: string;
+  },
+): Promise<ProductCategoryItem> {
+  const response = await fetch(`${API_URL}/products/categories`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  throwIfUnauthorized(response);
+
+  const data = (await response.json()) as
+    | RawProductCategory
+    | { message?: string | string[] };
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : (errorData.message ?? 'PRODUCT_CATEGORY_CREATE_FAILED');
+    throw new Error(message);
+  }
+
+  return normalizeProductCategory(data as RawProductCategory);
+}
+
+export async function updateProductCategory(
+  token: string,
+  categoryId: number,
+  payload: {
+    nameZh?: string;
+    nameFr?: string;
+    sortOrder?: number;
+  },
+): Promise<ProductCategoryItem> {
+  const response = await fetch(`${API_URL}/products/categories/${categoryId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  throwIfUnauthorized(response);
+
+  const data = (await response.json()) as
+    | RawProductCategory
+    | { message?: string | string[] };
+
+  if (!response.ok) {
+    const errorData = data as { message?: string | string[] };
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : (errorData.message ?? 'PRODUCT_CATEGORY_UPDATE_FAILED');
+    throw new Error(message);
+  }
+
+  return normalizeProductCategory(data as RawProductCategory);
+}
+
+export async function deleteProductCategory(
+  token: string,
+  categoryId: number,
+): Promise<void> {
+  const response = await fetch(`${API_URL}/products/categories/${categoryId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (response.ok) {
+    return;
+  }
+
+  throwIfUnauthorized(response);
+
+  const data = (await response.json()) as { message?: string | string[] };
+  const message = Array.isArray(data.message)
+    ? data.message.join(', ')
+    : (data.message ?? 'PRODUCT_CATEGORY_DELETE_FAILED');
+  throw new Error(message);
 }
 
 export async function updateProductAvailability(

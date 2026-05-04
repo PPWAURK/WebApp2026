@@ -18,6 +18,7 @@ export default function SupplierManagementScreen() {
   return (
     <SupplierManagementPage
       text={language.text}
+      language={language.language}
       accessToken={auth.session.accessToken}
     />
   );

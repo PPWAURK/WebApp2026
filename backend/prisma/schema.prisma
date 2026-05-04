@@ -109,6 +109,8 @@ model UserManagedRestaurant {
 model Produit {
   id                  BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
   supplierId          Int                  @map("supplier_id")
+  productCategoryId   Int?                 @map("product_category_id")
+  productCategory     ProductCategory?     @relation(fields: [productCategoryId], references: [id], onDelete: SetNull)
   reference           String?              @db.VarChar(100)
   categorie           String               @db.VarChar(20)
   nomCn               String               @map("nom_cn") @db.VarChar(255)
@@ -129,6 +131,7 @@ model Produit {
   purchaseOrderItems  PurchaseOrderItem[]
   purchaseReturnItems PurchaseReturnItem[]
 
+  @@index([productCategoryId])
   @@map("produits")
 }
 
@@ -140,9 +143,27 @@ model Fournisseur {
   orderNotice               String?          @map("order_notice") @db.Text
   purchaseOrders            PurchaseOrder[]
   purchaseReturns           PurchaseReturn[]
+  productCategories         ProductCategory[]
 
   @@index([sortOrder])
   @@map("fournisseurs")
+}
+
+model ProductCategory {
+  id         Int         @id @default(autoincrement())
+  supplierId Int         @map("supplier_id")
+  supplier   Fournisseur @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  nameZh     String      @map("name_zh") @db.VarChar(50)
+  nameFr     String      @map("name_fr") @db.VarChar(80)
+  sortOrder  Int         @map("sort_order")
+  isPreset   Boolean     @default(false) @map("is_preset")
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  products   Produit[]
+
+  @@unique([supplierId, nameZh])
+  @@index([supplierId, sortOrder])
+  @@map("product_categories")
 }
 
 model PurchaseOrder {

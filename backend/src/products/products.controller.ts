@@ -104,8 +104,9 @@ export class ProductsController {
     @Body()
     body: {
       supplierId: number;
+      categoryId?: number | null;
       reference?: string | null;
-      category: string;
+      category?: string;
       nameZh: string;
       nameFr?: string | null;
       specification?: string | null;
@@ -128,6 +129,81 @@ export class ProductsController {
     return this.productsService.createProduct(body);
   }
 
+  @ApiOperation({ summary: 'List product categories for one supplier' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('categories')
+  listProductCategories(
+    @Req() req: AuthenticatedRequest,
+    @Query('supplierId') supplierId: string,
+  ) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') {
+      throw new ForbiddenException('Only ADMIN can manage product categories');
+    }
+
+    return this.productsService.listProductCategories(Number(supplierId));
+  }
+
+  @ApiOperation({ summary: 'Create one product category' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('categories')
+  createProductCategory(
+    @Req() req: AuthenticatedRequest,
+    @Body()
+    body: {
+      supplierId: number;
+      nameZh: string;
+      nameFr: string;
+    },
+  ) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') {
+      throw new ForbiddenException('Only ADMIN can manage product categories');
+    }
+
+    return this.productsService.createProductCategory(body);
+  }
+
+  @ApiOperation({ summary: 'Update one product category' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('categories/:categoryId')
+  updateProductCategory(
+    @Req() req: AuthenticatedRequest,
+    @Param('categoryId', ParseIntPipe) categoryId: number,
+    @Body()
+    body: {
+      nameZh?: string;
+      nameFr?: string;
+      sortOrder?: number;
+    },
+  ) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') {
+      throw new ForbiddenException('Only ADMIN can manage product categories');
+    }
+
+    return this.productsService.updateProductCategory(categoryId, body);
+  }
+
+  @ApiOperation({ summary: 'Delete one unused product category' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete('categories/:categoryId')
+  deleteProductCategory(
+    @Req() req: AuthenticatedRequest,
+    @Param('categoryId', ParseIntPipe) categoryId: number,
+  ) {
+    const role = req.user?.role;
+    if (role !== 'ADMIN') {
+      throw new ForbiddenException('Only ADMIN can manage product categories');
+    }
+
+    return this.productsService.deleteProductCategory(categoryId);
+  }
+
   @ApiOperation({ summary: 'Update one product details' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
@@ -138,6 +214,7 @@ export class ProductsController {
     @Body()
     body: {
       supplierId?: number;
+      categoryId?: number | null;
       reference?: string | null;
       category?: string;
       nameZh?: string;

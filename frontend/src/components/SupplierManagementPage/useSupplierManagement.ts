@@ -2,11 +2,16 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AppText } from '../../locales/translations';
 import {
+  createProductCategory,
   createProduct,
+  deleteProductCategory,
+  fetchProductCategories,
   fetchProducts,
+  updateProductCategory,
   uploadProductImage,
   updateProduct,
   updateProductAvailability,
+  type ProductCategoryItem,
   type ProductItem,
 } from '../../services/productsApi';
 import {
@@ -65,9 +70,27 @@ export function useSupplierManagement({
   const confirmDeleteSupplierResolverRef = useRef<
     ((value: boolean) => void) | null
   >(null);
+  const [productCategories, setProductCategories] = useState<
+    ProductCategoryItem[]
+  >([]);
+  const [newProductCategoryId, setNewProductCategoryId] = useState<
+    number | null
+  >(null);
+  const [editProductCategoryId, setEditProductCategoryId] = useState<
+    number | null
+  >(null);
+  const [managedProductCategoryId, setManagedProductCategoryId] = useState<
+    number | null
+  >(null);
+  const [newCategoryNameZh, setNewCategoryNameZh] = useState('');
+  const [newCategoryNameFr, setNewCategoryNameFr] = useState('');
+  const [editCategoryNameZh, setEditCategoryNameZh] = useState('');
+  const [editCategoryNameFr, setEditCategoryNameFr] = useState('');
+  const [updatingCategoryId, setUpdatingCategoryId] = useState<number | null>(
+    null,
+  );
 
   const [newProductReference, setNewProductReference] = useState('');
-  const [newProductCategory, setNewProductCategory] = useState('');
   const [newProductNameZh, setNewProductNameZh] = useState('');
   const [newProductNameFr, setNewProductNameFr] = useState('');
   const [newProductSpecification, setNewProductSpecification] = useState('');
@@ -79,7 +102,6 @@ export function useSupplierManagement({
   const [newProductSpecification3, setNewProductSpecification3] = useState('');
   const [newProductUnit3, setNewProductUnit3] = useState('');
   const [newProductPriceHt3, setNewProductPriceHt3] = useState('');
-  const [editCategory, setEditCategory] = useState('');
   const [editNameZh, setEditNameZh] = useState('');
   const [editNameFr, setEditNameFr] = useState('');
   const [editSpecification, setEditSpecification] = useState('');
@@ -128,6 +150,54 @@ export function useSupplierManagement({
       isActive = false;
     };
   }, [accessToken, text.supplierManagement.loadError]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    if (!selectedSupplierId) {
+      setProductCategories([]);
+      setNewProductCategoryId(null);
+      setEditProductCategoryId(null);
+      setManagedProductCategoryId(null);
+      return;
+    }
+
+    setProductCategories([]);
+    setNewProductCategoryId(null);
+    setEditProductCategoryId(null);
+    setManagedProductCategoryId(null);
+
+    void fetchProductCategories(accessToken, selectedSupplierId)
+      .then((categories) => {
+        if (!isActive) {
+          return;
+        }
+
+        const sortedCategories = sortProductCategories(categories);
+        const firstCategoryId = sortedCategories[0]?.id ?? null;
+
+        setProductCategories(sortedCategories);
+        setNewProductCategoryId((current) =>
+          hasCategory(sortedCategories, current) ? current : firstCategoryId,
+        );
+        setManagedProductCategoryId((current) =>
+          hasCategory(sortedCategories, current) ? current : firstCategoryId,
+        );
+      })
+      .catch(() => {
+        if (isActive) {
+          setError(text.supplierManagement.loadCategoriesError);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    accessToken,
+    selectedSupplierId,
+    text.supplierManagement.loadCategoriesError,
+  ]);
 
   // --- Derived data ---
 
@@ -250,7 +320,7 @@ export function useSupplierManagement({
 
   useEffect(() => {
     if (!selectedProduct) {
-      setEditCategory('');
+      setEditProductCategoryId(null);
       setEditNameZh('');
       setEditNameFr('');
       setEditSpecification('');
@@ -266,7 +336,9 @@ export function useSupplierManagement({
       return;
     }
 
-    setEditCategory(selectedProduct.category);
+    setEditProductCategoryId(
+      resolveProductCategoryId(selectedProduct, productCategories),
+    );
     setEditNameZh(selectedProduct.nameZh);
     setEditNameFr(selectedProduct.nameFr ?? '');
     setEditSpecification(selectedProduct.specification ?? '');
@@ -291,7 +363,17 @@ export function useSupplierManagement({
         : selectedProduct.priceHt3.toString(),
     );
     setEditImage(selectedProduct.image ?? '');
-  }, [selectedProduct]);
+  }, [productCategories, selectedProduct]);
+
+  useEffect(() => {
+    const selectedCategory =
+      productCategories.find(
+        (category) => category.id === managedProductCategoryId,
+      ) ?? null;
+
+    setEditCategoryNameZh(selectedCategory?.nameZh ?? '');
+    setEditCategoryNameFr(selectedCategory?.nameFr ?? '');
+  }, [managedProductCategoryId, productCategories]);
 
   // --- Actions ---
 
@@ -351,7 +433,12 @@ export function useSupplierManagement({
       return;
     }
 
-    if (!newProductCategory.trim() || !newProductNameZh.trim()) {
+    const selectedCategory = getProductCategoryById(
+      productCategories,
+      newProductCategoryId,
+    );
+
+    if (!selectedCategory || !newProductNameZh.trim()) {
       setError(text.supplierManagement.createProductValidationError);
       return;
     }
@@ -378,7 +465,8 @@ export function useSupplierManagement({
         reference: newProductReference.trim()
           ? newProductReference.trim()
           : null,
-        category: newProductCategory.trim(),
+        categoryId: selectedCategory.id,
+        category: selectedCategory.nameZh,
         nameZh: newProductNameZh.trim(),
         nameFr: newProductNameFr.trim() ? newProductNameFr.trim() : null,
         specification: newProductSpecification.trim()
@@ -403,7 +491,6 @@ export function useSupplierManagement({
       setIsEditorOpen(true);
       setProductFilter('');
       setNewProductReference('');
-      setNewProductCategory('');
       setNewProductNameZh('');
       setNewProductNameFr('');
       setNewProductSpecification('');
@@ -431,6 +518,16 @@ export function useSupplierManagement({
       return;
     }
 
+    const selectedCategory = getProductCategoryById(
+      productCategories,
+      editProductCategoryId,
+    );
+
+    if (!selectedCategory || !editNameZh.trim()) {
+      setError(text.supplierManagement.createProductValidationError);
+      return;
+    }
+
     const parsedPrice = parseOptionalPrice(editPriceHt);
     const parsedPrice2 = parseOptionalPrice(editPriceHt2);
     const parsedPrice3 = parseOptionalPrice(editPriceHt3);
@@ -450,7 +547,8 @@ export function useSupplierManagement({
     try {
       const updated = await updateProduct(accessToken, selectedProduct.id, {
         supplierId: selectedSupplierId,
-        category: editCategory.trim(),
+        categoryId: selectedCategory.id,
+        category: selectedCategory.nameZh,
         nameZh: editNameZh.trim(),
         nameFr: editNameFr.trim() ? editNameFr.trim() : null,
         specification: editSpecification.trim()
@@ -568,6 +666,186 @@ export function useSupplierManagement({
     }
   }
 
+  async function handleCreateProductCategory() {
+    if (!selectedSupplierId) {
+      setError(text.supplierManagement.selectSupplierFirst);
+      return;
+    }
+
+    const trimmedNameZh = newCategoryNameZh.trim();
+    const trimmedNameFr = newCategoryNameFr.trim();
+
+    if (!trimmedNameZh || !trimmedNameFr) {
+      setError(text.supplierManagement.categoryValidationError);
+      return;
+    }
+
+    setUpdatingCategoryId(0);
+    setError(null);
+
+    try {
+      const created = await createProductCategory(accessToken, {
+        supplierId: selectedSupplierId,
+        nameZh: trimmedNameZh,
+        nameFr: trimmedNameFr,
+      });
+
+      setProductCategories((current) =>
+        sortProductCategories([...current, created]),
+      );
+      setNewProductCategoryId(created.id);
+      setManagedProductCategoryId(created.id);
+      setNewCategoryNameZh('');
+      setNewCategoryNameFr('');
+    } catch (createError) {
+      if (createError instanceof Error && createError.message.trim()) {
+        setError(createError.message);
+      } else {
+        setError(text.supplierManagement.createCategoryError);
+      }
+    } finally {
+      setUpdatingCategoryId(null);
+    }
+  }
+
+  async function handleSaveProductCategory() {
+    const category = getProductCategoryById(
+      productCategories,
+      managedProductCategoryId,
+    );
+
+    if (!category) {
+      return;
+    }
+
+    const trimmedNameZh = editCategoryNameZh.trim();
+    const trimmedNameFr = editCategoryNameFr.trim();
+
+    if (!trimmedNameZh || !trimmedNameFr) {
+      setError(text.supplierManagement.categoryValidationError);
+      return;
+    }
+
+    setUpdatingCategoryId(category.id);
+    setError(null);
+
+    try {
+      const updated = await updateProductCategory(accessToken, category.id, {
+        nameZh: trimmedNameZh,
+        nameFr: trimmedNameFr,
+      });
+
+      setProductCategories((current) =>
+        sortProductCategories(
+          current.map((entry) => (entry.id === updated.id ? updated : entry)),
+        ),
+      );
+      applyProductCategoryToProducts(updated);
+    } catch (updateError) {
+      if (updateError instanceof Error && updateError.message.trim()) {
+        setError(updateError.message);
+      } else {
+        setError(text.supplierManagement.updateCategoryError);
+      }
+    } finally {
+      setUpdatingCategoryId(null);
+    }
+  }
+
+  async function handleMoveProductCategory(
+    categoryId: number,
+    direction: 'up' | 'down',
+  ) {
+    const currentIndex = productCategories.findIndex(
+      (category) => category.id === categoryId,
+    );
+    const targetIndex =
+      direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+    if (
+      currentIndex < 0 ||
+      targetIndex < 0 ||
+      targetIndex >= productCategories.length
+    ) {
+      return;
+    }
+
+    const currentCategory = productCategories[currentIndex];
+    const targetCategory = productCategories[targetIndex];
+
+    setUpdatingCategoryId(categoryId);
+    setError(null);
+
+    try {
+      const [updatedCurrent, updatedTarget] = await Promise.all([
+        updateProductCategory(accessToken, currentCategory.id, {
+          sortOrder: targetCategory.sortOrder,
+        }),
+        updateProductCategory(accessToken, targetCategory.id, {
+          sortOrder: currentCategory.sortOrder,
+        }),
+      ]);
+
+      setProductCategories((current) =>
+        sortProductCategories(
+          current.map((category) => {
+            if (category.id === updatedCurrent.id) {
+              return updatedCurrent;
+            }
+            if (category.id === updatedTarget.id) {
+              return updatedTarget;
+            }
+            return category;
+          }),
+        ),
+      );
+    } catch (updateError) {
+      if (updateError instanceof Error && updateError.message.trim()) {
+        setError(updateError.message);
+      } else {
+        setError(text.supplierManagement.updateCategoryError);
+      }
+    } finally {
+      setUpdatingCategoryId(null);
+    }
+  }
+
+  async function handleDeleteProductCategory(categoryId: number) {
+    setUpdatingCategoryId(categoryId);
+    setError(null);
+
+    try {
+      await deleteProductCategory(accessToken, categoryId);
+
+      setProductCategories((current) => {
+        const remaining = current.filter(
+          (category) => category.id !== categoryId,
+        );
+        const firstCategoryId = remaining[0]?.id ?? null;
+
+        setNewProductCategoryId((selectedId) =>
+          selectedId === categoryId ? firstCategoryId : selectedId,
+        );
+        setEditProductCategoryId((selectedId) =>
+          selectedId === categoryId ? firstCategoryId : selectedId,
+        );
+        setManagedProductCategoryId((selectedId) =>
+          selectedId === categoryId ? firstCategoryId : selectedId,
+        );
+
+        return remaining;
+      });
+    } catch (deleteError) {
+      if (deleteError instanceof Error && deleteError.message.trim()) {
+        setError(deleteError.message);
+      } else {
+        setError(text.supplierManagement.deleteCategoryError);
+      }
+    } finally {
+      setUpdatingCategoryId(null);
+    }
+  }
+
   async function handleDeleteSupplier(supplier: SupplierItem) {
     const confirmed = await new Promise<boolean>((resolve) => {
       confirmDeleteSupplierResolverRef.current = resolve;
@@ -668,8 +946,7 @@ export function useSupplierManagement({
         accessToken,
         previousSupplier.id,
         {
-          includeAllProductsInOrder:
-            previousSupplier.includeAllProductsInOrder,
+          includeAllProductsInOrder: previousSupplier.includeAllProductsInOrder,
           orderNotice: nextOrderNotice,
         },
       );
@@ -720,6 +997,22 @@ export function useSupplierManagement({
     return Number.isFinite(parsed) ? parsed : undefined;
   }
 
+  function applyProductCategoryToProducts(category: ProductCategoryItem) {
+    setProducts((current) =>
+      current.map((product) =>
+        product.categoryId === category.id
+          ? {
+              ...product,
+              category: category.nameZh,
+              categoryNameZh: category.nameZh,
+              categoryNameFr: category.nameFr,
+              categorySortOrder: category.sortOrder,
+            }
+          : product,
+      ),
+    );
+  }
+
   return {
     // Data
     suppliers,
@@ -738,6 +1031,15 @@ export function useSupplierManagement({
     productFilter,
     orderNoticeDraft,
     isOrderNoticeDirty,
+    productCategories,
+    newProductCategoryId,
+    editProductCategoryId,
+    managedProductCategoryId,
+    newCategoryNameZh,
+    newCategoryNameFr,
+    editCategoryNameZh,
+    editCategoryNameFr,
+    updatingCategoryId,
     canMoveSelectedSupplierUp,
     canMoveSelectedSupplierDown,
 
@@ -764,8 +1066,7 @@ export function useSupplierManagement({
     // New product form
     newProductReference,
     setNewProductReference,
-    newProductCategory,
-    setNewProductCategory,
+    setNewProductCategoryId,
     newProductNameZh,
     setNewProductNameZh,
     newProductNameFr,
@@ -790,8 +1091,12 @@ export function useSupplierManagement({
     setNewProductPriceHt3,
 
     // Edit product form
-    editCategory,
-    setEditCategory,
+    setEditProductCategoryId,
+    setManagedProductCategoryId,
+    setNewCategoryNameZh,
+    setNewCategoryNameFr,
+    setEditCategoryNameZh,
+    setEditCategoryNameFr,
     editNameZh,
     setEditNameZh,
     editNameFr,
@@ -830,8 +1135,62 @@ export function useSupplierManagement({
     handleSaveProduct,
     handleUploadProductImage,
     handleToggleProductAvailability,
+    handleCreateProductCategory,
+    handleSaveProductCategory,
+    handleMoveProductCategory,
+    handleDeleteProductCategory,
     handleDeleteSupplier,
     closeDeleteProductDialog,
     closeDeleteSupplierDialog,
   };
+}
+
+function sortProductCategories(
+  categories: ProductCategoryItem[],
+): ProductCategoryItem[] {
+  return [...categories].sort((left, right) => {
+    if (left.sortOrder !== right.sortOrder) {
+      return left.sortOrder - right.sortOrder;
+    }
+
+    return left.id - right.id;
+  });
+}
+
+function hasCategory(
+  categories: ProductCategoryItem[],
+  categoryId: number | null,
+): boolean {
+  return (
+    categoryId !== null &&
+    categories.some((category) => category.id === categoryId)
+  );
+}
+
+function getProductCategoryById(
+  categories: ProductCategoryItem[],
+  categoryId: number | null,
+): ProductCategoryItem | null {
+  if (categoryId === null) {
+    return null;
+  }
+
+  return categories.find((category) => category.id === categoryId) ?? null;
+}
+
+function resolveProductCategoryId(
+  product: ProductItem,
+  categories: ProductCategoryItem[],
+): number | null {
+  if (hasCategory(categories, product.categoryId)) {
+    return product.categoryId;
+  }
+
+  const matchedCategory = categories.find(
+    (category) =>
+      category.nameZh === product.category ||
+      category.nameFr === product.category,
+  );
+
+  return matchedCategory?.id ?? categories[0]?.id ?? null;
 }

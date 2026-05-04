@@ -1,17 +1,22 @@
 import { Pressable, Text, View } from 'react-native';
 import type { AppText } from '../../locales/translations';
+import type { ProductCategoryItem } from '../../services/productsApi';
 import type { SupplierItem } from '../../services/suppliersApi';
+import type { Language } from '../../types/language';
 import { FieldInput } from './FieldInput';
+import { ProductCategorySelect } from './ProductCategorySelect';
 import { styles } from './SupplierManagementPage.styles';
 
 type ProductCreateCardProps = {
   text: AppText;
+  language: Language;
   selectedSupplier: SupplierItem | null;
   selectedSupplierId: number | null;
+  productCategories: ProductCategoryItem[];
+  selectedCategoryId: number | null;
   isMediumScreen: boolean;
   isCreatingProduct: boolean;
   newProductReference: string;
-  newProductCategory: string;
   newProductNameZh: string;
   newProductNameFr: string;
   newProductSpecification: string;
@@ -24,7 +29,7 @@ type ProductCreateCardProps = {
   newProductUnit3: string;
   newProductPriceHt3: string;
   onChangeReference: (value: string) => void;
-  onChangeCategory: (value: string) => void;
+  onSelectCategory: (categoryId: number) => void;
   onChangeNameZh: (value: string) => void;
   onChangeNameFr: (value: string) => void;
   onChangeSpecification: (value: string) => void;
@@ -41,12 +46,14 @@ type ProductCreateCardProps = {
 
 export function ProductCreateCard({
   text,
+  language,
   selectedSupplier,
   selectedSupplierId,
+  productCategories,
+  selectedCategoryId,
   isMediumScreen,
   isCreatingProduct,
   newProductReference,
-  newProductCategory,
   newProductNameZh,
   newProductNameFr,
   newProductSpecification,
@@ -59,7 +66,7 @@ export function ProductCreateCard({
   newProductUnit3,
   newProductPriceHt3,
   onChangeReference,
-  onChangeCategory,
+  onSelectCategory,
   onChangeNameZh,
   onChangeNameFr,
   onChangeSpecification,
@@ -111,11 +118,13 @@ export function ProductCreateCard({
           onChangeText={onChangeReference}
           isMediumScreen={isMediumScreen}
         />
-        <FieldInput
-          label={text.supplierManagement.fields.category}
-          value={newProductCategory}
-          onChangeText={onChangeCategory}
-          isMediumScreen={isMediumScreen}
+        <ProductCategorySelect
+          text={text}
+          language={language}
+          categories={productCategories}
+          selectedCategoryId={selectedCategoryId}
+          disabled={!selectedSupplierId}
+          onSelectCategory={onSelectCategory}
         />
         <FieldInput
           label={text.supplierManagement.fields.nameZh}
