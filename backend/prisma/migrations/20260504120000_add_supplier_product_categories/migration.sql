@@ -56,5 +56,4 @@ JOIN `product_categories` pc
     WHEN LOWER(CONCAT_WS(' ', p.`categorie`, p.`nom_cn`, p.`designation_fr`)) REGEXP 'hygiene|nettoy|clean|清洁|卫生' THEN '清洁用品'
     ELSE '其他'
   END
-SET p.`product_category_id` = pc.`id`,
-    p.`categorie` = pc.`name_zh`;
+SET p.`product_category_id` = pc.`id`;

@@ -223,13 +223,6 @@ export class ProductsService {
       data,
     });
 
-    if (data.nameZh !== undefined && data.nameZh !== existing.nameZh) {
-      await this.prisma.produit.updateMany({
-        where: { productCategoryId: categoryId },
-        data: { categorie: data.nameZh },
-      });
-    }
-
     return this.serializeProductCategory(updated);
   }
 
@@ -289,7 +282,7 @@ export class ProductsService {
         supplierId: payload.supplierId,
         productCategoryId: resolvedCategory.categoryId,
         reference: this.normalizeOptionalText(payload.reference),
-        categorie: resolvedCategory.categoryName,
+        categorie: resolvedCategory.legacyCategoryName,
         nomCn: normalizedNameZh,
         designationFr: this.normalizeOptionalText(payload.nameFr),
         specification: this.normalizeOptionalText(payload.specification),
@@ -363,7 +356,7 @@ export class ProductsService {
       });
 
       data.productCategoryId = resolvedCategory.categoryId;
-      data.categorie = resolvedCategory.categoryName;
+      data.categorie = resolvedCategory.legacyCategoryName;
     }
 
     if (payload.nameZh !== undefined) {
@@ -622,7 +615,11 @@ export class ProductsService {
     supplierId: number;
     categoryId?: number | null;
     category?: string;
-  }): Promise<{ categoryId: number | null; categoryName: string }> {
+  }): Promise<{
+    categoryId: number | null;
+    categoryName: string;
+    legacyCategoryName: string;
+  }> {
     if (input.categoryId !== undefined && input.categoryId !== null) {
       const category = await this.prisma.productCategory.findUnique({
         where: { id: input.categoryId },
@@ -637,6 +634,7 @@ export class ProductsService {
       return {
         categoryId: category.id,
         categoryName: category.nameZh,
+        legacyCategoryName: this.resolveLegacyProductCategory(category.nameZh),
       };
     }
 
@@ -645,10 +643,55 @@ export class ProductsService {
       throw new BadRequestException('category cannot be empty');
     }
 
+    const allowedLegacyCategories = [
+      'fresh',
+      'frozen',
+      'dry',
+      'drink',
+      'packaging',
+      'cleaning',
+      'other',
+    ];
+
+    if (!allowedLegacyCategories.includes(categoryName)) {
+      throw new BadRequestException(
+        'category must be fresh, frozen, dry, drink, packaging, cleaning or other',
+      );
+    }
+
     return {
       categoryId: null,
       categoryName,
+      legacyCategoryName: categoryName,
     };
+  }
+
+  private resolveLegacyProductCategory(categoryNameZh: string) {
+    if (categoryNameZh === '蔬菜水果' || categoryNameZh === '肉类海鲜') {
+      return 'fresh';
+    }
+
+    if (categoryNameZh === '冷冻冷藏') {
+      return 'frozen';
+    }
+
+    if (categoryNameZh === '干货粮油' || categoryNameZh === '调料酱料') {
+      return 'dry';
+    }
+
+    if (categoryNameZh === '饮料酒水') {
+      return 'drink';
+    }
+
+    if (categoryNameZh === '包材耗材') {
+      return 'packaging';
+    }
+
+    if (categoryNameZh === '清洁用品') {
+      return 'cleaning';
+    }
+
+    return 'other';
   }
 
   private async findProductForSerialization(productId: number) {
@@ -694,7 +737,7 @@ export class ProductsService {
       supplierId: product.supplierId,
       categoryId: product.productCategoryId,
       reference: product.reference,
-      category: product.categorie,
+      category: product.productCategory?.nameZh ?? product.categorie,
       categoryNameZh: product.productCategory?.nameZh ?? product.categorie,
       categoryNameFr: product.productCategory?.nameFr ?? product.categorie,
       categorySortOrder: product.productCategory?.sortOrder ?? null,
