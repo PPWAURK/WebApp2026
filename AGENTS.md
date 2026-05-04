@@ -761,40 +761,15 @@
 <claude-mem-context>
 # Memory Context
 
-# [WebApp2026] recent context, 2026-04-30 5:00pm GMT+2
+# [WebApp2026] recent context, 2026-05-04 2:45pm GMT+2
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 50 obs (15,385t read) | 548,703t work | 97% savings
+Stats: 50 obs (17,495t read) | 526,772t work | 97% savings
 
-### Apr 28, 2026
-141 1:54p 🟣 orderNotice field added to Fournisseur schema — per-supplier custom order notice
-142 " 🟣 Backend orderNotice fully wired into suppliers service and DTO
-143 1:55p 🟣 Frontend suppliersApi and ProductGrid wired to dynamic per-supplier orderNotice
-145 1:56p ⚖️ Order notice moved from SupplierManagementPage to OrdersPage (下单页面)
-146 " 🔵 orders.service.ts fetches fournisseur without explicit select — orderNotice auto-included post-migration
-147 1:57p 🔴 updateSupplierOrderSettings uses undefined-guard pattern to preserve existing orderNotice
 ### Apr 29, 2026
-148 9:55a ⚖️ 产品下架功能替代删除方案讨论
-149 " ⚖️ 产品删除改为下架功能 — 设计方向确立
-150 " ⚖️ 商品下架功能取代删除 — 设计方向确立
-151 9:56a 🔵 商品删除功能现有架构全貌 — 前后端代码路径梳理
-152 " ⚖️ 商品下架功能取代删除功能的需求提出
-153 9:57a 🔵 产品删除受订单约束 — 计划改为下架功能
-154 9:58a 🔵 商品删除限制问题 — 计划改为下架功能
-155 9:59a 🟣 商品上下架功能 — 后端完整实现
-156 10:00a 🟣 商品上下架功能 — 前端完整实现
-157 " ✅ 商品上下架多语言文案新增 — 中法双语完整覆盖
-158 10:01a ✅ 商品上下架功能 — 后端单元测试新增
-159 10:02a ✅ 商品上下架功能验证通过 — 测试、类型检查、Prisma 生成均成功
-161 " 🔵 前端 TypeScript 类型检查发现预存在错误 — 与本次功能无关
-162 10:03a 🟣 商品上下架功能全部完成 — 四阶段实现计划标记完毕
-163 10:05a 🔵 WebApp2026 仓库有两个远端 — GitHub 和 GitLab 双推送
-164 " 🟣 商品上下架功能提交到 main 分支 — commit 518625a
-165 10:09a 🔵 后端 ESLint 发现 3 处提交后遗留错误需修复
-166 " 🔴 后端 lint 错误修复 — 移除未使用导入和 prettier 格式修正
 167 10:12a ✅ Git push — frontend order/training/dashboard changes staged
 ### Apr 30, 2026
 180 11:07a 🟣 招聘请求功能 — 店长表单与管理员视图
@@ -822,6 +797,31 @@ Stats: 50 obs (15,385t read) | 548,703t work | 97% savings
 203 11:29a 🟣 Recruitment form gains preset position option chips
 205 11:31a 🔵 Recruitment requests feature is fully built across stack
 206 " 🟣 Position field gains hint text and fieldHint style
+### May 4, 2026
+214 9:24a 🔵 Order page refactor — codebase exploration of order-related files
+215 " 🔵 OrdersPage architecture deep-read before refactor
+216 9:25a 🔵 下单页面重构前代码探查 — 现有结构与翻译键梳理
+217 " ⚖️ 下单页面重构目标确立 — 体验优化 + 仅下单页 + 移动端优先
+218 9:26a 🔵 OrdersPage component structure explored ahead of refactor
+219 9:29a ⚖️ 下单页面重构计划启动
+220 9:35a ⚖️ 下单页面重构 — 手机端商品卡片 UI 设计方案确定
+221 9:36a 🔵 下单页面现有架构摸底 — OrdersPage 组件结构全览
+222 9:37a 🔄 OrdersPage 状态逻辑提取为独立 hook 和共享工具模块
+223 9:40a 🔄 OrdersPage 拆分出三个新子组件：筛选面板、手机底部汇总栏、商品卡片
+224 9:41a 🔄 OrdersPage.tsx 完全重写 — 布局逻辑按响应式断点分层，引入 isMobileLayout 主分支
+225 9:42a 🟣 OrdersPage.styles.ts 新增完整手机端样式集
+226 " 🔄 下单页面重构完成 — 代码规模和文件结构全面改善
+228 9:44a 🔵 开发环境无外网访问 — npx prettier 因 npm registry 不可达而失败
+229 9:45a 🔴 三个重构文件通过 prettier 格式修复
+230 " 🔄 OrdersPage 重构全部完成 — 四步计划全部标记 completed
+231 9:56a 🔵 OrderProductCard UI layout structure explored for redesign
+232 " 🟣 OrderProductCard mobile layout: carton spec reference added, unit/price moved after quantity
+233 " 🟣 OrdersPage mobile product card UI: carton reference, unit/price reorder, quantity centering
+234 9:57a 🟣 OrdersPage mobile card UI changes build successfully — carton reference and layout reorder confirmed
+235 10:00a 🔄 OrderProductCard mobile header layout refined — name and category badge inline, spec label removed from row
+236 " 🔴 Mobile quantity input digit centering fixed with lineHeight:44 and textAlign:'center'
+237 10:03a 🔵 Product category field is a free-text VARCHAR(20) with no dropdown — categories derived dynamically from product list
+238 " ⚖️ Product category redesign scope decided — supermarket-style categories, per-supplier, frontend UX focus
 
-Access 549k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 527k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

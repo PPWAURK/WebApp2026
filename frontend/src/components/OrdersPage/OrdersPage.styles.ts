@@ -237,58 +237,104 @@ export const styles = StyleSheet.create({
     fontFamily: 'Manrope_700Bold',
     fontSize: 12,
   },
-  supplierList: {
-    gap: 10,
-  },
-  supplierCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: SOFT_BORDER,
-    backgroundColor: PANEL,
-    padding: 14,
-  },
-  mobileSupplierChip: {
-    minWidth: 132,
-    maxWidth: 190,
-    minHeight: 44,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  supplierCardActive: {
-    borderColor: BRAND,
-    backgroundColor: BRAND_SOFT,
-  },
-  supplierCardTitleRow: {
+  supplierDropdownOptionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
   },
-  supplierCardTitle: {
-    flex: 1,
-    color: TEXT,
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 14,
-  },
-  mobileSupplierChipText: {
-    fontSize: 12,
-  },
-  supplierCardTitleActive: {
-    color: BRAND,
-  },
-  supplierCardCount: {
-    color: TEXT,
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 16,
-  },
-  mobileSupplierChipCount: {
-    fontSize: 13,
-  },
   mobileChipScrollerContent: {
     gap: 8,
     paddingRight: 4,
   },
-  supplierCardCountActive: {
+  supplierDropdownWrap: {
+    gap: 8,
+  },
+  supplierDropdownButton: {
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  mobileSupplierDropdownButton: {
+    minHeight: 50,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  supplierDropdownButtonActive: {
+    borderColor: BRAND,
+    backgroundColor: BRAND_SOFT,
+  },
+  supplierDropdownButtonTextBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  supplierDropdownLabel: {
+    color: MUTED,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
+    lineHeight: 14,
+    textTransform: 'uppercase',
+  },
+  supplierDropdownValue: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  supplierDropdownMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  supplierDropdownCount: {
+    color: BRAND,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  supplierDropdownMenu: {
+    maxHeight: 280,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: SOFT_BORDER,
+    backgroundColor: '#ffffff',
+    overflow: 'hidden',
+  },
+  supplierDropdownOption: {
+    minHeight: 44,
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(171, 30, 36, 0.08)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  supplierDropdownOptionActive: {
+    backgroundColor: BRAND_SOFT,
+  },
+  supplierDropdownOptionText: {
+    flex: 1,
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  supplierDropdownOptionTextActive: {
+    color: BRAND,
+  },
+  supplierDropdownOptionCount: {
+    color: TEXT,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
+  supplierDropdownOptionCountActive: {
     color: BRAND,
   },
   searchWrap: {

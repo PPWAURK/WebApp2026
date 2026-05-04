@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import type { AppText } from '../../locales/translations';
 import type { SupplierItem } from '../../services/suppliersApi';
@@ -46,14 +47,27 @@ export function OrderFilterPanel({
   onSelectedCategoryChange,
   onSelectSupplier,
 }: OrderFilterPanelProps) {
+  const [isSupplierDropdownOpen, setIsSupplierDropdownOpen] = useState(false);
+  const selectedSupplier = useMemo(
+    () =>
+      suppliers.find((supplier) => supplier.id === selectedSupplierId) ?? null,
+    [selectedSupplierId, suppliers],
+  );
+  const selectedSupplierProductCount = selectedSupplier
+    ? (supplierProductCountById.get(selectedSupplier.id) ?? 0)
+    : 0;
+
   if (mode === 'suppliers') {
     return renderSupplierPanel({
+      isSupplierDropdownOpen,
       loading,
       selectedSupplierId,
       selectedSupplierName,
+      selectedSupplierProductCount,
       supplierProductCountById,
       suppliers,
       text,
+      onDropdownOpenChange: setIsSupplierDropdownOpen,
       onSelectSupplier,
     });
   }
@@ -81,13 +95,21 @@ export function OrderFilterPanel({
         </View>
       </View>
 
-      {renderMobileSupplierScroller({
+      {renderSupplierDropdown({
+        isMobile: true,
+        isOpen: isSupplierDropdownOpen,
         loading,
         selectedSupplierId,
+        selectedSupplierName,
+        selectedSupplierProductCount,
         supplierProductCountById,
         suppliers,
         text,
-        onSelectSupplier,
+        onOpenChange: setIsSupplierDropdownOpen,
+        onSelectSupplier: (supplierId) => {
+          onSelectSupplier(supplierId);
+          setIsSupplierDropdownOpen(false);
+        },
       })}
 
       {renderSearchInput({
@@ -108,12 +130,15 @@ export function OrderFilterPanel({
 }
 
 function renderSupplierPanel({
+  isSupplierDropdownOpen,
   loading,
   selectedSupplierId,
   selectedSupplierName,
+  selectedSupplierProductCount,
   supplierProductCountById,
   suppliers,
   text,
+  onDropdownOpenChange,
   onSelectSupplier,
 }: Pick<
   OrderFilterPanelProps,
@@ -124,7 +149,11 @@ function renderSupplierPanel({
   | 'suppliers'
   | 'text'
   | 'onSelectSupplier'
->) {
+> & {
+  isSupplierDropdownOpen: boolean;
+  selectedSupplierProductCount: number;
+  onDropdownOpenChange: (next: boolean) => void;
+}) {
   return (
     <View style={styles.surfaceCard}>
       <View style={styles.surfaceHeader}>
@@ -139,27 +168,22 @@ function renderSupplierPanel({
         </View>
       </View>
 
-      {loading ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.docEmpty}>{text.orders.loading}</Text>
-        </View>
-      ) : suppliers.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.docEmpty}>{text.orders.empty}</Text>
-        </View>
-      ) : (
-        <View style={styles.supplierList}>
-          {suppliers.map((supplier) =>
-            renderSupplierChip({
-              isMobile: false,
-              isSelected: selectedSupplierId === supplier.id,
-              productCount: supplierProductCountById.get(supplier.id) ?? 0,
-              supplier,
-              onSelectSupplier,
-            }),
-          )}
-        </View>
-      )}
+      {renderSupplierDropdown({
+        isMobile: false,
+        isOpen: isSupplierDropdownOpen,
+        loading,
+        selectedSupplierId,
+        selectedSupplierName,
+        selectedSupplierProductCount,
+        supplierProductCountById,
+        suppliers,
+        text,
+        onOpenChange: onDropdownOpenChange,
+        onSelectSupplier: (supplierId) => {
+          onSelectSupplier(supplierId);
+          onDropdownOpenChange(false);
+        },
+      })}
     </View>
   );
 }
@@ -221,22 +245,33 @@ function renderSearchAndFilterPanel({
   );
 }
 
-function renderMobileSupplierScroller({
+function renderSupplierDropdown({
+  isMobile,
+  isOpen,
   loading,
   selectedSupplierId,
+  selectedSupplierName,
+  selectedSupplierProductCount,
   supplierProductCountById,
   suppliers,
   text,
+  onOpenChange,
   onSelectSupplier,
 }: Pick<
   OrderFilterPanelProps,
   | 'loading'
   | 'selectedSupplierId'
+  | 'selectedSupplierName'
   | 'supplierProductCountById'
   | 'suppliers'
   | 'text'
   | 'onSelectSupplier'
->) {
+> & {
+  isMobile: boolean;
+  isOpen: boolean;
+  selectedSupplierProductCount: number;
+  onOpenChange: (next: boolean) => void;
+}) {
   if (loading) {
     return (
       <View style={styles.emptyCard}>
@@ -254,21 +289,54 @@ function renderMobileSupplierScroller({
   }
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.mobileChipScrollerContent}
-    >
-      {suppliers.map((supplier) =>
-        renderSupplierChip({
-          isMobile: true,
-          isSelected: selectedSupplierId === supplier.id,
-          productCount: supplierProductCountById.get(supplier.id) ?? 0,
-          supplier,
-          onSelectSupplier,
-        }),
-      )}
-    </ScrollView>
+    <View style={styles.supplierDropdownWrap}>
+      <Pressable
+        style={[
+          styles.supplierDropdownButton,
+          isMobile && styles.mobileSupplierDropdownButton,
+          isOpen && styles.supplierDropdownButtonActive,
+        ]}
+        onPress={() => onOpenChange(!isOpen)}
+        accessibilityRole="button"
+        accessibilityLabel={selectedSupplierName}
+        accessibilityState={{ expanded: isOpen }}
+      >
+        <View style={styles.supplierDropdownButtonTextBlock}>
+          <Text style={styles.supplierDropdownLabel}>
+            {text.orders.supplierLabel}
+          </Text>
+          <Text style={styles.supplierDropdownValue} numberOfLines={1}>
+            {selectedSupplierName}
+          </Text>
+        </View>
+
+        <View style={styles.supplierDropdownMeta}>
+          <Text style={styles.supplierDropdownCount}>
+            {selectedSupplierProductCount}
+          </Text>
+          <Ionicons
+            name={isOpen ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            color="#ab1e24"
+          />
+        </View>
+      </Pressable>
+
+      {isOpen ? (
+        <View style={styles.supplierDropdownMenu}>
+          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
+            {suppliers.map((supplier) =>
+              renderSupplierOption({
+                isSelected: selectedSupplierId === supplier.id,
+                productCount: supplierProductCountById.get(supplier.id) ?? 0,
+                supplier,
+                onSelectSupplier,
+              }),
+            )}
+          </ScrollView>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -341,14 +409,12 @@ function renderSearchInput({
   );
 }
 
-function renderSupplierChip({
-  isMobile,
+function renderSupplierOption({
   isSelected,
   productCount,
   supplier,
   onSelectSupplier,
 }: {
-  isMobile: boolean;
   isSelected: boolean;
   productCount: number;
   supplier: SupplierItem;
@@ -358,21 +424,19 @@ function renderSupplierChip({
     <Pressable
       key={supplier.id}
       style={[
-        styles.supplierCard,
-        isMobile && styles.mobileSupplierChip,
-        isSelected && styles.supplierCardActive,
+        styles.supplierDropdownOption,
+        isSelected && styles.supplierDropdownOptionActive,
       ]}
       onPress={() => onSelectSupplier(supplier.id)}
       accessibilityRole="button"
       accessibilityLabel={supplier.name}
       accessibilityState={{ selected: isSelected }}
     >
-      <View style={styles.supplierCardTitleRow}>
+      <View style={styles.supplierDropdownOptionRow}>
         <Text
           style={[
-            styles.supplierCardTitle,
-            isMobile && styles.mobileSupplierChipText,
-            isSelected && styles.supplierCardTitleActive,
+            styles.supplierDropdownOptionText,
+            isSelected && styles.supplierDropdownOptionTextActive,
           ]}
           numberOfLines={1}
         >
@@ -380,9 +444,8 @@ function renderSupplierChip({
         </Text>
         <Text
           style={[
-            styles.supplierCardCount,
-            isMobile && styles.mobileSupplierChipCount,
-            isSelected && styles.supplierCardCountActive,
+            styles.supplierDropdownOptionCount,
+            isSelected && styles.supplierDropdownOptionCountActive,
           ]}
         >
           {productCount}
