@@ -247,19 +247,21 @@ describe('ProductsService', () => {
     expect(prisma.productCategory.delete).not.toHaveBeenCalled();
   });
 
-  it('creates a product with categoryId while preserving category text', async () => {
+  it('creates a product with categoryId and resolves legacy category', async () => {
     prisma.fournisseur.findUnique.mockResolvedValue({ id: 3 });
     prisma.productCategory.findUnique.mockResolvedValue(categoryRecord);
+
     prisma.produit.create.mockResolvedValue({
       ...productRecord,
       productCategoryId: 5,
-      categorie: categoryRecord.nameZh,
+      categorie: 'fresh',
     });
+
     prisma.produit.findUnique.mockResolvedValue({
       ...productRecord,
       productCategoryId: 5,
       productCategory: categoryRecord,
-      categorie: categoryRecord.nameZh,
+      categorie: 'fresh',
     });
 
     const result = await service.createProduct({
@@ -273,7 +275,7 @@ describe('ProductsService', () => {
         supplierId: 3,
         productCategoryId: 5,
         reference: null,
-        categorie: categoryRecord.nameZh,
+        categorie: 'fresh',
         nomCn: '上海青',
         designationFr: null,
         specification: null,
@@ -288,6 +290,7 @@ describe('ProductsService', () => {
         image: null,
       },
     });
+
     expect(result).toMatchObject({
       categoryId: 5,
       category: categoryRecord.nameZh,
