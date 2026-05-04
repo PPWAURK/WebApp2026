@@ -165,14 +165,71 @@ describe('ProductsService', () => {
     const result = await service.listProductCategories(3);
 
     expect(prisma.productCategory.createMany).toHaveBeenCalledWith({
-      data: expect.arrayContaining([
-        expect.objectContaining({
+      data: [
+        {
           supplierId: 3,
           nameZh: '蔬菜水果',
+          nameFr: 'Fruits & legumes',
           sortOrder: 10,
           isPreset: true,
-        }),
-      ]),
+        },
+        {
+          supplierId: 3,
+          nameZh: '肉类海鲜',
+          nameFr: 'Viandes & poissons',
+          sortOrder: 20,
+          isPreset: true,
+        },
+        {
+          supplierId: 3,
+          nameZh: '冷冻冷藏',
+          nameFr: 'Surgeles & frais',
+          sortOrder: 30,
+          isPreset: true,
+        },
+        {
+          supplierId: 3,
+          nameZh: '干货粮油',
+          nameFr: 'Epicerie seche',
+          sortOrder: 40,
+          isPreset: true,
+        },
+        {
+          supplierId: 3,
+          nameZh: '调料酱料',
+          nameFr: 'Condiments',
+          sortOrder: 50,
+          isPreset: true,
+        },
+        {
+          supplierId: 3,
+          nameZh: '饮料酒水',
+          nameFr: 'Boissons',
+          sortOrder: 60,
+          isPreset: true,
+        },
+        {
+          supplierId: 3,
+          nameZh: '包材耗材',
+          nameFr: 'Emballages',
+          sortOrder: 70,
+          isPreset: true,
+        },
+        {
+          supplierId: 3,
+          nameZh: '清洁用品',
+          nameFr: 'Hygiene',
+          sortOrder: 80,
+          isPreset: true,
+        },
+        {
+          supplierId: 3,
+          nameZh: '其他',
+          nameFr: 'Autres',
+          sortOrder: 90,
+          isPreset: true,
+        },
+      ],
       skipDuplicates: true,
     });
     expect(result).toEqual([categoryRecord]);
@@ -212,12 +269,24 @@ describe('ProductsService', () => {
     });
 
     expect(prisma.produit.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
+      data: {
         supplierId: 3,
         productCategoryId: 5,
+        reference: null,
         categorie: categoryRecord.nameZh,
         nomCn: '上海青',
-      }),
+        designationFr: null,
+        specification: null,
+        unite: null,
+        prixUHt: null,
+        specification2: null,
+        unite2: null,
+        prixUHt2: null,
+        specification3: null,
+        unite3: null,
+        prixUHt3: null,
+        image: null,
+      },
     });
     expect(result).toMatchObject({
       categoryId: 5,
