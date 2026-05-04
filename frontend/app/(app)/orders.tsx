@@ -10,14 +10,15 @@ export default function OrdersScreen() {
   const auth = useAuth();
   const language = useLanguage();
   const router = useRouter();
+
   const {
     setOrderRecap,
     orderQuantities,
     setOrderQuantities,
     selectedOrderSupplierId,
     setSelectedOrderSupplierId,
-    selectedOrderCategory,
-    setSelectedOrderCategory,
+    selectedOrderCategoryId,
+    setSelectedOrderCategoryId,
     orderProductSearch,
     setOrderProductSearch,
     setLatestCreatedOrder,
@@ -44,11 +45,11 @@ export default function OrdersScreen() {
       language={language.language}
       quantities={orderQuantities}
       selectedSupplierId={selectedOrderSupplierId}
-      selectedCategory={selectedOrderCategory}
+      selectedCategoryId={selectedOrderCategoryId}
       productSearch={orderProductSearch}
       onQuantitiesChange={setOrderQuantities}
       onSelectedSupplierIdChange={setSelectedOrderSupplierId}
-      onSelectedCategoryChange={setSelectedOrderCategory}
+      onSelectedCategoryChange={setSelectedOrderCategoryId}
       onProductSearchChange={setOrderProductSearch}
       onSubmitOrder={handleProceedToOrderRecap}
     />

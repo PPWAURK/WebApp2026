@@ -88,6 +88,9 @@ type OrderLineProduct = {
   id: bigint;
   supplierId: number;
   categorie: string;
+  productCategory?: {
+    nameZh: string;
+  } | null;
   nomCn: string;
   designationFr: string | null;
   specification: string | null;
@@ -172,6 +175,9 @@ export class OrdersService {
           in: distinctProductIds.map((id) => BigInt(id)),
         },
         isActive: true,
+      },
+      include: {
+        productCategory: true,
       },
     });
 
@@ -310,7 +316,7 @@ export class OrdersService {
             nameFr: item.product.designationFr,
             specification: item.specification,
             unit: item.unit,
-            category: item.product.categorie,
+            category: this.resolveOrderItemCategory(item.product),
           })),
         });
 
@@ -1737,6 +1743,9 @@ export class OrdersService {
         supplierId,
         isActive: true,
       },
+      include: {
+        productCategory: true,
+      },
       orderBy: {
         id: 'asc',
       },
@@ -2087,6 +2096,10 @@ export class OrdersService {
     const day = String(createdAt.getDate()).padStart(2, '0');
     const paddedId = String(orderId).padStart(4, '0');
     return `PO-${year}${month}${day}-${paddedId}`;
+  }
+
+  private resolveOrderItemCategory(product: OrderLineProduct) {
+    return product.productCategory?.nameZh ?? product.categorie;
   }
 
   private buildUploadFilePath(category: UploadCategory, fileName: string) {

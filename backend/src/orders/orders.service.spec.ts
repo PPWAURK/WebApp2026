@@ -329,6 +329,9 @@ describe('OrdersService', () => {
         },
         isActive: true,
       },
+      include: {
+        productCategory: true,
+      },
     });
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
@@ -401,6 +404,9 @@ describe('OrdersService', () => {
       where: {
         supplierId: 7,
         isActive: true,
+      },
+      include: {
+        productCategory: true,
       },
       orderBy: {
         id: 'asc',

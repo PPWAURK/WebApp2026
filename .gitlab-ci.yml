@@ -138,6 +138,7 @@ deploy:
 
         docker compose -f "$DEPLOY_COMPOSE_FILE" pull "$BACKEND_SERVICE"
         docker compose -f "$DEPLOY_COMPOSE_FILE" run --rm "$BACKEND_SERVICE" node scripts/recover-return-photo-migration.js
+        docker compose -f "$DEPLOY_COMPOSE_FILE" run --rm "$BACKEND_SERVICE" node scripts/recover-product-category-migration.js
         docker compose -f "$DEPLOY_COMPOSE_FILE" run --rm "$BACKEND_SERVICE" npm run prisma:migrate:deploy
         docker compose -f "$DEPLOY_COMPOSE_FILE" run --rm "$BACKEND_SERVICE" npm run prisma:seed
         docker compose -f "$DEPLOY_COMPOSE_FILE" up -d "$BACKEND_SERVICE"

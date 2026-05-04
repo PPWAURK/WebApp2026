@@ -91,6 +91,12 @@ export function ProductEditorModal({
   onSave,
   onUploadImage,
 }: ProductEditorModalProps) {
+  const selectedProductCategoryLabel = selectedProduct
+    ? language === 'zh'
+      ? selectedProduct.categoryNameZh
+      : selectedProduct.categoryNameFr
+    : '';
+
   return (
     <Modal
       visible={visible}
@@ -154,7 +160,7 @@ export function ProductEditorModal({
                       </View>
                       <View style={styles.modalPreviewChip}>
                         <Text style={styles.modalPreviewChipText}>
-                          {selectedProduct.category}
+                          {selectedProductCategoryLabel}
                         </Text>
                       </View>
                       {selectedProduct.reference ? (

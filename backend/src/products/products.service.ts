@@ -93,10 +93,10 @@ type UpdateProductCategoryPayload = {
 
 const PRODUCT_CATEGORY_PRESETS = [
   { nameZh: '蔬菜水果', nameFr: 'Fruits & legumes', sortOrder: 10 },
-  { nameZh: '肉类海鲜', nameFr: 'Viandes & poissons', sortOrder: 20 },
-  { nameZh: '冷冻冷藏', nameFr: 'Surgeles & frais', sortOrder: 30 },
-  { nameZh: '干货粮油', nameFr: 'Epicerie seche', sortOrder: 40 },
-  { nameZh: '调料酱料', nameFr: 'Condiments', sortOrder: 50 },
+  { nameZh: '调料酱料', nameFr: 'Sauces & Spices', sortOrder: 20 },
+  { nameZh: '肉类海鲜', nameFr: 'Viandes & poissons', sortOrder: 30 },
+  { nameZh: '冷冻冷藏', nameFr: 'Surgeles & frais', sortOrder: 40 },
+  { nameZh: '干货粮油', nameFr: 'Epicerie seche', sortOrder: 50 },
   { nameZh: '饮料酒水', nameFr: 'Boissons', sortOrder: 60 },
   { nameZh: '包材耗材', nameFr: 'Emballages', sortOrder: 70 },
   { nameZh: '清洁用品', nameFr: 'Hygiene', sortOrder: 80 },

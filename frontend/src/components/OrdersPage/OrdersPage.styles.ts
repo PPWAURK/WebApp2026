@@ -380,6 +380,9 @@ export const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
+  tabletCompactProductGrid: {
+    gap: 10,
+  },
   mobileProductGrid: {
     flexDirection: 'column',
     flexWrap: 'nowrap',
@@ -410,6 +413,9 @@ export const styles = StyleSheet.create({
     backgroundColor: PANEL,
     padding: 10,
     gap: 8,
+  },
+  tabletProductCard: {
+    width: '48.8%',
   },
   productCardHeader: {
     gap: 8,

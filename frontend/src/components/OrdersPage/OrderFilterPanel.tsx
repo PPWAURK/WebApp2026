@@ -2,32 +2,41 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import type { AppText } from '../../locales/translations';
 import type { SupplierItem } from '../../services/suppliersApi';
+import type { Language } from '../../types/language';
+import {
+  formatProductCategoryLabel,
+  type ProductCategory,
+} from './ordersPage.shared';
 import { styles } from './OrdersPage.styles';
 
 type OrderFilterPanelMode = 'suppliers' | 'filters' | 'mobile';
 
+type SelectedCategoryId = number | 'ALL';
+
 type OrderFilterPanelProps = {
-  categories: string[];
+  productCategories: ProductCategory[];
+  language: Language;
   loading: boolean;
   mode: OrderFilterPanelMode;
   productSearch: string;
-  selectedCategory: string;
+  selectedCategoryId: SelectedCategoryId;
   selectedSupplierId: number | 'ALL';
   selectedSupplierName: string;
   supplierProductCountById: Map<number, number>;
   suppliers: SupplierItem[];
   text: AppText;
   onProductSearchChange: (next: string) => void;
-  onSelectedCategoryChange: (next: string) => void;
+  onSelectedCategoryChange: (next: SelectedCategoryId) => void;
   onSelectSupplier: (supplierId: number) => void;
 };
 
 export function OrderFilterPanel({
-  categories,
+  productCategories,
+  language,
   loading,
   mode,
   productSearch,
-  selectedCategory,
+  selectedCategoryId,
   selectedSupplierId,
   selectedSupplierName,
   supplierProductCountById,
@@ -50,10 +59,11 @@ export function OrderFilterPanel({
   }
 
   if (mode === 'filters') {
-    return renderSearchAndCategoryPanel({
-      categories,
+    return renderSearchAndFilterPanel({
+      productCategories,
+      language,
       productSearch,
-      selectedCategory,
+      selectedCategoryId,
       text,
       onProductSearchChange,
       onSelectedCategoryChange,
@@ -86,9 +96,10 @@ export function OrderFilterPanel({
         onProductSearchChange,
       })}
 
-      {renderCategoryScroller({
-        categories,
-        selectedCategory,
+      {renderMobileFilterScroller({
+        productCategories,
+        language,
+        selectedCategoryId,
         text,
         onSelectedCategoryChange,
       })}
@@ -153,18 +164,20 @@ function renderSupplierPanel({
   );
 }
 
-function renderSearchAndCategoryPanel({
-  categories,
+function renderSearchAndFilterPanel({
+  productCategories,
+  language,
   productSearch,
-  selectedCategory,
+  selectedCategoryId,
   text,
   onProductSearchChange,
   onSelectedCategoryChange,
 }: Pick<
   OrderFilterPanelProps,
-  | 'categories'
+  | 'productCategories'
+  | 'language'
   | 'productSearch'
-  | 'selectedCategory'
+  | 'selectedCategoryId'
   | 'text'
   | 'onProductSearchChange'
   | 'onSelectedCategoryChange'
@@ -187,18 +200,20 @@ function renderSearchAndCategoryPanel({
         onProductSearchChange,
       })}
 
+      <Text style={styles.surfaceEyebrow}>{text.orders.categoryLabel}</Text>
       <View style={styles.categoryWrap}>
         {renderCategoryChip({
-          isSelected: selectedCategory === 'ALL',
-          label: text.orders.allTypes,
+          isSelected: selectedCategoryId === 'ALL',
+          label: text.orders.allCategories,
           onPress: () => onSelectedCategoryChange('ALL'),
         })}
-        {categories.map((category) =>
+
+        {productCategories.map((category) =>
           renderCategoryChip({
-            isSelected: selectedCategory === category,
-            key: category,
-            label: category,
-            onPress: () => onSelectedCategoryChange(category),
+            isSelected: selectedCategoryId === category.id,
+            key: String(category.id),
+            label: formatProductCategoryLabel(category, language),
+            onPress: () => onSelectedCategoryChange(category.id),
           }),
         )}
       </View>
@@ -257,37 +272,46 @@ function renderMobileSupplierScroller({
   );
 }
 
-function renderCategoryScroller({
-  categories,
-  selectedCategory,
+function renderMobileFilterScroller({
+  productCategories,
+  language,
+  selectedCategoryId,
   text,
   onSelectedCategoryChange,
 }: Pick<
   OrderFilterPanelProps,
-  'categories' | 'selectedCategory' | 'text' | 'onSelectedCategoryChange'
+  | 'productCategories'
+  | 'language'
+  | 'selectedCategoryId'
+  | 'text'
+  | 'onSelectedCategoryChange'
 >) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.mobileChipScrollerContent}
-    >
-      {renderCategoryChip({
-        isMobile: true,
-        isSelected: selectedCategory === 'ALL',
-        label: text.orders.allTypes,
-        onPress: () => onSelectedCategoryChange('ALL'),
-      })}
-      {categories.map((category) =>
-        renderCategoryChip({
+    <View>
+      <Text style={styles.surfaceEyebrow}>{text.orders.categoryLabel}</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.mobileChipScrollerContent}
+      >
+        {renderCategoryChip({
           isMobile: true,
-          isSelected: selectedCategory === category,
-          key: category,
-          label: category,
-          onPress: () => onSelectedCategoryChange(category),
-        }),
-      )}
-    </ScrollView>
+          isSelected: selectedCategoryId === 'ALL',
+          label: text.orders.allCategories,
+          onPress: () => onSelectedCategoryChange('ALL'),
+        })}
+
+        {productCategories.map((category) =>
+          renderCategoryChip({
+            isMobile: true,
+            isSelected: selectedCategoryId === category.id,
+            key: String(category.id),
+            label: formatProductCategoryLabel(category, language),
+            onPress: () => onSelectedCategoryChange(category.id),
+          }),
+        )}
+      </ScrollView>
+    </View>
   );
 }
 

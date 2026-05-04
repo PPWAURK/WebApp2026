@@ -8,6 +8,8 @@ import {
 } from 'react';
 import type { OrderRecapData } from '../types/order';
 
+type SelectedOrderCategoryId = number | 'ALL';
+
 type LatestCreatedOrder = {
   id: number;
   number: string;
@@ -19,16 +21,22 @@ type OrderFlowContextValue = {
   setOrderRecap: Dispatch<SetStateAction<OrderRecapData | null>>;
   orderQuantities: Record<string, number>;
   setOrderQuantities: Dispatch<SetStateAction<Record<string, number>>>;
+
   selectedOrderSupplierId: number | 'ALL';
   setSelectedOrderSupplierId: Dispatch<SetStateAction<number | 'ALL'>>;
-  selectedOrderCategory: string;
-  setSelectedOrderCategory: Dispatch<SetStateAction<string>>;
+
+  selectedOrderCategoryId: SelectedOrderCategoryId;
+  setSelectedOrderCategoryId: Dispatch<SetStateAction<SelectedOrderCategoryId>>;
+
   orderProductSearch: string;
   setOrderProductSearch: Dispatch<SetStateAction<string>>;
+
   deliveryDate: string;
   setDeliveryDate: Dispatch<SetStateAction<string>>;
+
   latestCreatedOrder: LatestCreatedOrder | null;
   setLatestCreatedOrder: Dispatch<SetStateAction<LatestCreatedOrder | null>>;
+
   resetOrderDraft: () => void;
 };
 
@@ -44,16 +52,22 @@ function getTodayDateString() {
 
 export function OrderFlowProvider({ children }: { children: ReactNode }) {
   const [orderRecap, setOrderRecap] = useState<OrderRecapData | null>(null);
-  const [orderQuantities, setOrderQuantities] = useState<Record<string, number>>(
-    {},
-  );
+
+  const [orderQuantities, setOrderQuantities] = useState<
+    Record<string, number>
+  >({});
+
   const [selectedOrderSupplierId, setSelectedOrderSupplierId] = useState<
     number | 'ALL'
   >('ALL');
-  const [selectedOrderCategory, setSelectedOrderCategory] =
-    useState<string>('ALL');
+
+  const [selectedOrderCategoryId, setSelectedOrderCategoryId] =
+    useState<SelectedOrderCategoryId>('ALL');
+
   const [orderProductSearch, setOrderProductSearch] = useState('');
+
   const [deliveryDate, setDeliveryDate] = useState(getTodayDateString());
+
   const [latestCreatedOrder, setLatestCreatedOrder] =
     useState<LatestCreatedOrder | null>(null);
 
@@ -61,7 +75,7 @@ export function OrderFlowProvider({ children }: { children: ReactNode }) {
     setOrderRecap(null);
     setOrderQuantities({});
     setSelectedOrderSupplierId('ALL');
-    setSelectedOrderCategory('ALL');
+    setSelectedOrderCategoryId('ALL');
     setOrderProductSearch('');
     setDeliveryDate(getTodayDateString());
     setLatestCreatedOrder(null);
@@ -74,16 +88,22 @@ export function OrderFlowProvider({ children }: { children: ReactNode }) {
         setOrderRecap,
         orderQuantities,
         setOrderQuantities,
+
         selectedOrderSupplierId,
         setSelectedOrderSupplierId,
-        selectedOrderCategory,
-        setSelectedOrderCategory,
+
+        selectedOrderCategoryId,
+        setSelectedOrderCategoryId,
+
         orderProductSearch,
         setOrderProductSearch,
+
         deliveryDate,
         setDeliveryDate,
+
         latestCreatedOrder,
         setLatestCreatedOrder,
+
         resetOrderDraft,
       }}
     >

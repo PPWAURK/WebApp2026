@@ -15,8 +15,10 @@ import {
 import { styles } from './OrdersPage.styles';
 
 type OrderProductCardProps = {
+  isCompactProductCard: boolean;
   isMobileLayout: boolean;
   isSmallScreen: boolean;
+  isTabletCompactProductCard: boolean;
   language: Language;
   product: ProductItem;
   quantities: Record<string, number>;
@@ -26,8 +28,10 @@ type OrderProductCardProps = {
 };
 
 export const OrderProductCard = memo(function OrderProductCard({
+  isCompactProductCard,
   isMobileLayout,
   isSmallScreen,
+  isTabletCompactProductCard,
   language,
   product,
   quantities,
@@ -37,10 +41,17 @@ export const OrderProductCard = memo(function OrderProductCard({
 }: OrderProductCardProps) {
   const productName =
     language === 'zh' ? product.nameZh : (product.nameFr ?? product.nameZh);
+  const categoryLabel =
+    language === 'zh' ? product.categoryNameZh : product.categoryNameFr;
 
-  if (isMobileLayout) {
+  if (isCompactProductCard) {
     return (
-      <View style={styles.mobileProductCard}>
+      <View
+        style={[
+          styles.mobileProductCard,
+          isTabletCompactProductCard && styles.tabletProductCard,
+        ]}
+      >
         <View style={styles.mobileProductHeaderRow}>
           {renderProductImage(product, true)}
           <View style={styles.mobileProductTitleColumn}>
@@ -50,7 +61,7 @@ export const OrderProductCard = memo(function OrderProductCard({
               </Text>
               <View style={styles.productBadge}>
                 <Text style={styles.productBadgeText} numberOfLines={1}>
-                  {product.category}
+                  {categoryLabel}
                 </Text>
               </View>
             </View>
@@ -94,7 +105,7 @@ export const OrderProductCard = memo(function OrderProductCard({
       <View style={styles.productCardHeader}>
         <View style={styles.productBadgeRow}>
           <View style={styles.productBadge}>
-            <Text style={styles.productBadgeText}>{product.category}</Text>
+            <Text style={styles.productBadgeText}>{categoryLabel}</Text>
           </View>
           {product.reference ? (
             <View style={styles.productBadge}>

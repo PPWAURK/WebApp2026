@@ -32,10 +32,10 @@ SELECT f.`id`, preset.`name_zh`, preset.`name_fr`, preset.`sort_order`, true
 FROM `fournisseurs` f
 JOIN (
   SELECT '蔬菜水果' AS `name_zh`, 'Fruits & legumes' AS `name_fr`, 10 AS `sort_order`
-  UNION ALL SELECT '肉类海鲜', 'Viandes & poissons', 20
-  UNION ALL SELECT '冷冻冷藏', 'Surgeles & frais', 30
-  UNION ALL SELECT '干货粮油', 'Epicerie seche', 40
-  UNION ALL SELECT '调料酱料', 'Condiments', 50
+  UNION ALL SELECT '调料酱料', 'Sauces & Spices', 20
+  UNION ALL SELECT '肉类海鲜', 'Viandes & poissons', 30
+  UNION ALL SELECT '冷冻冷藏', 'Surgeles & frais', 40
+  UNION ALL SELECT '干货粮油', 'Epicerie seche', 50
   UNION ALL SELECT '饮料酒水', 'Boissons', 60
   UNION ALL SELECT '包材耗材', 'Emballages', 70
   UNION ALL SELECT '清洁用品', 'Hygiene', 80

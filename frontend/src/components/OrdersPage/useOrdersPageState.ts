@@ -3,18 +3,24 @@ import { fetchProducts, type ProductItem } from '../../services/productsApi';
 import { fetchSuppliers, type SupplierItem } from '../../services/suppliersApi';
 import type { AppText } from '../../locales/translations';
 import type { OrderRecapData } from '../../types/order';
-import { buildOrderItemKey, clampOrderQuantity } from './ordersPage.shared';
+import {
+  buildOrderItemKey,
+  clampOrderQuantity,
+  type ProductCategory,
+} from './ordersPage.shared';
+
+type SelectedCategoryId = number | 'ALL';
 
 type UseOrdersPageStateParams = {
   accessToken: string;
   quantities: Record<string, number>;
   selectedSupplierId: number | 'ALL';
-  selectedCategory: string;
+  selectedCategoryId: SelectedCategoryId;
   productSearch: string;
   text: AppText;
   onQuantitiesChange: (next: Record<string, number>) => void;
   onSelectedSupplierIdChange: (next: number | 'ALL') => void;
-  onSelectedCategoryChange: (next: string) => void;
+  onSelectedCategoryChange: (next: SelectedCategoryId) => void;
   onSubmitOrder: (recap: OrderRecapData) => void;
 };
 
@@ -22,7 +28,7 @@ export function useOrdersPageState({
   accessToken,
   quantities,
   selectedSupplierId,
-  selectedCategory,
+  selectedCategoryId,
   productSearch,
   text,
   onQuantitiesChange,
@@ -42,17 +48,13 @@ export function useOrdersPageState({
 
     void Promise.all([fetchProducts(accessToken), fetchSuppliers(accessToken)])
       .then(([productResult, supplierResult]) => {
-        if (!isActive) {
-          return;
-        }
+        if (!isActive) return;
 
         setProducts(productResult);
         setSuppliers(supplierResult);
       })
       .catch(() => {
-        if (!isActive) {
-          return;
-        }
+        if (!isActive) return;
 
         setProducts([]);
         setSuppliers([]);
@@ -74,9 +76,11 @@ export function useOrdersPageState({
       if (selectedSupplierId !== 'ALL') {
         onSelectedSupplierIdChange('ALL');
       }
-      if (selectedCategory !== 'ALL') {
+
+      if (selectedCategoryId !== 'ALL') {
         onSelectedCategoryChange('ALL');
       }
+
       return;
     }
 
@@ -101,7 +105,7 @@ export function useOrdersPageState({
     onSelectedSupplierIdChange,
     products,
     quantities,
-    selectedCategory,
+    selectedCategoryId,
     selectedSupplierId,
     suppliers,
   ]);
@@ -134,17 +138,48 @@ export function useOrdersPageState({
     );
   }, [products, selectedSupplierId]);
 
+  const productCategories = useMemo<ProductCategory[]>(() => {
+    const categoryById = new Map<number, ProductCategory>();
+
+    for (const product of supplierProducts) {
+      const categoryId = product.categoryId;
+
+      if (categoryId == null) {
+        continue;
+      }
+
+      categoryById.set(categoryId, {
+        id: categoryId,
+        supplierId: product.supplierId,
+        nameZh: product.categoryNameZh ?? product.category,
+        nameFr: product.categoryNameFr ?? product.category,
+        sortOrder: product.categorySortOrder ?? Number.MAX_SAFE_INTEGER,
+        isPreset: true,
+      });
+    }
+
+    return Array.from(categoryById.values()).sort((left, right) => {
+      if (left.sortOrder !== right.sortOrder) {
+        return left.sortOrder - right.sortOrder;
+      }
+
+      return left.nameFr.localeCompare(right.nameFr);
+    });
+  }, [supplierProducts]);
+
   useEffect(() => {
-    if (selectedCategory === 'ALL') {
+    if (selectedCategoryId === 'ALL') {
       return;
     }
 
     if (
-      !supplierProducts.some((product) => product.category === selectedCategory)
+      !supplierProducts.some(
+        (product) => Number(product.categoryId) === Number(selectedCategoryId),
+      )
     ) {
       onSelectedCategoryChange('ALL');
     }
-  }, [onSelectedCategoryChange, selectedCategory, supplierProducts]);
+  }, [onSelectedCategoryChange, selectedCategoryId, supplierProducts]);
 
   const summary = useMemo(() => {
     return supplierProducts.reduce(
@@ -181,12 +216,14 @@ export function useOrdersPageState({
           }
 
           const price = specification.priceHt ?? 0;
+
           return {
             orderItemKey,
             productId: product.id,
             specificationSlot: specification.slot,
             supplierId: product.supplierId,
             category: product.category,
+            productCategoryId: product.categoryId,
             nameZh: product.nameZh,
             nameFr: product.nameFr,
             specification: specification.specification,
@@ -201,43 +238,13 @@ export function useOrdersPageState({
     );
   }, [quantities, supplierProducts]);
 
-  const categories = useMemo(() => {
-    const categorySortOrderByName = new Map<string, number>();
-
-    for (const product of supplierProducts) {
-      if (!product.category.trim()) {
-        continue;
-      }
-
-      const currentSortOrder =
-        categorySortOrderByName.get(product.category) ??
-        Number.MAX_SAFE_INTEGER;
-      const nextSortOrder =
-        product.categorySortOrder ?? Number.MAX_SAFE_INTEGER;
-
-      categorySortOrderByName.set(
-        product.category,
-        Math.min(currentSortOrder, nextSortOrder),
-      );
-    }
-
-    return Array.from(categorySortOrderByName.entries())
-      .sort(([leftName, leftSortOrder], [rightName, rightSortOrder]) => {
-        if (leftSortOrder !== rightSortOrder) {
-          return leftSortOrder - rightSortOrder;
-        }
-
-        return leftName.localeCompare(rightName);
-      })
-      .map(([category]) => category);
-  }, [supplierProducts]);
-
   const filteredProducts = useMemo(() => {
     const normalizedQuery = productSearch.trim().toLowerCase();
 
     return supplierProducts.filter((product) => {
       const matchCategory =
-        selectedCategory === 'ALL' || product.category === selectedCategory;
+        selectedCategoryId === 'ALL' ||
+        Number(product.categoryId) === Number(selectedCategoryId);
 
       if (!matchCategory) {
         return false;
@@ -250,6 +257,10 @@ export function useOrdersPageState({
       const nameFr = (product.nameFr ?? '').toLowerCase();
       const nameZh = (product.nameZh ?? '').toLowerCase();
       const reference = (product.reference ?? '').toLowerCase();
+      const category = (product.category ?? '').toLowerCase();
+      const categoryNameFr = (product.categoryNameFr ?? '').toLowerCase();
+      const categoryNameZh = (product.categoryNameZh ?? '').toLowerCase();
+
       const specifications = product.specifications.map((item) =>
         (item.specification ?? '').toLowerCase(),
       );
@@ -258,12 +269,15 @@ export function useOrdersPageState({
         nameFr.includes(normalizedQuery) ||
         nameZh.includes(normalizedQuery) ||
         reference.includes(normalizedQuery) ||
+        category.includes(normalizedQuery) ||
+        categoryNameFr.includes(normalizedQuery) ||
+        categoryNameZh.includes(normalizedQuery) ||
         specifications.some((specification) =>
           specification.includes(normalizedQuery),
         )
       );
     });
-  }, [productSearch, selectedCategory, supplierProducts]);
+  }, [productSearch, selectedCategoryId, supplierProducts]);
 
   const selectedSupplierName = useMemo(() => {
     if (selectedSupplierId === 'ALL') {
@@ -307,11 +321,11 @@ export function useOrdersPageState({
   }, [onSubmitOrder, selectedItems, summary.totalAmount, summary.totalItems]);
 
   return {
-    categories,
     filteredProducts,
     handleSelectSupplier,
     hasLoadError,
     loading,
+    productCategories,
     selectedSupplierName,
     selectedSupplierOrderNotice,
     setQuantity,

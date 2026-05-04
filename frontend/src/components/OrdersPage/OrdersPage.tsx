@@ -19,8 +19,10 @@ import { OrderFilterPanel } from './OrderFilterPanel';
 import { OrderMobileSummaryBar } from './OrderMobileSummaryBar';
 import { OrderProductCard } from './OrderProductCard';
 import { styles } from './OrdersPage.styles';
-import { formatAmount } from './ordersPage.shared';
+import { formatAmount, formatProductCategoryLabel } from './ordersPage.shared';
 import { useOrdersPageState } from './useOrdersPageState';
+
+type SelectedCategoryId = number | 'ALL';
 
 type OrdersPageProps = {
   text: AppText;
@@ -28,11 +30,11 @@ type OrdersPageProps = {
   language: Language;
   quantities: Record<string, number>;
   selectedSupplierId: number | 'ALL';
-  selectedCategory: string;
+  selectedCategoryId: SelectedCategoryId;
   productSearch: string;
   onQuantitiesChange: (next: Record<string, number>) => void;
   onSelectedSupplierIdChange: (next: number | 'ALL') => void;
-  onSelectedCategoryChange: (next: string) => void;
+  onSelectedCategoryChange: (next: SelectedCategoryId) => void;
   onProductSearchChange: (next: string) => void;
   onSubmitOrder: (recap: OrderRecapData) => void;
 };
@@ -43,7 +45,7 @@ export function OrdersPage({
   language,
   quantities,
   selectedSupplierId,
-  selectedCategory,
+  selectedCategoryId,
   productSearch,
   onQuantitiesChange,
   onSelectedSupplierIdChange,
@@ -53,6 +55,7 @@ export function OrdersPage({
 }: OrdersPageProps) {
   const { width } = useWindowDimensions();
   const isMobileLayout = width < BREAKPOINT_TABLET;
+  const isTabletLayout = width >= BREAKPOINT_TABLET && width < BREAKPOINT_WIDE;
   const isSmallScreen = width < BREAKPOINT_COMPACT;
   const isWideLayout = width >= BREAKPOINT_WIDE;
   const useSingleColumnGrid = isMobileLayout || width < 900;
@@ -63,7 +66,7 @@ export function OrdersPage({
     accessToken,
     quantities,
     selectedSupplierId,
-    selectedCategory,
+    selectedCategoryId,
     productSearch,
     text,
     onQuantitiesChange,
@@ -71,6 +74,19 @@ export function OrdersPage({
     onSelectedCategoryChange,
     onSubmitOrder,
   });
+
+  const selectedCategory = state.productCategories.find(
+    (category) => category.id === selectedCategoryId,
+  );
+
+  const selectedCategoryLabel =
+    selectedCategoryId === 'ALL'
+      ? text.orders.allCategories
+      : selectedCategory
+        ? formatProductCategoryLabel(selectedCategory, language)
+        : text.orders.allCategories;
+
+  const selectedFilterLabel = selectedCategoryLabel;
 
   const summaryCard = useMemo(
     () => (
@@ -137,6 +153,7 @@ export function OrdersPage({
                   {text.orders.summaryItems}
                 </Text>
               </View>
+
               <View style={styles.heroStatCard}>
                 <Text style={styles.heroStatValue}>
                   {formatAmount(state.summary.totalAmount)}
@@ -145,6 +162,7 @@ export function OrdersPage({
                   {text.orders.summaryAmount}
                 </Text>
               </View>
+
               <View style={styles.heroStatCard}>
                 <Text style={styles.heroStatValue}>
                   {state.filteredProducts.length}
@@ -163,13 +181,14 @@ export function OrdersPage({
 
         {isMobileLayout ? (
           <MobileOrdersContent
-            categories={state.categories}
+            productCategories={state.productCategories}
             filteredProducts={state.filteredProducts}
             language={language}
             loading={state.loading}
             productSearch={productSearch}
             quantities={quantities}
-            selectedCategory={selectedCategory}
+            selectedCategoryId={selectedCategoryId}
+            selectedFilterLabel={selectedFilterLabel}
             selectedSupplierId={selectedSupplierId}
             selectedSupplierName={state.selectedSupplierName}
             selectedSupplierOrderNotice={state.selectedSupplierOrderNotice}
@@ -191,11 +210,12 @@ export function OrdersPage({
               ]}
             >
               <OrderFilterPanel
-                categories={state.categories}
+                productCategories={state.productCategories}
+                language={language}
                 loading={state.loading}
                 mode="suppliers"
                 productSearch={productSearch}
-                selectedCategory={selectedCategory}
+                selectedCategoryId={selectedCategoryId}
                 selectedSupplierId={selectedSupplierId}
                 selectedSupplierName={state.selectedSupplierName}
                 supplierProductCountById={state.supplierProductCountById}
@@ -205,16 +225,18 @@ export function OrdersPage({
                 onSelectedCategoryChange={onSelectedCategoryChange}
                 onSelectSupplier={state.handleSelectSupplier}
               />
+
               {shouldMoveSummaryCardToBottom ? null : summaryCard}
             </View>
 
             <View style={styles.contentColumn}>
               <OrderFilterPanel
-                categories={state.categories}
+                productCategories={state.productCategories}
+                language={language}
                 loading={state.loading}
                 mode="filters"
                 productSearch={productSearch}
-                selectedCategory={selectedCategory}
+                selectedCategoryId={selectedCategoryId}
                 selectedSupplierId={selectedSupplierId}
                 selectedSupplierName={state.selectedSupplierName}
                 supplierProductCountById={state.supplierProductCountById}
@@ -227,12 +249,14 @@ export function OrdersPage({
 
               <ProductListSurface
                 filteredProducts={state.filteredProducts}
+                isCompactProductCard={isTabletLayout}
                 isMobileLayout={false}
                 isSmallScreen={isSmallScreen}
+                isTabletCompactProductCard={isTabletLayout}
                 language={language}
                 loading={state.loading}
                 quantities={quantities}
-                selectedCategory={selectedCategory}
+                selectedFilterLabel={selectedFilterLabel}
                 selectedSupplierName={state.selectedSupplierName}
                 selectedSupplierOrderNotice={state.selectedSupplierOrderNotice}
                 supplierProductsLength={state.supplierProducts.length}
@@ -262,13 +286,14 @@ export function OrdersPage({
 }
 
 function MobileOrdersContent({
-  categories,
+  productCategories,
   filteredProducts,
   language,
   loading,
   productSearch,
   quantities,
-  selectedCategory,
+  selectedCategoryId,
+  selectedFilterLabel,
   selectedSupplierId,
   selectedSupplierName,
   selectedSupplierOrderNotice,
@@ -281,13 +306,14 @@ function MobileOrdersContent({
   onSelectSupplier,
   onSetQuantity,
 }: {
-  categories: string[];
+  productCategories: ReturnType<typeof useOrdersPageState>['productCategories'];
   filteredProducts: ReturnType<typeof useOrdersPageState>['filteredProducts'];
   language: Language;
   loading: boolean;
   productSearch: string;
   quantities: Record<string, number>;
-  selectedCategory: string;
+  selectedCategoryId: SelectedCategoryId;
+  selectedFilterLabel: string;
   selectedSupplierId: number | 'ALL';
   selectedSupplierName: string;
   selectedSupplierOrderNotice: string;
@@ -296,18 +322,19 @@ function MobileOrdersContent({
   suppliers: ReturnType<typeof useOrdersPageState>['suppliers'];
   text: AppText;
   onProductSearchChange: (next: string) => void;
-  onSelectedCategoryChange: (next: string) => void;
+  onSelectedCategoryChange: (next: SelectedCategoryId) => void;
   onSelectSupplier: (supplierId: number) => void;
   onSetQuantity: (orderItemKey: string, nextQuantity: number) => void;
 }) {
   return (
     <View style={styles.mobileContentStack}>
       <OrderFilterPanel
-        categories={categories}
+        productCategories={productCategories}
+        language={language}
         loading={loading}
         mode="mobile"
         productSearch={productSearch}
-        selectedCategory={selectedCategory}
+        selectedCategoryId={selectedCategoryId}
         selectedSupplierId={selectedSupplierId}
         selectedSupplierName={selectedSupplierName}
         supplierProductCountById={supplierProductCountById}
@@ -320,12 +347,14 @@ function MobileOrdersContent({
 
       <ProductListSurface
         filteredProducts={filteredProducts}
+        isCompactProductCard
         isMobileLayout
         isSmallScreen
+        isTabletCompactProductCard={false}
         language={language}
         loading={loading}
         quantities={quantities}
-        selectedCategory={selectedCategory}
+        selectedFilterLabel={selectedFilterLabel}
         selectedSupplierName={selectedSupplierName}
         selectedSupplierOrderNotice={selectedSupplierOrderNotice}
         supplierProductsLength={supplierProductsLength}
@@ -339,12 +368,14 @@ function MobileOrdersContent({
 
 function ProductListSurface({
   filteredProducts,
+  isCompactProductCard,
   isMobileLayout,
   isSmallScreen,
+  isTabletCompactProductCard,
   language,
   loading,
   quantities,
-  selectedCategory,
+  selectedFilterLabel,
   selectedSupplierName,
   selectedSupplierOrderNotice,
   supplierProductsLength,
@@ -353,12 +384,14 @@ function ProductListSurface({
   onSetQuantity,
 }: {
   filteredProducts: ReturnType<typeof useOrdersPageState>['filteredProducts'];
+  isCompactProductCard: boolean;
   isMobileLayout: boolean;
   isSmallScreen: boolean;
+  isTabletCompactProductCard: boolean;
   language: Language;
   loading: boolean;
   quantities: Record<string, number>;
-  selectedCategory: string;
+  selectedFilterLabel: string;
   selectedSupplierName: string;
   selectedSupplierOrderNotice: string;
   supplierProductsLength: number;
@@ -379,6 +412,7 @@ function ProductListSurface({
           >
             {selectedSupplierName}
           </Text>
+
           {selectedSupplierOrderNotice ? (
             <View
               style={[
@@ -397,12 +431,10 @@ function ProductListSurface({
               </Text>
             </View>
           ) : null}
-          <Text style={styles.surfaceSubtitle}>
-            {selectedCategory === 'ALL'
-              ? text.orders.allTypes
-              : selectedCategory}
-          </Text>
+
+          <Text style={styles.surfaceSubtitle}>{selectedFilterLabel}</Text>
         </View>
+
         <View style={styles.surfaceCountPill}>
           <Text style={styles.surfaceCountText}>{filteredProducts.length}</Text>
         </View>
@@ -433,6 +465,7 @@ function ProductListSurface({
           styles.productGrid,
           styles.listBlock,
           isMobileLayout && styles.mobileProductGrid,
+          isTabletCompactProductCard && styles.tabletCompactProductGrid,
         ]}
       >
         {filteredProducts.map((product) => (
@@ -442,8 +475,10 @@ function ProductListSurface({
             quantities={quantities}
             language={language}
             text={text}
+            isCompactProductCard={isCompactProductCard}
             isMobileLayout={isMobileLayout}
             isSmallScreen={isSmallScreen}
+            isTabletCompactProductCard={isTabletCompactProductCard}
             useSingleColumnGrid={useSingleColumnGrid}
             onSetQuantity={onSetQuantity}
           />
@@ -469,12 +504,14 @@ function OrderSummaryCard({
   return (
     <View style={styles.summaryCard}>
       <Text style={styles.summaryTitle}>{text.orders.summaryTitle}</Text>
+
       <View style={styles.summaryMetricRow}>
         <Text style={styles.summaryMetricLabel}>
           {text.orders.summaryItems}
         </Text>
         <Text style={styles.summaryMetricValue}>{totalItems}</Text>
       </View>
+
       <View style={styles.summaryMetricRow}>
         <Text style={styles.summaryMetricLabel}>
           {text.orders.summaryAmount}
